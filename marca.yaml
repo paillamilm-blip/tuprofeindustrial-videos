@@ -1,0 +1,41 @@
+# Identidad visual y sonora de Tu Profe Industrial.
+# Todo es opcional: lo que borres vuelve a su valor por defecto.
+
+nombre: "Tu Profe Industrial"
+usuario: "@tuprofeindustrial"
+
+colores:            # formato #RRGGBB
+  fondo: "#0B1220"       # azul noche (pizarra)
+  panel: "#121B2F"       # tarjetas
+  borde: "#24324F"
+  texto: "#F8FAFC"
+  tenue: "#94A3B8"
+  acento: "#FFC72C"      # amarillo seguridad industrial: destacados y resultado
+  exito: "#22C55E"
+  cuadricula: "#38BDF8"  # líneas tenues del fondo tipo plano técnico
+
+materias:           # color de la etiqueta de cada materia
+  matematica: "#38BDF8"
+  fisica: "#FB923C"
+  ingenieria: "#FACC15"
+
+voz:
+  proveedor: edge                 # edge (neural, gratis) | gtts | silencio
+  nombre: "es-CL-LorenzoNeural"   # voz chilena; también: es-CL-CatalinaNeural (ver ./tpi voces)
+  velocidad: "+5%"
+
+cierre:
+  texto: "Sígueme para más ejercicios resueltos"
+  voz: "Sígueme para más ejercicios resueltos. ¡Nos vemos en el próximo!"
+
+subtitulos:         # estilo CapCut
+  fuente: "Montserrat Black"
+  tamano: 84
+  color: "#FFFFFF"
+  color_activo: "#FFC72C"   # color de la palabra que se está diciendo
+  borde: 7
+  sombra: 3
+  posicion_y: 0.72          # 0 = arriba, 1 = abajo (0.72 deja libre la zona de botones de la app)
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 16

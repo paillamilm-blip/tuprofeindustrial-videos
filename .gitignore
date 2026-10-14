@@ -1,0 +1,21 @@
+# Entorno de Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Videos y archivos generados (nunca subir videos a Git)
+salida/
+media/
+*.mp4
+*.mov
+*.mp3
+*.wav
+
+# Secretos
+.env
+
+# macOS
+.DS_Store

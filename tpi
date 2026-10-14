@@ -1,0 +1,18 @@
+#!/bin/bash
+# Lanzador del motor de video. Uso: ./tpi <comando>   (ej. ./tpi doctor)
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# LaTeX (MacTeX / BasicTeX) y FFmpeg completo (ffmpeg-full no queda en el PATH por sí solo)
+for carpeta in /Library/TeX/texbin /opt/homebrew/opt/ffmpeg-full/bin /usr/local/opt/ffmpeg-full/bin; do
+  if [ -d "$carpeta" ]; then PATH="$carpeta:$PATH"; fi
+done
+export PATH
+export TPI_RAIZ="$DIR"
+
+if [ ! -x "$DIR/.venv/bin/tpi" ]; then
+  echo "❌ El motor todavía no está instalado en esta carpeta."
+  echo "   Ejecuta primero:  ./scripts/instalar_mac.sh"
+  exit 1
+fi
+
+exec "$DIR/.venv/bin/tpi" "$@"
