@@ -68,6 +68,9 @@ def silenciar_avisos() -> None:
         _importar_sox_en_silencio()
     # PyAV avisa de opciones internas de Manim que no usa ("Some options were not used").
     logging.getLogger("av.container.output").setLevel(logging.ERROR)
+    # Gemini (google-genai) y su cliente HTTP anuncian cada petición a nivel INFO.
+    for nombre in ("google_genai", "httpx", "httpcore"):
+        logging.getLogger(nombre).setLevel(logging.WARNING)
 
 
 def _importar_sox_en_silencio() -> None:

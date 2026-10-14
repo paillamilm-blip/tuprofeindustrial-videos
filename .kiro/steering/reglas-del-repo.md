@@ -18,3 +18,8 @@ inclusion: always
   `guiones/ejemplos/` y mirar cuadros del video antes de abrir la PR.
 - **Guiones:** `texto`/`tex` es lo que se ve y `voz` lo que se escucha; fórmulas LaTeX entre comillas simples.
 - **Nunca subir videos ni audios** (`salida/` está en `.gitignore`).
+- **Secretos:** la clave de Gemini vive solo en `.env` (ignorado por Git, permisos 600) o en la variable
+  `GEMINI_API_KEY`. Nunca imprimirla, registrarla ni pedirla por el chat: el usuario la guarda con `./tpi clave`.
+- **IA (`tpi redactar`):** las instrucciones del modelo están en `src/tpi_videos/plantillas/ia/`. La IA
+  devuelve datos en un esquema JSON fijo (nunca código) y todo guion pasa por las validaciones del motor.
+  Probar cambios con un servidor falso de Gemini (`GOOGLE_GEMINI_BASE_URL`) si no hay clave disponible.

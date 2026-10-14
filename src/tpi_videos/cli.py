@@ -1,6 +1,8 @@
 """Comandos del motor. Se usan desde la carpeta del repo con ``./tpi <comando>``.
 
 ./tpi doctor                         ¿está todo instalado?
+./tpi redactar foto.jpg --crear      la IA escribe el guion desde un enunciado (y crea el borrador)
+./tpi clave                          guarda tu clave de Gemini
 ./tpi nuevo mi_ejercicio             crea guiones/mi_ejercicio.yaml desde la plantilla
 ./tpi revisar guiones/x.yaml         revisa el guion (duración, gancho, frases)
 ./tpi crear guiones/x.yaml           crea el video final
@@ -138,7 +140,8 @@ def cmd_crear(args: argparse.Namespace) -> int:
     if args.voz:
         proveedor, voz = (args.voz, None) if args.voz in PROVEEDORES else ("edge", args.voz)
 
-    _mostrar_revision(args.guion)
+    if not getattr(args, "revisado", False):  # redactar ya mostró la revisión
+        _mostrar_revision(args.guion)
     calidad = "borrador" if args.borrador else "final"
     consola.print(
         f"\n[bold]🎬 Creando video ({calidad})…[/] la voz se genera con internet; "
@@ -186,6 +189,66 @@ def cmd_subtitular(args: argparse.Namespace) -> int:
     consola.print(f'[green bold]✅ Listo:[/] {ruta}\n   Para verlo: [bold]open "{ruta}"[/]')
     if args.abrir:
         _abrir(salida)
+    return 0
+
+
+def cmd_clave(args: argparse.Namespace) -> int:
+    from getpass import getpass
+
+    from .ia import URL_CLAVE, guardar_clave, probar_clave
+
+    consola.print(f"🔑 Crea tu clave gratis en [bold]{URL_CLAVE}[/] (botón «Create API key») y cópiala.")
+    clave = getpass("Pega aquí tu clave (no se verá mientras la pegas) y presiona Enter: ").strip()
+    if not args.sin_probar:
+        with consola.status("Probando la clave con Gemini…"):
+            probar_clave(clave)
+    ruta = guardar_clave(clave)
+    consola.print(
+        f"[green]✅ Clave guardada en {ruta.name}[/] (queda solo en este computador; nunca se sube a GitHub)."
+    )
+    consola.print('Prueba: ./tpi redactar "Una escalera de 5 m se apoya en una pared…" --crear --abrir')
+    return 0
+
+
+def cmd_redactar(args: argparse.Namespace) -> int:
+    from .ia import MODELO_POR_DEFECTO
+    from .redactor import redactar
+
+    with consola.status("Preparando…") as estado:
+        resultado = redactar(
+            " ".join(args.enunciado),  # sin comillas, la terminal lo separa en palabras
+            materia=args.materia,
+            nivel=args.nivel,
+            modelo=args.modelo or MODELO_POR_DEFECTO,
+            nombre=args.nombre,
+            forzar=args.forzar,
+            revisar_con_ia=not args.sin_revision,
+            avisar=lambda mensaje: estado.update(mensaje),
+        )
+    ruta = _ruta_amigable(resultado.ruta)
+    consola.print(f"[green bold]✅ Guion listo:[/] {ruta}")
+    if resultado.revisado_por_ia and not resultado.pendientes:
+        consola.print("   Fórmulas compiladas y cálculos revisados por la IA: sin observaciones.")
+    for supuesto in resultado.supuestos:
+        consola.print(f"   [cyan]ℹ Supuesto de la IA:[/] {supuesto}")
+    if resultado.pendientes:
+        consola.print("[yellow]⚠️  Quedaron observaciones (también están al inicio del archivo):[/]")
+        for p in resultado.pendientes:
+            consola.print(f"   [yellow]• {p}[/]")
+    consola.print()
+    _mostrar_revision(str(resultado.ruta))
+    consola.print("\n[bold]⚠️  Revisa la matemática antes de publicar:[/] la IA puede equivocarse.")
+    if args.crear:
+        consola.print()
+        cmd_crear(
+            argparse.Namespace(
+                guion=str(resultado.ruta), borrador=True, voz=None, velocidad=None, sin_subtitulos=False,
+                sincronizar="auto", modelo="base", salida=None, abrir=args.abrir, revisado=True,
+            )
+        )  # fmt: skip
+    else:
+        consola.print(f"   Para corregirlo: open -e {ruta}")
+        consola.print(f"   Para verlo:      ./tpi crear {ruta} --borrador --abrir")
     return 0
 
 
@@ -263,6 +326,32 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--salida", help="carpeta de salida (por defecto: salida/subtitulados/)")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.set_defaults(func=cmd_subtitular)
+
+    s = sub.add_parser(
+        "redactar", help="escribe un guion con IA a partir de un enunciado (texto, foto o PDF)"
+    )
+    s.add_argument(
+        "enunciado",
+        nargs="+",
+        help="el enunciado (mejor entre comillas) o un archivo .txt, .jpg, .png, .heic o .pdf",
+    )
+    s.add_argument(
+        "--materia", choices=["matematica", "fisica", "ingenieria"], help="opcional: la IA la deduce"
+    )
+    s.add_argument("--nivel", help='opcional, ej. "1° medio" o "técnico en electricidad"')
+    s.add_argument("--nombre", help="nombre del archivo del guion (por defecto, a partir del título)")
+    s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
+    s.add_argument("--forzar", action="store_true", help="reemplaza el guion si ya existe")
+    s.add_argument(
+        "--sin-revision", action="store_true", help="no pedir la segunda revisión a la IA (más rápido)"
+    )
+    s.add_argument("--crear", action="store_true", help="crea también el video borrador al terminar")
+    s.add_argument("--abrir", action="store_true", help="con --crear: abre el video al terminar")
+    s.set_defaults(func=cmd_redactar)
+
+    s = sub.add_parser("clave", help="guarda tu clave de Gemini (para redactar con IA)")
+    s.add_argument("--sin-probar", action="store_true", help="guardar sin probarla por internet")
+    s.set_defaults(func=cmd_clave)
 
     s = sub.add_parser("voces", help="lista las voces en español")
     s.add_argument("--todas", action="store_true", help="todos los países de habla hispana")

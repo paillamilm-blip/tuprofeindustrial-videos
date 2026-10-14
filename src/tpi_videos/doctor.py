@@ -151,6 +151,28 @@ def diagnosticar(probar_red: bool = False) -> list[Chequeo]:
         )
     )
 
+    from . import ia
+
+    clave = ia.obtener_clave()
+    if clave and probar_red:
+        try:
+            ia.probar_clave(clave)
+            chequeos.append(
+                Chequeo("IA para redactar (opcional)", "ok", f"clave válida · {ia.MODELO_POR_DEFECTO}")
+            )
+        except Exception as e:  # ErrorMotor con el motivo
+            chequeos.append(Chequeo("IA para redactar (opcional)", "falla", getattr(e, "mensaje", str(e)),
+                                    getattr(e, "ayuda", None)))  # fmt: skip
+    else:
+        chequeos.append(
+            Chequeo(
+                "IA para redactar (opcional)",
+                "ok" if clave else "opcional",
+                "clave de Gemini configurada" if clave else "sin clave: ./tpi redactar no funcionará",
+                None if clave else ia.AYUDA_CLAVE,
+            )
+        )
+
     if probar_red:
         ok, detalle = _probar_voz()
         chequeos.append(

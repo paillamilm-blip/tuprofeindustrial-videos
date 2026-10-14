@@ -57,9 +57,10 @@ para subir a YouTube.
 
 ## 3. El día a día: de un enunciado a un video
 
-1. **Escribe el guion.** Dos caminos:
-   - **Con Kiro (recomendado):** pásale el enunciado en el chat; Kiro escribe el guion con la solución paso a
-     paso y te lo entrega en un Pull Request. Luego lo bajas con `git pull`.
+1. **Consigue el guion.** Tres caminos:
+   - **Con IA, en un comando (recomendado):** pásale el enunciado escrito, una **foto** o un **PDF**
+     (ver sección 4). La IA resuelve el ejercicio y escribe el guion; con `--crear` también hace el borrador.
+   - **Con Kiro:** pásale el enunciado en el chat y te entrega el guion en un Pull Request.
    - **Tú mismo:** crea uno desde la plantilla y ábrelo con TextEdit:
      ```bash
      ./tpi nuevo plano_inclinado --materia fisica
@@ -74,11 +75,52 @@ para subir a YouTube.
 
 Cómo escribir un buen guion (con ejemplos de LaTeX): **[docs/GUIA_GUIONES.md](docs/GUIA_GUIONES.md)**.
 
-## 4. Comandos
+## 4. Redactar guiones con IA (Gemini)
+
+**Una sola vez:** crea tu clave gratis en [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+(botón *Create API key*), cópiala y guárdala:
+
+```bash
+./tpi clave
+```
+
+La clave queda en el archivo `.env` de esta carpeta, solo en tu Mac: nunca se sube a GitHub.
+
+**Cada vez:**
+
+```bash
+./tpi redactar "Un bus viaja a 72 km/h constantes. ¿Cuántos minutos tarda en recorrer 18 km?" --crear --abrir
+```
+
+También acepta un archivo: una foto del libro o de la pizarra (`.jpg`, `.png`, `.heic`), un `.pdf` o un `.txt`.
+Hay ejemplos en `enunciados/ejemplos/`:
+
+```bash
+./tpi redactar enunciados/ejemplos/matematica_escalera_pitagoras.txt --crear --abrir
+./tpi redactar ~/Desktop/foto_ejercicio.jpg --nivel "1° medio"
+```
+
+Qué hace por dentro:
+
+1. **Gemini resuelve el ejercicio** y escribe el guion siguiendo las reglas de `docs/GUIA_GUIONES.md`.
+2. **El motor lo revisa:** compila cada fórmula con LaTeX y aplica las reglas de `./tpi revisar`.
+3. **Gemini lo revisa de nuevo como profesor revisor**: rehace los cálculos por su cuenta.
+4. Si algo falla, **se lo devuelve para corregir** (hasta 2 veces). Lo que no logre arreglar queda anotado
+   al inicio del guion, junto con los supuestos que hizo.
+
+> ⚠️ **La IA puede equivocarse.** Mira siempre el borrador y revisa la matemática antes de publicar.
+
+Opciones útiles: `--materia fisica`, `--nivel "técnico en electricidad"`, `--nombre mi_guion`,
+`--sin-revision` (más rápido, sin la segunda revisión) y `--modelo` (por defecto `gemini-3.8-flash`, que
+funciona con la cuenta gratuita).
+
+## 5. Comandos
 
 | Comando | Qué hace |
 |---|---|
-| `./tpi doctor` | Revisa que todo esté instalado (agrega `--red` para probar también la voz) |
+| `./tpi doctor` | Revisa que todo esté instalado (agrega `--red` para probar también la voz y la clave de IA) |
+| `./tpi redactar ENUNCIADO --crear` | La IA escribe el guion desde un texto, foto o PDF (y crea el borrador) |
+| `./tpi clave` | Guarda tu clave de Gemini para `redactar` |
 | `./tpi nuevo NOMBRE --materia fisica` | Crea `guiones/NOMBRE.yaml` desde la plantilla |
 | `./tpi revisar GUION.yaml` | Revisa el guion sin crear el video |
 | `./tpi crear GUION.yaml` | Crea el video final (1080×1920, 30 fps) |
@@ -91,17 +133,19 @@ Cómo escribir un buen guion (con ejemplos de LaTeX): **[docs/GUIA_GUIONES.md](d
 
 Agrega `--abrir` a `crear` o `subtitular` para que el video se abra solo al terminar.
 
-## 5. Personalizar la marca
+## 6. Personalizar la marca
 
 Edita **`marca.yaml`**: nombre, usuario (@), colores, voz por defecto, frase de cierre y estilo de los
 subtítulos (fuente, tamaño, color de la palabra activa, altura). Todo es opcional.
 
-## 6. Dónde queda cada cosa
+## 7. Dónde queda cada cosa
 
 ```
 guiones/ejemplos/     3 guiones de ejemplo (física, matemática, ingeniería)
-guiones/              tus guiones
+guiones/              tus guiones (y los que redacta la IA)
+enunciados/ejemplos/  enunciados de prueba para ./tpi redactar
 marca.yaml            identidad visual y sonora
+.env                  tu clave de Gemini (solo en tu Mac, no se sube)
 salida/               videos generados (no se suben a GitHub)
 src/tpi_videos/       el motor (Python)
 docs/                 guía de guiones y plan del proyecto
@@ -109,11 +153,14 @@ scripts/              instalador para Mac
 tpi                   lanzador de comandos
 ```
 
-## 7. Problemas frecuentes
+## 8. Problemas frecuentes
 
 | Mensaje | Solución |
 |---|---|
 | `zsh: permission denied: ./tpi` | `chmod +x tpi scripts/instalar_mac.sh` |
+| `No module named 'google'` o algo falla tras actualizar | Vuelve a ejecutar `./scripts/instalar_mac.sh` (instala lo nuevo) |
+| `Falta la clave de Gemini` / `Gemini rechazó la clave` | `./tpi clave` (créala en aistudio.google.com/apikey) |
+| `Llegaste al límite de uso de Gemini` | La cuenta gratuita tiene un límite por minuto y por día: espera y repite |
 | `Falta LaTeX` | Cierra la Terminal, ábrela de nuevo y ejecuta `./scripts/instalar_mac.sh` |
 | `Tu FFmpeg no puede dibujar subtítulos` | `brew install ffmpeg-full` (el `ffmpeg` normal de Homebrew ya no trae libass) |
 | `No pude generar la voz` | Revisa internet. Alternativas: `--voz gtts` o `--voz silencio` |
@@ -121,7 +168,7 @@ tpi                   lanzador de comandos
 | `No pude dibujar la fórmula` | Revisa el LaTeX (llaves `{ }`, comandos con `\`). Pruébala en overleaf.com |
 | Algo inesperado | Repite con `./tpi --debug crear …` y comparte el mensaje con Kiro |
 
-## 8. Bueno saber
+## 9. Bueno saber
 
 - **Tiempos** (medidos en las pruebas del sandbox, Linux de 8 núcleos, para ~1 minuto de video): borrador
   ~15–20 s, final ~35–40 s. En tu Mac pueden variar.
@@ -130,4 +177,7 @@ tpi                   lanzador de comandos
   voces chilenas con licencia comercial (ver [docs/PLAN.md](docs/PLAN.md)).
 - **Whisper** se usa cuando la voz no trae marcas de tiempo (`--voz gtts`, `tpi subtitular`). La primera vez
   descarga su modelo (~140 MB).
+- **IA (Gemini):** con la cuenta gratuita, Google puede usar lo que envías para mejorar sus productos. Para
+  enunciados de ejercicios no suele importar; no envíes datos personales de estudiantes. Cada guion usa
+  entre 2 y 6 consultas.
 - **Fuente:** Montserrat, licencia SIL Open Font License (`src/tpi_videos/assets/fuentes/OFL.txt`).

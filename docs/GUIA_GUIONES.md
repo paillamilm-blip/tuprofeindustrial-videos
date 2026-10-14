@@ -5,6 +5,10 @@ LaTeX) de **lo que se escucha** (`voz`), porque la voz sintética no sabe leer f
 
 Plantilla comentada: `./tpi nuevo mi_ejercicio` · Ejemplos completos: `guiones/ejemplos/`.
 
+> **Atajo:** `./tpi redactar "enunciado…"` (o una foto o PDF) hace que la IA escriba el guion siguiendo
+> estas mismas reglas (sus instrucciones están en `src/tpi_videos/plantillas/ia/`). Esta guía te sirve
+> para revisarlo y ajustarlo.
+
 ## 1. La estructura del video
 
 | # | Bloque | Duración ideal | Para qué sirve |

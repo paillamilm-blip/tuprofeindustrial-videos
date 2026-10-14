@@ -1,0 +1,2 @@
+Un motor eléctrico de 2 kW funciona 3 horas al día.
+Si el kWh cuesta 180 pesos, ¿cuánto cuesta la energía que consume en 30 días?
