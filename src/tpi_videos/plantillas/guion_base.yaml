@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  GUION DE VIDEO · Tu Profe Industrial
+#  1) Cambia los textos de abajo por tu ejercicio.
+#  2) Revisa:  ./tpi revisar guiones/ESTE_ARCHIVO.yaml
+#  3) Crea:    ./tpi crear guiones/ESTE_ARCHIVO.yaml --borrador   (rápido, para revisar)
+#              ./tpi crear guiones/ESTE_ARCHIVO.yaml              (final, para publicar)
+#
+#  Reglas de oro:
+#  • Textos entre comillas dobles "…"; fórmulas LaTeX entre comillas SIMPLES '…'.
+#  • "texto" / "tex" es lo que se VE; "voz" es lo que se ESCUCHA (escríbelo como lo dirías:
+#    "nueve coma ocho metros por segundo al cuadrado", no "9,8 m/s²").
+#  • Frases cortas (máx. ~15 palabras). Una idea por frase.
+#  • Coma decimal chilena: escribe 9,8 en la fórmula; el motor la acomoda solo.
+#  • Guía completa: docs/GUIA_GUIONES.md
+# ─────────────────────────────────────────────────────────────────────────────
+
+titulo: "Título corto del ejercicio"
+materia: fisica              # matematica | fisica | ingenieria
+nivel: "2° medio"            # opcional
+
+# Los primeros 3 segundos: una pregunta o un dato que sorprenda. Nada de "Hola" ni "en este video…".
+gancho:
+  texto: "¿Pregunta que engancha con un número, como 20 metros?"
+  voz: "Pregunta que engancha, dicha en voz alta."
+
+# El problema tal como lo verías en una guía. "destacar" subraya frases cuando la voz las dice.
+enunciado:
+  texto: "Escribe aquí el enunciado completo, con sus datos: 20 metros, 9,8 m/s²."
+  voz: "Cuenta el problema con tus palabras, en una o dos frases."
+  destacar: ["20 metros"]
+
+# Datos conocidos (opcional). Cada uno aparece cuando se nombra y luego queda fijo arriba.
+datos:
+  - tex: 'h = 20\ \text{m}'
+    voz: "La altura es de veinte metros."
+  - tex: 't = ?'
+    voz: "Y buscamos el tiempo."
+
+# La solución, un paso por idea. Cada fórmula se transforma en la siguiente.
+#   nota:       texto pequeño sobre la fórmula (opcional)
+#   destacar:   parte de la fórmula que se enmarca (opcional, tal como está en tex)
+#   transformar: false  → la fórmula se escribe de cero en vez de transformarse
+pasos:
+  - nota: "Ecuación que usamos"
+    tex: 'h = \frac{1}{2} g t^2'
+    voz: "Usamos esta ecuación porque…"
+  - nota: "Despejamos"
+    tex: 't = \sqrt{\frac{2h}{g}}'
+    voz: "Despejamos el tiempo."
+    destacar: ['t']
+
+resultado:
+  tex: 't \approx 2,02\ \text{s}'
+  voz: "El resultado es… (di también la unidad)."
+
+# Opcional: ¿el resultado tiene sentido? Ayuda a pensar, no solo a calcular.
+verificacion:
+  texto: "Una frase que compruebe o interprete el resultado."
+
+# Opcional (recomendado): un ejercicio parecido para que el público practique y comente.
+reto:
+  texto: "¿Y si la altura fuera 45 metros?"
+  voz: "Ahora tú: ¿y si la altura fuera cuarenta y cinco metros? Déjalo en los comentarios."
+
+# Opcional: si no lo escribes, se usa el cierre de marca.yaml
+# cierre:
+#   texto: "Sígueme para más ejercicios resueltos"
+#   voz: "Sígueme para más ejercicios resueltos."

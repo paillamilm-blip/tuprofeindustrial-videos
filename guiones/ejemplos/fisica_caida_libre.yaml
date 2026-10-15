@@ -1,0 +1,49 @@
+# Ejemplo de guion · Física · Caída libre
+# Crear el video:   ./tpi crear guiones/ejemplos/fisica_caida_libre.yaml
+# Regla de oro: textos entre comillas dobles "…", fórmulas LaTeX entre comillas simples '…'.
+
+titulo: "Caída libre: ¿cuánto tarda en caer?"
+materia: fisica
+nivel: "2° medio"
+
+gancho:
+  texto: "¿Cuánto tarda una piedra en caer 20 metros?"
+  voz: "¿Cuánto tarda una piedra en caer veinte metros? Menos de lo que crees."
+
+enunciado:
+  texto: "Se deja caer una piedra desde 20 metros de altura. ¿Cuánto tarda en llegar al suelo? Usa g = 9,8 m/s²."
+  voz: "Soltamos una piedra desde veinte metros de altura. ¿Cuánto demora en llegar al suelo?"
+  destacar: ["20 metros", "g = 9,8 m/s²"]
+
+datos:
+  - tex: 'h = 20\ \text{m}'
+    voz: "La altura es de veinte metros."
+  - tex: 'g = 9,8\ \text{m/s}^2'
+    voz: "La gravedad, nueve coma ocho metros por segundo al cuadrado."
+  - tex: 't = ?'
+    voz: "Y buscamos el tiempo."
+
+pasos:
+  - nota: "Caída libre: parte del reposo"
+    tex: 'h = \frac{1}{2}\, g\, t^2'
+    voz: "Como la piedra parte del reposo, usamos la ecuación de caída libre."
+  - nota: "Despejamos t"
+    tex: 't = \sqrt{\frac{2h}{g}}'
+    voz: "Despejamos el tiempo. Queda la raíz de dos h sobre g."
+  - nota: "Reemplazamos los datos"
+    tex: 't = \sqrt{\frac{2 \cdot 20}{9,8}}'
+    voz: "Reemplazamos la altura y la gravedad."
+  - tex: 't = \sqrt{4,08}'
+    voz: "Dos por veinte es cuarenta. Dividido en nueve coma ocho, da cuatro coma cero ocho."
+
+resultado:
+  tex: 't \approx 2,02\ \text{s}'
+  voz: "Sacamos la raíz: la piedra tarda unos dos segundos en caer."
+
+verificacion:
+  texto: "Si la altura fuera el doble, no tardaría el doble: el tiempo crece con la raíz de la altura."
+  voz: "Ojo: con el doble de altura no tarda el doble. El tiempo crece con la raíz de la altura."
+
+reto:
+  texto: "¿Cuánto tarda en caer desde 45 metros? Usa g = 10 m/s²."
+  voz: "Ahora tú. ¿Cuánto tarda desde cuarenta y cinco metros, con g igual a diez? Déjalo en los comentarios."

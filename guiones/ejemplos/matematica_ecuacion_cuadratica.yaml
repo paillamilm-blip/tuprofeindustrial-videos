@@ -1,0 +1,41 @@
+# Ejemplo de guion · Matemática · Ecuación cuadrática por factorización
+# Crear el video:   ./tpi crear guiones/ejemplos/matematica_ecuacion_cuadratica.yaml
+# Sin "datos": en ejercicios de álgebra la pizarra parte directo con la ecuación.
+
+titulo: "Ecuación cuadrática por factorización"
+materia: matematica
+nivel: "1° y 2° medio"
+
+gancho:
+  texto: "¿Qué dos números suman 5 y multiplicados dan 6?"
+  voz: "¿Qué dos números suman cinco y multiplicados dan seis? Con eso resuelves esta ecuación."
+
+enunciado:
+  texto: "Resuelve la ecuación x² - 5x + 6 = 0 factorizando."
+  voz: "Resolvamos x al cuadrado, menos cinco x, más seis, igual a cero. Lo haremos factorizando."
+  destacar: ["x² - 5x + 6 = 0"]
+
+pasos:
+  - nota: "La ecuación"
+    tex: 'x^2 - 5x + 6 = 0'
+    voz: "Partimos de la ecuación."
+  - nota: "Dos números: suman 5 y multiplican 6"
+    tex: '(x - 2)(x - 3) = 0'
+    voz: "Buscamos dos números que sumen cinco y multipliquen seis. Son el dos y el tres."
+  - nota: "Si un producto es cero, un factor es cero"
+    tex: 'x - 2 = 0 \quad \text{o} \quad x - 3 = 0'
+    voz: "Si un producto da cero, alguno de sus factores es cero."
+  - tex: 'x = 2 \quad \text{o} \quad x = 3'
+    voz: "Despejamos cada uno."
+
+resultado:
+  tex: 'x_1 = 2 \qquad x_2 = 3'
+  voz: "Las soluciones son dos y tres."
+
+verificacion:
+  texto: "Comprueba con x = 2: 4 - 10 + 6 = 0."
+  voz: "Compruébalo: con x igual a dos queda cuatro, menos diez, más seis. Da cero."
+
+reto:
+  texto: "Resuelve x² - 7x + 12 = 0. Pista: suman 7 y multiplican 12."
+  voz: "Ahora tú: resuelve x al cuadrado, menos siete x, más doce, igual a cero. Te leo en los comentarios."

@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tpi-videos"
+version = "0.2.0"
+description = "Motor de video de Tu Profe Industrial: enunciados de Matemática, Física e Ingeniería → videos verticales 9:16 con animaciones Manim, voz sintética y subtítulos estilo CapCut."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "manim>=0.22.0,<0.23",
+    "manim-voiceover[gtts]>=0.4.0,<0.5",
+    "edge-tts>=7.3.1,<8",
+    "google-genai>=2.30.1,<3",  # Gemini: `tpi redactar`
+    "pydantic>=2.10,<3",
+    "python-dotenv>=1.0",  # lee la clave de Gemini desde .env
+    "pyyaml>=6.0",
+    "rich>=13",
+]
+
+[project.optional-dependencies]
+# Whisper sincroniza subtítulos cuando la voz no trae marcas de tiempo (gTTS, voz grabada,
+# o cualquier video con `tpi subtitular`). Es opcional porque descarga PyTorch (~1 GB).
+whisper = ["openai-whisper>=20250625"]
+
+[project.scripts]
+tpi = "tpi_videos.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tpi_videos = ["assets/fuentes/*", "plantillas/*.yaml", "plantillas/ia/*.md"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]  # el formateador ajusta el largo; los mensajes al usuario pueden ser largos

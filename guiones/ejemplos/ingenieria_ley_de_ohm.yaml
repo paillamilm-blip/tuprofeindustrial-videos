@@ -1,0 +1,48 @@
+# Ejemplo de guion · Ingeniería (electricidad) · Ley de Ohm y potencia
+# Crear el video:   ./tpi crear guiones/ejemplos/ingenieria_ley_de_ohm.yaml
+
+titulo: "Ley de Ohm: ¿cuánta potencia disipa?"
+materia: ingenieria
+nivel: "Electricidad · Técnico profesional"
+
+gancho:
+  texto: "¿Cuántos watts quema una resistencia de 24 Ω en 12 V?"
+  voz: "¿Cuántos watts quema una resistencia conectada a doce volts? Lo calculamos en dos pasos."
+
+enunciado:
+  texto: "Una resistencia de 24 Ω se conecta a una batería de 12 V. Calcula la corriente y la potencia que disipa."
+  voz: "Una resistencia de veinticuatro ohms se conecta a una batería de doce volts. Calcula la corriente y la potencia."
+  destacar: ["24 Ω", "12 V"]
+
+datos:
+  - tex: 'V = 12\ \text{V}'
+    voz: "El voltaje es de doce volts."
+  - tex: 'R = 24\ \Omega'
+    voz: "La resistencia, veinticuatro ohms."
+
+pasos:
+  - nota: "Ley de Ohm"
+    tex: 'I = \frac{V}{R}'
+    voz: "Primero la corriente, con la ley de Ohm: voltaje dividido en resistencia."
+  - tex: 'I = \frac{12\ \text{V}}{24\ \Omega}'
+    voz: "Reemplazamos: doce volts dividido en veinticuatro ohms."
+  - tex: 'I = 0,5\ \text{A}'
+    voz: "Circulan cero coma cinco amperes."
+    destacar: ['0,5\ \text{A}']
+  - nota: "Potencia eléctrica"
+    tex: 'P = V \cdot I'
+    voz: "Ahora la potencia: voltaje por corriente."
+  - tex: 'P = 12\ \text{V} \cdot 0,5\ \text{A}'
+    voz: "Doce volts por cero coma cinco amperes."
+
+resultado:
+  tex: 'P = 6\ \text{W}'
+  voz: "La resistencia disipa seis watts. Por eso se calienta."
+
+verificacion:
+  texto: "Con P = V²/R también da 144/24 = 6 W."
+  voz: "Compruébalo con otra fórmula: voltaje al cuadrado sobre resistencia. También da seis."
+
+reto:
+  texto: "¿Y si la batería fuera de 24 V? Calcula la corriente y la potencia."
+  voz: "Ahora tú: ¿qué pasa con la corriente y la potencia si la batería es de veinticuatro volts? Comenta tu respuesta."
