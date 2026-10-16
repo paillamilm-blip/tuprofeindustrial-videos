@@ -19,6 +19,7 @@ media/
 
 # Tus ajustes del panel (temas, fondos, stickers, marca): son tuyos, Git no los toca
 mis_ajustes/
+.nicegui/
 
 # macOS
 .DS_Store

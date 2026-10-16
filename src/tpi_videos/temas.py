@@ -24,6 +24,7 @@ from .tipografia import existe
 TEMAS_DIR = PLANTILLAS_DIR / "temas"
 FONDOS_DIR = PAQUETE / "assets" / "fondos"
 TEMA_POR_DEFECTO = "hoja_de_desarrollo"
+_ID_VALIDO = re.compile(r"[A-Za-z0-9_-]{1,80}")
 
 
 class _Base(BaseModel):
@@ -136,6 +137,8 @@ def id_tema(nombre: str) -> str:
 
 
 def _rutas(identificador: str) -> list[Path]:
+    if not _ID_VALIDO.fullmatch(identificador):  # nunca una ruta como «../otra_carpeta»
+        return []
     return [temas_usuario_dir() / f"{identificador}.yaml", TEMAS_DIR / f"{identificador}.yaml"]
 
 

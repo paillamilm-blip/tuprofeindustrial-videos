@@ -103,6 +103,35 @@ def duracion(video: Path) -> float:
         return float(contenedor.duration or 0) / 1_000_000
 
 
+def extraer_cuadro(video: Path, segundos: float, destino: Path, ancho: int | None = None) -> Path:
+    """Guarda como imagen (PNG o JPG) el cuadro del video en ``segundos``."""
+    import av
+    from PIL import Image
+
+    objetivo = max(0.0, segundos)
+    try:
+        with av.open(str(video)) as contenedor:
+            flujo = contenedor.streams.video[0]
+            contenedor.seek(int(objetivo / flujo.time_base), stream=flujo, backward=True)
+            cuadro = None
+            for cuadro in contenedor.decode(flujo):
+                if cuadro.time is not None and cuadro.time >= objetivo - 1e-3:
+                    break
+            if cuadro is None:
+                raise ErrorMotor(f"No pude leer un cuadro de {video.name}.")
+            imagen = cuadro.to_image()
+    except av.error.FFmpegError as e:
+        raise ErrorMotor(f"No pude abrir el video {video.name}.") from e
+    if ancho and imagen.width != ancho:
+        imagen = imagen.resize((ancho, round(imagen.height * ancho / imagen.width)), Image.LANCZOS)
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    if destino.suffix.lower() in (".jpg", ".jpeg"):
+        imagen.convert("RGB").save(destino, quality=88)
+    else:
+        imagen.save(destino)
+    return destino
+
+
 def resolucion(video: Path) -> tuple[int, int]:
     import av
 

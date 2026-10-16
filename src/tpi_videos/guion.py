@@ -268,3 +268,80 @@ def cargar_guion(ruta: str | Path) -> Guion:
             f"El guion {ruta.name} tiene problemas:\n{detalle}",
             ayuda="Compara con guiones/ejemplos/ o con docs/GUIA_GUIONES.md",
         ) from e
+
+
+# ---------------------------------------------------------------------------------------------
+# Escritura (el inverso de cargar_guion): textos con "…", fórmulas con '…', como en los ejemplos
+# ---------------------------------------------------------------------------------------------
+
+
+def _dobles(s: str) -> str:
+    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _simples(s: str) -> str:
+    return "'" + s.replace("'", "''") + "'"
+
+
+def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
+    """Escribe un guion (dict con la forma de ``Guion``) como YAML legible. Omite lo que está por defecto."""
+    # Un salto de línea dentro de un comentario rompería el YAML
+    cabecera = [c.replace("\r", " ").replace("\n", " ") for c in (cabecera or [])]
+    lineas = [f"# {c}" if c else "#" for c in cabecera] + ([""] if cabecera else [])
+    lineas.append(f"titulo: {_dobles(guion['titulo'])}")
+    lineas.append(f"materia: {guion['materia']}")
+    for clave in ("nivel", "tema", "voz", "velocidad"):
+        if guion.get(clave):
+            lineas.append(f"{clave}: {_dobles(guion[clave])}")
+
+    def bloque(nombre: str, b: dict[str, Any]) -> None:
+        lineas.extend(["", f"{nombre}:", f"  texto: {_dobles(b['texto'])}"])
+        if b.get("voz"):
+            lineas.append(f"  voz: {_dobles(b['voz'])}")
+        if b.get("destacar"):
+            lineas.append(f"  destacar: [{', '.join(_dobles(d) for d in b['destacar'])}]")
+        if b.get("tex"):
+            lineas.append(f"  tex: {_simples(b['tex'])}")
+        if b.get("emoji"):
+            lineas.append(f"  emoji: {_dobles(b['emoji'])}")
+
+    bloque("gancho", guion["gancho"])
+    bloque("enunciado", guion["enunciado"])
+    if guion.get("datos"):
+        lineas += ["", "datos:"]
+        for d in guion["datos"]:
+            lineas += [f"  - tex: {_simples(d['tex'])}", f"    voz: {_dobles(d['voz'])}"]
+    lineas += ["", "pasos:"]
+    for p in guion["pasos"]:
+        primero = True
+        for clave in ("nota", "tex", "voz"):
+            if p.get(clave):
+                valor = _simples(p[clave]) if clave == "tex" else _dobles(p[clave])
+                lineas.append(f"  {'- ' if primero else '  '}{clave}: {valor}")
+                primero = False
+        if p.get("destacar"):
+            lineas.append(f"    destacar: [{', '.join(_simples(d) for d in p['destacar'])}]")
+        if p.get("transformar") is False:
+            lineas.append("    transformar: false")
+        if p.get("emoji"):
+            lineas.append(f"    emoji: {_dobles(p['emoji'])}")
+        if p.get("error"):
+            lineas.append("    error: true   # error típico: se muestra tachado")
+    lineas += ["", "resultado:", f"  tex: {_simples(guion['resultado']['tex'])}",
+               f"  voz: {_dobles(guion['resultado']['voz'])}"]  # fmt: skip
+    if guion["resultado"].get("emoji"):
+        lineas.append(f"  emoji: {_dobles(guion['resultado']['emoji'])}")
+    for nombre in ("verificacion", "reto", "cierre"):
+        if guion.get(nombre):
+            bloque(nombre, guion[nombre])
+    return "\n".join(lineas) + "\n"
+
+
+def cabecera_de(ruta: Path) -> list[str]:
+    """Los comentarios del inicio de un guion (supuestos de la IA, etc.), para conservarlos al guardar."""
+    cabecera: list[str] = []
+    for linea in ruta.read_text(encoding="utf-8").splitlines():
+        if not linea.startswith("#"):
+            break
+        cabecera.append(linea[2:] if linea.startswith("# ") else linea[1:])
+    return cabecera

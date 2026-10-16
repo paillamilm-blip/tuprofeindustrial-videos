@@ -1,0 +1,34 @@
+# Guion corto para la vista previa de un estilo (./tpi vista-previa y el panel).
+# Muestra gancho con emoji y fórmula, un error típico, un paso con emoji y el resultado.
+# Las voces son largas a propósito: así cada animación termina mientras se ve un subtítulo.
+titulo: "Vista previa del estilo"
+materia: matematica
+
+gancho:
+  texto: "¿Resuelves así?"
+  tex: '(a + b)^2 = a^2 + b^2'
+  voz: "¿Tú también lo resuelves así? Mira bien, porque casi todos caen en este error."
+  emoji: "🤔"
+
+enunciado:
+  texto: "Desarrolla (a + b)² paso a paso."
+  voz: "Veamos paso a paso."
+
+pasos:
+  - nota: "Error típico"
+    tex: '(a + b)^2 = a^2 + b^2'
+    voz: "Este es el error más común."
+    error: true
+  - nota: "Por sí mismo"
+    tex: '(a + b)^2 = (a + b)(a + b)'
+    voz: "Elevar al cuadrado es multiplicar el binomio por sí mismo, término por término."
+    emoji: "💡"
+
+resultado:
+  tex: '(a + b)^2 = a^2 + 2ab + b^2'
+  voz: "Y este es el resultado correcto: a al cuadrado, más dos a b, más b al cuadrado."
+  emoji: "✅"
+
+cierre:
+  texto: "Sígueme para más ejercicios"
+  voz: "Sígueme."

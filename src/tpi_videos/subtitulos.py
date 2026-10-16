@@ -254,6 +254,35 @@ def escribir_ass(
     return ruta
 
 
+def tiempos_ass(ruta: Path) -> list[tuple[float, float]]:
+    """(inicio, fin) de cada subtítulo de un archivo ASS (para elegir cuadros con subtítulo visible)."""
+
+    def segundos(marca: str) -> float:
+        h, m, s = marca.split(":")
+        return int(h) * 3600 + int(m) * 60 + float(s)
+
+    if not ruta.exists():
+        return []
+    tiempos = []
+    for linea in ruta.read_text(encoding="utf-8").splitlines():
+        if linea.startswith("Dialogue:"):
+            partes = linea.split(",", 3)
+            tiempos.append((segundos(partes[1]), segundos(partes[2])))
+    return tiempos
+
+
+def momento_con_subtitulo(
+    inicio: float, fin: float, tiempos: list[tuple[float, float]], hasta: float = 0.92
+) -> float:
+    """Un instante del bloque [inicio, fin] cerca del final (animación completa) con subtítulo visible."""
+    limite = inicio + (fin - inicio) * hasta
+    candidatos = [(a, b) for a, b in tiempos if a >= inicio and b <= limite and b - a > 0.12]
+    if candidatos:
+        a, b = candidatos[-1]
+        return (a + b) / 2
+    return max(inicio + 0.05, fin - 0.3)
+
+
 def _tiempo_srt(segundos: float) -> str:
     ms = max(0, round(segundos * 1000))
     h, resto = divmod(ms, 3_600_000)

@@ -89,7 +89,7 @@ else
 fi
 
 # ── 5. Python + librerías del motor ──────────────────────────────────────────
-titulo "5/5 · Python 3.12 y librerías del motor (Manim, voz, Whisper)"
+titulo "5/5 · Python 3.12 y librerías del motor (Manim, voz, Whisper, panel)"
 PREFIJO_BREW="$(brew --prefix)"
 PKG_CONFIG_PATH="$PREFIJO_BREW/lib/pkgconfig:$PREFIJO_BREW/opt/cairo/lib/pkgconfig:${PKG_CONFIG_PATH}"
 export PKG_CONFIG_PATH
@@ -112,8 +112,10 @@ titulo "Revisión final"
 estado=$?
 echo
 if [ $estado -eq 0 ]; then
-  verde "¡Listo! Crea tu primer video (borrador rápido) con:"
-  echo "   ./tpi crear guiones/ejemplos/fisica_caida_libre.yaml --borrador --abrir"
+  "$REPO/tpi" icono >/dev/null 2>&1 && verde "Ícono «Panel Tu Profe Industrial» listo en tu Escritorio"
+  verde "¡Listo! Abre el panel de control con doble clic en ese ícono, o con:"
+  echo "   ./tpi panel"
+  echo "   (o crea un video desde la Terminal: ./tpi crear guiones/ejemplos/fisica_caida_libre.yaml --borrador --abrir)"
 else
   amarillo "Casi listo: revisa los puntos marcados con ❌ arriba."
 fi

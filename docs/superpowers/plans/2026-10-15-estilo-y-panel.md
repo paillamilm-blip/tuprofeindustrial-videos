@@ -56,11 +56,13 @@ de `main` con `--voz silencio` deben salir idénticos con `--tema pizarra_noctur
 
 ## Etapa 2
 
-13. **CLI:** `--progreso-json` en `crear` y `redactar`. Comandos nuevos `tpi vista-previa` (3 cuadros por
-    tema), `tpi publicar` (portada y textos con IA), `tpi panel` e `tpi icono`.
-14. **`panel/`:** `app.py` (arranque en 127.0.0.1), `tareas.py` (un proceso a la vez, con cancelación y
-    progreso), `editor.py` (tarjetas ↔ guion y vista previa LaTeX) y `paginas/` (crear, videos, estilos,
-    ajustes).
+13. **CLI:** `--progreso-json` en `crear`, `redactar`, `publicar`, `vista-previa` y `doctor`. Comandos nuevos
+    `tpi vista-previa` (3 cuadros por tema), `tpi publicar` (portada y textos con IA), `tpi panel` e `tpi icono`.
+    La escritura del YAML pasa a `guion.a_yaml` (la usan la IA y el panel).
+14. **`panel/`:** `app.py` (arranque en 127.0.0.1, bucle asyncio estándar), `tareas.py` (un proceso a la vez,
+    con cancelación y progreso), `editor.py` (tarjetas ↔ guion), `formulas.py` (vista previa LaTeX),
+    `biblioteca.py` (guiones y videos) y `paginas/` (crear, videos, estilos, ajustes). Las rutas que llegan
+    desde el navegador se validan: solo `guiones/`, `salida/`, stickers y fondos.
 15. **Instalador y `doctor`:** dependencia `nicegui` y revisión de que el panel carga.
 16. **Verificación:**
     - Recorrido del panel con Playwright en el sandbox: crear desde texto con Gemini simulado, editar, crear

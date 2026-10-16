@@ -6,6 +6,10 @@ inclusion: always
 
 - **Solo Python.** Stack: Python 3.11+ (el instalador usa 3.12), Manim Community Edition, manim-voiceover,
   Whisper, FFmpeg y LaTeX. Nada de Next.js, React, Node ni frontend en este repo.
+- **El panel de control** (`src/tpi_videos/panel/`) es Python con NiceGUI: sin JavaScript ni HTML propios,
+  sin Node ni npm. Escucha solo en `127.0.0.1` y ejecuta los comandos `tpi … --progreso-json` en procesos
+  aparte (uno a la vez). Toda ruta que llega desde el navegador se valida (solo `guiones/`, `salida/`,
+  `mis_ajustes/stickers` y `mis_ajustes/fondos`); nunca servir `.env`. Verificarlo con Playwright y capturas.
 - **100 % independiente de la web (Sistema 1, Sistema-omicrom).** No compartir código, dependencias,
   credenciales ni despliegues con la web.
 - **Usuario no técnico, español de Chile.** Textos de la CLI, errores y documentación en español claro.
