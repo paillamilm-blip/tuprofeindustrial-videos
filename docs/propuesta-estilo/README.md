@@ -3,21 +3,26 @@
 Prueba hecha con el motor de video, imitando tus videos de @tuprofeindustrial.
 Todavía **no** es parte del motor: es solo para que decidas.
 
-## 1. Tu estilo en el motor
+## 🎬 Video de muestra (animado, con voz y subtítulos)
 
-![Gancho, paso a paso y resultado con el estilo Hoja de desarrollo](1_tu_estilo_en_el_motor.png)
+**[▶ Abrir video_muestra.mp4](video_muestra.mp4)**: en la página que se abre, presiona **"View raw"**
+o el botón de descarga para verlo.
 
-Gancho, paso a paso y resultado. Títulos con la letra **5** y subtítulos con la letra **A** (ver abajo).
+- Mismas animaciones del motor: cada dato se subraya cuando la voz lo dice, los términos pasan de una
+  ecuación a la siguiente y los pasos anteriores quedan arriba, más chicos.
+- Títulos con **Comic Neue** en mayúsculas y subtítulos con **Bangers**: pocas palabras y la que suena en
+  amarillo.
 
-## 2. Opciones de letras
+## Las 3 letras para títulos
 
-![Cinco letras para títulos y tres para subtítulos](2_opciones_de_letras.png)
+![Gancho con las 3 letras](3_titulos_gancho.png)
 
-- **Títulos:** de la 1 a la 5. En la prueba se usó la **5 (Caveat Brush)**.
-- **Subtítulos:** de la A a la C. En la prueba se usó la **A (Luckiest Guy)**.
+![Paso a paso con las 3 letras](4_titulos_paso.png)
 
-Todas son gratuitas y traen tildes y ñ en mayúscula.
+1. **Comic Neue**: cómic técnico, la más clara en el celular (la del video).
+2. **Caveat Bold**: escrita a mano, más informal.
+3. **Patrick Hand**: escrita a mano, ordenada.
 
 ---
 
-Responde en el chat de Kiro: **¿apruebas el diseño?** y **¿qué letras prefieres?** (por ejemplo: "títulos 5, subtítulos A").
+Responde en el chat de Kiro con el número de la letra para los títulos (por ejemplo: **"sí, títulos 1"**).
