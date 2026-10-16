@@ -112,8 +112,13 @@ titulo "Revisión final"
 estado=$?
 echo
 if [ $estado -eq 0 ]; then
-  "$REPO/tpi" icono >/dev/null 2>&1 && verde "Ícono «Panel Tu Profe Industrial» listo en tu Escritorio"
-  verde "¡Listo! Abre el panel de control con doble clic en ese ícono, o con:"
+  # La primera vez se muestra en Finder; al actualizar solo se renueva (sin abrir ventanas)
+  if [ -e "$HOME/Desktop/Panel Tu Profe Industrial.command" ]; then
+    "$REPO/tpi" icono --sin-mostrar >/dev/null 2>&1 && verde "Ícono «Panel Tu Profe Industrial» actualizado en tu Escritorio"
+  else
+    "$REPO/tpi" icono >/dev/null 2>&1 && verde "Ícono «Panel Tu Profe Industrial» listo en tu Escritorio (se abrió Finder para mostrártelo)"
+  fi
+  verde "¡Listo! Abre el panel de control con doble clic en ese ícono (azul, con un engranaje amarillo), o con:"
   echo "   ./tpi panel"
   echo "   (o crea un video desde la Terminal: ./tpi crear guiones/ejemplos/fisica_caida_libre.yaml --borrador --abrir)"
 else

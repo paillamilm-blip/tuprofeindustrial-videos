@@ -101,7 +101,7 @@ def marco(ruta_activa: str) -> Iterator[None]:
     ui.colors(primary=AZUL, secondary="#5B6B86", accent=ROJO, positive=VERDE, negative=ROJO)
     with ui.header().classes("items-center justify-between px-6 py-2").style(f"background:{AZUL}"):
         with ui.row().classes("items-center gap-3"):
-            ui.icon("settings").classes("text-3xl").style("color:#FFC72C")
+            ui.image("/marca/panel.png").classes("w-11 h-11").props('alt="" no-spinner no-transition')
             with ui.column().classes("gap-0"):
                 ui.label("TU PROFE INDUSTRIAL").classes("tpi-marca text-lg leading-tight")
                 ui.label("Motor de video · panel de control").classes("text-xs opacity-80")
