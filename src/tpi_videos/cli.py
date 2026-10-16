@@ -13,7 +13,7 @@
 ./tpi emojis                         emojis 3D que puedes poner en el guion
 ./tpi voces                          voces disponibles en español
 ./tpi panel                          abre el panel de control en el navegador (solo en este Mac)
-./tpi icono                          crea un ícono en el Escritorio para abrir el panel
+./tpi icono                          crea el ícono del panel en el Escritorio y te lo muestra en Finder
 ./tpi publicar salida/x/x.mp4        portada + título, descripción y hashtags para publicar
 ./tpi vista-previa --tema X          3 cuadros de muestra de un estilo
 """
@@ -415,24 +415,25 @@ def cmd_panel(args: argparse.Namespace) -> int:
 
 
 def cmd_icono(args: argparse.Namespace) -> int:
-    import shlex
+    from .icono import crear_icono, es_mac
 
-    from .entorno import raiz_proyecto
-
-    escritorio = Path.home() / "Desktop"
-    if not escritorio.is_dir():
-        escritorio = Path.home()
-    destino = escritorio / "Panel Tu Profe Industrial.command"
-    raiz = raiz_proyecto()
-    destino.write_text(
-        "#!/bin/bash\n"
-        "# Abre el panel de control del motor de video (doble clic). Para cerrarlo: cierra esta ventana.\n"
-        f"cd {shlex.quote(str(raiz))} && ./tpi panel\n",
-        encoding="utf-8",
+    icono = crear_icono(mostrar=not args.sin_mostrar)
+    consola.print(f"[green bold]✅ Ícono listo:[/] {icono.ruta}")
+    if icono.con_imagen:
+        consola.print("   Es el cuadrado azul con el engranaje amarillo y el ▶ rojo.")
+    elif es_mac():
+        consola.print("   (No pude ponerle la imagen de tu marca: se ve como un documento de la Terminal.)")
+    if icono.mostrado:
+        consola.print(
+            "   Se abrió una ventana de Finder con el ícono marcado: doble clic en él para abrir el panel."
+        )
+    else:
+        consola.print("   Doble clic en «Panel Tu Profe Industrial» de tu Escritorio para abrir el panel.")
+    consola.print("   Tip: arrástralo al lado derecho del Dock (junto a la papelera) y lo abres con un clic.")
+    consola.print(
+        "   ¿No lo ves en el escritorio? Clic derecho en el escritorio → desmarca «Usar pilas», o en Ajustes "
+        "del Sistema → Escritorio y Dock → «Mostrar ítems», marca «En el escritorio»."
     )
-    destino.chmod(0o755)
-    consola.print(f"[green bold]✅ Ícono creado:[/] {destino}")
-    consola.print("   Haz doble clic en «Panel Tu Profe Industrial» de tu Escritorio para abrir el panel.")
     consola.print("   La primera vez el Mac puede preguntar si quieres abrirlo: responde «Abrir».")
     return 0
 
@@ -558,7 +559,8 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--no-abrir", action="store_true", help="no abrir el navegador automáticamente")
     s.set_defaults(func=cmd_panel)
 
-    s = sub.add_parser("icono", help="crea un ícono en el Escritorio para abrir el panel con doble clic")
+    s = sub.add_parser("icono", help="crea el ícono del panel en el Escritorio y te lo muestra en Finder")
+    s.add_argument("--sin-mostrar", action="store_true", help="no abrir Finder (lo usa el instalador)")
     s.set_defaults(func=cmd_icono)
 
     s = sub.add_parser("publicar", help="kit para publicar: portada + título, descripción y hashtags")

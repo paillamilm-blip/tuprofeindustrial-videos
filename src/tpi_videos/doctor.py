@@ -175,6 +175,18 @@ def diagnosticar(probar_red: bool = False) -> list[Chequeo]:
             None if version_panel else "Ejecuta ./scripts/instalar_mac.sh (instala lo nuevo)",
         )
     )
+    from .icono import NOMBRE, escritorio
+
+    icono = escritorio() / NOMBRE
+    donde = "en tu Escritorio" if icono.parent.name == "Desktop" else str(icono)
+    chequeos.append(
+        Chequeo(
+            "Ícono del panel (opcional)",
+            "ok" if icono.exists() else "opcional",
+            donde if icono.exists() else "no está en tu Escritorio",
+            None if icono.exists() else "Créalo con: ./tpi icono (te lo muestra en Finder)",
+        )
+    )
 
     from . import whisper_sync
 

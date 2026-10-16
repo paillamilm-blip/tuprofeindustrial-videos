@@ -33,6 +33,7 @@ panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-
 | `tipografia.py` / `emojis.py` | Letras incluidas (grosor más cercano, medición igual a lo que se dibuja) / emojis 3D y stickers propios |
 | `publicar.py` / `vista_previa.py` | Kit de publicación (portada del gancho + título, descripción y hashtags con Gemini o plantilla) / 3 cuadros de muestra por estilo |
 | `panel/` | Panel de control: páginas Crear, Mis videos, Estilos y Ajustes; `tareas.py` ejecuta los comandos `tpi` con progreso en JSON |
+| `icono.py` | Ícono del panel en el Escritorio (`.command`) con la imagen de la marca; lo muestra en Finder |
 | `tex.py` | Plantilla LaTeX mínima, coma decimal chilena, división de fórmulas para `TransformMatchingTex` |
 | `subtitulos.py` / `whisper_sync.py` | Alineación texto-audio y estilo CapCut (ASS) / transcripción con Whisper |
 | `postproduccion.py`, `entorno.py`, `doctor.py` | FFmpeg, rutas de Homebrew/LaTeX, diagnóstico |
@@ -58,6 +59,7 @@ panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-
 | **Ajustes del usuario en `mis_ajustes/`** | Editar `marca.yaml` | Git lo ignora: actualizar el motor nunca choca con lo que personaliza el profe |
 | **Panel con NiceGUI**, local | Gradio o Streamlit; app nativa; web en internet | Es Python (regla del repo), se ve como una app y no un formulario, no cuesta ni expone nada: escucha solo en `127.0.0.1` (NiceGUI escucha en toda la red si no se indica) |
 | **El panel ejecuta los comandos `tpi`** en procesos aparte (`--progreso-json`) | Llamar al motor dentro del panel | Si un video falla, el panel sigue vivo; cancelar detiene también LaTeX y FFmpeg; lo que hace el panel es exactamente lo que hacen los comandos |
+| **Ícono `.command` con imagen propia** (AppleScript-ObjC vía `osascript`, el método de `fileicon`) | Una app `.app` con `osacompile`; instalar `fileicon` | Sin instalar nada (viene con macOS) y conserva la ventana de la Terminal para cerrar el panel. Se revisa que macOS guardó el ícono (setIcon responde «sí» aunque falle); si no, el ícono igual funciona |
 | **Bucle `asyncio` estándar** en el panel | uvloop (el que trae uvicorn) | Con uvloop, lanzar un comando mientras otro hilo trabajaba (miniaturas) podía congelar el panel; con el bucle estándar no pasa |
 
 ## Riesgos y mitigaciones

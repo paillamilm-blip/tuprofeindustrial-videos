@@ -8,6 +8,7 @@ import webbrowser
 from nicegui import app, ui
 
 from ..entorno import FUENTES_DIR, PAQUETE, raiz_proyecto
+from ..icono import IMAGEN
 from .paginas import ajustes, crear, estilos, videos
 from .tareas import TAREAS
 
@@ -39,6 +40,7 @@ def iniciar(puerto: int = 8765, abrir: bool = True) -> None:
         (raiz / "mis_ajustes" / sub).mkdir(parents=True, exist_ok=True)
     app.add_static_files("/fuentes", FUENTES_DIR)
     app.add_static_files("/emojis", PAQUETE / "assets" / "emojis")
+    app.add_static_files("/marca", IMAGEN.parent)  # el ícono de la marca (encabezado del panel)
     # Solo estas carpetas se pueden ver desde el navegador (nunca .env ni el resto del Mac)
     app.add_media_files("/medios/salida", raiz / "salida")
     app.add_media_files("/medios/stickers", raiz / "mis_ajustes" / "stickers")
@@ -54,7 +56,7 @@ def iniciar(puerto: int = 8765, abrir: bool = True) -> None:
         host=HOST,
         port=puerto,
         title="Panel · Tu Profe Industrial",
-        favicon="🎬",
+        favicon=IMAGEN,  # la pestaña del navegador lleva el mismo ícono del Escritorio
         language="es",
         reload=False,
         show=abrir,

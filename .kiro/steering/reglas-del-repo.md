@@ -10,6 +10,8 @@ inclusion: always
   sin Node ni npm. Escucha solo en `127.0.0.1` y ejecuta los comandos `tpi … --progreso-json` en procesos
   aparte (uno a la vez). Toda ruta que llega desde el navegador se valida (solo `guiones/`, `salida/`,
   `mis_ajustes/stickers` y `mis_ajustes/fondos`); nunca servir `.env`. Verificarlo con Playwright y capturas.
+- **Lo propio del Mac** (`osascript`, `open`, `xattr`, `.command`) no se puede probar en el sandbox Linux:
+  simularlo con comandos falsos que registren sus argumentos, y decir en la PR qué quedó sin probar en un Mac.
 - **100 % independiente de la web (Sistema 1, Sistema-omicrom).** No compartir código, dependencias,
   credenciales ni despliegues con la web.
 - **Usuario no técnico, español de Chile.** Textos de la CLI, errores y documentación en español claro.

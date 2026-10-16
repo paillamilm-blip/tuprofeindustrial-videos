@@ -46,15 +46,22 @@ cd tuprofeindustrial-videos
 - Tarda entre 10 y 25 minutos la primera vez. Te pedirá **tu contraseña del Mac** (al instalar LaTeX).
 - Puedes repetirlo cuando quieras: lo que ya está instalado se salta.
 - Al final ejecuta `./tpi doctor`, que revisa todo. Si algo sale con ❌, sigue la flecha amarilla.
-- Si todo está bien, deja en tu Escritorio el ícono **«Panel Tu Profe Industrial»**.
+- Si todo está bien, deja en tu Escritorio el ícono **«Panel Tu Profe Industrial»** (la primera vez se abre
+  Finder para mostrártelo).
 
 ## 2. El panel de control (lo más fácil)
 
-Abre el panel con **doble clic en el ícono «Panel Tu Profe Industrial»** de tu Escritorio, o desde la Terminal:
+<img src="src/tpi_videos/assets/icono/panel.png" alt="Ícono del panel: cuadrado azul con un engranaje amarillo y un ▶ rojo" width="88" align="right">
+
+Abre el panel con **doble clic en el ícono «Panel Tu Profe Industrial»** de tu Escritorio (el cuadrado azul con
+el engranaje amarillo), o desde la Terminal:
 
 ```bash
 cd ~/Downloads/tuprofeindustrial-videos && ./tpi panel
 ```
+
+¿No encuentras el ícono? `./tpi icono` lo crea de nuevo y abre Finder con el ícono marcado. Tip: arrástralo al
+lado derecho del Dock (junto a la papelera) y lo abres con un clic.
 
 Se abre en tu navegador, en `http://127.0.0.1:8765`. **Solo funciona en tu Mac**: nadie más puede entrar,
 ni siquiera desde tu WiFi. Deja abierta la ventana de la Terminal mientras lo usas; para cerrar el panel,
@@ -179,7 +186,7 @@ funciona con la cuenta gratuita).
 | Comando | Qué hace |
 |---|---|
 | `./tpi panel` | Abre el panel de control en tu navegador (solo en tu Mac) |
-| `./tpi icono` | Crea (o repara) el ícono del panel en tu Escritorio |
+| `./tpi icono` | Crea (o repara) el ícono del panel en tu Escritorio y te lo muestra en Finder |
 | `./tpi doctor` | Revisa que todo esté instalado (agrega `--red` para probar también la voz y la clave de IA) |
 | `./tpi redactar ENUNCIADO --crear` | La IA escribe el guion desde un texto, foto o PDF (y crea el borrador) |
 | `./tpi clave` | Guarda tu clave de Gemini para `redactar` y el kit de publicación |
@@ -241,7 +248,7 @@ tpi                   lanzador de comandos
 | `Falta instalar el panel de control` | `./scripts/instalar_mac.sh` (instala lo nuevo y no toca lo que ya tienes) |
 | El panel no se abre en el navegador | Abre a mano `http://127.0.0.1:8765` (con la ventana de la Terminal abierta) |
 | `El panel ya está abierto` | Ya hay un panel funcionando: usa esa pestaña del navegador, o cierra la otra ventana de la Terminal |
-| El ícono del Escritorio no abre | `./tpi icono` lo crea de nuevo. La primera vez el Mac puede preguntar: responde «Abrir» |
+| No veo el ícono del panel (o no abre) | `./tpi icono` lo crea de nuevo y abre Finder con el ícono marcado. Si en Finder está pero no en el escritorio: clic derecho en el escritorio → desmarca «Usar pilas», o en Ajustes del Sistema → Escritorio y Dock → «Mostrar ítems», marca «En el escritorio». La primera vez el Mac puede preguntar: responde «Abrir» |
 | `Falta la clave de Gemini` / `Gemini rechazó la clave` | `./tpi clave` (créala en aistudio.google.com/apikey) |
 | `Llegaste al límite de uso de Gemini` | La cuenta gratuita tiene un límite por minuto y por día: espera y repite |
 | `Falta LaTeX` | Cierra la Terminal, ábrela de nuevo y ejecuta `./scripts/instalar_mac.sh` |
