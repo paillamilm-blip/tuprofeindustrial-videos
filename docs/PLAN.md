@@ -6,11 +6,12 @@ Enunciado de Matemática / Física / Ingeniería → video vertical 9:16 de 30�
 sintética chilena y subtítulos estilo CapCut, listo para TikTok, Reels y Shorts. Repo **solo Python**,
 independiente de la web (Sistema 1).
 
-## Arquitectura (v0.2)
+## Arquitectura (v0.3)
 
 ```
 enunciado (texto, foto o PDF) ─► redactor.py (Gemini escribe → motor valida → Gemini revisa) ─► guion.yaml
 guion.yaml ─► guion.py (valida, errores en español) ─► revision.py (duración, gancho, pedagogía)
+          ─► temas.py (estilo: --tema > guion > marca.yaml) ─► tipografia.py · emojis.py
           ─► escena.py (Manim) ── voces.py (manim-voiceover: edge-tts / gTTS / silencio)
           │      └─ linea_de_tiempo.json  (inicio, texto exacto y marcas de cada bloque de voz)
           ─► subtitulos.py (tiempos por palabra: voz exacta > Whisper > estimado → archivo ASS)
@@ -25,8 +26,10 @@ guion.yaml ─► guion.py (valida, errores en español) ─► revision.py (dur
 | `guion.py` | Formato del guion (pydantic) y mensajes claros (incluye la trampa de comillas dobles con LaTeX) |
 | `revision.py` | Reglas de guion corto y de pedagogía; estimación de duración calibrada con la voz es-CL |
 | `voces.py` | Servicios de voz para manim-voiceover; edge-tts entrega la marca de tiempo de cada palabra |
-| `escena.py` | Secciones del video: gancho, enunciado, datos, pizarra de pasos, resultado, verificación, reto, cierre |
-| `componentes.py` | Diseño 9:16: zonas seguras, texto con líneas parejas, fórmulas divididas en partes, íconos |
+| `escena.py` | Secciones del video: gancho, enunciado, datos, pizarra de pasos (con «error típico»), resultado, verificación, reto, cierre |
+| `componentes.py` | Diseño 9:16: zonas seguras por marco, texto con líneas parejas, fórmulas divididas en partes, fondos, hoja, emojis |
+| `temas.py` | Estilos visuales (`plantillas/temas/` y los propios en `mis_ajustes/temas/`): marco, colores, letras, fondo, subtítulos y animación |
+| `tipografia.py` / `emojis.py` | Letras incluidas (grosor más cercano, medición igual a lo que se dibuja) / emojis 3D y stickers propios |
 | `tex.py` | Plantilla LaTeX mínima, coma decimal chilena, división de fórmulas para `TransformMatchingTex` |
 | `subtitulos.py` / `whisper_sync.py` | Alineación texto-audio y estilo CapCut (ASS) / transcripción con Whisper |
 | `postproduccion.py`, `entorno.py`, `doctor.py` | FFmpeg, rutas de Homebrew/LaTeX, diagnóstico |
@@ -46,6 +49,10 @@ guion.yaml ─► guion.py (valida, errores en español) ─► revision.py (dur
 | **Validación en capas** | Confiar en una sola respuesta | 1) esquema del guion, 2) LaTeX compilado de verdad, 3) reglas de `tpi revisar`, 4) segunda pasada de Gemini como revisor que rehace los cálculos, 5) hasta 2 rondas de corrección y 6) revisión humana del borrador |
 | **Gemini 3.8 Flash** por defecto | Gemini 4 Argon, otros proveedores | Estable y con cuenta gratuita; razonamiento `high` para la matemática. `--modelo` permite usar otro (ej. Argon, de pago) |
 | **API `generateContent`** | API Interactions (la nueva de Google) | Documentada para los modelos actuales y estable; migrar es cambiar un solo módulo (`redactor._pedir`) |
+| **Temas en YAML** con «Hoja de desarrollo» por defecto | Un solo diseño fijo; CSS/HTML | El estilo de Instagram del profe pasa a ser el principal sin perder el original: `pizarra_nocturna` sale idéntico cuadro a cuadro (comparado contra los videos de `main`) |
+| **Emojis Noto 3D en PNG** | Emojis 2D, Twemoji, emojis de la letra del sistema | Se ven modernos, tienen licencia libre (OFL) y no dependen de las letras del Mac (Manim no dibuja emojis de color dentro de un texto) |
+| **Paso «error típico»** (`error: true`) | Solo pasos correctos | Es el formato de los posts con más alcance del canal («¿Resuelves así?»): mostrar el error y tacharlo engancha y enseña |
+| **Ajustes del usuario en `mis_ajustes/`** | Editar `marca.yaml` | Git lo ignora: actualizar el motor nunca choca con lo que personaliza el profe |
 
 ## Riesgos y mitigaciones
 
@@ -64,8 +71,10 @@ guion.yaml ─► guion.py (valida, errores en español) ─► revision.py (dur
 1. ✅ **v0.1:** motor completo guion → video, 3 ejemplos, instalador para Mac, diagnóstico.
 2. ✅ **v0.2 · Redactar guiones desde el enunciado:** `tpi redactar` (texto, foto o PDF) con Gemini, validación
    en capas y `--crear` para obtener el borrador en un solo comando.
-3. **Visuales por materia:** gráficos de funciones (parábolas, rectas), diagramas de física (caída libre,
+3. ✅ **v0.3 · Estilo «Hoja de desarrollo»:** temas, letras Comic Neue + Bangers, emojis 3D, stickers propios,
+   paso «error típico» y gancho con fórmula.
+4. **v0.4 · Panel de control local** (NiceGUI, solo en el Mac) y kit de publicación (portada + textos con IA).
+5. **Visuales por materia:** gráficos de funciones (parábolas, rectas), diagramas de física (caída libre,
    plano inclinado, fuerzas) y de electricidad (circuitos serie/paralelo).
-4. **Producción:** música de fondo que baja cuando hay voz, portada/miniatura, título + descripción +
-   hashtags para publicar, voz Azure o voz propia grabada.
-5. **Escala:** crear varios videos en lote y una verificación automática de render en GitHub Actions.
+6. **Producción:** música de fondo que baja cuando hay voz, voz Azure o voz propia grabada.
+7. **Escala:** crear varios videos en lote y una verificación automática de render en GitHub Actions.

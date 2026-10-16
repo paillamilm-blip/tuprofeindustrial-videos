@@ -1,0 +1,49 @@
+# Ejemplo de guion · Matemática · Cuadrado de binomio con «error típico»
+# Crear el video:   ./tpi crear guiones/ejemplos/matematica_error_binomio.yaml
+# Muestra el paso «error: true»: la forma equivocada aparece y se tacha con una ✗ roja.
+# Es el formato de tus posts que más enganchan («¿Resuelves así?», «El 90 % se equivoca»).
+
+titulo: "Cuadrado de binomio: el error más común"
+materia: matematica
+nivel: "1° medio"
+
+# Gancho con la fórmula equivocada a la vista: el público quiere saber si está bien o mal.
+gancho:
+  texto: "¿Resuelves así?"
+  tex: '(x + 5)^2 = x^2 + 25'
+  voz: "¿Tú también lo resuelves así? Casi todos caen en este error."
+  emoji: "🚨"
+
+enunciado:
+  texto: "Desarrolla (x + 5)² sin caer en el error más común."
+  voz: "Desarrollemos x más cinco, al cuadrado, sin caer en el error más común."
+  destacar: ["(x + 5)²"]
+
+pasos:
+  - nota: "Error típico"
+    tex: '(x + 5)^2 = x^2 + 25'
+    voz: "El error es elevar cada término por separado. Así se pierde un término completo."
+    error: true
+  - nota: "Al cuadrado: por sí mismo"
+    tex: '(x + 5)^2 = (x + 5)(x + 5)'
+    voz: "Elevar al cuadrado es multiplicar el binomio por sí mismo."
+    emoji: "💡"
+  - nota: "Cada término por cada término"
+    tex: '(x + 5)(x + 5) = x^2 + 5x + 5x + 25'
+    voz: "Multiplicamos cada término por cada término. Aparece dos veces cinco x."
+    destacar: ['5x + 5x']
+
+resultado:
+  tex: '(x + 5)^2 = x^2 + 10x + 25'
+  voz: "Cinco x más cinco x es diez x. Ese término del medio es el que casi todos olvidan."
+  emoji: "✅"
+
+verificacion:
+  texto: "Prueba con x = 1: (1 + 5)² = 36 y 1 + 10 + 25 = 36."
+  voz: "Compruébalo con x igual a uno. Seis al cuadrado da treinta y seis. Uno más diez más veinticinco, también."
+  emoji: "🤓"
+
+reto:
+  texto: "Desarrolla (x - 3)². ¡Ojo con el signo del término del medio!"
+  voz: "Ahora tú: desarrolla x menos tres, al cuadrado. Ojo con el signo. Déjalo en los comentarios."
+  emoji: "✍️"

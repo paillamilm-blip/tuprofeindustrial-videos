@@ -11,17 +11,21 @@
 #    "nueve coma ocho metros por segundo al cuadrado", no "9,8 m/s²").
 #  • Frases cortas (máx. ~15 palabras). Una idea por frase.
 #  • Coma decimal chilena: escribe 9,8 en la fórmula; el motor la acomoda solo.
+#  • Emojis 3D: campo «emoji» (ver ./tpi emojis). Nunca dentro de «voz»: se leerían en voz alta.
 #  • Guía completa: docs/GUIA_GUIONES.md
 # ─────────────────────────────────────────────────────────────────────────────
 
 titulo: "Título corto del ejercicio"
 materia: fisica              # matematica | fisica | ingenieria
 nivel: "2° medio"            # opcional
+# tema: pizarra_nocturna     # opcional: otro estilo solo para este video (ver ./tpi temas)
 
 # Los primeros 3 segundos: una pregunta o un dato que sorprenda. Nada de "Hola" ni "en este video…".
 gancho:
   texto: "¿Pregunta que engancha con un número, como 20 metros?"
   voz: "Pregunta que engancha, dicha en voz alta."
+  emoji: "🤔"                # opcional: aparece con un salto (ver ./tpi emojis)
+  # tex: 'h = 20\ \text{m}'   # opcional: una fórmula bajo la pregunta
 
 # El problema tal como lo verías en una guía. "destacar" subraya frases cuando la voz las dice.
 enunciado:
@@ -40,6 +44,9 @@ datos:
 #   nota:       texto pequeño sobre la fórmula (opcional)
 #   destacar:   parte de la fórmula que se enmarca (opcional, tal como está en tex)
 #   transformar: false  → la fórmula se escribe de cero en vez de transformarse
+#   emoji:      emoji junto a la fórmula (opcional)
+#   error: true → ERROR TÍPICO: muestra la forma equivocada y la tacha con una ✗ roja.
+#                 El paso siguiente debe mostrar la forma correcta. ¡Engancha mucho!
 pasos:
   - nota: "Ecuación que usamos"
     tex: 'h = \frac{1}{2} g t^2'
@@ -52,6 +59,7 @@ pasos:
 resultado:
   tex: 't \approx 2,02\ \text{s}'
   voz: "El resultado es… (di también la unidad)."
+  emoji: "✅"                # opcional
 
 # Opcional: ¿el resultado tiene sentido? Ayuda a pensar, no solo a calcular.
 verificacion:

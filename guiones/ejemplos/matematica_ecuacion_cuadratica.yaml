@@ -9,6 +9,7 @@ nivel: "1° y 2° medio"
 gancho:
   texto: "¿Qué dos números suman 5 y multiplicados dan 6?"
   voz: "¿Qué dos números suman cinco y multiplicados dan seis? Con eso resuelves esta ecuación."
+  emoji: "🤔"
 
 enunciado:
   texto: "Resuelve la ecuación x² - 5x + 6 = 0 factorizando."
@@ -22,6 +23,7 @@ pasos:
   - nota: "Dos números: suman 5 y multiplican 6"
     tex: '(x - 2)(x - 3) = 0'
     voz: "Buscamos dos números que sumen cinco y multipliquen seis. Son el dos y el tres."
+    emoji: "💡"
   - nota: "Si un producto es cero, un factor es cero"
     tex: 'x - 2 = 0 \quad \text{o} \quad x - 3 = 0'
     voz: "Si un producto da cero, alguno de sus factores es cero."
@@ -31,6 +33,7 @@ pasos:
 resultado:
   tex: 'x_1 = 2 \qquad x_2 = 3'
   voz: "Las soluciones son dos y tres."
+  emoji: "✅"
 
 verificacion:
   texto: "Comprueba con x = 2: 4 - 10 + 6 = 0."
@@ -39,3 +42,4 @@ verificacion:
 reto:
   texto: "Resuelve x² - 7x + 12 = 0. Pista: suman 7 y multiplican 12."
   voz: "Ahora tú: resuelve x al cuadrado, menos siete x, más doce, igual a cero. Te leo en los comentarios."
+  emoji: "✍️"

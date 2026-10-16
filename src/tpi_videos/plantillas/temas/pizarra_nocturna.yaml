@@ -1,0 +1,13 @@
+# El estilo original del motor: pizarra azul noche con cuadrícula técnica.
+# Los colores, materias y subtítulos salen de marca.yaml (así se ve exactamente como antes).
+nombre: "Pizarra nocturna"
+descripcion: "El estilo original: pizarra azul noche con cuadrícula técnica y letra Montserrat."
+marco: pizarra
+usar_marca: true
+tipografia:
+  titulos: {familia: "Montserrat", grosor: conservar}
+  texto: {familia: "Montserrat", grosor: conservar}
+nota: {rol: texto, escala: 1.0, color: materia}
+formulas_negrita: true
+fondo: {tipo: cuadricula}
+animacion: {titulos: aparecer}

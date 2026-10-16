@@ -8,6 +8,7 @@ nivel: "Electricidad · Técnico profesional"
 gancho:
   texto: "¿Cuántos watts quema una resistencia de 24 Ω en 12 V?"
   voz: "¿Cuántos watts quema una resistencia conectada a doce volts? Lo calculamos en dos pasos."
+  emoji: "🔥"
 
 enunciado:
   texto: "Una resistencia de 24 Ω se conecta a una batería de 12 V. Calcula la corriente y la potencia que disipa."
@@ -24,6 +25,7 @@ pasos:
   - nota: "Ley de Ohm"
     tex: 'I = \frac{V}{R}'
     voz: "Primero la corriente, con la ley de Ohm: voltaje dividido en resistencia."
+    emoji: "⚡"
   - tex: 'I = \frac{12\ \text{V}}{24\ \Omega}'
     voz: "Reemplazamos: doce volts dividido en veinticuatro ohms."
   - tex: 'I = 0,5\ \text{A}'
@@ -38,6 +40,7 @@ pasos:
 resultado:
   tex: 'P = 6\ \text{W}'
   voz: "La resistencia disipa seis watts. Por eso se calienta."
+  emoji: "🔥"
 
 verificacion:
   texto: "Con P = V²/R también da 144/24 = 6 W."
@@ -46,3 +49,4 @@ verificacion:
 reto:
   texto: "¿Y si la batería fuera de 24 V? Calcula la corriente y la potencia."
   voz: "Ahora tú: ¿qué pasa con la corriente y la potencia si la batería es de veinticuatro volts? Comenta tu respuesta."
+  emoji: "🔋"

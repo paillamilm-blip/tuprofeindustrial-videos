@@ -30,12 +30,15 @@ Plantilla comentada: `./tpi nuevo mi_ejercicio` · Ejemplos completos: `guiones/
 titulo: "Caída libre: ¿cuánto tarda en caer?"   # corto: cabe en 1–2 líneas
 materia: fisica                                  # matematica | fisica | ingenieria
 nivel: "2° medio"                                # opcional
+tema: pizarra_nocturna                           # opcional: otro estilo solo para este video (./tpi temas)
 voz: "es-CL-CatalinaNeural"                      # opcional: otra voz solo para este video
 velocidad: "+10%"                                # opcional
 
 gancho:
   texto: "¿Cuánto tarda una piedra en caer 20 metros?"   # en pantalla (los números se destacan solos)
   voz: "¿Cuánto tarda una piedra en caer veinte metros? Menos de lo que crees."
+  emoji: "🪨"                       # opcional: emoji 3D que aparece con un salto (./tpi emojis)
+  tex: 'h = 20\ \text{m}'           # opcional: una fórmula bajo la pregunta
 
 enunciado:
   texto: "Se deja caer una piedra desde 20 metros de altura. Usa g = 9,8 m/s²."
@@ -52,10 +55,16 @@ pasos:
     voz: "Despejamos el tiempo."
     destacar: ['t']                 # parte de la fórmula que se enmarca (opcional)
     transformar: true               # false = escribirla de cero en vez de transformar la anterior
+    emoji: "💡"                     # opcional: junto a la fórmula
+  - nota: "Error típico"
+    tex: 't = \frac{2h}{g}'          # la forma EQUIVOCADA
+    voz: "Mucha gente olvida la raíz. Así el tiempo sale mal."
+    error: true                     # se tacha con una ✗ roja (ver sección 5)
 
 resultado:
   tex: 't \approx 2,02\ \text{s}'
   voz: "La piedra tarda unos dos segundos."
+  emoji: "⏱️"                       # opcional: como sticker en la esquina del recuadro
 
 verificacion: "Con el doble de altura no tarda el doble."   # forma corta: mismo texto para ver y oír
 reto:
@@ -65,6 +74,9 @@ reto:
 
 **Forma corta:** `gancho`, `enunciado`, `verificacion`, `reto` y `cierre` aceptan un solo texto
 (`reto: "…"`); en ese caso se muestra y se dice lo mismo.
+
+`verificacion`, `reto` y `cierre` también aceptan `emoji:`. En el `cierre`, el emoji o tu sticker
+reemplaza al engranaje de la marca.
 
 ## 3. Reglas para la voz (lo que se escucha)
 
@@ -85,7 +97,29 @@ reto:
 - **Verifica:** una frase de "¿tiene sentido?" ayuda a pensar, no solo a calcular.
 - **Termina con un reto parecido:** practicar recordando fija lo aprendido (y genera comentarios).
 
-## 5. LaTeX rápido
+## 5. Emojis y «error típico» (para enganchar)
+
+**Emojis 3D.** Van en su propio campo `emoji:`, nunca dentro de `texto` ni `voz` (en el texto no se
+dibujan y la voz los leería en voz alta). Acepta el emoji (`"🤯"`) o su nombre (`explota`). Lista
+completa: `./tpi emojis`.
+
+- Usa 2 a 4 por video: el gancho casi siempre; en los pasos, solo donde aporten (💡 idea clave, ⚠️ cuidado).
+- **Tus propias imágenes (stickers):** guarda un PNG con fondo transparente en `mis_ajustes/stickers/`
+  (ej. `mis_ajustes/stickers/mascota.png`) y escribe `emoji: mascota`.
+
+**Error típico** (`error: true` en un paso). Es el formato de tus posts que más enganchan («¿Resuelves
+así?», «El 90 % se equivoca»):
+
+1. La fórmula equivocada aparece con la nota «¡ERROR TÍPICO!» (o la tuya), se dibuja una ✗ roja encima,
+   tiembla y salta un 🚨.
+2. El paso siguiente **muestra la forma correcta** y parte de la última fórmula correcta (la tachada no
+   se transforma).
+3. Úsalo una vez por video y nunca como último paso. Truco: pon la misma fórmula equivocada en el
+   gancho (`tex:`) con la pregunta «¿Resuelves así?».
+
+Ejemplo completo: `guiones/ejemplos/matematica_error_binomio.yaml`.
+
+## 6. LaTeX rápido
 
 Escribe las fórmulas **siempre entre comillas simples** `'…'` (con comillas dobles se pierden las `\`).
 
@@ -107,7 +141,7 @@ Escribe las fórmulas **siempre entre comillas simples** `'…'` (con comillas d
   Los términos iguales en dos pasos seguidos se mueven de uno a otro.
 - **`destacar` en un paso** debe escribirse igual que en `tex` (ej. `'0,5\ \text{A}'`).
 
-## 6. Errores comunes
+## 7. Errores comunes
 
 | Mensaje de `./tpi revisar` | Qué hacer |
 |---|---|
@@ -117,3 +151,7 @@ Escribe las fórmulas **siempre entre comillas simples** `'…'` (con comillas d
 | "la voz contiene el signo =" | Escríbelo en palabras: "igual a" |
 | "frase de 24 palabras" | Divídela en dos frases |
 | "¿faltan las unidades?" | Agrega la unidad al resultado: `'2,02\ \text{s}'` |
+| "el emoji «…» no existe" | Elige uno de `./tpi emojis` o guarda tu imagen en `mis_ajustes/stickers/` |
+| "la voz contiene un emoji" / "hay un emoji dentro del texto" | Sácalo de ahí y ponlo en el campo `emoji:` |
+| "un paso con «error: true» necesita la fórmula equivocada" | Agrega `tex:` a ese paso |
+| "el último paso es un error típico" | Agrega después un paso con la forma correcta |

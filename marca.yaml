@@ -4,6 +4,13 @@
 nombre: "Tu Profe Industrial"
 usuario: "@tuprofeindustrial"
 
+# Estilo visual de tus videos (ver ./tpi temas):
+#   hoja_de_desarrollo → tu estilo de Instagram: hoja cuadriculada, títulos de cómic, subtítulos Bangers
+#   pizarra_nocturna   → el estilo original: pizarra azul noche (usa los colores y subtítulos de abajo)
+tema: hoja_de_desarrollo
+
+# ── Colores y subtítulos del tema «pizarra_nocturna» ──────────────────────────────────────────
+# (El tema «hoja_de_desarrollo» trae sus propios colores, letras y subtítulos.)
 colores:            # formato #RRGGBB
   fondo: "#0B1220"       # azul noche (pizarra)
   panel: "#121B2F"       # tarjetas

@@ -3,13 +3,18 @@
 Convierte un ejercicio de **Matemática, Física o Ingeniería** escrito en un archivo de texto (un *guion*) en un
 **video vertical 9:16** listo para TikTok, Reels y Shorts:
 
+- 📓 **Tu estilo «Hoja de desarrollo»**: hoja cuadriculada sobre fondo difuminado, títulos de cómic técnico
+  (Comic Neue) que se escriben como con plumón. El estilo original «Pizarra nocturna» sigue disponible.
 - 🧮 **Animaciones con Manim**: las fórmulas (LaTeX) se transforman paso a paso, como en una pizarra.
+- 🤯 **Emojis 3D y «error típico»**: emojis que aparecen con un salto y un paso que muestra la forma
+  equivocada y la tacha con una ✗ roja («¿Resuelves así?»).
 - 🗣️ **Voz sintética chilena** (manim-voiceover + voces neurales `es-CL`), sincronizada con cada animación.
-- 💬 **Subtítulos estilo CapCut**: palabras grandes y la que suena en amarillo (FFmpeg; Whisper cuando hace falta).
+- 💬 **Subtítulos estilo CapCut**: letra Bangers, pocas palabras y la que suena en amarillo (FFmpeg; Whisper
+  cuando hace falta).
 
 > Es el **Sistema 2** del ecosistema Tu Profe Industrial y es **100 % independiente de la web**: este repo es solo Python.
 
-![Cuadros del video de ejemplo de caída libre: gancho, problema, pasos, resultado y reto](docs/img/vista_previa.jpg)
+![Cuadros del ejemplo «error típico» en el estilo Hoja de desarrollo: gancho, error tachado, pasos, resultado y reto](docs/img/vista_previa.jpg)
 
 ```
 guion .yaml ─► ./tpi revisar ─► Manim + voz ─► subtítulos ─► FFmpeg ─► salida/…/video.mp4 (1080×1920)
@@ -75,6 +80,28 @@ para subir a YouTube.
 
 Cómo escribir un buen guion (con ejemplos de LaTeX): **[docs/GUIA_GUIONES.md](docs/GUIA_GUIONES.md)**.
 
+### Emojis y «error típico» en el guion
+
+```yaml
+gancho:
+  texto: "¿Resuelves así?"
+  tex: '(x + 5)^2 = x^2 + 25'     # una fórmula bajo la pregunta (opcional)
+  emoji: "🚨"                      # emoji 3D que aparece con un salto (opcional)
+
+pasos:
+  - nota: "Error típico"
+    tex: '(x + 5)^2 = x^2 + 25'
+    voz: "El error es elevar cada término por separado."
+    error: true                    # se tacha con una ✗ roja; el paso siguiente muestra la forma correcta
+```
+
+- Los emojis van en su campo `emoji:` (en el gancho, los pasos, el resultado, la verificación, el reto y el
+  cierre), nunca dentro de `texto` o `voz`. Lista: `./tpi emojis`.
+- **Tus propias imágenes:** guarda un PNG con fondo transparente en `mis_ajustes/stickers/` (por ejemplo
+  `mascota.png`) y escribe `emoji: mascota`. En el `cierre` reemplaza al engranaje de la marca.
+- Ejemplo completo: `guiones/ejemplos/matematica_error_binomio.yaml`. La IA (`./tpi redactar`) también
+  elige emojis y agrega un error típico cuando existe uno famoso.
+
 ## 4. Redactar guiones con IA (Gemini)
 
 **Una sola vez:** crea tu clave gratis en [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
@@ -125,26 +152,39 @@ funciona con la cuenta gratuita).
 | `./tpi revisar GUION.yaml` | Revisa el guion sin crear el video |
 | `./tpi crear GUION.yaml` | Crea el video final (1080×1920, 30 fps) |
 | `./tpi crear GUION.yaml --borrador` | Versión rápida para revisar (540×960) |
+| `./tpi crear GUION.yaml --tema pizarra_nocturna` | Con otro estilo visual (ver `./tpi temas`) |
 | `./tpi crear GUION.yaml --voz es-CL-CatalinaNeural` | Otra voz (ver `./tpi voces`) |
 | `./tpi crear GUION.yaml --voz silencio` | Sin voz y sin internet: para revisar el diseño |
 | `./tpi crear GUION.yaml --sin-subtitulos` | Sin subtítulos quemados |
 | `./tpi subtitular VIDEO.mp4` | Subtítulos estilo CapCut para **cualquier** video (por ejemplo, uno grabado por ti) |
+| `./tpi temas` | Lista los estilos visuales (⭐ = el que se usa por defecto) |
+| `./tpi emojis` | Lista los emojis 3D y tus stickers |
 | `./tpi voces` | Lista las voces en español |
 
 Agrega `--abrir` a `crear` o `subtitular` para que el video se abra solo al terminar.
 
-## 6. Personalizar la marca
+## 6. Personalizar la marca y el estilo
 
-Edita **`marca.yaml`**: nombre, usuario (@), colores, voz por defecto, frase de cierre y estilo de los
-subtítulos (fuente, tamaño, color de la palabra activa, altura). Todo es opcional.
+- **Estilo de todos tus videos:** `tema:` en `marca.yaml` (`hoja_de_desarrollo` por defecto, o
+  `pizarra_nocturna`, el estilo original).
+- **Estilo de un solo video:** `tema:` dentro del guion, o `--tema` al crearlo.
+- **`marca.yaml`** también define nombre, usuario (@), voz por defecto y frase de cierre. Sus colores y
+  subtítulos son los del estilo «Pizarra nocturna»; «Hoja de desarrollo» trae los suyos.
+- **Tus ajustes van en `mis_ajustes/`** (temas, fondos, stickers y cambios de marca). Git ignora esa carpeta:
+  al actualizar el motor nunca se pierden ni chocan.
+
+Así se ve el estilo original «Pizarra nocturna»:
+
+![Cuadros del ejemplo de caída libre en el estilo Pizarra nocturna](docs/img/vista_previa_pizarra.jpg)
 
 ## 7. Dónde queda cada cosa
 
 ```
-guiones/ejemplos/     3 guiones de ejemplo (física, matemática, ingeniería)
+guiones/ejemplos/     4 guiones de ejemplo (física, matemática, ingeniería y un «error típico»)
 guiones/              tus guiones (y los que redacta la IA)
 enunciados/ejemplos/  enunciados de prueba para ./tpi redactar
-marca.yaml            identidad visual y sonora
+marca.yaml            identidad visual y sonora (y el estilo por defecto)
+mis_ajustes/          tus temas, fondos y stickers (no se sube a GitHub)
 .env                  tu clave de Gemini (solo en tu Mac, no se sube)
 salida/               videos generados (no se suben a GitHub)
 src/tpi_videos/       el motor (Python)
@@ -166,12 +206,14 @@ tpi                   lanzador de comandos
 | `No pude generar la voz` | Revisa internet. Alternativas: `--voz gtts` o `--voz silencio` |
 | `parece que la fórmula está entre comillas dobles` | En el guion, escribe las fórmulas entre comillas **simples**: `tex: 'h = \frac{1}{2} g t^2'` |
 | `No pude dibujar la fórmula` | Revisa el LaTeX (llaves `{ }`, comandos con `\`). Pruébala en overleaf.com |
+| `No existe el tema «…»` | Revisa el nombre con `./tpi temas` (en el guion, en `marca.yaml` o en `--tema`) |
+| `el emoji «…» no existe` | Elige uno de `./tpi emojis` o guarda tu imagen en `mis_ajustes/stickers/` |
 | Algo inesperado | Repite con `./tpi --debug crear …` y comparte el mensaje con Kiro |
 
 ## 9. Bueno saber
 
 - **Tiempos** (medidos en las pruebas del sandbox, Linux de 8 núcleos, para ~1 minuto de video): borrador
-  ~15–20 s, final ~35–40 s. En tu Mac pueden variar.
+  ~15–20 s, final ~40–50 s. En tu Mac pueden variar.
 - **Voz:** por defecto usa las voces neurales de Microsoft vía `edge-tts` (gratis, requiere internet). Es un
   servicio no oficial: si el canal crece o se monetiza, conviene pasar a Azure Speech, que tiene las mismas
   voces chilenas con licencia comercial (ver [docs/PLAN.md](docs/PLAN.md)).
@@ -180,4 +222,6 @@ tpi                   lanzador de comandos
 - **IA (Gemini):** con la cuenta gratuita, Google puede usar lo que envías para mejorar sus productos. Para
   enunciados de ejercicios no suele importar; no envíes datos personales de estudiantes. Cada guion usa
   entre 2 y 6 consultas.
-- **Fuente:** Montserrat, licencia SIL Open Font License (`src/tpi_videos/assets/fuentes/OFL.txt`).
+- **Letras:** Montserrat, Comic Neue, Bangers, Cinzel, Caveat y Patrick Hand (SIL Open Font License) y
+  Luckiest Guy (Apache 2.0). Licencias en `src/tpi_videos/assets/fuentes/licencias/`.
+- **Emojis:** Noto Emoji 3D de Google (SIL Open Font License), en `src/tpi_videos/assets/emojis/`.

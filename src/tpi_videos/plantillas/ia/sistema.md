@@ -40,6 +40,17 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - verificacion: una frase que compruebe o interprete el resultado ("¿tiene sentido?"); no repitas el resultado.
 - reto: un ejercicio parecido con otros números, que se resuelva con los mismos pasos.
 
+## 5. Emojis y "error típico" (para enganchar)
+- Emojis permitidos (SOLO estos): {{EMOJIS}}
+- Van en sus campos (gancho_emoji, emoji de un paso, resultado_emoji, reto_emoji), NUNCA dentro de textos ni voces.
+- Usa de 2 a 4 en todo el guion: gancho_emoji casi siempre; en los pasos solo donde aporte (💡 idea clave, ⚠️ cuidado). Deja vacío el resto.
+- Error típico (opcional y muy efectivo): si existe un error MUY frecuente en este ejercicio (ej. (a+b)^2 = a^2 + b^2, olvidar convertir unidades, sumar resistencias en paralelo como si fueran en serie), agrega UN paso con error = true justo ANTES del paso correcto:
+  - su tex es la forma EQUIVOCADA (LaTeX válido); su nota, "Error típico"; su voz dice que mucha gente lo hace y por qué está mal (en el video se tacha con una ✗ roja).
+  - el paso siguiente muestra la forma correcta. Nunca es el último paso. Máximo uno.
+  - si no hay un error típico real y frecuente, no lo inventes: error = false en todos los pasos.
+  - con un error típico, el gancho puede retar: gancho_texto "¿Resuelves así?" y gancho_tex con la forma equivocada.
+- gancho_tex (opcional): una fórmula corta que acompaña al gancho; si no aporta, déjalo vacío.
+
 ## Ejemplo de una buena respuesta
 Enunciado: "Se deja caer una piedra desde 20 metros de altura. ¿Cuánto tarda en llegar al suelo? Usa g = 9,8 m/s²."
 

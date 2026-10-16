@@ -23,6 +23,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, ValidationError
 
 from . import ia
+from .emojis import lista_para_ia, normalizar_para_ia, quitar_emojis
 from .entorno import PLANTILLAS_DIR, raiz_proyecto
 from .errores import ErrorMotor
 from .guion import Guion, cargar_guion, explicar_errores, sin_tildes
@@ -56,6 +57,10 @@ class PasoIA(BaseModel):
     tex: str = Field(description="Ecuación completa del paso en LaTeX, sin $")
     voz: str = Field(description="Por qué se hace este paso, en palabras, sin cifras ni símbolos")
     destacar: list[str] = Field(default_factory=list, description="0 o 1 fragmento copiado del tex")
+    emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida (vacío = ninguno)")
+    error: bool = Field(
+        default=False, description="true solo en el paso 'error típico': su tex es la forma EQUIVOCADA"
+    )
 
 
 class GuionIA(BaseModel):
@@ -66,6 +71,8 @@ class GuionIA(BaseModel):
     nivel: str
     gancho_texto: str
     gancho_voz: str
+    gancho_emoji: str = Field(default="", description="1 emoji de la lista permitida (o vacío)")
+    gancho_tex: str = Field(default="", description="Opcional: fórmula corta bajo el gancho, sin $")
     enunciado_texto: str
     enunciado_voz: str
     enunciado_destacar: list[str]
@@ -73,10 +80,12 @@ class GuionIA(BaseModel):
     pasos: list[PasoIA]
     resultado_tex: str
     resultado_voz: str
+    resultado_emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida")
     verificacion_texto: str
     verificacion_voz: str
     reto_texto: str
     reto_voz: str
+    reto_emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida")
     supuestos: list[str] = Field(
         description="Supuestos o aclaraciones para el profesor (no salen en el video)"
     )
@@ -94,6 +103,7 @@ EJEMPLO = GuionIA(
     nivel="2° medio",
     gancho_texto="¿Cuánto tarda una piedra en caer 20 metros?",
     gancho_voz="¿Cuánto tarda una piedra en caer veinte metros? Menos de lo que crees.",
+    gancho_emoji="🤔",
     enunciado_texto="Se deja caer una piedra desde 20 metros de altura. ¿Cuánto tarda en llegar al suelo? "
     "Usa g = 9,8 m/s².",
     enunciado_voz="Soltamos una piedra desde veinte metros de altura. ¿Cuánto demora en llegar al suelo?",
@@ -129,11 +139,13 @@ EJEMPLO = GuionIA(
     ],
     resultado_tex=r"t \approx 2,02\ \text{s}",
     resultado_voz="Sacamos la raíz: la piedra tarda unos dos segundos en caer.",
+    resultado_emoji="⏱️",
     verificacion_texto="Con el doble de altura no tarda el doble: el tiempo crece con la raíz de la altura.",
     verificacion_voz="Ojo: con el doble de altura no tarda el doble. El tiempo crece con la raíz de la altura.",
     reto_texto="¿Cuánto tarda en caer desde 45 metros? Usa g = 10 m/s².",
     reto_voz="Ahora tú. ¿Cuánto tarda desde cuarenta y cinco metros, con g igual a diez? "
     "Déjalo en los comentarios.",
+    reto_emoji="✍️",
     supuestos=[],
 )
 
@@ -221,7 +233,14 @@ def limpiar_tex(tex: str) -> str:
 
 
 def _texto(s: str) -> str:
-    return " ".join((s or "").replace("—", ", ").split())
+    # Los emojis van en su propio campo: dentro de un texto no se dibujan y la voz los leería
+    return quitar_emojis((s or "").replace("—", ", "))
+
+
+def _emoji(valor: str) -> dict[str, str]:
+    """{"emoji": …} si es un emoji permitido; si no, nada (la IA no puede inventar)."""
+    emoji = normalizar_para_ia(valor)
+    return {"emoji": emoji} if emoji else {}
 
 
 def a_guion(g: GuionIA) -> dict[str, Any]:
@@ -234,12 +253,19 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
         destacar = [d.strip() for d in p.destacar if d.strip() and d.strip() in tex][:1]
         if destacar:
             paso["destacar"] = destacar
+        paso |= _emoji(p.emoji)
+        if p.error and tex:
+            paso["error"] = True
         pasos.append(paso)
+    gancho: dict[str, Any] = {"texto": _texto(g.gancho_texto), "voz": _texto(g.gancho_voz)}
+    if limpiar_tex(g.gancho_tex or ""):
+        gancho["tex"] = limpiar_tex(g.gancho_tex)
+    gancho |= _emoji(g.gancho_emoji)
     guion: dict[str, Any] = {
         "titulo": _texto(g.titulo),
         "materia": g.materia,
         "nivel": _texto(g.nivel) or None,
-        "gancho": {"texto": _texto(g.gancho_texto), "voz": _texto(g.gancho_voz)},
+        "gancho": gancho,
         "enunciado": {
             "texto": enunciado,
             "voz": _texto(g.enunciado_voz),
@@ -247,7 +273,8 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
         },
         "datos": [{"tex": limpiar_tex(d.tex), "voz": _texto(d.voz)} for d in g.datos],
         "pasos": pasos,
-        "resultado": {"tex": limpiar_tex(g.resultado_tex), "voz": _texto(g.resultado_voz)},
+        "resultado": {"tex": limpiar_tex(g.resultado_tex), "voz": _texto(g.resultado_voz)}
+        | _emoji(g.resultado_emoji),
     }
     if _texto(g.verificacion_texto):
         guion["verificacion"] = {
@@ -255,7 +282,9 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
             "voz": _texto(g.verificacion_voz) or None,
         }
     if _texto(g.reto_texto):
-        guion["reto"] = {"texto": _texto(g.reto_texto), "voz": _texto(g.reto_voz) or None}
+        guion["reto"] = {"texto": _texto(g.reto_texto), "voz": _texto(g.reto_voz) or None} | _emoji(
+            g.reto_emoji
+        )
     return guion
 
 
@@ -293,7 +322,8 @@ def errores_latex(guion: Guion) -> list[str]:
     preparar()
     if not all(latex_disponible()):  # sin LaTeX no se puede comprobar (y no es culpa de la IA)
         raise SinLatex
-    formulas = [(f"dato {i}", d.tex) for i, d in enumerate(guion.datos, 1)]
+    formulas = [("gancho", guion.gancho.tex)] if guion.gancho.tex else []
+    formulas += [(f"dato {i}", d.tex) for i, d in enumerate(guion.datos, 1)]
     formulas += [(f"paso {i}", p.tex) for i, p in enumerate(guion.pasos, 1) if p.tex]
     formulas.append(("resultado", guion.resultado.tex))
     problemas = []
@@ -329,7 +359,7 @@ def problemas_de_formato(guion: Guion) -> list[str]:
 def _sistema() -> str:
     plantilla = (PLANTILLAS_DIR / "ia" / "sistema.md").read_text(encoding="utf-8")
     ejemplo = json.dumps(EJEMPLO.model_dump(), ensure_ascii=False, indent=1)
-    return plantilla.replace("{{EJEMPLO}}", ejemplo)
+    return plantilla.replace("{{EJEMPLO}}", ejemplo).replace("{{EMOJIS}}", lista_para_ia())
 
 
 def _pedir(
@@ -410,6 +440,10 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str]) -> str:
             lineas.append(f"  voz: {_dobles(b['voz'])}")
         if b.get("destacar"):
             lineas.append(f"  destacar: [{', '.join(_dobles(d) for d in b['destacar'])}]")
+        if b.get("tex"):
+            lineas.append(f"  tex: {_simples(b['tex'])}")
+        if b.get("emoji"):
+            lineas.append(f"  emoji: {_dobles(b['emoji'])}")
 
     bloque("gancho", guion["gancho"])
     bloque("enunciado", guion["enunciado"])
@@ -427,8 +461,14 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str]) -> str:
                 primero = False
         if p.get("destacar"):
             lineas.append(f"    destacar: [{', '.join(_simples(d) for d in p['destacar'])}]")
+        if p.get("emoji"):
+            lineas.append(f"    emoji: {_dobles(p['emoji'])}")
+        if p.get("error"):
+            lineas.append("    error: true   # error típico: se muestra tachado")
     lineas += ["", "resultado:", f"  tex: {_simples(guion['resultado']['tex'])}",
                f"  voz: {_dobles(guion['resultado']['voz'])}"]  # fmt: skip
+    if guion["resultado"].get("emoji"):
+        lineas.append(f"  emoji: {_dobles(guion['resultado']['emoji'])}")
     for nombre in ("verificacion", "reto"):
         if guion.get(nombre):
             bloque(nombre, guion[nombre])
