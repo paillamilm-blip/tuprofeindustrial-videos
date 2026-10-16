@@ -7,7 +7,7 @@ Plantilla comentada: `./tpi nuevo mi_ejercicio` · Ejemplos completos: `guiones/
 
 > **Atajo:** `./tpi redactar "enunciado…"` (o una foto o PDF) hace que la IA escriba el guion siguiendo
 > estas mismas reglas (sus instrucciones están en `src/tpi_videos/plantillas/ia/`). Esta guía te sirve
-> para revisarlo y ajustarlo.
+> para revisarlo y ajustarlo. En el panel (`./tpi panel` → Crear) haces lo mismo con tarjetas, sin tocar el YAML.
 
 ## 1. La estructura del video
 

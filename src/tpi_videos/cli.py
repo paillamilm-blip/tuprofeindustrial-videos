@@ -12,11 +12,16 @@
 ./tpi temas                          estilos visuales disponibles
 ./tpi emojis                         emojis 3D que puedes poner en el guion
 ./tpi voces                          voces disponibles en español
+./tpi panel                          abre el panel de control en el navegador (solo en este Mac)
+./tpi icono                          crea un ícono en el Escritorio para abrir el panel
+./tpi publicar salida/x/x.mp4        portada + título, descripción y hashtags para publicar
+./tpi vista-previa --tema X          3 cuadros de muestra de un estilo
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import platform
 import subprocess
 import sys
@@ -32,6 +37,26 @@ from .errores import ErrorMotor
 
 # soft_wrap: nunca cortar rutas ni comandos con saltos de línea (así se copian y pegan bien)
 consola = Console(highlight=False, soft_wrap=True)
+
+# Con --progreso-json (lo usa el panel), la salida estándar lleva solo líneas JSON
+# ({"etapa": …, "avance": 0–1, "detalle": …}) y los mensajes para personas van a la salida de errores.
+_JSON = {"activo": False}
+
+
+def _emitir(**datos: object) -> None:
+    sys.stdout.write(json.dumps(datos, ensure_ascii=False, default=str) + "\n")
+    sys.stdout.flush()
+
+
+def _modo_json(args: argparse.Namespace) -> bool:
+    if getattr(args, "progreso_json", False) and not _JSON["activo"]:
+        _JSON["activo"] = True
+        consola.file = sys.stderr
+    return _JSON["activo"]
+
+
+def _progreso_json(etapa: str, avance: float, detalle: str) -> None:
+    _emitir(etapa=etapa, avance=avance, detalle=detalle)
 
 
 def _ruta_amigable(ruta: Path) -> str:
@@ -60,11 +85,16 @@ def _minutos(segundos: float) -> str:
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
+    from dataclasses import asdict
+
     from .doctor import diagnosticar
 
+    json_activo = _modo_json(args)
     consola.print("[bold]🩺 Diagnóstico del motor de video[/]\n")
     with consola.status("Revisando… (la primera vez puede tardar unos segundos)"):
         chequeos = diagnosticar(probar_red=args.red)
+    if json_activo:
+        _emitir(etapa="resultado", avance=1.0, chequeos=[asdict(c) for c in chequeos])
     iconos = {"ok": "[green]✅[/]", "falla": "[red]❌[/]", "opcional": "[yellow]➖[/]"}
     for c in chequeos:
         consola.print(f"{iconos[c.estado]} [bold]{c.nombre}[/]: {c.detalle}")
@@ -139,6 +169,8 @@ def cmd_crear(args: argparse.Namespace) -> int:
     from .render import crear_video
     from .voces import PROVEEDORES
 
+    json_activo = _modo_json(args)
+
     proveedor, voz = None, None
     if args.voz:
         proveedor, voz = (args.voz, None) if args.voz in PROVEEDORES else ("edge", args.voz)
@@ -161,7 +193,11 @@ def cmd_crear(args: argparse.Namespace) -> int:
         modelo_whisper=args.modelo,
         carpeta_salida=Path(args.salida) if args.salida else None,
         tema=getattr(args, "tema", None),
+        progreso=_progreso_json if json_activo else None,
     )
+    if json_activo:
+        _emitir(etapa="resultado", avance=1.0, video=resultado.video, srt=resultado.srt, tema=resultado.tema,
+                duracion=round(resultado.duracion, 1), segundos=round(resultado.segundos_proceso))  # fmt: skip
     nombres = {"voz": "marcas exactas de la voz", "whisper": "Whisper", "estimado": "tiempos estimados"}
     fuentes = ", ".join(nombres[f] for f in sorted(resultado.fuentes_tiempo)) or "sin subtítulos"
     ruta = _ruta_amigable(resultado.video)
@@ -219,6 +255,14 @@ def cmd_redactar(args: argparse.Namespace) -> int:
     from .ia import MODELO_POR_DEFECTO
     from .redactor import redactar
 
+    json_activo = _modo_json(args)
+
+    def avisar(mensaje: str, estado=None) -> None:
+        if json_activo:
+            _emitir(etapa="redactando", avance=0.0, detalle=mensaje)
+        if estado is not None:
+            estado.update(mensaje)
+
     with consola.status("Preparando…") as estado:
         resultado = redactar(
             " ".join(args.enunciado),  # sin comillas, la terminal lo separa en palabras
@@ -228,8 +272,11 @@ def cmd_redactar(args: argparse.Namespace) -> int:
             nombre=args.nombre,
             forzar=args.forzar,
             revisar_con_ia=not args.sin_revision,
-            avisar=lambda mensaje: estado.update(mensaje),
+            avisar=lambda mensaje: avisar(mensaje, estado),
         )
+    if json_activo:
+        _emitir(etapa="guion", avance=1.0, guion=resultado.ruta, supuestos=resultado.supuestos,
+                pendientes=resultado.pendientes, revisado_por_ia=resultado.revisado_por_ia)  # fmt: skip
     ruta = _ruta_amigable(resultado.ruta)
     consola.print(f"[green bold]✅ Guion listo:[/] {ruta}")
     if resultado.revisado_por_ia and not resultado.pendientes:
@@ -249,6 +296,7 @@ def cmd_redactar(args: argparse.Namespace) -> int:
             argparse.Namespace(
                 guion=str(resultado.ruta), borrador=True, voz=None, velocidad=None, sin_subtitulos=False,
                 sincronizar="auto", modelo="base", salida=None, abrir=args.abrir, revisado=True, tema=None,
+                progreso_json=json_activo,
             )
         )  # fmt: skip
     else:
@@ -301,6 +349,94 @@ def cmd_emojis(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_vista_previa(args: argparse.Namespace) -> int:
+    from .vista_previa import crear_vista_previa
+
+    json_activo = _modo_json(args)
+    # Sin --progreso-json: un aviso que no hace nada (así Manim no dibuja sus barras bajo el «Creando…»)
+    progreso = _progreso_json if json_activo else (lambda etapa, avance, detalle: None)
+    with consola.status("Creando 3 cuadros de muestra (unos segundos)…"):
+        cuadros = crear_vista_previa(args.tema, progreso=progreso, forzar=args.forzar)
+    if json_activo:
+        _emitir(etapa="resultado", avance=1.0, cuadros=cuadros)
+    consola.print("[green bold]✅ Vista previa lista:[/]")
+    for cuadro in cuadros:
+        consola.print(f'   open "{_ruta_amigable(cuadro)}"')
+    if args.abrir:
+        for cuadro in cuadros:
+            _abrir(cuadro)
+    return 0
+
+
+def cmd_publicar(args: argparse.Namespace) -> int:
+    from .publicar import crear_kit
+
+    json_activo = _modo_json(args)
+
+    def avisar(mensaje: str, estado=None) -> None:
+        if json_activo:
+            _emitir(etapa="publicando", avance=0.0, detalle=mensaje)
+        if estado is not None:
+            estado.update(mensaje)
+
+    with consola.status("Preparando el kit de publicación…") as estado:
+        kit = crear_kit(Path(args.video), con_ia=not args.sin_ia, modelo=args.modelo,
+                        avisar=lambda m: avisar(m, estado))  # fmt: skip
+    if json_activo:
+        _emitir(etapa="resultado", avance=1.0, portada=kit.portada, archivo=kit.archivo, con_ia=kit.con_ia,
+                aviso=kit.aviso, **kit.textos.model_dump())  # fmt: skip
+    t = kit.textos
+    consola.print(
+        f"[green bold]✅ Kit de publicación listo[/] ({'escrito con IA' if kit.con_ia else 'plantilla'})"
+    )
+    if kit.aviso:
+        consola.print(f"   [yellow]{kit.aviso}[/]")
+    consola.print(f"\n[bold]YouTube Shorts · título:[/] {t.titulo_youtube}\n{t.descripcion_youtube}")
+    consola.print(f"\n[bold]TikTok:[/] {t.texto_tiktok}")
+    consola.print(f"\n[bold]Instagram Reels:[/] {t.texto_instagram}")
+    consola.print(f"\n[bold]Hashtags:[/] {' '.join(t.hashtags)}")
+    consola.print(f'\n   Portada: open "{_ruta_amigable(kit.portada)}"')
+    consola.print(f'   Todo junto para copiar: open -e "{_ruta_amigable(kit.archivo)}"')
+    return 0
+
+
+def cmd_panel(args: argparse.Namespace) -> int:
+    import importlib.util
+
+    if importlib.util.find_spec("nicegui") is None:
+        raise ErrorMotor(
+            "Falta instalar el panel de control.",
+            ayuda="Ejecuta ./scripts/instalar_mac.sh (instala lo nuevo y no toca lo que ya tienes).",
+        )
+    from .panel import iniciar
+
+    iniciar(puerto=args.puerto, abrir=not args.no_abrir)
+    return 0
+
+
+def cmd_icono(args: argparse.Namespace) -> int:
+    import shlex
+
+    from .entorno import raiz_proyecto
+
+    escritorio = Path.home() / "Desktop"
+    if not escritorio.is_dir():
+        escritorio = Path.home()
+    destino = escritorio / "Panel Tu Profe Industrial.command"
+    raiz = raiz_proyecto()
+    destino.write_text(
+        "#!/bin/bash\n"
+        "# Abre el panel de control del motor de video (doble clic). Para cerrarlo: cierra esta ventana.\n"
+        f"cd {shlex.quote(str(raiz))} && ./tpi panel\n",
+        encoding="utf-8",
+    )
+    destino.chmod(0o755)
+    consola.print(f"[green bold]✅ Ícono creado:[/] {destino}")
+    consola.print("   Haz doble clic en «Panel Tu Profe Industrial» de tu Escritorio para abrir el panel.")
+    consola.print("   La primera vez el Mac puede preguntar si quieres abrirlo: responde «Abrir».")
+    return 0
+
+
 def cmd_voces(args: argparse.Namespace) -> int:
     from .voces import listar_voces_es
 
@@ -337,6 +473,7 @@ def construir_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("doctor", help="revisa que todo esté instalado")
     s.add_argument("--red", action="store_true", help="también prueba la voz por internet")
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_doctor)
 
     s = sub.add_parser("nuevo", help="crea un guion nuevo desde la plantilla")
@@ -365,6 +502,7 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--salida", help="carpeta de salida (por defecto: salida/)")
     s.add_argument("--tema", help="estilo visual, ej. pizarra_nocturna (ver ./tpi temas)")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_crear)
 
     s = sub.add_parser("subtitular", help="subtítulos estilo CapCut para cualquier video (usa Whisper)")
@@ -398,6 +536,7 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--crear", action="store_true", help="crea también el video borrador al terminar")
     s.add_argument("--abrir", action="store_true", help="con --crear: abre el video al terminar")
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_redactar)
 
     s = sub.add_parser("clave", help="guarda tu clave de Gemini (para redactar con IA)")
@@ -413,6 +552,28 @@ def construir_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("emojis", help="lista los emojis 3D que puedes usar en los guiones")
     s.set_defaults(func=cmd_emojis)
+
+    s = sub.add_parser("panel", help="abre el panel de control en el navegador (solo en este Mac)")
+    s.add_argument("--puerto", type=int, default=8765, help="puerto local (por defecto 8765)")
+    s.add_argument("--no-abrir", action="store_true", help="no abrir el navegador automáticamente")
+    s.set_defaults(func=cmd_panel)
+
+    s = sub.add_parser("icono", help="crea un ícono en el Escritorio para abrir el panel con doble clic")
+    s.set_defaults(func=cmd_icono)
+
+    s = sub.add_parser("publicar", help="kit para publicar: portada + título, descripción y hashtags")
+    s.add_argument("video", help="el video (.mp4), su carpeta en salida/ o el guion (.yaml)")
+    s.add_argument("--sin-ia", action="store_true", help="textos con plantilla, sin usar Gemini")
+    s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)
+    s.set_defaults(func=cmd_publicar)
+
+    s = sub.add_parser("vista-previa", help="3 cuadros de muestra de un estilo (unos segundos)")
+    s.add_argument("--tema", help="estilo (por defecto, el de marca.yaml)")
+    s.add_argument("--forzar", action="store_true", help="crearla de nuevo aunque no haya cambios")
+    s.add_argument("--abrir", action="store_true", help="abre las imágenes al terminar")
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)
+    s.set_defaults(func=cmd_vista_previa)
     return p
 
 
@@ -426,6 +587,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return int(args.func(args) or 0)
     except ErrorMotor as e:
+        if _JSON["activo"]:
+            _emitir(etapa="error", mensaje=e.mensaje, ayuda=e.ayuda)
         consola.print(f"\n[bold red]✖ {e.mensaje}[/]")
         if e.ayuda:
             consola.print(f"[yellow]→ {e.ayuda}[/]")
@@ -434,6 +597,10 @@ def main(argv: list[str] | None = None) -> int:
         consola.print("\n[yellow]Cancelado.[/]")
         return 130
     except Exception as e:  # error inesperado: mensaje corto y, con --debug, el detalle
+        if _JSON["activo"]:
+            _emitir(
+                etapa="error", mensaje=f"Error inesperado: {e}", ayuda="Repite; si sigue, avísale a Kiro."
+            )
         if args.debug:
             traceback.print_exc()
         consola.print(f"\n[bold red]✖ Error inesperado: {e}[/]")

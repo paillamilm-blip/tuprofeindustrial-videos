@@ -26,7 +26,7 @@ from . import ia
 from .emojis import lista_para_ia, normalizar_para_ia, quitar_emojis
 from .entorno import PLANTILLAS_DIR, raiz_proyecto
 from .errores import ErrorMotor
-from .guion import Guion, cargar_guion, explicar_errores, sin_tildes
+from .guion import Guion, a_yaml, cargar_guion, explicar_errores, sin_tildes
 
 RONDAS_DE_CORRECCION = 2
 MAX_BYTES_ARCHIVO = 18 * 1024 * 1024  # límite práctico para enviar un archivo dentro de la petición
@@ -362,7 +362,7 @@ def _sistema() -> str:
     return plantilla.replace("{{EJEMPLO}}", ejemplo).replace("{{EMOJIS}}", lista_para_ia())
 
 
-def _pedir(
+def pedir_json(
     cliente: Any, modelo: str, sistema: str, contenido: list[Any], esquema: type[BaseModel], pensar: str
 ):
     from google.genai import types
@@ -410,69 +410,6 @@ def _contenido_base(entrada: Entrada, materia: str | None, nivel: str | None) ->
     pistas.append(f"Nivel de los estudiantes: {nivel or 'enseñanza media (Chile)'}.")
     contenido.append(" ".join(pistas))
     return contenido
-
-
-# ------------------------------------------------------------------------------------------
-# Escritura del YAML (mismo estilo que los ejemplos: textos con "…", fórmulas con '…')
-# ------------------------------------------------------------------------------------------
-
-
-def _dobles(s: str) -> str:
-    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
-
-
-def _simples(s: str) -> str:
-    return "'" + s.replace("'", "''") + "'"
-
-
-def a_yaml(guion: dict[str, Any], cabecera: list[str]) -> str:
-    # Un salto de línea dentro de un comentario rompería el YAML
-    cabecera = [c.replace("\r", " ").replace("\n", " ") for c in cabecera]
-    lineas = [f"# {c}" if c else "#" for c in cabecera] + [""]
-    lineas.append(f"titulo: {_dobles(guion['titulo'])}")
-    lineas.append(f"materia: {guion['materia']}")
-    if guion.get("nivel"):
-        lineas.append(f"nivel: {_dobles(guion['nivel'])}")
-
-    def bloque(nombre: str, b: dict[str, Any]) -> None:
-        lineas.extend(["", f"{nombre}:", f"  texto: {_dobles(b['texto'])}"])
-        if b.get("voz"):
-            lineas.append(f"  voz: {_dobles(b['voz'])}")
-        if b.get("destacar"):
-            lineas.append(f"  destacar: [{', '.join(_dobles(d) for d in b['destacar'])}]")
-        if b.get("tex"):
-            lineas.append(f"  tex: {_simples(b['tex'])}")
-        if b.get("emoji"):
-            lineas.append(f"  emoji: {_dobles(b['emoji'])}")
-
-    bloque("gancho", guion["gancho"])
-    bloque("enunciado", guion["enunciado"])
-    if guion["datos"]:
-        lineas += ["", "datos:"]
-        for d in guion["datos"]:
-            lineas += [f"  - tex: {_simples(d['tex'])}", f"    voz: {_dobles(d['voz'])}"]
-    lineas += ["", "pasos:"]
-    for p in guion["pasos"]:
-        primero = True
-        for clave in ("nota", "tex", "voz"):
-            if p.get(clave):
-                valor = _simples(p[clave]) if clave == "tex" else _dobles(p[clave])
-                lineas.append(f"  {'- ' if primero else '  '}{clave}: {valor}")
-                primero = False
-        if p.get("destacar"):
-            lineas.append(f"    destacar: [{', '.join(_simples(d) for d in p['destacar'])}]")
-        if p.get("emoji"):
-            lineas.append(f"    emoji: {_dobles(p['emoji'])}")
-        if p.get("error"):
-            lineas.append("    error: true   # error típico: se muestra tachado")
-    lineas += ["", "resultado:", f"  tex: {_simples(guion['resultado']['tex'])}",
-               f"  voz: {_dobles(guion['resultado']['voz'])}"]  # fmt: skip
-    if guion["resultado"].get("emoji"):
-        lineas.append(f"  emoji: {_dobles(guion['resultado']['emoji'])}")
-    for nombre in ("verificacion", "reto"):
-        if guion.get(nombre):
-            bloque(nombre, guion[nombre])
-    return "\n".join(lineas) + "\n"
 
 
 def _nombre_archivo(titulo: str, nombre: str | None, forzar: bool) -> Path:
@@ -523,7 +460,7 @@ def redactar(
     sin_latex = False
 
     avisar("Gemini está resolviendo el ejercicio y escribiendo el guion (30–90 s)…")
-    respuesta = _pedir(cliente, modelo, sistema, base, GuionIA, "high")
+    respuesta = pedir_json(cliente, modelo, sistema, base, GuionIA, "high")
     rondas = 0
     revisado = False
     while True:
@@ -553,7 +490,7 @@ def redactar(
             if revisar_con_ia and not problemas:
                 avisar("Gemini revisa la matemática como profesor revisor…")
                 guion_json = json.dumps(respuesta.model_dump(), ensure_ascii=False)
-                revision = _pedir(cliente, modelo, revisor, [*base, f"GUION A REVISAR (JSON):\n{guion_json}"],
+                revision = pedir_json(cliente, modelo, revisor, [*base, f"GUION A REVISAR (JSON):\n{guion_json}"],
                                   RevisionIA, "high")  # fmt: skip
                 revisado = True
                 if not revision.aprobado:
@@ -574,7 +511,7 @@ def redactar(
                 f"RESPUESTA ANTERIOR (JSON):\n{anterior}",
             ]
         )
-        respuesta = _pedir(cliente, modelo, sistema, [*base, pedido], GuionIA, "high")
+        respuesta = pedir_json(cliente, modelo, sistema, [*base, pedido], GuionIA, "high")
 
     if guion is None:
         detalle = "\n".join(f"  • {p}" for p in problemas[:8])

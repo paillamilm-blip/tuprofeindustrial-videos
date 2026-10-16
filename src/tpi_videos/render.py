@@ -145,6 +145,11 @@ def crear_video(
         progreso=por_bloque if progreso else None,
     )  # fmt: skip
     final = carpeta / (f"{nombre}.mp4" if calidad == "final" else f"{nombre}_{calidad}.mp4")
+    # Para «Mis videos» del panel (rehacer con otro estilo) y para el kit de publicación
+    linea |= {"guion": str(Path(ruta_guion).resolve()), "calidad": calidad, "intermedio": str(video_manim)}
+    (carpeta / "linea_de_tiempo.json").write_text(
+        json.dumps(linea, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     resultado = ResultadoVideo(
         video=final, carpeta=carpeta, duracion=0.0, segundos_proceso=0.0, tema=estilo_video.nombre
     )

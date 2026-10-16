@@ -6,7 +6,7 @@ Enunciado de Matemática / Física / Ingeniería → video vertical 9:16 de 30�
 sintética chilena y subtítulos estilo CapCut, listo para TikTok, Reels y Shorts. Repo **solo Python**,
 independiente de la web (Sistema 1).
 
-## Arquitectura (v0.3)
+## Arquitectura (v0.4)
 
 ```
 enunciado (texto, foto o PDF) ─► redactor.py (Gemini escribe → motor valida → Gemini revisa) ─► guion.yaml
@@ -16,7 +16,8 @@ guion.yaml ─► guion.py (valida, errores en español) ─► revision.py (dur
           │      └─ linea_de_tiempo.json  (inicio, texto exacto y marcas de cada bloque de voz)
           ─► subtitulos.py (tiempos por palabra: voz exacta > Whisper > estimado → archivo ASS)
           ─► postproduccion.py (FFmpeg + libass: quema subtítulos, −14 LUFS, H.264, faststart)
-          ─► salida/<guion>/<guion>.mp4 + .srt
+          ─► salida/<guion>/<guion>.mp4 + .srt ─► publicar.py (portada + textos con IA) ─► kit
+panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-json`, uno a la vez, en procesos aparte
 ```
 
 | Módulo | Responsabilidad |
@@ -30,6 +31,8 @@ guion.yaml ─► guion.py (valida, errores en español) ─► revision.py (dur
 | `componentes.py` | Diseño 9:16: zonas seguras por marco, texto con líneas parejas, fórmulas divididas en partes, fondos, hoja, emojis |
 | `temas.py` | Estilos visuales (`plantillas/temas/` y los propios en `mis_ajustes/temas/`): marco, colores, letras, fondo, subtítulos y animación |
 | `tipografia.py` / `emojis.py` | Letras incluidas (grosor más cercano, medición igual a lo que se dibuja) / emojis 3D y stickers propios |
+| `publicar.py` / `vista_previa.py` | Kit de publicación (portada del gancho + título, descripción y hashtags con Gemini o plantilla) / 3 cuadros de muestra por estilo |
+| `panel/` | Panel de control: páginas Crear, Mis videos, Estilos y Ajustes; `tareas.py` ejecuta los comandos `tpi` con progreso en JSON |
 | `tex.py` | Plantilla LaTeX mínima, coma decimal chilena, división de fórmulas para `TransformMatchingTex` |
 | `subtitulos.py` / `whisper_sync.py` | Alineación texto-audio y estilo CapCut (ASS) / transcripción con Whisper |
 | `postproduccion.py`, `entorno.py`, `doctor.py` | FFmpeg, rutas de Homebrew/LaTeX, diagnóstico |
@@ -48,11 +51,14 @@ guion.yaml ─► guion.py (valida, errores en español) ─► revision.py (dur
 | **La IA entrega datos, no código** (`tpi redactar`) | Que genere código Manim o YAML libre | Responde en un JSON con esquema fijo; el motor lo convierte al formato del guion. Así el resultado siempre se puede validar y renderizar |
 | **Validación en capas** | Confiar en una sola respuesta | 1) esquema del guion, 2) LaTeX compilado de verdad, 3) reglas de `tpi revisar`, 4) segunda pasada de Gemini como revisor que rehace los cálculos, 5) hasta 2 rondas de corrección y 6) revisión humana del borrador |
 | **Gemini 3.8 Flash** por defecto | Gemini 4 Argon, otros proveedores | Estable y con cuenta gratuita; razonamiento `high` para la matemática. `--modelo` permite usar otro (ej. Argon, de pago) |
-| **API `generateContent`** | API Interactions (la nueva de Google) | Documentada para los modelos actuales y estable; migrar es cambiar un solo módulo (`redactor._pedir`) |
+| **API `generateContent`** | API Interactions (la nueva de Google) | Documentada para los modelos actuales y estable; migrar es cambiar un solo módulo (`redactor.pedir_json`) |
 | **Temas en YAML** con «Hoja de desarrollo» por defecto | Un solo diseño fijo; CSS/HTML | El estilo de Instagram del profe pasa a ser el principal sin perder el original: `pizarra_nocturna` sale idéntico cuadro a cuadro (comparado contra los videos de `main`) |
 | **Emojis Noto 3D en PNG** | Emojis 2D, Twemoji, emojis de la letra del sistema | Se ven modernos, tienen licencia libre (OFL) y no dependen de las letras del Mac (Manim no dibuja emojis de color dentro de un texto) |
 | **Paso «error típico»** (`error: true`) | Solo pasos correctos | Es el formato de los posts con más alcance del canal («¿Resuelves así?»): mostrar el error y tacharlo engancha y enseña |
 | **Ajustes del usuario en `mis_ajustes/`** | Editar `marca.yaml` | Git lo ignora: actualizar el motor nunca choca con lo que personaliza el profe |
+| **Panel con NiceGUI**, local | Gradio o Streamlit; app nativa; web en internet | Es Python (regla del repo), se ve como una app y no un formulario, no cuesta ni expone nada: escucha solo en `127.0.0.1` (NiceGUI escucha en toda la red si no se indica) |
+| **El panel ejecuta los comandos `tpi`** en procesos aparte (`--progreso-json`) | Llamar al motor dentro del panel | Si un video falla, el panel sigue vivo; cancelar detiene también LaTeX y FFmpeg; lo que hace el panel es exactamente lo que hacen los comandos |
+| **Bucle `asyncio` estándar** en el panel | uvloop (el que trae uvicorn) | Con uvloop, lanzar un comando mientras otro hilo trabajaba (miniaturas) podía congelar el panel; con el bucle estándar no pasa |
 
 ## Riesgos y mitigaciones
 
@@ -73,7 +79,8 @@ guion.yaml ─► guion.py (valida, errores en español) ─► revision.py (dur
    en capas y `--crear` para obtener el borrador en un solo comando.
 3. ✅ **v0.3 · Estilo «Hoja de desarrollo»:** temas, letras Comic Neue + Bangers, emojis 3D, stickers propios,
    paso «error típico» y gancho con fórmula.
-4. **v0.4 · Panel de control local** (NiceGUI, solo en el Mac) y kit de publicación (portada + textos con IA).
+4. ✅ **v0.4 · Panel de control local** (NiceGUI, solo en el Mac), kit de publicación (portada + textos con IA)
+   y vista previa de estilos.
 5. **Visuales por materia:** gráficos de funciones (parábolas, rectas), diagramas de física (caída libre,
    plano inclinado, fuerzas) y de electricidad (circuitos serie/paralelo).
 6. **Producción:** música de fondo que baja cuando hay voz, voz Azure o voz propia grabada.

@@ -166,6 +166,15 @@ def diagnosticar(probar_red: bool = False) -> list[Chequeo]:
         )
     )
     chequeos.append(_chequear_estilos())
+    version_panel = _version("nicegui")
+    chequeos.append(
+        Chequeo(
+            "Panel de control",
+            "ok" if version_panel else "falla",
+            f"NiceGUI {version_panel} · ábrelo con ./tpi panel" if version_panel else "no instalado",
+            None if version_panel else "Ejecuta ./scripts/instalar_mac.sh (instala lo nuevo)",
+        )
+    )
 
     from . import whisper_sync
 
