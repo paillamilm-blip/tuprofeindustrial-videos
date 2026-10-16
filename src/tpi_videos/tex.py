@@ -24,12 +24,13 @@ PREAMBULO = "\n".join(
         r"\boldmath",  # fórmulas en negrita: se leen mucho mejor en la pantalla de un celular
     ]
 )
+PREAMBULO_NORMAL = PREAMBULO.replace("\n\\boldmath", "")  # grosor normal (estilo Hoja de desarrollo)
 
 
-def plantilla_tex() -> TexTemplate:
+def plantilla_tex(negrita: bool = True) -> TexTemplate:
     from manim import TexTemplate
 
-    return TexTemplate(preamble=PREAMBULO)
+    return TexTemplate(preamble=PREAMBULO if negrita else PREAMBULO_NORMAL)
 
 
 _DECIMAL = re.compile(r"(?<=\d),(?=\d)")

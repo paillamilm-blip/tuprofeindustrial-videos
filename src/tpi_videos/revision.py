@@ -165,4 +165,44 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
                     Aviso("advertencia", f"paso {i}", f"destacar «{parte}» no aparece en la fórmula.")
                 )
 
+    # Estilo, emojis y error típico
+    from .emojis import PATRON_EMOJI, es_valido
+    from .guion import emojis_del_guion
+    from .temas import existe_tema
+
+    if guion.tema and not existe_tema(guion.tema):
+        avisos.append(Aviso("advertencia", "tema", f"el tema «{guion.tema}» no existe: mira las opciones con "
+                            "./tpi temas."))  # fmt: skip
+
+    for donde, valor in emojis_del_guion(guion):
+        if not es_valido(valor):
+            avisos.append(Aviso("advertencia", donde, f"el emoji «{valor}» no existe: usa uno de ./tpi emojis "
+                                "o guarda tu imagen en mis_ajustes/stickers/."))  # fmt: skip
+    en_voz = [seccion for seccion, texto in voces if PATRON_EMOJI.search(texto)]
+    for seccion in dict.fromkeys(en_voz):
+        avisos.append(Aviso("advertencia", seccion, "la voz contiene un emoji o símbolo que se leería en "
+                            "voz alta: ponlo en el campo «emoji»."))  # fmt: skip
+    for seccion, texto in _textos_visibles(guion):
+        if seccion not in en_voz and PATRON_EMOJI.search(texto):
+            avisos.append(Aviso("advertencia", seccion, "hay un emoji dentro del texto y ahí no se dibuja "
+                                "bien: ponlo en el campo «emoji»."))  # fmt: skip
+    errores = [i for i, p in enumerate(guion.pasos, 1) if p.error]
+    if errores and errores[-1] == len(guion.pasos):
+        avisos.append(Aviso("advertencia", f"paso {errores[-1]}", "el último paso es un error típico: agrega "
+                            "después la forma correcta."))  # fmt: skip
+    if len(errores) > 1:
+        avisos.append(Aviso("sugerencia", "pasos", f"hay {len(errores)} errores típicos; con uno basta para "
+                            "llamar la atención."))  # fmt: skip
+
     return Revision(segundos=segundos, palabras=palabras, bloques=len(voces), avisos=avisos)
+
+
+def _textos_visibles(guion: Guion) -> list[tuple[str, str]]:
+    """(sección, texto) de lo que se escribe en pantalla con letras."""
+    textos = [("título", guion.titulo), ("gancho", guion.gancho.texto), ("enunciado", guion.enunciado.texto)]
+    textos += [(f"paso {i}", p.nota) for i, p in enumerate(guion.pasos, 1) if p.nota]
+    for campo, seccion in (("verificacion", "verificación"), ("reto", "reto"), ("cierre", "cierre")):
+        bloque = getattr(guion, campo)
+        if bloque is not None:
+            textos.append((seccion, bloque.texto))
+    return textos

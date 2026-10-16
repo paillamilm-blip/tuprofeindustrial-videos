@@ -2,7 +2,7 @@
 
 - Agrega al PATH las carpetas típicas de LaTeX (MacTeX/BasicTeX/TinyTeX) y de FFmpeg completo
   (``ffmpeg-full`` de Homebrew, que sí trae libass para quemar subtítulos).
-- Registra las fuentes Montserrat incluidas en el repo.
+- Registra las letras incluidas en el repo (Montserrat, Comic Neue, Bangers…).
 - Silencia avisos ruidosos de librerías que no aportan nada al usuario.
 """
 
@@ -105,7 +105,7 @@ def preparar() -> None:
 
 @functools.cache
 def registrar_fuentes() -> bool:
-    """Registra Montserrat para Manim (Pango). Devuelve False si no se pudo."""
+    """Registra las letras incluidas para Manim (Pango). Devuelve False si no se pudo."""
     import manimpango
 
     ok = True

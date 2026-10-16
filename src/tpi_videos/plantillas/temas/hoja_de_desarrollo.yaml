@@ -1,0 +1,46 @@
+# Tu estilo: hoja cuadriculada sobre fondo difuminado, como en tus videos de @tuprofeindustrial.
+nombre: "Hoja de desarrollo"
+descripcion: "Hoja cuadriculada sobre fondo difuminado, títulos de cómic técnico y subtítulos Bangers."
+marco: hoja
+colores:
+  fondo: "#2A2A2C"       # detrás de la imagen difuminada
+  panel: "#FFFFFF"       # tarjetas sobre la hoja
+  borde: "#CFCFCF"
+  titulos: "#1C3D74"     # azul marino de tus títulos
+  texto: "#3A3A3A"       # explicaciones
+  formulas: "#151515"    # fórmulas en negro
+  tenue: "#6B6B6B"
+  acento: "#D32F2F"      # rojo: destacados y recuadros
+  exito: "#2E7D32"       # verde del resultado
+  cuadricula: "#D4D4D4"
+  error: "#D32F2F"       # la ✗ roja del «error típico»
+materias:                # etiquetas como PROBLEMA, DATOS… (rojo de corrección)
+  matematica: "#D32F2F"
+  fisica: "#D32F2F"
+  ingenieria: "#D32F2F"
+tipografia:
+  titulos: {familia: "Comic Neue", grosor: BOLD, mayusculas: true}
+  texto: {familia: "Comic Neue", grosor: NORMAL}
+nota: {rol: titulos, escala: 1.45, color: titulos}
+formulas_negrita: false
+fondo: {tipo: imagen, imagen: difuminado}
+hoja:
+  encabezado: "HOJADEDESARROLLO"
+  etiqueta: "Notas"
+  fecha: "Fecha:"
+  color: "#FFFFFF"
+  lineas: "#D4D4D4"
+  cuadricula: true
+subtitulos:
+  fuente: "Bangers"
+  tamano: 118
+  color: "#FFFFFF"
+  color_activo: "#FFD60A"
+  borde: 7
+  sombra: 3
+  posicion_y: 0.78
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 18
+  resaltar: true
+animacion: {titulos: plumon}

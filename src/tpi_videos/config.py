@@ -86,6 +86,7 @@ class EstiloSubtitulos(_Base):
     mayusculas: bool = True
     max_palabras: int = Field(default=3, ge=1, le=8)
     max_caracteres: int = Field(default=16, ge=6, le=40)
+    resaltar: bool = True  # pintar la palabra que suena (False = todo del mismo color)
 
     _hex = field_validator("color", "color_activo")(classmethod(lambda cls, v: _validar_hex(v)))
 
@@ -93,6 +94,8 @@ class EstiloSubtitulos(_Base):
 class Marca(_Base):
     nombre: str = "Tu Profe Industrial"
     usuario: str = "@tuprofeindustrial"
+    tema: str = "hoja_de_desarrollo"  # estilo visual por defecto (ver ./tpi temas)
+    # Colores, materias y subtítulos del tema "pizarra_nocturna" (el estilo original del motor)
     colores: Colores = Colores()
     materias: ColoresMateria = ColoresMateria()
     voz: Voz = Voz()
@@ -100,17 +103,59 @@ class Marca(_Base):
     subtitulos: EstiloSubtitulos = EstiloSubtitulos()
 
 
-def cargar_marca(ruta: Path | None = None) -> Marca:
-    """Lee ``marca.yaml`` (si existe) y completa lo que falte con valores por defecto."""
-    ruta = ruta or raiz_proyecto() / "marca.yaml"
-    if not ruta.exists():
-        return Marca()
+def ajustes_dir() -> Path:
+    """Carpeta con todo lo que personaliza el usuario (Git la ignora: actualizar nunca choca)."""
+    return raiz_proyecto() / "mis_ajustes"
+
+
+def _leer_yaml(ruta: Path) -> dict:
     try:
         datos = yaml.safe_load(ruta.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as e:
-        raise ErrorMotor(f"marca.yaml tiene un error de formato: {e}") from e
+        raise ErrorMotor(f"{ruta.name} tiene un error de formato: {e}") from e
+    if not isinstance(datos, dict):
+        raise ErrorMotor(f"{ruta.name} no tiene el formato esperado (clave: valor).")
+    return datos
+
+
+def _fusionar(base: dict, extra: dict) -> dict:
+    """Mezcla ``extra`` sobre ``base`` (las sub-secciones se mezclan, no se reemplazan)."""
+    salida = dict(base)
+    for clave, valor in extra.items():
+        if isinstance(valor, dict) and isinstance(salida.get(clave), dict):
+            salida[clave] = _fusionar(salida[clave], valor)
+        else:
+            salida[clave] = valor
+    return salida
+
+
+def cargar_marca(ruta: Path | None = None) -> Marca:
+    """Lee ``marca.yaml`` y, encima, ``mis_ajustes/marca.yaml`` (lo que cambias en el panel).
+    Lo que falte se completa con valores por defecto."""
+    rutas = [ruta] if ruta else [raiz_proyecto() / "marca.yaml", ajustes_dir() / "marca.yaml"]
+    datos: dict = {}
+    for r in rutas:
+        if r.exists():
+            datos = _fusionar(datos, _leer_yaml(r))
     try:
         return Marca.model_validate(datos)
     except ValidationError as e:
         detalle = "; ".join(f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in e.errors())
         raise ErrorMotor(f"marca.yaml tiene valores no válidos → {detalle}") from e
+
+
+def guardar_ajustes_marca(cambios: dict) -> Path:
+    """Guarda cambios de marca en ``mis_ajustes/marca.yaml`` (nunca toca ``marca.yaml``)."""
+    destino = ajustes_dir() / "marca.yaml"
+    actuales = _leer_yaml(destino) if destino.exists() else {}
+    nuevos = _fusionar(actuales, cambios)
+    repo = raiz_proyecto() / "marca.yaml"
+    base = _leer_yaml(repo) if repo.exists() else {}
+    try:  # validar antes de guardar: un valor malo no debe dejar el archivo dañado
+        Marca.model_validate(_fusionar(base, nuevos))
+    except ValidationError as e:
+        detalle = "; ".join(f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in e.errors())
+        raise ErrorMotor(f"Ese ajuste no es válido → {detalle}") from e
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text(yaml.safe_dump(nuevos, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    return destino

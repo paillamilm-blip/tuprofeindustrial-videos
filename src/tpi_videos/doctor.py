@@ -56,6 +56,30 @@ def _probar_voz() -> tuple[bool, str]:
         return False, str(e)[:120]
 
 
+def _chequear_estilos() -> Chequeo:
+    """El tema por defecto se puede cargar y están los emojis 3D."""
+    from .config import cargar_marca
+    from .emojis import EMOJIS, EMOJIS_DIR
+    from .errores import ErrorMotor
+    from .temas import cargar_tema, listar_temas
+
+    nombre = "Estilos y emojis"
+    try:
+        tema = cargar_tema(None, cargar_marca())
+    except ErrorMotor as e:
+        return Chequeo(
+            nombre, "falla", e.mensaje, e.ayuda or "Revisa «tema:» en marca.yaml (ver ./tpi temas)."
+        )
+    faltan = [n for n in EMOJIS.values() if not (EMOJIS_DIR / f"{n}.png").exists()]
+    if faltan:
+        return Chequeo(
+            nombre, "falla", f"faltan {len(faltan)} emojis", "Vuelve a descargar el repo (git pull)."
+        )
+    return Chequeo(
+        nombre, "ok", f"estilo «{tema.nombre}» · {len(listar_temas())} temas · {len(EMOJIS)} emojis 3D"
+    )
+
+
 def diagnosticar(probar_red: bool = False) -> list[Chequeo]:
     entorno.preparar()
     chequeos: list[Chequeo] = []
@@ -121,19 +145,27 @@ def diagnosticar(probar_red: bool = False) -> list[Chequeo]:
             )
         )
 
-    fuentes = sorted(p.name for p in entorno.FUENTES_DIR.glob("*.ttf"))
+    from . import tipografia
+
+    faltan = tipografia.faltantes()
     try:
         registradas = entorno.registrar_fuentes()
     except Exception:
         registradas = False
+    ok_letras = not faltan and registradas
+    if ok_letras:
+        detalle = f"{len(tipografia.FAMILIAS)} familias ({', '.join(tipografia.FAMILIAS)})"
+    else:
+        detalle = f"faltan: {', '.join(faltan)}" if faltan else "no se pudieron registrar"
     chequeos.append(
         Chequeo(
-            "Fuentes Montserrat",
-            "ok" if fuentes and registradas else "falla",
-            f"{len(fuentes)} estilos" if fuentes else "faltan archivos .ttf",
-            None if fuentes and registradas else "Vuelve a descargar el repo (git pull).",
+            "Letras",
+            "ok" if ok_letras else "falla",
+            detalle,
+            None if ok_letras else "Vuelve a descargar el repo (git pull).",
         )
     )
+    chequeos.append(_chequear_estilos())
 
     from . import whisper_sync
 

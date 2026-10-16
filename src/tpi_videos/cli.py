@@ -7,7 +7,10 @@
 ./tpi revisar guiones/x.yaml         revisa el guion (duración, gancho, frases)
 ./tpi crear guiones/x.yaml           crea el video final
 ./tpi crear guiones/x.yaml --borrador    versión rápida para revisar
+./tpi crear guiones/x.yaml --tema pizarra_nocturna   con otro estilo visual
 ./tpi subtitular video.mp4           subtítulos estilo CapCut para cualquier video
+./tpi temas                          estilos visuales disponibles
+./tpi emojis                         emojis 3D que puedes poner en el guion
 ./tpi voces                          voces disponibles en español
 """
 
@@ -157,14 +160,15 @@ def cmd_crear(args: argparse.Namespace) -> int:
         sincronizar=args.sincronizar,
         modelo_whisper=args.modelo,
         carpeta_salida=Path(args.salida) if args.salida else None,
+        tema=getattr(args, "tema", None),
     )
     nombres = {"voz": "marcas exactas de la voz", "whisper": "Whisper", "estimado": "tiempos estimados"}
     fuentes = ", ".join(nombres[f] for f in sorted(resultado.fuentes_tiempo)) or "sin subtítulos"
     ruta = _ruta_amigable(resultado.video)
     consola.print(f"\n[green bold]✅ Video listo:[/] {ruta}")
     consola.print(
-        f"   Duración: {resultado.duracion:.1f} s · Proceso: {_minutos(resultado.segundos_proceso)} · "
-        f"Subtítulos: {fuentes}"
+        f"   Estilo: {resultado.tema} · Duración: {resultado.duracion:.1f} s · "
+        f"Proceso: {_minutos(resultado.segundos_proceso)} · Subtítulos: {fuentes}"
     )
     if resultado.srt:
         consola.print(f"   Subtítulos para YouTube: {_ruta_amigable(resultado.srt)}")
@@ -184,6 +188,7 @@ def cmd_subtitular(args: argparse.Namespace) -> int:
             texto=texto,
             modelo=args.modelo,
             carpeta_salida=Path(args.salida) if args.salida else None,
+            tema=args.tema,
         )
     ruta = _ruta_amigable(salida)
     consola.print(f'[green bold]✅ Listo:[/] {ruta}\n   Para verlo: [bold]open "{ruta}"[/]')
@@ -243,12 +248,56 @@ def cmd_redactar(args: argparse.Namespace) -> int:
         cmd_crear(
             argparse.Namespace(
                 guion=str(resultado.ruta), borrador=True, voz=None, velocidad=None, sin_subtitulos=False,
-                sincronizar="auto", modelo="base", salida=None, abrir=args.abrir, revisado=True,
+                sincronizar="auto", modelo="base", salida=None, abrir=args.abrir, revisado=True, tema=None,
             )
         )  # fmt: skip
     else:
         consola.print(f"   Para corregirlo: open -e {ruta}")
         consola.print(f"   Para verlo:      ./tpi crear {ruta} --borrador --abrir")
+    return 0
+
+
+def cmd_temas(args: argparse.Namespace) -> int:
+    from .config import cargar_marca
+    from .temas import listar_temas, temas_usuario_dir
+
+    actual = cargar_marca().tema
+    tabla = Table("Tema (para --tema)", "Nombre", "Descripción", header_style="bold")
+    for identificador, tema, propio in listar_temas():
+        marca = " ⭐" if identificador == actual else ""
+        origen = " (tuyo)" if propio else ""
+        estilo = "bold green" if identificador == actual else ""
+        tabla.add_row(f"{identificador}{marca}", f"{tema.nombre}{origen}", tema.descripcion, style=estilo)
+    consola.print(tabla)
+    consola.print("⭐ = el que se usa por defecto (cámbialo con «tema:» en marca.yaml).")
+    consola.print("Para un solo video: ./tpi crear guiones/x.yaml --tema pizarra_nocturna")
+    consola.print("   o escribe «tema: pizarra_nocturna» en el guion.")
+    consola.print(f"Tus temas propios se guardan en {_ruta_amigable(temas_usuario_dir())}/")
+    return 0
+
+
+def cmd_emojis(args: argparse.Namespace) -> int:
+    from .emojis import EMOJIS, stickers_dir
+
+    columnas = 4
+    tabla = Table(*(["Emoji", "Nombre"] * columnas), header_style="bold", box=None, padding=(0, 1))
+    items = list(EMOJIS.items())
+    for i in range(0, len(items), columnas):
+        fila: list[str] = []
+        for emoji, nombre in items[i : i + columnas]:
+            fila += [emoji, nombre]
+        tabla.add_row(*fila)
+    consola.print(tabla)
+    propios = sorted(p.stem for p in stickers_dir().glob("*.png")) if stickers_dir().exists() else []
+    if propios:
+        consola.print(f"\n[bold]Tus stickers:[/] {', '.join(propios)}")
+    consola.print(
+        '\nEn el guion: [bold]emoji: "🤯"[/] o [bold]emoji: explota[/] (en gancho, pasos, resultado, reto…).'
+    )
+    consola.print(
+        f"Tus propias imágenes: guarda un PNG con fondo transparente en {_ruta_amigable(stickers_dir())}/ "
+        "y usa su nombre (ej. emoji: mascota)."
+    )
     return 0
 
 
@@ -314,6 +363,7 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--modelo", default="base", help="modelo de Whisper: tiny, base, small, medium")
     s.add_argument("--salida", help="carpeta de salida (por defecto: salida/)")
+    s.add_argument("--tema", help="estilo visual, ej. pizarra_nocturna (ver ./tpi temas)")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.set_defaults(func=cmd_crear)
 
@@ -324,6 +374,7 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--modelo", default="base", help="modelo de Whisper: tiny, base, small, medium")
     s.add_argument("--salida", help="carpeta de salida (por defecto: salida/subtitulados/)")
+    s.add_argument("--tema", help="usa la letra y colores de subtítulos de este tema (ver ./tpi temas)")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.set_defaults(func=cmd_subtitular)
 
@@ -356,6 +407,12 @@ def construir_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("voces", help="lista las voces en español")
     s.add_argument("--todas", action="store_true", help="todos los países de habla hispana")
     s.set_defaults(func=cmd_voces)
+
+    s = sub.add_parser("temas", help="lista los estilos visuales (Hoja de desarrollo, Pizarra nocturna…)")
+    s.set_defaults(func=cmd_temas)
+
+    s = sub.add_parser("emojis", help="lista los emojis 3D que puedes usar en los guiones")
+    s.set_defaults(func=cmd_emojis)
     return p
 
 

@@ -82,8 +82,11 @@ class _ConTexto(_Base):
 
 class Gancho(_ConTexto):
     destacar: list[str] = []
+    tex: str | None = None  # fórmula bajo la pregunta, ej. '(x+5)^2 = x^2 + 25'
+    emoji: str | None = None  # ej. "🤯", "alerta" o un sticker propio
 
     _lista = field_validator("destacar", mode="before")(classmethod(lambda cls, v: _como_lista(v)))
+    _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
 
 
 class Enunciado(_ConTexto):
@@ -93,7 +96,7 @@ class Enunciado(_ConTexto):
 
 
 class Bloque(_ConTexto):
-    pass
+    emoji: str | None = None
 
 
 class Dato(_Base):
@@ -109,14 +112,24 @@ class Paso(_Base):
     nota: str | None = None
     destacar: list[str] = []
     transformar: bool = True
+    emoji: str | None = None
+    # Error típico: la fórmula (equivocada) se tacha con una ✗ roja; no cuenta como paso correcto
+    error: bool = False
 
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
     _lista = field_validator("destacar", mode="before")(classmethod(lambda cls, v: _como_lista(v)))
+
+    @model_validator(mode="after")
+    def _error_con_formula(self) -> Paso:
+        if self.error and not self.tex:
+            raise ValueError("un paso con «error: true» necesita la fórmula equivocada en «tex»")
+        return self
 
 
 class Resultado(_Base):
     tex: str = Field(min_length=1)
     voz: str = Field(min_length=1)
+    emoji: str | None = None
 
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
 
@@ -125,6 +138,7 @@ class Guion(_Base):
     titulo: str = Field(min_length=1)
     materia: Literal["matematica", "fisica", "ingenieria"]
     nivel: str | None = None
+    tema: str | None = None  # estilo visual de este video (ver ./tpi temas)
     voz: str | None = None
     velocidad: str | None = None
     gancho: Gancho
@@ -186,6 +200,18 @@ _MENSAJES = {
     "model_type": "debe tener sub-campos (por ejemplo texto: y voz:)",
     "model_attributes_type": "debe tener sub-campos (por ejemplo texto: y voz:)",
 }
+
+
+def emojis_del_guion(guion: Guion) -> list[tuple[str, str]]:
+    """(sección, valor) de cada emoji usado en el guion."""
+    usados = [("gancho", guion.gancho.emoji)]
+    usados += [(f"paso {i}", p.emoji) for i, p in enumerate(guion.pasos, 1)]
+    usados.append(("resultado", guion.resultado.emoji))
+    for nombre in ("verificacion", "reto", "cierre"):
+        bloque = getattr(guion, nombre)
+        if bloque is not None:
+            usados.append((nombre, bloque.emoji))
+    return [(donde, valor) for donde, valor in usados if valor]
 
 
 def _ubicacion(loc: tuple[Any, ...]) -> str:

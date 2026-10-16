@@ -3,12 +3,15 @@
 El cuadro de Manim mide 9 unidades de ancho × 16 de alto (1 unidad = 120 px en 1080×1920),
 con el origen al centro: arriba y = 8, abajo y = −8.
 
-Zonas (de arriba hacia abajo):
+Zonas del marco "pizarra" (de arriba hacia abajo):
 - y ≈ 6.5      cabecera con la marca y la materia
 - y ≈ 5.5      título del ejercicio
 - 4.7 … −2.4   zona de contenido (enunciado, datos, pasos, resultado)
 - y ≈ −3.5     subtítulos estilo CapCut (los quema FFmpeg después)
 - y < −4.8     se deja libre: ahí van los botones y textos de TikTok/Reels/Shorts
+
+El marco "hoja" (Hoja de desarrollo) pone todo dentro de una hoja cuadriculada (y de 5.9 a −5.7), con
+los subtítulos dentro de la hoja, abajo (y ≈ −4.5).
 """
 
 from __future__ import annotations
@@ -16,41 +19,61 @@ from __future__ import annotations
 import functools
 import logging
 import re
+from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 from manim import (
+    BOLD,
+    DL,
     DOWN,
+    DR,
     HEAVY,
     LEFT,
     MEDIUM,
     RIGHT,
     SEMIBOLD,
     TAU,
+    UL,
     ULTRABOLD,
+    UP,
+    UR,
     Circle,
+    Group,
+    ImageMobject,
     Line,
+    MarkupText,
     MathTex,
     Mobject,
     Paragraph,
     Polygon,
+    Rectangle,
     RoundedRectangle,
     Text,
     VGroup,
     VMobject,
 )
-from PIL import ImageFont
 
-from .entorno import FUENTES_DIR
+from . import tipografia
 from .errores import ErrorMotor
 from .tex import corregir_decimales, partes
 
-FUENTE = "Montserrat"
-ARCHIVO_POR_PESO = {
-    MEDIUM: "Montserrat-Medium.ttf",
-    SEMIBOLD: "Montserrat-SemiBold.ttf",
-    ULTRABOLD: "Montserrat-ExtraBold.ttf",
-    HEAVY: "Montserrat-Black.ttf",
-}
+# ------------------------------------------------------------------------------------------
+# Estilo activo (lo fija `usar_estilo` al comenzar cada video; cada video se crea en su propio
+# proceso). Los valores iniciales son los del estilo original "Pizarra nocturna".
+# ------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Rol:
+    familia: str = "Montserrat"
+    grosor: str = "conservar"  # "conservar" = usar el grosor que pide cada texto
+    escala: float = 1.0
+
+
+_TITULOS = Rol()
+_TEXTO = Rol()
+_PESOS_TITULO = {HEAVY, ULTRABOLD, BOLD}
 
 ANCHO_UTIL = 7.6
 Y_CABECERA = 6.55
@@ -59,6 +82,30 @@ Y_ZONA_SUPERIOR = 4.75
 Y_ZONA_INFERIOR = -2.4
 CENTRO_ZONA = (Y_ZONA_SUPERIOR + Y_ZONA_INFERIOR) / 2
 ALTO_ZONA = Y_ZONA_SUPERIOR - Y_ZONA_INFERIOR
+
+# Marco "hoja": la hoja cuadriculada ocupa casi todo el cuadro; los subtítulos van dentro, abajo.
+HOJA_ANCHO, HOJA_ALTO, HOJA_CENTRO_Y = 7.9, 11.6, 0.1
+_ZONAS = {
+    "pizarra": {"ANCHO_UTIL": 7.6, "Y_CABECERA": 6.55, "Y_TITULO": 5.55, "Y_ZONA_SUPERIOR": 4.75,
+                "Y_ZONA_INFERIOR": -2.4},
+    "hoja": {"ANCHO_UTIL": 7.0, "Y_CABECERA": 6.5, "Y_TITULO": 4.78, "Y_ZONA_SUPERIOR": 4.15,
+             "Y_ZONA_INFERIOR": -3.55},
+}  # fmt: skip
+
+
+def usar_estilo(tema) -> None:
+    """Aplica la tipografía y las zonas del tema (ver ``temas.Tema``)."""
+    global _TITULOS, _TEXTO, ANCHO_UTIL, Y_CABECERA, Y_TITULO, Y_ZONA_SUPERIOR, Y_ZONA_INFERIOR
+    global CENTRO_ZONA, ALTO_ZONA
+    t = tema.tipografia
+    _TITULOS = Rol(t.titulos.familia, t.titulos.grosor, t.titulos.escala)
+    _TEXTO = Rol(t.texto.familia, t.texto.grosor, t.texto.escala)
+    z = _ZONAS[tema.marco]
+    ANCHO_UTIL, Y_CABECERA, Y_TITULO = z["ANCHO_UTIL"], z["Y_CABECERA"], z["Y_TITULO"]
+    Y_ZONA_SUPERIOR, Y_ZONA_INFERIOR = z["Y_ZONA_SUPERIOR"], z["Y_ZONA_INFERIOR"]
+    CENTRO_ZONA = (Y_ZONA_SUPERIOR + Y_ZONA_INFERIOR) / 2
+    ALTO_ZONA = Y_ZONA_SUPERIOR - Y_ZONA_INFERIOR
+
 
 TAM_GANCHO = 60
 TAM_TITULO = 28
@@ -76,23 +123,21 @@ ESCALA_HISTORIAL = 0.72  # tamaño de los pasos anteriores
 # ------------------------------------------------------------------------------------------
 
 
-@functools.cache
-def _fuente_pil(peso: str) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(str(FUENTES_DIR / ARCHIVO_POR_PESO[peso]), 100)
+def _letra(peso: str) -> tuple[str, str, float]:
+    """(familia, grosor real, escala) para un texto que pide ``peso``.
 
-
-@functools.cache
-def _unidades_por_pixel(peso: str) -> float:
-    """Calibra cuánto mide en Manim (a font_size 100) un píxel medido con PIL."""
-    referencia = "Hamburguesa ñandú 123 ¿Qué?"
-    ancho_manim = Text(referencia, font=FUENTE, weight=peso, font_size=100).width
-    return ancho_manim / _fuente_pil(peso).getlength(referencia)
+    Los pesos fuertes (títulos, etiquetas, marca) usan la letra de títulos; el resto, la de texto."""
+    rol = _TITULOS if peso in _PESOS_TITULO else _TEXTO
+    grosor = peso if rol.grosor == "conservar" else rol.grosor
+    return rol.familia, tipografia.grosor_disponible(rol.familia, grosor), rol.escala
 
 
 def ancho_texto(texto: str, tam: float, peso: str) -> float:
-    """Ancho aproximado (en unidades de Manim) de una línea de texto."""
+    """Ancho aproximado (en unidades de Manim) de una línea de texto (``tam`` ya escalado)."""
+    familia, grosor, _ = _letra(peso)
     try:
-        return _fuente_pil(peso).getlength(texto) * _unidades_por_pixel(peso) * tam / 100
+        pil = tipografia.fuente_pil(familia, grosor)
+        return pil.getlength(texto) * tipografia.unidades_por_pixel(familia, grosor) * tam / 100
     except (OSError, KeyError):  # sin la fuente: estimación por cantidad de letras
         return len(texto) * 0.0062 * tam
 
@@ -237,8 +282,13 @@ def envolver_equilibrado(
     return lineas[::-1]
 
 
-def texto(contenido: str, tam: float, peso: str = SEMIBOLD, color: str = "#FFFFFF") -> Text:
-    return Text(contenido, font=FUENTE, weight=peso, font_size=tam, color=color)
+def texto(
+    contenido: str, tam: float, peso: str = SEMIBOLD, color: str = "#FFFFFF", mayus: bool = False
+) -> Text:
+    familia, grosor, escala = _letra(peso)
+    if mayus:
+        contenido = contenido.upper()
+    return Text(contenido, font=familia, weight=grosor, font_size=tam * escala, color=color)
 
 
 def parrafo(
@@ -246,17 +296,25 @@ def parrafo(
     tam: float,
     peso: str = SEMIBOLD,
     color: str = "#FFFFFF",
-    ancho_max: float = ANCHO_UTIL,
+    ancho_max: float | None = None,
     alineacion: str = "center",
     destacar: list[str] | tuple[str, ...] = (),
     color_destacado: str | None = None,
     interlineado: float = 0.5,
     max_lineas: int | None = None,
+    mayus: bool = False,
 ) -> Paragraph:
     """Párrafo con saltos de línea automáticos. Guarda ``.lineas_texto`` para ubicar frases.
 
     ``interlineado``: espacio extra entre líneas como fracción del tamaño de letra.
-    ``max_lineas``: si el texto ocupa más líneas, la letra se achica (hasta un 30 %)."""
+    ``max_lineas``: si el texto ocupa más líneas, la letra se achica (hasta un 30 %).
+    ``mayus``: todo en mayúsculas (las frases a destacar también)."""
+    ancho_max = ANCHO_UTIL if ancho_max is None else ancho_max
+    familia, grosor, escala = _letra(peso)
+    tam = tam * escala
+    if mayus:
+        contenido = contenido.upper()
+        destacar = [f.upper() for f in destacar]
     destacar = tuple(f for f in destacar if f)
     # Líneas de largo parejo: evita una palabra sola al final (ej. "m/s²." huérfano).
     lineas = envolver_equilibrado(contenido, tam, peso, ancho_max, atomicos=destacar)
@@ -267,8 +325,8 @@ def parrafo(
     t2c = {f: color_destacado for f in destacar if color_destacado and any(f in linea for linea in lineas)}
     p = Paragraph(
         *lineas,
-        font=FUENTE,
-        weight=peso,
+        font=familia,
+        weight=grosor,
         font_size=tam,
         color=color,
         alignment=alineacion,
@@ -279,11 +337,14 @@ def parrafo(
     if p.width > ancho_max:
         p.scale_to_fit_width(ancho_max)
     p.lineas_texto = lineas
+    p.mayus = mayus
     return p
 
 
 def frase_en_parrafo(p: Paragraph, frase: str) -> VGroup:
     """Las letras de ``frase`` dentro del párrafo (todas sus apariciones)."""
+    if getattr(p, "mayus", False):
+        frase = frase.upper()
     grupo = VGroup()
     for linea_mob, linea_txt in zip(p, getattr(p, "lineas_texto", []), strict=False):
         desde = 0
@@ -304,9 +365,10 @@ def numeros_en(contenido: str) -> list[str]:
 
 
 def ecuacion(
-    tex: str, tam: float = TAM_ECUACION, color: str = "#FFFFFF", ancho_max: float = ANCHO_UTIL
+    tex: str, tam: float = TAM_ECUACION, color: str = "#FFFFFF", ancho_max: float | None = None
 ) -> MathTex:
     """Fórmula dividida en partes (para animar cada término). Si la división falla, usa una sola."""
+    ancho_max = ANCHO_UTIL if ancho_max is None else ancho_max
     tex = corregir_decimales(tex)
     piezas = partes(tex)
     registro = logging.getLogger("manim")
@@ -362,12 +424,26 @@ def coincidencias(origen: MathTex, destino: MathTex) -> dict[str, str] | None:
 
 
 def partes_por_tex(eq: MathTex, buscado: str) -> list[Mobject]:
-    """Partes de la fórmula que coinciden con ``buscado`` (exacto o contenido)."""
+    """Partes de la fórmula que coinciden con ``buscado``: exacta, contenida en una parte o, si no,
+    varias partes seguidas (ej. '5x + 5x', que la fórmula divide en '5x', '+', '5x')."""
     buscado = corregir_decimales(buscado).strip()
     exactas = [p for p in eq.submobjects if getattr(p, "tex_string", "").strip() == buscado]
     if exactas:
         return exactas
-    return [p for p in eq.submobjects if buscado and buscado in getattr(p, "tex_string", "")]
+    contenidas = [p for p in eq.submobjects if buscado and buscado in getattr(p, "tex_string", "")]
+    if contenidas or not buscado:
+        return contenidas
+    objetivo = _ESPACIOS_TEX.sub("", buscado)
+    piezas = [p for p in eq.submobjects if hasattr(p, "tex_string")]
+    for i in range(len(piezas)):
+        unido = ""
+        for j in range(i, len(piezas)):
+            unido += _ESPACIOS_TEX.sub("", piezas[j].tex_string)
+            if unido == objetivo:
+                return piezas[i : j + 1]
+            if not objetivo.startswith(unido):
+                break
+    return []
 
 
 # ------------------------------------------------------------------------------------------
@@ -427,3 +503,98 @@ def fondo_cuadricula(color: str, paso: float = 0.6) -> VGroup:
     for y in np.arange(-8, 8 + 1e-6, paso):
         lineas.add(Line([-4.5, y, 0], [4.5, y, 0]))
     return lineas.set_stroke(color, width=1, opacity=0.07)
+
+
+# ------------------------------------------------------------------------------------------
+# Fondos y marcos por tema
+# ------------------------------------------------------------------------------------------
+
+
+def _capa_fondo(tema) -> Mobject | None:
+    """Imagen, degradado o cuadrícula de fondo (lo que hay detrás de todo)."""
+    from .temas import ruta_fondo
+
+    fondo = tema.fondo
+    if fondo.tipo == "imagen":
+        return ImageMobject(str(ruta_fondo(fondo.imagen))).scale_to_fit_height(16).set_z_index(-3)
+    if fondo.tipo == "degradado":
+        capa = Rectangle(width=9.2, height=16.2).set_stroke(width=0)
+        return capa.set_fill(fondo.degradado, 1).set_sheen_direction(DOWN).set_z_index(-3)
+    if fondo.tipo == "cuadricula":
+        return fondo_cuadricula(tema.colores.cuadricula).set_z_index(-1)
+    return None  # "color": basta el color de fondo del video
+
+
+def fondo_tema(tema) -> Mobject:
+    """Todo lo fijo del fondo según el tema. En "pizarra" con cuadrícula es idéntico al original."""
+    capa = _capa_fondo(tema)
+    if tema.marco == "hoja":
+        return marco_hoja(tema, capa)
+    return capa if capa is not None else VGroup()
+
+
+def marco_hoja(tema, capa: Mobject | None = None) -> Group:
+    """Fondo + "Notas" + "Fecha:" + hoja cuadriculada con encabezado, como en tus videos."""
+    h = tema.hoja
+    piezas: list[Mobject] = [capa] if capa is not None else []
+    hoja = RoundedRectangle(corner_radius=0.42, width=HOJA_ANCHO, height=HOJA_ALTO)
+    hoja.set_fill(h.color, 1).set_stroke(width=0).move_to([0, HOJA_CENTRO_Y, 0]).set_z_index(-2)
+    piezas.append(hoja)
+    if h.cuadricula:
+        izq, der = hoja.get_left()[0] + 0.2, hoja.get_right()[0] - 0.2
+        arr, aba = hoja.get_top()[1] - 0.2, hoja.get_bottom()[1] + 0.2
+        lineas = VGroup()
+        for x in np.arange(izq, der + 1e-6, 0.26):
+            lineas.add(Line([x, aba, 0], [x, arr, 0]))
+        for y in np.arange(aba, arr + 1e-6, 0.26):
+            lineas.add(Line([izq, y, 0], [der, y, 0]))
+        piezas.append(lineas.set_stroke(h.lineas, width=1.3).set_z_index(-1))
+    if h.encabezado.strip():
+        encabezado = MarkupText(
+            f'<span letter_spacing="1600">{_escapar_markup(h.encabezado.strip())}</span>',
+            font="Cinzel", font_size=26, color="#4A4A4A",
+        )  # fmt: skip
+        if encabezado.width > HOJA_ANCHO - 1.0:
+            encabezado.scale_to_fit_width(HOJA_ANCHO - 1.0)
+        piezas.append(encabezado.move_to([0, hoja.get_top()[1] - 0.42, 0]))
+    if h.etiqueta.strip():
+        etiqueta = Text(h.etiqueta.strip(), font="Montserrat", weight=MEDIUM, font_size=34, color="#FFFFFF")
+        piezas.append(etiqueta.move_to([0, 6.5, 0]).to_edge(LEFT, buff=0.6))
+    if h.fecha.strip():
+        pastilla = RoundedRectangle(corner_radius=0.25, width=2.3, height=0.5)
+        pastilla.set_fill("#FFFFFF", 0.93).set_stroke(width=0).move_to([0, 6.5, 0]).to_edge(RIGHT, buff=0.6)
+        fecha = Text(h.fecha.strip(), font="Montserrat", weight=MEDIUM, font_size=20, color="#555555")
+        if fecha.width > 1.9:
+            fecha.scale_to_fit_width(1.9)
+        fecha.move_to(pastilla).align_to(pastilla, LEFT).shift(RIGHT * 0.22)
+        piezas += [pastilla, fecha]
+    return Group(*piezas)
+
+
+def _escapar_markup(texto_: str) -> str:
+    return texto_.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+# ------------------------------------------------------------------------------------------
+# Emojis, stickers y error típico
+# ------------------------------------------------------------------------------------------
+
+
+def imagen_emoji(valor: str | None, alto: float) -> ImageMobject | None:
+    """El emoji 3D (o sticker propio) como imagen de ``alto`` unidades, o None."""
+    from .emojis import resolver
+
+    ruta: Path | None = resolver(valor)
+    if ruta is None:
+        return None
+    return ImageMobject(str(ruta)).scale_to_fit_height(alto).set_z_index(3)
+
+
+def tachado(objetivo: Mobject, color: str, grosor: float = 11, margen: float = 0.18) -> VGroup:
+    """Una ✗ roja dibujada sobre ``objetivo`` (para el paso "error típico")."""
+    sup_izq = objetivo.get_corner(UL) + (LEFT + UP) * margen
+    inf_der = objetivo.get_corner(DR) + (RIGHT + DOWN) * margen
+    sup_der = objetivo.get_corner(UR) + (RIGHT + UP) * margen
+    inf_izq = objetivo.get_corner(DL) + (LEFT + DOWN) * margen
+    cruz = VGroup(Line(sup_izq, inf_der), Line(sup_der, inf_izq)).set_stroke(color, grosor, 0.92)
+    return cruz.set_z_index(2)

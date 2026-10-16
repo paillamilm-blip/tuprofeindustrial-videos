@@ -211,7 +211,8 @@ def escribir_ass(
 ) -> Path:
     x, y = ancho // 2, round(alto * estilo.posicion_y)
     blanco = _color_ass(estilo.color)
-    normal, activo = _color_etiqueta(estilo.color), _color_etiqueta(estilo.color_activo)
+    normal = _color_etiqueta(estilo.color)
+    activo = _color_etiqueta(estilo.color_activo if estilo.resaltar else estilo.color)
     lineas = [
         "[Script Info]",
         "ScriptType: v4.00+",

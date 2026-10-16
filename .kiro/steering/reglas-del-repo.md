@@ -14,9 +14,16 @@ inclusion: always
 - **Entrega en rama nueva + Pull Request a `main`** (nunca push directo a `main`). Incluir en la PR los pasos
   para probar en el Mac y para actualizar:
   `cd ~/Downloads/tuprofeindustrial-videos && git checkout main && git pull origin main`
-- **Verificar renderizando**, no solo revisando código: crear el borrador de los 3 guiones de
+- **Verificar renderizando**, no solo revisando código: crear el borrador de los guiones de
   `guiones/ejemplos/` y mirar cuadros del video antes de abrir la PR.
+- **No romper el estilo original:** con `--tema pizarra_nocturna --voz silencio --borrador`, los ejemplos
+  antiguos deben salir idénticos cuadro a cuadro a los de `main`. Comparar con `PYTHONHASHSEED=0` en ambos
+  lados (`TransformMatchingTex` recorre conjuntos y el orden de dibujo cambia entre procesos).
+- **Estilos y datos del usuario:** el estilo por defecto es `hoja_de_desarrollo`; todo campo nuevo del guion o
+  del tema es opcional. Lo que personaliza el usuario va en `mis_ajustes/` (ignorado por Git), nunca en
+  archivos del repo.
 - **Guiones:** `texto`/`tex` es lo que se ve y `voz` lo que se escucha; fórmulas LaTeX entre comillas simples.
+  Los emojis van solo en el campo `emoji:` (nunca en `texto` ni `voz`).
 - **Nunca subir videos ni audios** (`salida/` está en `.gitignore`).
 - **Secretos:** la clave de Gemini vive solo en `.env` (ignorado por Git, permisos 600) o en la variable
   `GEMINI_API_KEY`. Nunca imprimirla, registrarla ni pedirla por el chat: el usuario la guarda con `./tpi clave`.
