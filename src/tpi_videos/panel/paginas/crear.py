@@ -228,6 +228,10 @@ class PaginaCrear:
             args += ["--materia", str(idea["materia"])]
         if idea.get("nivel"):
             args += ["--nivel", str(idea["nivel"])]
+        if idea.get("gancho"):
+            args += ["--gancho", str(idea["gancho"])]
+        if idea.get("titulo"):
+            args += ["--titulo", str(idea["titulo"])]
         args += ["--", enunciado]
 
         self.zona_idea_video.clear()

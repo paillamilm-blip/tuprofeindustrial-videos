@@ -184,8 +184,8 @@ funciona con la cuenta gratuita).
 ### ¿De qué hago mi próximo video? 3 ideas y eliges
 
 No tienes que partir con el ejercicio listo. Escribe un tema y Gemini propone **3 ideas distintas** (un error
-típico, una aplicación real, un dato curioso), cada una con su gancho, el ejercicio con números, el nivel y la
-duración estimada:
+típico, una aplicación real, un dato curioso), pensadas para frenar el scroll, cada una con su gancho, el
+ejercicio con números, el nivel y la duración estimada:
 
 ```bash
 ./tpi ideas "Teorema de Pitágoras"
@@ -196,7 +196,8 @@ Aparecen numeradas. Escribe `1`, `2` o `3` para hacer ese video, `[Enter]` si ni
 
 Al elegir, el motor hace **todo solo** (es lo mismo que `./tpi producir`):
 
-1. Resuelve el ejercicio y escribe el guion, con las tres revisiones de arriba.
+1. Resuelve el ejercicio y escribe el guion, con las tres revisiones de arriba. **El gancho de la idea que
+   elegiste llega al video tal cual**: la IA no escribe otro.
 2. Crea el **video final** (o el borrador con `--borrador`).
 3. Arma el **kit de publicación** (portada + título, descripción y hashtags).
 

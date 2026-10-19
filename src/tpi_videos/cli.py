@@ -319,7 +319,12 @@ def cmd_redactar(args: argparse.Namespace) -> int:
 
 
 def _producir(
-    args: argparse.Namespace, valor: str, materia: str | None = None, nivel: str | None = None
+    args: argparse.Namespace,
+    valor: str,
+    materia: str | None = None,
+    nivel: str | None = None,
+    gancho: str | None = None,
+    titulo: str | None = None,
 ) -> int:
     """Guion revisado + video + kit de publicación en un solo paso, y lo muestra."""
     from .ia import MODELO_POR_DEFECTO
@@ -353,6 +358,8 @@ def _producir(
         sincronizar=getattr(args, "sincronizar", "auto"),
         revisar_con_ia=not getattr(args, "sin_revision", False),
         con_kit=not getattr(args, "sin_kit", False),
+        gancho=gancho if gancho is not None else getattr(args, "gancho", None),
+        titulo=titulo if titulo is not None else getattr(args, "titulo", None),
         avisar=avisar,
         progreso=progreso if json_activo else None,
     )
@@ -471,7 +478,14 @@ def cmd_ideas(args: argparse.Namespace) -> int:
             )
         elegida = ideas[eleccion - 1]
         consola.print(f"\n[bold]🎬 Voy con «{elegida.titulo}»[/] ({elegida.emoji})\n")
-        return _producir(args, elegida.enunciado, materia=args.materia, nivel=elegida.nivel)
+        return _producir(
+            args,
+            elegida.enunciado,
+            materia=args.materia,
+            nivel=elegida.nivel,
+            gancho=elegida.gancho,
+            titulo=elegida.titulo,
+        )
 
 
 def cmd_temas(args: argparse.Namespace) -> int:
@@ -744,6 +758,13 @@ def construir_parser() -> argparse.ArgumentParser:
         "--materia", choices=["matematica", "fisica", "ingenieria"], help="opcional: la IA la deduce"
     )
     s.add_argument("--nivel", help='opcional, ej. "2° medio" o "técnico en electricidad"')
+    s.add_argument(
+        "--gancho",
+        help="gancho de la idea elegida: el guion lo mantiene en vez de escribir otro (lo usa el panel)",
+    )
+    s.add_argument(
+        "--titulo", help="título de la idea elegida, para que el guion siga esa línea (lo usa el panel)"
+    )
     s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
     s.add_argument("--nombre", help="nombre del archivo del guion")
     s.add_argument("--forzar", action="store_true", help="reemplaza el guion si ya existe")
