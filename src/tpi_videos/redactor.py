@@ -402,13 +402,16 @@ def pedir_json(
         ) from e
 
 
-def _contenido_base(entrada: Entrada, materia: str | None, nivel: str | None) -> list[Any]:
+def _contenido_base(
+    entrada: Entrada, materia: str | None, nivel: str | None, pistas: list[str] | None = None
+) -> list[Any]:
     contenido = entrada.partes()
-    pistas = []
+    pistas_base = []
     if materia:
-        pistas.append(f"Materia: {materia}.")
-    pistas.append(f"Nivel de los estudiantes: {nivel or 'enseñanza media (Chile)'}.")
-    contenido.append(" ".join(pistas))
+        pistas_base.append(f"Materia: {materia}.")
+    pistas_base.append(f"Nivel de los estudiantes: {nivel or 'enseñanza media (Chile)'}.")
+    contenido.append(" ".join(pistas_base))
+    contenido.extend(pistas or [])
     return contenido
 
 
@@ -449,12 +452,13 @@ def redactar(
     nombre: str | None = None,
     forzar: bool = False,
     revisar_con_ia: bool = True,
+    pistas: list[str] | None = None,
     avisar=lambda mensaje: None,
 ) -> ResultadoRedaccion:
     entrada = leer_entrada(valor)
     cliente = ia.cliente()
     sistema = _sistema()
-    base = _contenido_base(entrada, materia, nivel)
+    base = _contenido_base(entrada, materia, nivel, pistas)
     revisor = (PLANTILLAS_DIR / "ia" / "revisor.md").read_text(encoding="utf-8")
     historial: list[str] = []
     sin_latex = False

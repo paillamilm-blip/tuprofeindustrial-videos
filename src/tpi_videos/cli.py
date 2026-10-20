@@ -1,6 +1,8 @@
 """Comandos del motor. Se usan desde la carpeta del repo con ``./tpi <comando>``.
 
 ./tpi doctor                         ¿está todo instalado?
+./tpi ideas "Teorema de Pitágoras"  la IA propone 3 ideas, tú eliges y el motor hace el video completo
+./tpi producir "Un bus viaja a…"    guion revisado + video final + kit de publicación, en un comando
 ./tpi redactar foto.jpg --crear      la IA escribe el guion desde un enunciado (y crea el borrador)
 ./tpi clave                          guarda tu clave de Gemini
 ./tpi nuevo mi_ejercicio             crea guiones/mi_ejercicio.yaml desde la plantilla
@@ -77,6 +79,15 @@ def _abrir(ruta: Path) -> None:
 def _minutos(segundos: float) -> str:
     m, s = divmod(round(segundos), 60)
     return f"{m} min {s:02d} s" if m else f"{s} s"
+
+
+def _dividir_voz(valor: str | None) -> tuple[str | None, str | None]:
+    """``--voz`` acepta un servicio (edge | gtts | silencio) o el nombre de una voz."""
+    from .voces import PROVEEDORES
+
+    if not valor:
+        return None, None
+    return (valor, None) if valor in PROVEEDORES else ("edge", valor)
 
 
 # ------------------------------------------------------------------------------------------
@@ -167,13 +178,10 @@ def cmd_revisar(args: argparse.Namespace) -> int:
 
 def cmd_crear(args: argparse.Namespace) -> int:
     from .render import crear_video
-    from .voces import PROVEEDORES
 
     json_activo = _modo_json(args)
 
-    proveedor, voz = None, None
-    if args.voz:
-        proveedor, voz = (args.voz, None) if args.voz in PROVEEDORES else ("edge", args.voz)
+    proveedor, voz = _dividir_voz(args.voz)
 
     if not getattr(args, "revisado", False):  # redactar ya mostró la revisión
         _mostrar_revision(args.guion)
@@ -303,6 +311,181 @@ def cmd_redactar(args: argparse.Namespace) -> int:
         consola.print(f"   Para corregirlo: open -e {ruta}")
         consola.print(f"   Para verlo:      ./tpi crear {ruta} --borrador --abrir")
     return 0
+
+
+# ------------------------------------------------------------------------------------------
+# Ideas de video y producción completa (de la idea al video listo para publicar)
+# ------------------------------------------------------------------------------------------
+
+
+def _producir(
+    args: argparse.Namespace,
+    valor: str,
+    materia: str | None = None,
+    nivel: str | None = None,
+    gancho: str | None = None,
+    titulo: str | None = None,
+) -> int:
+    """Guion revisado + video + kit de publicación en un solo paso, y lo muestra."""
+    from .ia import MODELO_POR_DEFECTO
+    from .ideas import producir
+
+    json_activo = _modo_json(args)
+    proveedor, voz = _dividir_voz(getattr(args, "voz", None))
+
+    def avisar(mensaje: str) -> None:
+        if json_activo:
+            _emitir(etapa="redactando", avance=0.0, detalle=mensaje)
+        else:
+            consola.print(f"[dim]→ {mensaje}[/dim]")
+
+    def progreso(etapa: str, avance: float, detalle: str) -> None:
+        _progreso_json(etapa, avance, detalle)
+
+    resultado = producir(
+        valor,
+        materia=materia if materia is not None else getattr(args, "materia", None),
+        nivel=nivel if nivel is not None else getattr(args, "nivel", None),
+        modelo=getattr(args, "modelo", None) or MODELO_POR_DEFECTO,
+        nombre=getattr(args, "nombre", None),
+        forzar=getattr(args, "forzar", False),
+        calidad="borrador" if getattr(args, "borrador", False) else "final",
+        tema=getattr(args, "estilo", None),
+        proveedor=proveedor,
+        voz=voz,
+        velocidad=getattr(args, "velocidad", None),
+        subtitulos=not getattr(args, "sin_subtitulos", False),
+        sincronizar=getattr(args, "sincronizar", "auto"),
+        revisar_con_ia=not getattr(args, "sin_revision", False),
+        con_kit=not getattr(args, "sin_kit", False),
+        gancho=gancho if gancho is not None else getattr(args, "gancho", None),
+        titulo=titulo if titulo is not None else getattr(args, "titulo", None),
+        avisar=avisar,
+        progreso=progreso if json_activo else None,
+    )
+
+    if json_activo:
+        _emitir(
+            etapa="resultado", avance=1.0,
+            guion=resultado.ruta_guion, video=resultado.video, srt=resultado.srt,
+            tema=resultado.tema, duracion=round(resultado.duracion, 1),
+            portada=resultado.portada, publicacion=resultado.publicacion,
+            supuestos=resultado.redaccion.supuestos, pendientes=resultado.redaccion.pendientes,
+            revisado_por_ia=resultado.redaccion.revisado_por_ia,
+        )  # fmt: skip
+    rutas = {"guion": resultado.ruta_guion, "video": resultado.video, "portada": resultado.portada,
+             "kit": resultado.publicacion}  # fmt: skip
+    nombres = {"voz": "marcas exactas de la voz", "whisper": "Whisper", "estimado": "tiempos estimados"}
+    fuentes = ", ".join(nombres[f] for f in sorted(resultado.fuentes_tiempo)) or "sin subtítulos"
+    consola.print()
+    for etiqueta, ruta in rutas.items():
+        if ruta is not None:
+            consola.print(f"[green]✅[/] [bold]{etiqueta.capitalize()}:[/] {_ruta_amigable(Path(ruta))}")
+    consola.print(
+        f"   Estilo: {resultado.tema} · Duración: {resultado.duracion:.1f} s · Subtítulos: {fuentes}"
+    )
+    for supuesto in resultado.redaccion.supuestos:
+        consola.print(f"   [cyan]ℹ Supuesto de la IA:[/] {supuesto}")
+    for pendiente in resultado.redaccion.pendientes:
+        consola.print(f"   [yellow]⚠️  Por revisar:[/] {pendiente}")
+    if resultado.kit_aviso:
+        consola.print(f"   [yellow]{resultado.kit_aviso}[/]")
+    consola.print(f'   Para verlo: [bold]open "{_ruta_amigable(resultado.video)}"[/]')
+    if resultado.publicacion:
+        consola.print(f'   Para copiar los textos: open -e "{_ruta_amigable(resultado.publicacion)}"')
+    if getattr(args, "abrir", False):
+        _abrir(resultado.video)
+    return 0
+
+
+def cmd_producir(args: argparse.Namespace) -> int:
+    _modo_json(args)
+    consola.print(
+        "[bold]🎬 Video completo[/] (guion revisado por IA → video final → kit de publicación).\n"
+        "   Dura varios minutos: la animación se crea ahora, no hay que repetirla después.\n"
+    )
+    # sin comillas: la terminal separa el enunciado en palabras
+    return _producir(args, " ".join(args.enunciado))
+
+
+def _mostrar_ideas(ideas: list, tema: str | None) -> None:
+    from .ideas import ANGULOS
+
+    consola.print(f"\n[bold]🎬 3 ideas[/]{' para «' + tema + '»' if tema else ''}:\n")
+    for n, idea in enumerate(ideas, 1):
+        consola.print(f" [bold cyan]{n}[/]  [bold]{idea.emoji} {ANGULOS[idea.angulo]}[/] · {idea.titulo}")
+        consola.print(f"    [bold]Gancho:[/] {idea.gancho}")
+        consola.print(f"    [bold]El ejercicio:[/] {idea.enunciado}")
+        consola.print(
+            f"    [bold]Nivel:[/] {idea.nivel} · {idea.materia.upper()} · [yellow]≈{idea.segundos} s[/]"
+        )
+        consola.print(f"    [dim]{idea.porque}[/]\n")
+
+
+def cmd_ideas(args: argparse.Namespace) -> int:
+    from .ia import MODELO_POR_DEFECTO
+    from .ideas import proponer_ideas
+
+    json_activo = _modo_json(args)
+    tema = " ".join(args.tema).strip() or None
+    modelo = args.modelo or MODELO_POR_DEFECTO
+    evitadas: list[str] = list(args.evitar or [])
+    eleccion = args.elegir
+
+    while True:
+        ideas = proponer_ideas(
+            tema=tema,
+            materia=args.materia,
+            nivel=args.nivel,
+            modelo=modelo,
+            evitar=evitadas,
+            avisar=lambda m: _emitir(etapa="redactando", avance=0.0, detalle=m)
+            if json_activo
+            else consola.print(f"[dim]→ {m}[/dim]"),
+        )  # fmt: skip
+        if json_activo:
+            # El panel muestra las tarjetas y sigue con `tpi producir`: sin preguntar, termina aquí.
+            _emitir(
+                etapa="resultado", avance=1.0, tema=tema or "",
+                ideas=[i.model_dump() for i in ideas],
+            )  # fmt: skip
+            if eleccion is None:
+                return 0
+        else:
+            _mostrar_ideas(ideas, tema)
+            if args.sin_video:
+                return 0
+        if eleccion is None:
+            try:
+                respuesta = input("\nElige 1, 2 o 3 · [Enter] otras 3 ideas · [q] salir: ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                consola.print("\n[yellow]Cancelado.[/]")
+                return 130
+            if respuesta in ("q", "salir", "s"):
+                consola.print("Cancelado: ninguna idea te convenció.")
+                return 130
+            if respuesta == "":
+                evitadas += [i.titulo for i in ideas]
+                continue
+            if not respuesta.isdigit() or not 1 <= int(respuesta) <= len(ideas):
+                consola.print("[yellow]Escribe 1, 2 o 3 (Enter para ver otras 3, q para salir).[/]")
+                continue
+            eleccion = int(respuesta)
+        if not 1 <= eleccion <= len(ideas):
+            raise ErrorMotor(
+                f"La idea {eleccion} no está en la lista (hay {len(ideas)}).",
+                ayuda='Ej. ./tpi ideas "Porcentajes" --elegir 2',
+            )
+        elegida = ideas[eleccion - 1]
+        consola.print(f"\n[bold]🎬 Voy con «{elegida.titulo}»[/] ({elegida.emoji})\n")
+        return _producir(
+            args,
+            elegida.enunciado,
+            materia=args.materia,
+            nivel=elegida.nivel,
+            gancho=elegida.gancho,
+            titulo=elegida.titulo,
+        )
 
 
 def cmd_temas(args: argparse.Namespace) -> int:
@@ -539,6 +722,70 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--abrir", action="store_true", help="con --crear: abre el video al terminar")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_redactar)
+
+    s = sub.add_parser(
+        "ideas",
+        help="la IA propone 3 ideas de video sobre un tema; eliges una y el motor hace el video completo",
+    )
+    s.add_argument("tema", nargs="*", help='de qué trata, ej. "Teorema de Pitágoras" o "ley de Ohm"')
+    s.add_argument(
+        "--materia", choices=["matematica", "fisica", "ingenieria"], help="opcional: la IA la deduce"
+    )
+    s.add_argument("--nivel", help='opcional, ej. "2° medio" o "técnico en electricidad"')
+    s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
+    s.add_argument("--evitar", nargs="+", default=[], help="títulos ya vistos, para que salgan otras 3")
+    s.add_argument("--elegir", type=int, help="hacer el video de esa idea (1, 2 o 3) sin preguntar")
+    s.add_argument("--sin-video", action="store_true", help="solo mostrar las 3 ideas")
+    s.add_argument(
+        "--sin-revision", action="store_true", help="no pedir la segunda revisión a la IA (más rápido)"
+    )
+    s.add_argument("--borrador", action="store_true", help="crear un borrador rápido en vez del video final")
+    s.add_argument("--estilo", help="estilo visual del video, ej. pizarra_nocturna (ver ./tpi temas)")
+    s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
+    s.add_argument("--sin-kit", action="store_true", help="no armar el kit de publicación")
+    s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
+    s.set_defaults(func=cmd_ideas)
+
+    s = sub.add_parser(
+        "producir",
+        help="del enunciado al video completo: guion revisado + video final + kit de publicación",
+    )
+    s.add_argument(
+        "enunciado", nargs="+", help="el enunciado (mejor entre comillas), o una ruta .txt/.jpg/.pdf"
+    )
+    s.add_argument(
+        "--materia", choices=["matematica", "fisica", "ingenieria"], help="opcional: la IA la deduce"
+    )
+    s.add_argument("--nivel", help='opcional, ej. "2° medio" o "técnico en electricidad"')
+    s.add_argument(
+        "--gancho",
+        help="gancho de la idea elegida: el guion lo mantiene en vez de escribir otro (lo usa el panel)",
+    )
+    s.add_argument(
+        "--titulo", help="título de la idea elegida, para que el guion siga esa línea (lo usa el panel)"
+    )
+    s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
+    s.add_argument("--nombre", help="nombre del archivo del guion")
+    s.add_argument("--forzar", action="store_true", help="reemplaza el guion si ya existe")
+    s.add_argument(
+        "--sin-revision", action="store_true", help="no pedir la segunda revisión a la IA (más rápido)"
+    )
+    s.add_argument("--borrador", action="store_true", help="crea un borrador rápido en vez del video final")
+    s.add_argument("--estilo", help="estilo visual del video, ej. pizarra_nocturna (ver ./tpi temas)")
+    s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
+    s.add_argument("--velocidad", help="velocidad de la voz, ej. +10%% o -5%%")
+    s.add_argument("--sin-subtitulos", action="store_true", help="no quemar subtítulos")
+    s.add_argument(
+        "--sincronizar",
+        choices=["auto", "voz", "whisper", "estimado"],
+        default="auto",
+        help="de dónde salen los tiempos de los subtítulos (auto = el mejor disponible)",
+    )
+    s.add_argument("--sin-kit", action="store_true", help="no armar el kit de publicación")
+    s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
+    s.set_defaults(func=cmd_producir)
 
     s = sub.add_parser("clave", help="guarda tu clave de Gemini (para redactar con IA)")
     s.add_argument("--sin-probar", action="store_true", help="guardar sin probarla por internet")

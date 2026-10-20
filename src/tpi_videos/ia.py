@@ -85,6 +85,13 @@ def explicar_error(error: Exception, modelo: str) -> ErrorMotor:
         if codigo in (400, 401, 403) and ("API key" in mensaje or "API_KEY" in mensaje or codigo == 401):
             return ErrorMotor("Gemini rechazó la clave (no es válida o fue borrada).", ayuda=AYUDA_CLAVE)
         if codigo == 403:
+            if modelo == MODELO_POR_DEFECTO:
+                # El modelo por defecto negado es un corte del proyecto, no un error del comando.
+                return ErrorMotor(
+                    f"Google le cortó el acceso al proyecto de tu clave ({mensaje}).",
+                    ayuda=f"No es el modelo ni el comando: es tu cuenta de Google. Entra a {URL_CLAVE}, "
+                    "revisa el estado del proyecto y crea una clave nueva. Después: ./tpi clave",
+                )  # fmt: skip
             return ErrorMotor(
                 f"Tu clave no tiene permiso para usar «{modelo}» ({mensaje}).",
                 ayuda=f"Prueba con --modelo {MODELO_POR_DEFECTO} o revisa tu cuenta en {URL_CLAVE}",

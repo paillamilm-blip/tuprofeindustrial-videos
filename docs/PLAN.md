@@ -9,6 +9,7 @@ independiente de la web (Sistema 1).
 ## Arquitectura (v0.4)
 
 ```
+tema ("Teorema de Pitágoras") ─► ideas.py (Gemini propone 3 ángulos) ─► el profe elige una ─┐
 enunciado (texto, foto o PDF) ─► redactor.py (Gemini escribe → motor valida → Gemini revisa) ─► guion.yaml
 guion.yaml ─► guion.py (valida, errores en español) ─► revision.py (duración, gancho, pedagogía)
           ─► temas.py (estilo: --tema > guion > marca.yaml) ─► tipografia.py · emojis.py
@@ -19,11 +20,13 @@ guion.yaml ─► guion.py (valida, errores en español) ─► revision.py (dur
           ─► salida/<guion>/<guion>.mp4 + .srt ─► publicar.py (portada + textos con IA) ─► kit
 panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-json`, uno a la vez, en procesos aparte
 ```
+`ideas.py` + `producir` encadenan todo: de un tema al video final con su kit, sin escribir el enunciado.
 
 | Módulo | Responsabilidad |
 |---|---|
 | `cli.py` | Comandos `tpi` en español; errores sin trazas técnicas (`--debug` para verlas) |
 | `redactor.py` / `ia.py` | `tpi redactar`: Gemini escribe el guion, el motor lo valida y Gemini lo revisa / clave y errores de la API |
+| `ideas.py` | `tpi ideas` (3 ángulos distintos para un tema, con el ejercicio ya numerado) y `tpi producir` (guion → video → kit en un solo paso) |
 | `guion.py` | Formato del guion (pydantic) y mensajes claros (incluye la trampa de comillas dobles con LaTeX) |
 | `revision.py` | Reglas de guion corto y de pedagogía; estimación de duración calibrada con la voz es-CL |
 | `voces.py` | Servicios de voz para manim-voiceover; edge-tts entrega la marca de tiempo de cada palabra |
@@ -83,7 +86,9 @@ panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-
    paso «error típico» y gancho con fórmula.
 4. ✅ **v0.4 · Panel de control local** (NiceGUI, solo en el Mac), kit de publicación (portada + textos con IA)
    y vista previa de estilos.
-5. **Visuales por materia:** gráficos de funciones (parábolas, rectas), diagramas de física (caída libre,
+5. ✅ **v0.5 · De un tema al video completo:** `tpi ideas` (Gemini propone 3 ángulos y el profe elige) y
+   `tpi producir` (guion revisado → video final → kit). En el panel: pestaña **Crear → Ideas**.
+6. **Visuales por materia:** gráficos de funciones (parábolas, rectas), diagramas de física (caída libre,
    plano inclinado, fuerzas) y de electricidad (circuitos serie/paralelo).
-6. **Producción:** música de fondo que baja cuando hay voz, voz Azure o voz propia grabada.
-7. **Escala:** crear varios videos en lote y una verificación automática de render en GitHub Actions.
+7. **Producción:** música de fondo que baja cuando hay voz, voz Azure o voz propia grabada.
+8. **Escala:** crear varios videos en lote y una verificación automática de render en GitHub Actions.

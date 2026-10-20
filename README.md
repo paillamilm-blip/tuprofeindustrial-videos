@@ -71,7 +71,7 @@ cierra esa ventana (o presiona `Control + C`).
 
 | Pestaña | Para qué sirve |
 |---|---|
-| **Crear** | 1) Escribe el enunciado o sube una foto o PDF, y la IA escribe el guion (también puedes abrir uno o empezar en blanco). 2) Edítalo en tarjetas: lo que se ve, lo que se escucha, emojis y «error típico». Cada fórmula se dibuja tal como saldrá en el video. 3) Elige el estilo y crea el borrador o el video final. Verás una barra de avance y el video aparece ahí mismo. |
+| **Crear** | 4 pestañas: **Ideas** (escribes un tema, la IA te propone 3 videos y tú eliges uno; el motor hace todo lo demás), **Escribir con IA** (el enunciado, una foto o un PDF → el guion), **Abrir un guion** y **Empezar en blanco**. El guion se edita en tarjetas: lo que se ve, lo que se escucha, emojis y «error típico», con cada fórmula dibujada tal como saldrá en el video. Luego eliges el estilo y creas el borrador o el video final: verás una barra de avance y el video aparece ahí mismo. |
 | **Mis videos** | Ver tus videos, mostrarlos en Finder, rehacerlos con otro estilo, borrarlos y abrir el 📦 **kit de publicación**. |
 | **Estilos** | Ver una vista previa de cada estilo y elegir el que usas siempre. Para cambiar colores, letras, el fondo (¡también con tu foto!), la hoja o los subtítulos, duplica un estilo y edita la copia. |
 | **Ajustes** | Tu clave de Gemini, tu marca, la voz (con muestra ▶), tus stickers y el diagnóstico. |
@@ -181,6 +181,40 @@ Opciones útiles: `--materia fisica`, `--nivel "técnico en electricidad"`, `--n
 `--sin-revision` (más rápido, sin la segunda revisión) y `--modelo` (por defecto `gemini-3.8-flash`, que
 funciona con la cuenta gratuita).
 
+### ¿De qué hago mi próximo video? 3 ideas y eliges
+
+No tienes que partir con el ejercicio listo. Escribe un tema y Gemini propone **3 ideas distintas** (un error
+típico, una aplicación real, un dato curioso), pensadas para frenar el scroll, cada una con su gancho, el
+ejercicio con números, el nivel y la duración estimada:
+
+```bash
+./tpi ideas "Teorema de Pitágoras"
+```
+
+Aparecen numeradas. Escribe `1`, `2` o `3` para hacer ese video, `[Enter]` si ninguna te convence (pide otras
+3 sin repetir las que ya viste) o `q` para salir. Si solo quieres leer las ideas: `./tpi ideas "Porcentajes" --sin-video`.
+
+Al elegir, el motor hace **todo solo** (es lo mismo que `./tpi producir`):
+
+1. Resuelve el ejercicio y escribe el guion, con las tres revisiones de arriba. **El gancho de la idea que
+   elegiste llega al video tal cual**: la IA no escribe otro.
+2. Crea el **video final** (o el borrador con `--borrador`).
+3. Arma el **kit de publicación** (portada + título, descripción y hashtags).
+
+```bash
+./tpi producir "Un electricista apoyará una escalera a 1,5 m de la pared para llegar a 4 m de altura. ¿Qué largo mínimo necesita?" --materia matematica --nivel "técnico en electricidad" --abrir
+```
+
+Sirven las mismas opciones de `crear` y `redactar`: `--borrador`, `--estilo pizarra_nocturna`,
+`--voz es-CL-CatalinaNeural`, `--sin-kit`, `--sin-revision`.
+
+**En el panel es todavía más fácil:** pestaña **Crear → Ideas**. Escribes el tema (o tocas uno sugerido, como
+*Ley de Ohm* o *Caída libre*), ves las 3 tarjetas, presionas **«Otras 3 ideas»** si no te convencen y en la que
+eliges presionas **«Hacer este video»**. Ahí mismo ves el avance: el guion, el video y el kit.
+
+> 💡 Las ideas usan lo que el motor ya sabe dibujar (fórmulas y texto en la pizarra). Por eso no propone
+> gráficos de funciones ni diagramas de circuitos: eso viene después.
+
 ## 6. Comandos
 
 | Comando | Qué hace |
@@ -189,6 +223,8 @@ funciona con la cuenta gratuita).
 | `./tpi icono` | Crea (o repara) el ícono del panel en tu Escritorio y te lo muestra en Finder |
 | `./tpi doctor` | Revisa que todo esté instalado (agrega `--red` para probar también la voz y la clave de IA) |
 | `./tpi redactar ENUNCIADO --crear` | La IA escribe el guion desde un texto, foto o PDF (y crea el borrador) |
+| `./tpi ideas "TEMA"` | La IA propone 3 ideas de video; eliges una y la hace completa (`--sin-video` solo las muestra) |
+| `./tpi producir ENUNCIADO` | Del enunciado al video final + kit de publicación, todo en un comando |
 | `./tpi clave` | Guarda tu clave de Gemini para `redactar` y el kit de publicación |
 | `./tpi nuevo NOMBRE --materia fisica` | Crea `guiones/NOMBRE.yaml` desde la plantilla |
 | `./tpi revisar GUION.yaml` | Revisa el guion sin crear el video |

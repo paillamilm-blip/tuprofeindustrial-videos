@@ -12,6 +12,7 @@ from ...config import ajustes_dir, cargar_marca
 from ...entorno import PLANTILLAS_DIR, raiz_proyecto
 from ...errores import ErrorMotor
 from ...guion import cabecera_de, cargar_guion
+from ...ideas import ANGULOS
 from ...revision import Revision
 from ...temas import listar_temas
 from .. import biblioteca
@@ -21,6 +22,36 @@ from ..tareas import TAREAS, Tarea
 from .videos import abrir_kit
 
 TIPOS_SUBIDA = ".jpg,.jpeg,.png,.heic,.heif,.webp,.pdf,.txt"
+
+# Temas que más piden en el canal: un atajo para no tener que escribir
+TEMAS_SUGERIDOS = (
+    "Ley de Ohm",
+    "Caída libre",
+    "Porcentajes",
+    "Teorema de Pitágoras",
+    "MRU",
+    "Potencia eléctrica",
+)
+ANGULOS_ICONO = {
+    "error_tipico": "report_problem",
+    "aplicacion_real": "construction",
+    "dato_curioso": "emoji_objects",
+    "paso_a_paso": "school",
+    "reto": "sports_score",
+}
+NOMBRES_MATERIA = {"matematica": "Matemática", "fisica": "Física", "ingenieria": "Ingeniería"}
+# La etapa del comando dice en qué paso del video completo vamos
+PASOS = ("El guion", "El video", "El kit")
+ETAPA_PASO = {
+    "redactando": 0,
+    "guion": 0,
+    "preparando": 1,
+    "animacion": 1,
+    "subtitulos": 1,
+    "video final": 1,
+    "listo": 2,
+    "publicando": 2,
+}
 
 
 def _nombre_seguro(nombre: str) -> str:
@@ -43,25 +74,229 @@ class PaginaCrear:
     def __init__(self) -> None:
         self.editor: EditorGuion | None = None
         self.subida: Path | None = None
+        self.ideas_vistas: list[str] = []
 
     # --------------------------------------------------------------------------------------
     # 1 · El ejercicio
     # --------------------------------------------------------------------------------------
 
     def seccion_ejercicio(self) -> None:
-        titulo_seccion("1", "El ejercicio", "Escríbelo, sube una foto o PDF, o abre un guion que ya tienes.")
+        titulo_seccion(
+            "1",
+            "El ejercicio",
+            "Busca ideas con la IA, escribe el enunciado, sube una foto o PDF, o abre un guion que ya tienes.",
+        )
         with ui.card().classes("tpi-hoja w-full p-0"):
             with ui.tabs().classes("w-full text-primary") as pestanas:
+                ideas_tab = ui.tab("Ideas", icon="lightbulb")
                 ia_tab = ui.tab("Escribir con IA", icon="auto_awesome")
                 abrir_tab = ui.tab("Abrir un guion", icon="folder_open")
                 blanco_tab = ui.tab("Empezar en blanco", icon="note_add")
-            with ui.tab_panels(pestanas, value=ia_tab).classes("w-full"):
+            with ui.tab_panels(pestanas, value=ideas_tab).classes("w-full"):
+                with ui.tab_panel(ideas_tab).classes("gap-3"):
+                    self._panel_ideas()
                 with ui.tab_panel(ia_tab).classes("gap-3"):
                     self._panel_ia()
                 with ui.tab_panel(abrir_tab).classes("gap-3"):
                     self._panel_abrir()
                 with ui.tab_panel(blanco_tab).classes("gap-3"):
                     self._panel_blanco()
+
+    # --------------------------------------------------------------------------------------
+    # Ideas: la IA propone 3, la persona elige y el motor hace el video completo
+    # --------------------------------------------------------------------------------------
+
+    def _panel_ideas(self) -> None:
+        if ia.obtener_clave() is None:
+            with ui.row().classes("w-full items-center gap-2 bg-[#FFF4E5] rounded p-3"):
+                ui.icon("key").classes("text-xl text-orange-8")
+                ui.label("Para buscar ideas falta tu clave de Gemini (gratis).")
+                ui.link("Configurarla en Ajustes", "/ajustes").classes("font-bold")
+        self.tema_idea = ui.input(
+            "¿De qué tema quieres un video?", placeholder="Ej. Teorema de Pitágoras"
+        ).props("outlined").classes("w-full")  # fmt: skip
+        with ui.row().classes("w-full items-center flex-wrap gap-2"):
+            ui.label("O toca un tema sugerido:").classes("tpi-ayuda")
+            for sugerido in TEMAS_SUGERIDOS:
+                ui.button(sugerido, on_click=lambda t=sugerido: self._buscar_ideas(t)).props(
+                    "outline dense no-caps size=sm"
+                )
+        with ui.row().classes("w-full items-end gap-4"):
+            self.materia_idea = ui.select(
+                {"": "La IA la deduce", "matematica": "Matemática", "fisica": "Física", "ingenieria": "Ingeniería"},
+                value="", label="Materia",
+            ).props("outlined dense").classes("w-60")  # fmt: skip
+            self.nivel_idea = ui.input("Nivel (opcional)", placeholder="Ej. 2° medio").props("outlined dense")
+            self.boton_ideas = ui.button("Buscar 3 ideas", icon="lightbulb", on_click=self._buscar_ideas)
+            self.estado_ideas = ui.label("").classes("tpi-ayuda")
+        self.barra_ideas = ui.linear_progress(show_value=False).props("indeterminate").classes("w-full")
+        self.barra_ideas.set_visibility(False)
+        self.tarjetas_ideas = ui.column().classes("w-full gap-3")
+        with self.tarjetas_ideas:
+            ui.label("Las 3 ideas aparecen aquí. En la que te guste, toca «Hacer este video».").classes(
+                "tpi-ayuda"
+            )
+        self.zona_idea_video = ui.column().classes("w-full gap-3")
+
+    async def _buscar_ideas(self, tema: str | None = None) -> None:
+        texto = (tema or self.tema_idea.value or "").strip()
+        if not texto:
+            ui.notify("Escribe un tema (ej. «Porcentajes») o toca uno de los sugeridos.", type="warning")
+            return
+        if tema:
+            self.tema_idea.value = tema
+        if TAREAS.ocupado():
+            ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+            return
+        args = ["ideas"]
+        if self.materia_idea.value:
+            args += ["--materia", self.materia_idea.value]
+        if (self.nivel_idea.value or "").strip():
+            args += ["--nivel", self.nivel_idea.value.strip()]
+        if self.ideas_vistas:
+            args += ["--evitar", *self.ideas_vistas]
+        args += ["--", texto]
+
+        self.boton_ideas.disable()
+        self.barra_ideas.set_visibility(True)
+        self.estado_ideas.text = "La IA está pensando 3 ideas…"
+        tarea = await TAREAS.ejecutar("Buscando ideas", args)
+        self.boton_ideas.enable()
+        self.barra_ideas.set_visibility(False)
+        self.estado_ideas.text = ""
+        if not tarea.ok:
+            if tarea.cancelada:
+                ui.notify("Cancelado.", type="info")
+            else:
+                self._error(tarea)
+            return
+        ideas = list(tarea.resultado.get("ideas") or [])
+        if len(ideas) < 3:
+            ui.notify("La IA trajo pocas ideas: prueba con un tema más concreto.", type="warning")
+            return
+        self.ideas_vistas = (self.ideas_vistas + [str(i.get("titulo", "")) for i in ideas])[-9:]
+        self._mostrar_tarjetas(ideas, texto)
+
+    def _mostrar_tarjetas(self, ideas: list[dict], tema: str) -> None:
+        self.tarjetas_ideas.clear()
+        self.zona_idea_video.clear()
+        with self.tarjetas_ideas:
+            with ui.row().classes("w-full items-center justify-between"):
+                ui.label(f"3 ideas para «{tema}»").classes("tpi-titulo text-lg")
+                ui.button("Otras 3 ideas", icon="refresh", on_click=lambda: self._buscar_ideas()).props(
+                    "outline"
+                )
+            for idea in ideas:
+                angulo = str(idea.get("angulo", ""))
+                clave_materia = str(idea.get("materia", ""))
+                materia = NOMBRES_MATERIA.get(clave_materia, clave_materia.capitalize())
+                emoji = str(idea.get("emoji") or "")
+                with ui.card().classes("tpi-hoja w-full p-5 gap-2"):
+                    with ui.row().classes("w-full items-center gap-3 no-wrap"):
+                        ui.icon(ANGULOS_ICONO.get(angulo, "bolt")).classes("text-2xl text-primary")
+                        ui.label(ANGULOS.get(angulo, "Idea")).classes("tpi-titulo text-sm")
+                        ui.label(f"{emoji} {idea.get('titulo', '')}".strip()).classes("text-lg font-bold")
+                    ui.label(f"«{idea.get('gancho', '')}»").classes("text-base")
+                    ui.label(str(idea.get("enunciado", ""))).classes("tpi-ayuda")
+                    ui.label(str(idea.get("porque", ""))).classes("text-sm italic")
+                    with ui.row().classes("w-full items-center gap-3"):
+                        with ui.row().classes("items-center gap-2 no-wrap"):
+                            for etiqueta in (
+                                str(idea.get("nivel", "")),
+                                materia,
+                                f"≈ {idea.get('segundos', 0)} s",
+                            ):
+                                if etiqueta:
+                                    ui.chip(etiqueta).props("dense outline size=sm")
+                        ui.space()
+                        ui.button(
+                            "Hacer este video",
+                            icon="movie",
+                            on_click=lambda i=idea: self._hacer_video(i),
+                        )
+
+    async def _hacer_video(self, idea: dict) -> None:
+        if TAREAS.ocupado():
+            ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+            return
+        enunciado = str(idea.get("enunciado") or "").strip()
+        if not enunciado:
+            ui.notify("Esta idea no trae el ejercicio: busca otras 3.", type="warning")
+            return
+        args = ["producir"]
+        if idea.get("materia"):
+            args += ["--materia", str(idea["materia"])]
+        if idea.get("nivel"):
+            args += ["--nivel", str(idea["nivel"])]
+        if idea.get("gancho"):
+            args += ["--gancho", str(idea["gancho"])]
+        if idea.get("titulo"):
+            args += ["--titulo", str(idea["titulo"])]
+        args += ["--", enunciado]
+
+        self.zona_idea_video.clear()
+        with self.zona_idea_video:
+            with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
+                ui.label(f"🎬 {idea.get('titulo', 'El video')}").classes("text-lg font-bold")
+                barra = ui.linear_progress(value=0, show_value=False).classes("w-full")
+                pasos = [ui.label(f"・ {p}").classes("tpi-ayuda") for p in PASOS]
+                estado = ui.label("").classes("tpi-ayuda")
+                boton_cancelar = ui.button("Cancelar", icon="stop", on_click=TAREAS.cancelar).props(
+                    "flat color=negative"
+                )
+
+        def avance(t: Tarea) -> None:
+            barra.value = t.avance
+            estado.text = t.texto_etapa
+            actual = ETAPA_PASO.get(t.etapa, 0) if not t.terminada else len(PASOS)
+            for n, etiqueta in enumerate(pasos):
+                marca = "✅" if n < actual else ("⏳" if n == actual else "・")
+                etiqueta.set_text(f"{marca} {PASOS[n]}")
+
+        tarea = await TAREAS.ejecutar("Video completo", args, al_cambiar=avance)
+        if not tarea.ok:
+            boton_cancelar.set_visibility(False)
+            if tarea.cancelada:
+                ui.notify("Cancelado.", type="info")
+                return
+            self._error(tarea)
+            return
+        boton_cancelar.set_visibility(False)
+        self._mostrar_video_ideas(tarea.resultado, idea)
+
+    def _mostrar_video_ideas(self, resultado: dict, idea: dict) -> None:
+        video = Path(resultado["video"])
+        guion = Path(resultado["guion"])
+        self.zona_idea_video.clear()
+        with self.zona_idea_video:
+            with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
+                with ui.row().classes("w-full items-start gap-6 no-wrap"):
+                    ui.video(url_medio(video)).classes("h-[70vh] aspect-[9/16] rounded-lg bg-black").props(
+                        'preload="metadata"'
+                    )
+                    with ui.column().classes("gap-2"):
+                        ui.label("✅ Video completo listo").classes("tpi-titulo text-lg")
+                        ui.label(
+                            f"≈ {resultado.get('duracion', 0)} s · estilo {resultado.get('tema', '')} · "
+                            f"guion en {guion.name}"
+                        ).classes("tpi-ayuda")
+                        for pendiente in resultado.get("pendientes") or []:
+                            ui.label(f"⚠️ Por revisar: {pendiente}").classes("text-sm").style("color:#B26A00")
+                        for supuesto in resultado.get("supuestos") or []:
+                            ui.label(f"ℹ️ Supuesto de la IA: {supuesto}").classes("text-sm")
+                        ui.label(
+                            "Revisa el guion y el video antes de publicar: la IA puede equivocarse."
+                        ).classes("text-sm")
+                        ui.button(
+                            "Kit de publicación", icon="inventory_2", on_click=lambda: abrir_kit(video.parent)
+                        ).props("outline")
+                        ui.button(
+                            "Abrir en el Mac", icon="open_in_new", on_click=lambda: abrir_en_mac(video)
+                        ).props("outline")
+                        ui.button(
+                            "Otro video de este tema", icon="refresh", on_click=lambda: self._buscar_ideas()
+                        ).props("flat")
+        self.abrir(guion)  # el guion queda arriba, listo para retocar y recrear el video
 
     def _panel_ia(self) -> None:
         if ia.obtener_clave() is None:
