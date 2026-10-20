@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tpi-videos"
-version = "0.5.0"
+version = "0.6.0"
 description = "Motor de video de Tu Profe Industrial: enunciados de Matemática, Física e Ingeniería → videos verticales 9:16 con animaciones Manim, voz sintética y subtítulos estilo CapCut."
 readme = "README.md"
 requires-python = ">=3.11"
