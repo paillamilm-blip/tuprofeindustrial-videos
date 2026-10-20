@@ -16,7 +16,7 @@ Plantilla comentada: `./tpi nuevo mi_ejercicio` · Ejemplos completos: `guiones/
 | 1 | `gancho` | 0–3 s | Que no pasen de largo: una pregunta o un dato sorprendente |
 | 2 | `enunciado` | 5–8 s | El problema concreto, antes de cualquier fórmula |
 | 3 | `datos` (opcional) | 2–3 s c/u | Lo que sabemos; luego queda fijo arriba como referencia |
-| 4 | `pasos` | 3–6 s c/u | Una idea por paso; la fórmula se transforma en la siguiente |
+| 4 | `pasos` | 3–6 s c/u | Una idea por paso; la fórmula se transforma en la siguiente. Un paso puede llevar `visual:` y dibujarse abajo |
 | 5 | `resultado` | 3–5 s | La respuesta destacada, **con unidades** |
 | 6 | `verificacion` (opcional) | 4–6 s | "¿Tiene sentido?": interpretar, no solo calcular |
 | 7 | `reto` (opcional, recomendado) | 5–8 s | Un ejercicio parecido para que practiquen y comenten |
@@ -56,6 +56,11 @@ pasos:
     destacar: ['t']                 # parte de la fórmula que se enmarca (opcional)
     transformar: true               # false = escribirla de cero en vez de transformar la anterior
     emoji: "💡"                     # opcional: junto a la fórmula
+    visual:                         # opcional: un dibujo en el pie de la hoja (mira la sección de abajo)
+      tipo: grafico_funcion
+      funcion: '-4.9t^2 + 20'
+      eje_x: "tiempo (s)"
+      eje_y: "altura (m)"
   - nota: "Error típico"
     tex: 't = \frac{2h}{g}'          # la forma EQUIVOCADA
     voz: "Mucha gente olvida la raíz. Así el tiempo sale mal."
@@ -77,6 +82,57 @@ reto:
 
 `verificacion`, `reto` y `cierre` también aceptan `emoji:`. En el `cierre`, el emoji o tu sticker
 reemplaza al engranaje de la marca.
+
+### El dibujo de un paso (`visual:`)
+
+Un paso puede llevar un dibujo, que se traza en el pie de la hoja mientras suena la voz de ese paso.
+Sirve para lo que la fórmula sola no muestra: la parábola de la caída, las fuerzas sobre el cuerpo,
+las ramas del circuito. El motor conoce tres:
+
+**1. `grafico_funcion`** — la curva de una función.
+
+```yaml
+    visual:
+      tipo: grafico_funcion
+      funcion: '-4.9t^2 + 12t'      # en texto plano, NO en LaTeX: ^ para elevar, punto decimal, 4.9t^2
+      variable: t                   # opcional: falta solo si la fórmula tiene dos letras
+      rango: [0, 2.5]               # opcional: de dónde a dónde se mira el eje horizontal
+      marcar: [0, 2.45]             # opcional: puntos que se rotulan con su valor
+      eje_x: "tiempo (s)"           # opcional: si no se escribe, sale «t» o «x»
+      eje_y: "altura (m)"
+```
+
+Las raíces (donde corta el eje) y el vértice se marcan y se rotulan solos; `marcar` agrega los puntos
+que tú quieras. Si un punto o un extremo del rango se sale de lo que la función puede calcular,
+`./tpi revisar` lo avisa. Funciona con `2x^3 - 3x`, `12/U`, `sin(x)`, `sqrt(x)`, `1/x`, `exp(x)`
+(la «e» de Euler se escribe `E` o `exp`, porque una letra suelta se toma por otra variable).
+
+**2. `diagrama_fuerzas`** — el cuerpo con sus flechas.
+
+```yaml
+    visual:
+      tipo: diagrama_fuerzas
+      cuerpo: bloque                # bloque | bola
+      vectores: ['P', 'N', 'f']     # P peso · N normal · f rozamiento · v velocidad · a aceleración · T tensión
+      angulo: 30                    # opcional: plano inclinado en grados (solo con bloque)
+```
+
+Sin `angulo` el cuerpo está sobre una mesa horizontal.
+
+**3. `circuito`** — la pila y sus resistencias.
+
+```yaml
+    visual:
+      tipo: circuito
+      arreglo: paralelo             # serie | paralelo
+      fuente: '9 V'
+      resistencias: ['4 Ω', '6 Ω', '12 Ω']   # de 2 a 4, cada una con su unidad
+```
+
+Las reglas: **un dibujo por video** (más de uno se confunde en 60 segundos), los campos de otro tipo
+se pueden dejar fuera, y `./tpi revisar` avisa si la función no se entiende o si falta un número.
+En el panel, el mismo dibujo se arma en cada tarjeta de paso, dentro de «Dibujo en el pie de la hoja».
+Ejemplo con los tres: `guiones/ejemplos/visuales_tres_tipos.yaml`.
 
 ## 3. Reglas para la voz (lo que se escucha)
 

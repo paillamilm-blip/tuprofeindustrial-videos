@@ -88,7 +88,9 @@ panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-
    y vista previa de estilos.
 5. ✅ **v0.5 · De un tema al video completo:** `tpi ideas` (Gemini propone 3 ángulos y el profe elige) y
    `tpi producir` (guion revisado → video final → kit). En el panel: pestaña **Crear → Ideas**.
-6. **Visuales por materia:** gráficos de funciones (parábolas, rectas), diagramas de física (caída libre,
-   plano inclinado, fuerzas) y de electricidad (circuitos serie/paralelo).
+6. ✅ **v0.6 · Visuales por materia:** `visual:` en un paso — gráfico de función (con raíces y vértice
+   marcados por SymPy), diagrama de fuerzas (bloque o bola, con plano inclinado) y circuito serie/paralelo.
+   Se trazan en el pie de la hoja, en los dos estilos, los pide la IA y se editan en el panel.
+   Ejemplo: `guiones/ejemplos/visuales_tres_tipos.yaml`.
 7. **Producción:** música de fondo que baja cuando hay voz, voz Azure o voz propia grabada.
 8. **Escala:** crear varios videos en lote y una verificación automática de render en GitHub Actions.

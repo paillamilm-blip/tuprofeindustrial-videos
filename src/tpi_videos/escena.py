@@ -62,6 +62,7 @@ from manim_voiceover import VoiceoverScene
 from manim_voiceover.helper import remove_bookmarks
 
 from . import componentes as c
+from . import dibujos as d
 from .config import Marca
 from .guion import Bloque, Guion, sin_tildes
 from .voces import RESOLUCION, crear_servicio
@@ -391,25 +392,65 @@ class VideoEjercicio(VoiceoverScene):
         peso = SEMIBOLD if nota.rol == "texto" else HEAVY
         return c.texto(texto, 24 * nota.escala, peso, color)
 
+    def _franja_del_dibujo(self, paso: Any, tope: float) -> tuple[float, float]:
+        """Hasta dónde puede bajar la pizarra de pasos, y dónde va el centro del dibujo."""
+        if paso.visual is None:
+            return c.Y_ZONA_INFERIOR, 0.0
+        fondo = c.Y_ZONA_INFERIOR + d.ALTO_DIBUJO + 0.28
+        return fondo, (c.Y_ZONA_INFERIOR + min(fondo, tope)) / 2
+
+    def _trazar_dibujo(self, paso: Any, centro_y: float, tr: Any) -> d.Dibujo:
+        """Dibuja el visual del paso con lo que queda de su voz: primero el trazo, luego lo escrito."""
+        hoja = self.tema.marco == "hoja"
+        # El color del papel es el de la hoja cuadriculada, o el de la tarjeta en la pizarra oscura.
+        papel = self.tema.hoja.color if hoja else self.col.panel
+        dibujo = d.dibujar_visual(paso.visual, self.col, c.ANCHO_UTIL, d.ALTO_DIBUJO, papel)
+        dibujo.place(0, centro_y)
+        if not hoja:  # en la pizarra el dibujo tiene su propia tarjeta, como los pasos
+            caja = (
+                RoundedRectangle(corner_radius=0.28, width=c.ANCHO_UTIL, height=d.ALTO_DIBUJO)
+                .set_fill(papel, 0.94)
+                .set_stroke(self.col.borde, 2.5)
+                .move_to([0, centro_y, 0])
+            )
+            dibujo.mobs.add(caja)
+            self.add(caja)
+        restante = max(self._restante(tr) - 0.5, 1.0)
+        if dibujo.trazo:
+            self.play(
+                LaggedStart(*[Create(m) for m in dibujo.trazo], lag_ratio=0.1), run_time=restante * 0.55
+            )
+        if dibujo.aparece:
+            self.play(
+                LaggedStart(*[FadeIn(m, shift=UP * 0.1) for m in dibujo.aparece], lag_ratio=0.12),
+                run_time=restante * 0.45,
+            )
+        return dibujo
+
     def _pasos(self) -> None:
         """Pizarra vertical: cada paso aparece bajo el anterior. Los pasos anteriores se
         achican y atenúan (quedan como historial) y solo salen por arriba si ya no caben.
         Un paso "error típico" se tacha y no sirve de origen para la transformación siguiente."""
         tope = getattr(self, "y_inicio_pasos", c.Y_ZONA_SUPERIOR - 0.2)
         self.tope_pasos = tope
-        alto_zona = tope - c.Y_ZONA_INFERIOR
         pila: list[Linea] = []
         en_historial: set[int] = set()  # líneas ya achicadas (por id de la ecuación)
         resaltes: list[VGroup] = []
         extras_vivos: list[Mobject] = []  # emojis del paso anterior (salen en el siguiente)
+        dibujo_vivo: d.Dibujo | None = None  # el dibujo del paso anterior (sale en el siguiente)
         ultima: Any = None  # última ecuación CORRECTA (origen de la transformación)
 
         for i, paso in enumerate(self.guion.pasos, 1):
             with self.hablar(paso.voz, f"paso {i}") as tr:
+                fondo, centro_dibujo = self._franja_del_dibujo(paso, tope)
+                sale_dibujo = [FadeOut(dibujo_vivo.mobs)] if dibujo_vivo else []
+                dibujo_vivo = None
                 if paso.tex is None:  # paso solo hablado
-                    self._con_pendientes(*[FadeOut(x) for x in extras_vivos], run_time=0.5)
+                    self._con_pendientes(*[FadeOut(x) for x in extras_vivos], *sale_dibujo, run_time=0.5)
                     extras_vivos = []
-                    if ultima is not None:
+                    if paso.visual is not None:
+                        dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, tr)
+                    elif ultima is not None:
                         self.play(Indicate(ultima, color=self.col.acento, scale_factor=1.04), run_time=0.6)
                     continue
 
@@ -429,6 +470,7 @@ class VideoEjercicio(VoiceoverScene):
                 # Destino de cada línea anterior: más pequeña y tenue. Si no cabe todo,
                 # salen las más antiguas.
                 salen: list[Linea] = []
+                alto_zona = tope - fondo
                 while True:
                     destinos = []
                     for linea in pila:
@@ -442,12 +484,14 @@ class VideoEjercicio(VoiceoverScene):
                     salen.append(pila.pop(0))
                 if columna.height > alto_zona:
                     columna.scale_to_fit_height(alto_zona)
-                columna.move_to([0, (tope + c.Y_ZONA_INFERIOR) / 2, 0])  # pizarra centrada
+                columna.move_to([0, (tope + fondo) / 2, 0])  # pizarra centrada
                 if emoji is not None:  # la fila [nota o fórmula + emoji] queda centrada
                     ancla.shift(LEFT * hueco / 2)
                     emoji.next_to(ancla, RIGHT, buff=0.2)
 
-                previas: list[Animation] = [FadeOut(r) for r in resaltes] + [FadeOut(x) for x in extras_vivos]
+                previas: list[Animation] = (
+                    [FadeOut(r) for r in resaltes] + [FadeOut(x) for x in extras_vivos] + sale_dibujo
+                )
                 resaltes, extras_vivos = [], []
                 for linea in salen:
                     previas += [FadeOut(m, shift=UP * 0.5) for m in linea.mobs]
@@ -473,6 +517,8 @@ class VideoEjercicio(VoiceoverScene):
                 else:
                     aparecer.append(Write(eq))
                 self.play(*aparecer, run_time=float(np.clip(tr.duration * 0.45, 0.8, 1.6)))
+                if paso.visual is not None:
+                    dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, tr)
 
                 linea_nueva = Linea(mobs=list(nueva), eq=eq)
                 if emoji is not None:
@@ -509,6 +555,8 @@ class VideoEjercicio(VoiceoverScene):
 
         self.pila, self.resaltes, self.ultima = pila, resaltes, ultima
         self._pendientes += [FadeOut(x) for x in extras_vivos]
+        if dibujo_vivo is not None:
+            self._pendientes.append(FadeOut(dibujo_vivo.mobs))
 
     def _resultado(self) -> None:
         r = self.guion.resultado

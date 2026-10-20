@@ -19,6 +19,7 @@ dependencies = [
     "python-dotenv>=1.0",  # lee la clave de Gemini desde .env
     "pyyaml>=6.0",
     "rich>=13",
+    "sympy>=1.12,<2",  # lee la «funcion:» de un gráfico y calcula raíces y vértice (visuales.py)
 ]
 
 [project.optional-dependencies]
