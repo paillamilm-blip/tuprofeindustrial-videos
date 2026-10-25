@@ -405,6 +405,15 @@ def errores_latex(guion: Guion) -> list[str]:
     return problemas
 
 
+def promesa_incumplida(duracion: float, segundos_prometidos: int | None) -> bool:
+    """Si lo que duró el video pasa de lo que anunció la tarjeta de la idea.
+
+    Es el único lugar donde vive ese umbral: lo usa el aviso del guion antes de renderizar y lo usan
+    el comando y el panel después, para que nunca se contradigan con dos márgenes distintos.
+    """
+    return bool(segundos_prometidos) and duracion > segundos_prometidos + MARGEN_DE_DURACION
+
+
 def problemas_de_formato(guion: Guion, segundos_prometidos: int | None = None) -> list[str]:
     """Los avisos del revisor de guiones, que la IA debe corregir antes del render.
 
@@ -417,7 +426,7 @@ def problemas_de_formato(guion: Guion, segundos_prometidos: int | None = None) -
 
     rev = revisar(guion, cargar_marca().cierre.voz)
     problemas = [f"{a.donde}: {a.mensaje}" for a in rev.avisos if a.nivel == "advertencia"]
-    if segundos_prometidos and rev.segundos > segundos_prometidos + MARGEN_DE_DURACION:
+    if promesa_incumplida(rev.segundos, segundos_prometidos):
         problemas.append(
             f"duración: la idea se anunció en ≈{segundos_prometidos} s y este guion se estima en "
             f"~{rev.segundos:.0f} s. Achícalo a ~{segundos_prometidos} s: quédate con los 3 o 4 pasos "

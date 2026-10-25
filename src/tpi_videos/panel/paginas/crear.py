@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -75,6 +76,7 @@ class PaginaCrear:
         self.editor: EditorGuion | None = None
         self.subida: Path | None = None
         self.ideas_vistas: list[str] = []
+        self.ideas_mostradas: list[dict] = []
 
     # --------------------------------------------------------------------------------------
     # 1 · El ejercicio
@@ -180,12 +182,19 @@ class PaginaCrear:
     def _mostrar_tarjetas(self, ideas: list[dict], tema: str) -> None:
         self.tarjetas_ideas.clear()
         self.zona_idea_video.clear()
+        self.ideas_mostradas = ideas
         with self.tarjetas_ideas:
             with ui.row().classes("w-full items-center justify-between"):
                 ui.label(f"3 ideas para «{tema}»").classes("tpi-titulo text-lg")
-                ui.button("Otras 3 ideas", icon="refresh", on_click=lambda: self._buscar_ideas()).props(
-                    "outline"
-                )
+                with ui.row().classes("items-center gap-2 no-wrap"):
+                    ui.button("Otras 3 ideas", icon="refresh", on_click=lambda: self._buscar_ideas()).props(
+                        "outline"
+                    )
+                    ui.button(
+                        "Hacer los 3 videos",
+                        icon="playlist_add_check",
+                        on_click=self._hacer_lote,
+                    ).props("color=primary")
             for idea in ideas:
                 angulo = str(idea.get("angulo", ""))
                 clave_materia = str(idea.get("materia", ""))
@@ -265,6 +274,88 @@ class PaginaCrear:
             return
         boton_cancelar.set_visibility(False)
         self._mostrar_video_ideas(tarea.resultado, idea)
+
+    async def _hacer_lote(self) -> None:
+        """Los 3 videos de las ideas que ya están en pantalla, en un solo trabajo de cola."""
+        if TAREAS.ocupado():
+            ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+            return
+        ideas = [i for i in self.ideas_mostradas if str(i.get("enunciado") or "").strip()]
+        if len(ideas) < 2:
+            ui.notify("Estas ideas no traen el ejercicio: busca otras 3.", type="warning")
+            return
+        args = ["lote", "--ideas-json", json.dumps(ideas, ensure_ascii=False)]
+
+        self.zona_idea_video.clear()
+        with self.zona_idea_video:
+            with ui.card().classes("tpi-hoja w-full p-5 gap-2"):
+                ui.label(f"📦 Lote de {len(ideas)} videos, uno detrás de otro").classes("text-lg font-bold")
+                barra = ui.linear_progress(value=0, show_value=False).classes("w-full")
+                estado = ui.label("").classes("tpi-ayuda")
+                ui.label(
+                    "Tarda unos 3 minutos por video. Si una idea falla, el lote sigue con las siguientes y "
+                    "guarda lo que salió."
+                ).classes("tpi-ayuda")
+                boton_cancelar = ui.button("Cancelar", icon="stop", on_click=TAREAS.cancelar).props(
+                    "flat color=negative"
+                )
+
+        def avance(t: Tarea) -> None:
+            barra.value = t.avance
+            estado.text = t.texto_etapa
+
+        tarea = await TAREAS.ejecutar("Lote de videos", args, al_cambiar=avance)
+        boton_cancelar.set_visibility(False)
+        if not tarea.ok:
+            if tarea.cancelada:
+                ui.notify("Cancelado: los videos que ya terminaron quedan en salida/.", type="info")
+                return
+            self._error(tarea)
+            return
+        self._mostrar_lote(list(tarea.resultado.get("lote") or []))
+
+    def _mostrar_lote(self, items: list[dict]) -> None:
+        """La tabla del lote: qué salió, qué quedó por revisar y por qué falló el que no salió."""
+        listos = sum(1 for item in items if item.get("ok"))
+        self.zona_idea_video.clear()
+        with self.zona_idea_video:
+            with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
+                ui.label(f"Lote terminado: {listos} de {len(items)} videos").classes("tpi-titulo text-lg")
+                for item in items:
+                    with ui.column().classes("w-full gap-1 border-t pt-2"):
+                        with ui.row().classes("w-full items-center gap-3 no-wrap"):
+                            if item.get("ok"):
+                                aviso = "⚠️" if item.get("promesa_incumplida") else "✅"
+                                ui.label(f"{aviso} {item.get('emoji', '')} {item.get('titulo', '')}").classes(
+                                    "font-bold"
+                                )
+                                promesa = item.get("prometido")
+                                duracion = f"≈{item.get('duracion', 0)} s"
+                                ui.label(
+                                    f"{duracion}" + (f" · prometidos ≈{promesa} s" if promesa else "")
+                                ).classes("tpi-ayuda")
+                            else:
+                                ui.label(f"❌ {item.get('emoji', '')} {item.get('titulo', '')}").classes(
+                                    "font-bold"
+                                )
+                                ui.label(str(item.get("error") or "No salió")).classes("text-sm").style(
+                                    "color:#C0392B"
+                                )
+                            ui.space()
+                            if item.get("ok"):
+                                video = Path(item["video"])
+                                ui.button(
+                                    "Abrir", icon="play_circle", on_click=lambda v=video: abrir_en_mac(v)
+                                ).props("flat dense")
+                                ui.button(
+                                    "Kit", icon="inventory_2", on_click=lambda v=video: abrir_kit(v.parent)
+                                ).props("flat dense")
+                        for pendiente in item.get("pendientes") or []:
+                            ui.label(f"⚠️ Por revisar: {pendiente}").classes("text-sm").style("color:#B26A00")
+                if listos < len(items):
+                    ui.label(
+                        "Las tarjetas de arriba siguen sirviendo: «Hacer este video» reintenta una por una."
+                    ).classes("tpi-ayuda")
 
     def _mostrar_video_ideas(self, resultado: dict, idea: dict) -> None:
         video = Path(resultado["video"])

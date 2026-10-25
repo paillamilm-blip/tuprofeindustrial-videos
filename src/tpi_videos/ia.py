@@ -105,16 +105,22 @@ def explicar_error(error: Exception, modelo: str) -> ErrorMotor:
             return ErrorMotor(
                 "Llegaste al límite de uso de Gemini por ahora.",
                 ayuda="Espera un par de minutos y repite (si es el límite diario, mañana).",
+                transitorio=True,  # es la cuota: esperando se levanta
             )
         if codigo and codigo >= 500:
             return ErrorMotor(
                 "El servicio de Gemini está con problemas en este momento.",
                 ayuda="Intenta de nuevo en unos minutos.",
+                transitorio=True,
             )
         return ErrorMotor(f"Gemini respondió con un error ({codigo}): {mensaje[:300]}")
     nombre = type(error).__name__
     if "Timeout" in nombre or "Connect" in nombre or "Network" in nombre or isinstance(error, OSError):
-        return ErrorMotor("No pude conectarme con Gemini.", ayuda="Revisa tu conexión a internet y repite.")
+        return ErrorMotor(
+            "No pude conectarme con Gemini.",
+            ayuda="Revisa tu conexión a internet y repite.",
+            transitorio=True,
+        )  # fmt: skip
     return ErrorMotor(f"Error inesperado al hablar con Gemini: {error}")
 
 

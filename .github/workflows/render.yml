@@ -1,0 +1,48 @@
+name: Verificación de render
+
+# Qué hace: renderiza un guion de ejemplo de verdad, sin claves y sin internet de IA, para que
+# un cambio de código no rompa los videos en silencio. No usa secretos: no llama a Gemini ni a edge-tts.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: TeX, FFmpeg y las librerías de Manim
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended dvisvgm \
+            ffmpeg pkg-config libcairo2-dev libpango1.0-dev
+      - name: Instalar el motor
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Render de un guion de ejemplo
+        # El ejemplo más completo: fórmula con LaTeX, gráfico de función, diagrama de fuerzas y circuito.
+        # --voz silencio: la voz sintética necesita internet y no es lo que se quiere comprobar acá.
+        run: tpi crear guiones/ejemplos/visuales_tres_tipos.yaml --borrador --voz silencio
+
+      - name: Comprobar el video con ffprobe
+        run: |
+          video=salida/visuales-tres-tipos/visuales-tres-tipos_borrador.mp4
+          test -f "$video" || { echo "❌ El motor no dejó el video en $video"; exit 1; }
+          lee() { ffprobe -v error -select_streams v:0 -show_entries stream=$1 -of csv=p=0 "$video"; }
+          ancho=$(lee width); alto=$(lee height); dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$video")
+          echo "Video: ${ancho}×${alto}, ${dur} s"
+          [ "$ancho" = "540" ] && [ "$alto" = "960" ] || { echo "❌ No es vertical 9:16 (540×960)."; exit 1; }
+          awk "BEGIN { exit !($dur > 20) }" || { echo "❌ El video dura menos de 20 s: se cortó."; exit 1; }
+          echo "✅ El render completo (LaTeX → Manim → subtítulos → volumen) sigue funcionando."
