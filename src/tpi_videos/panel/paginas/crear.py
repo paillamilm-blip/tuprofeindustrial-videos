@@ -232,6 +232,8 @@ class PaginaCrear:
             args += ["--gancho", str(idea["gancho"])]
         if idea.get("titulo"):
             args += ["--titulo", str(idea["titulo"])]
+        if idea.get("segundos"):
+            args += ["--segundos", str(idea["segundos"])]
         args += ["--", enunciado]
 
         self.zona_idea_video.clear()
@@ -280,6 +282,14 @@ class PaginaCrear:
                             f"≈ {resultado.get('duracion', 0)} s · estilo {resultado.get('tema', '')} · "
                             f"guion en {guion.name}"
                         ).classes("tpi-ayuda")
+                        promesa = resultado.get("prometido")
+                        if promesa:
+                            # Si no cupo, el ⚠️ de arriba (avisos del guion) ya lo dice: acá solo mostramos
+                            # los dos números, para que la comparación la haga quien mira la tarjeta.
+                            ui.label(
+                                f"Prometido en la idea: ≈{promesa} s · el video duró "
+                                f"{resultado.get('duracion', 0)} s"
+                            ).classes("tpi-ayuda")
                         for pendiente in resultado.get("pendientes") or []:
                             ui.label(f"⚠️ Por revisar: {pendiente}").classes("text-sm").style("color:#B26A00")
                         for supuesto in resultado.get("supuestos") or []:

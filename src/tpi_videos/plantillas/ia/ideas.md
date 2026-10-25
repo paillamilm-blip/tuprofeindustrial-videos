@@ -34,6 +34,7 @@ Tu tarea: proponer 3 IDEAS de video sobre el TEMA que te indican. No resuelves e
 - materia: matematica, fisica o ingenieria (la que corresponda; si te piden una materia obligatoria, úsala en las 3).
 - nivel: curso real chileno, ej. "1° medio", "3° medio", "4° medio", "técnico en electricidad", "ingeniería comercial". Adapta la dificultad al nivel.
 - segundos: duración aproximada real del video (30 a 75). Para el alcance, más corto retiene más: apunta a 35–50 salvo que el ejercicio exija más.
+- segundos es una PROMESA, no un deseo: el motor achica el guion para respetarlo. Cuenta unos 8 s por paso hablado, más el gancho y el resultado; si el ejercicio necesita 6 pasos, promete 60–70 s en vez de 40.
 
 ## 5. Emojis
 - Emojis permitidos (SOLO estos): {{EMOJIS}}

@@ -29,6 +29,7 @@ from .errores import ErrorMotor
 from .guion import Guion, a_yaml, cargar_guion, explicar_errores, sin_tildes
 
 RONDAS_DE_CORRECCION = 2
+MARGEN_DE_DURACION = 8.0  # s: «≈45 s» puede llegar a 53 s y sigue siendo lo prometido
 MAX_BYTES_ARCHIVO = 18 * 1024 * 1024  # límite práctico para enviar un archivo dentro de la petición
 TIPOS_ARCHIVO = {
     ".png": "image/png",
@@ -404,12 +405,26 @@ def errores_latex(guion: Guion) -> list[str]:
     return problemas
 
 
-def problemas_de_formato(guion: Guion) -> list[str]:
+def problemas_de_formato(guion: Guion, segundos_prometidos: int | None = None) -> list[str]:
+    """Los avisos del revisor de guiones, que la IA debe corregir antes del render.
+
+    Con ``segundos_prometidos`` (el ``≈45 s`` que muestra la tarjeta de la idea) la duración deja de
+    ser una sugerencia: un guion más largo que lo prometido devuelve a Gemini a achicarse, porque el
+    número que la persona vio al elegir es la única señal que tiene de cuánto va a durar el video.
+    """
     from .config import cargar_marca
     from .revision import revisar
 
     rev = revisar(guion, cargar_marca().cierre.voz)
-    return [f"{a.donde}: {a.mensaje}" for a in rev.avisos if a.nivel == "advertencia"]
+    problemas = [f"{a.donde}: {a.mensaje}" for a in rev.avisos if a.nivel == "advertencia"]
+    if segundos_prometidos and rev.segundos > segundos_prometidos + MARGEN_DE_DURACION:
+        problemas.append(
+            f"duración: la idea se anunció en ≈{segundos_prometidos} s y este guion se estima en "
+            f"~{rev.segundos:.0f} s. Achícalo a ~{segundos_prometidos} s: quédate con los 3 o 4 pasos "
+            "imprescindibles, quita la verificación o el reto y acorta las frases. No cambies los "
+            "resultados ni los números del ejercicio."
+        )
+    return problemas
 
 
 # ------------------------------------------------------------------------------------------
@@ -514,11 +529,21 @@ def redactar(
     forzar: bool = False,
     revisar_con_ia: bool = True,
     pistas: list[str] | None = None,
+    segundos_prometidos: int | None = None,
     avisar=lambda mensaje: None,
 ) -> ResultadoRedaccion:
     entrada = leer_entrada(valor)
     cliente = ia.cliente()
     sistema = _sistema()
+    if segundos_prometidos:
+        # La tarjeta de la idea ya le mostró esa duración a la persona: es un compromiso, no un deseo.
+        pistas = [
+            *(pistas or []),
+            f"DURACIÓN PROMETIDA: este video se anunció con ≈{segundos_prometidos} s. La voz dice unos "
+            f"15 caracteres por segundo, así que tienes ~{segundos_prometidos * 15} caracteres hablados "
+            "para todo el guion (gancho, enunciado, pasos, resultado y cierre): 3 o 4 pasos cortos y "
+            "frases de una línea.",
+        ]
     base = _contenido_base(entrada, materia, nivel, pistas)
     revisor = (PLANTILLAS_DIR / "ia" / "revisor.md").read_text(encoding="utf-8")
     historial: list[str] = []
@@ -551,7 +576,7 @@ def redactar(
                 problemas += errores_latex(guion)
             except SinLatex:
                 sin_latex = True
-            problemas += problemas_de_formato(guion)
+            problemas += problemas_de_formato(guion, segundos_prometidos)
             if revisar_con_ia and not problemas:
                 avisar("Gemini revisa la matemática como profesor revisor…")
                 guion_json = json.dumps(respuesta.model_dump(), ensure_ascii=False)

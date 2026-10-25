@@ -5,4 +5,4 @@ vertical 9:16 con animaciones (Manim), voz sintética (manim-voiceover) y subtí
 CapCut (Whisper + FFmpeg).
 """
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"

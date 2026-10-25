@@ -189,7 +189,7 @@ funciona con la cuenta gratuita).
 
 No tienes que partir con el ejercicio listo. Escribe un tema y Gemini propone **3 ideas distintas** (un error
 típico, una aplicación real, un dato curioso), pensadas para frenar el scroll, cada una con su gancho, el
-ejercicio con números, el nivel y la duración estimada:
+ejercicio con números, el nivel y la duración que se promete y después se cumple:
 
 ```bash
 ./tpi ideas "Teorema de Pitágoras"
@@ -201,7 +201,9 @@ Aparecen numeradas. Escribe `1`, `2` o `3` para hacer ese video, `[Enter]` si ni
 Al elegir, el motor hace **todo solo** (es lo mismo que `./tpi producir`):
 
 1. Resuelve el ejercicio y escribe el guion, con las tres revisiones de arriba. **El gancho de la idea que
-   elegiste llega al video tal cual**: la IA no escribe otro.
+   elegiste llega al video tal cual**: la IA no escribe otro. **La duración prometida también se cumple**:
+   si la tarjeta decía ≈45 s y el guion se estira a 60 s, el motor lo manda a achicar (menos pasos, frases
+   más cortas) y, si no cabe, te lo avisa antes de renderizar.
 2. Crea el **video final** (o el borrador con `--borrador`).
 3. Arma el **kit de publicación** (portada + título, descripción y hashtags).
 
@@ -210,7 +212,8 @@ Al elegir, el motor hace **todo solo** (es lo mismo que `./tpi producir`):
 ```
 
 Sirven las mismas opciones de `crear` y `redactar`: `--borrador`, `--estilo pizarra_nocturna`,
-`--voz es-CL-CatalinaNeural`, `--sin-kit`, `--sin-revision`.
+`--voz es-CL-CatalinaNeural`, `--sin-kit`, `--sin-revision`, y `--segundos 45` para exigir la duración
+de la tarjeta (el panel lo pasa solo al presionar «Hacer este video»).
 
 **En el panel es todavía más fácil:** pestaña **Crear → Ideas**. Escribes el tema (o tocas uno sugerido, como
 *Ley de Ohm* o *Caída libre*), ves las 3 tarjetas, presionas **«Otras 3 ideas»** si no te convencen y en la que
