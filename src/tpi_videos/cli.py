@@ -330,7 +330,7 @@ def _producir(
     """Guion revisado + video + kit de publicación en un solo paso, y lo muestra."""
     from .ia import MODELO_POR_DEFECTO
     from .ideas import producir
-    from .redactor import MARGEN_DE_DURACION
+    from .redactor import promesa_incumplida
 
     json_activo = _modo_json(args)
     proveedor, voz = _dividir_voz(getattr(args, "voz", None))
@@ -389,7 +389,7 @@ def _producir(
         f"   Estilo: {resultado.tema} · Duración: {resultado.duracion:.1f} s · Subtítulos: {fuentes}"
     )
     if prometido:
-        if resultado.duracion > prometido + MARGEN_DE_DURACION:
+        if promesa_incumplida(resultado.duracion, prometido):
             consola.print(
                 f"   [yellow]⚠️ La idea prometió ≈{prometido} s y el video duró "
                 f"{resultado.duracion:.1f} s: acorta pasos en el guion.[/]"
@@ -499,6 +499,108 @@ def cmd_ideas(args: argparse.Namespace) -> int:
             titulo=elegida.titulo,
             segundos=elegida.segundos,
         )
+
+
+def _mostrar_lote(items: list, tema: str | None) -> None:
+    """La tabla del lote: qué salió, qué quedó con avisos y qué falló (con su motivo)."""
+    from .ideas import ANGULOS
+
+    consola.print(f"\n[bold]🎬 Lote[/]{' de «' + tema + '»' if tema else ''}: "
+                  f"{sum(i.ok for i in items)} de {len(items)} video(s) listos.\n")  # fmt: skip
+    for n, item in enumerate(items, 1):
+        angulo = ANGULOS.get(item.idea.angulo, item.idea.angulo)
+        guion = f"{item.idea.emoji} {angulo} · {item.idea.titulo}".strip()
+        if not item.ok:
+            consola.print(f" [bold]{n}[/]  [red]❌[/] {guion}")
+            consola.print(f"    [red]{item.error}[/]")
+            if item.ayuda:
+                consola.print(f"    [dim]{item.ayuda}[/]")
+            continue
+        estado = "[green]✅[/]"
+        if item.promesa_incumplida:
+            estado = "[yellow]⚠️[/]"
+        consola.print(f" [bold]{n}[/]  {estado} {guion}")
+        consola.print(
+            f"    [bold]Video:[/] {_ruta_amigable(Path(item.video))} · {item.duracion:.1f} s "
+            f"(prometidos ≈{item.idea.segundos} s)"
+        )
+        if item.portada:
+            consola.print(f"    [dim]Kit:[/] {_ruta_amigable(Path(item.publicacion))}")
+        for pendiente in item.pendientes:
+            consola.print(f"    [yellow]⚠️  Por revisar:[/] {pendiente}")
+    faltan = [f"{n}. {item.idea.titulo}" for n, item in enumerate(items, 1) if not item.ok]
+    if faltan:
+        consola.print(
+            "\n[yellow]Los que faltan quedan con su tarjeta en el panel[/] (Crear → Ideas → «Hacer este "
+            'video»), o en la terminal con el enunciado: ./tpi producir "…"'
+        )
+    consola.print()
+
+
+def cmd_lote(args: argparse.Namespace) -> int:
+    """De un tema, los 3 videos de una pasada: guion revisado + video final + kit de cada idea."""
+    from .ia import MODELO_POR_DEFECTO
+    from .ideas import proponer_ideas
+    from .lote import ideas_desde_json, producir_lote
+
+    json_activo = _modo_json(args)
+    proveedor, voz = _dividir_voz(args.voz)
+    modelo = args.modelo or MODELO_POR_DEFECTO
+    tema = " ".join(args.tema).strip() or None
+
+    def avisar(mensaje: str) -> None:
+        if json_activo:
+            _emitir(etapa="redactando", avance=0.0, detalle=mensaje)
+        else:
+            consola.print(f"[dim]→ {mensaje}[/dim]")
+
+    if args.ideas_json:
+        ideas = ideas_desde_json(args.ideas_json)
+    else:
+        if not tema:
+            raise ErrorMotor(
+                "El lote necesita el tema.",
+                ayuda='Ej. ./tpi lote "Porcentajes"   (o usa el botón «Hacer los 3 videos» del panel)',
+            )
+        ideas = proponer_ideas(
+            tema=tema, materia=args.materia, nivel=args.nivel, modelo=modelo,
+            evitar=list(args.evitar or []), avisar=avisar,
+        )  # fmt: skip
+
+    if not json_activo:
+        consola.print(
+            f"\n[bold]📦 Lote de {len(ideas)} videos[/] · de uno en uno, unos {len(ideas) * 3} minutos.\n"
+            "   Si una idea falla el lote sigue con las otras; lo que salga queda en salida/."
+        )
+
+    items = producir_lote(
+        ideas,
+        materia=args.materia,
+        nivel=args.nivel,
+        modelo=modelo,
+        calidad="borrador" if args.borrador else "final",
+        estilo=args.estilo,
+        proveedor=proveedor,
+        voz=voz,
+        velocidad=args.velocidad,
+        subtitulos=not args.sin_subtitulos,
+        sincronizar=args.sincronizar,
+        revisar_con_ia=not args.sin_revision,
+        con_kit=not args.sin_kit,
+        espera=args.espera,
+        avisar=avisar,
+        progreso=_progreso_json if json_activo else None,
+    )
+
+    if json_activo:
+        # Sale 0 aunque fallen ideas: el panel muestra esta tabla con sus motivos, no un error genérico.
+        _emitir(etapa="resultado", avance=1.0, tema=tema or "", lote=[i.como_dict() for i in items])
+    _mostrar_lote(items, tema)
+    if args.abrir:
+        for item in items:
+            if item.ok:
+                _abrir(Path(item.video))
+    return 0
 
 
 def cmd_temas(args: argparse.Namespace) -> int:
@@ -804,6 +906,41 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_producir)
+
+    s = sub.add_parser(
+        "lote",
+        help="de un tema, los 3 videos de una pasada: guion + video final + kit de cada idea",
+    )
+    s.add_argument("tema", nargs="*", help='el tema (mejor entre comillas), ej. "Porcentajes"')
+    s.add_argument(
+        "--materia", choices=["matematica", "fisica", "ingenieria"], help="opcional: la IA la deduce"
+    )
+    s.add_argument("--nivel", help='opcional, ej. "2° medio" o "técnico en electricidad"')
+    s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
+    s.add_argument("--evitar", nargs="+", default=[], help="títulos ya vistos, para que salgan otras 3")
+    s.add_argument(
+        "--espera",
+        type=float,
+        default=60.0,
+        help="segundos de espera antes de reintentar una idea si Gemini está saturado (0 = no esperar)",
+    )
+    s.add_argument("--borrador", action="store_true", help="los 3 como borradores rápidos (en vez del final)")
+    s.add_argument("--estilo", help="estilo visual de los videos, ej. pizarra_nocturna (ver ./tpi temas)")
+    s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
+    s.add_argument("--velocidad", help="velocidad de la voz, ej. +10%% o -5%%")
+    s.add_argument("--sin-subtitulos", action="store_true", help="no quemar subtítulos")
+    s.add_argument(
+        "--sincronizar",
+        choices=["auto", "voz", "whisper", "estimado"],
+        default="auto",
+        help="de dónde salen los tiempos de los subtítulos (auto = el mejor disponible)",
+    )
+    s.add_argument("--sin-revision", action="store_true", help="no pedir la segunda revisión a la IA")
+    s.add_argument("--sin-kit", action="store_true", help="no armar el kit de publicación")
+    s.add_argument("--abrir", action="store_true", help="abre los videos al terminar")
+    s.add_argument("--ideas-json", help=argparse.SUPPRESS)  # el panel ya tiene las 3 ideas en pantalla
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
+    s.set_defaults(func=cmd_lote)
 
     s = sub.add_parser("clave", help="guarda tu clave de Gemini (para redactar con IA)")
     s.add_argument("--sin-probar", action="store_true", help="guardar sin probarla por internet")

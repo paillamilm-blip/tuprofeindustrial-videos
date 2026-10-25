@@ -38,9 +38,10 @@ se arregló en v0.6.1). El lote pasa los tres campos de cada idea y listo.
   `redactor._nombre_archivo()` agrega `_2`, `_3` cuando el archivo ya existe.
 - Duración esperada de un lote completo: 9 a 10 minutos (3 videos finales).
 
-**Avance.** Las líneas de `--progreso-json` ganan dos campos: `video` (1, 2, 3) y `de_total` (3). El campo
-`avance` pasa a ser el progreso global: `(i - 1 + avance_interno) / de_total`. Como el panel solo lee `avance`
-y `detalle`, la barra actual funciona sin modificar `tareas.py`; el texto del paso dice "Video 2 de 3 · …".
+**Avance.** El lote emite las mismas líneas `--progreso-json` que un video suelto (`etapa`, `avance`,
+`detalle`), con dos cambios: `avance` es el progreso global del lote (`(i - 1 + avance_interno) / 3`) y el
+`detalle` trae delante «Video 2 de 3 · …». Así la barra y la tarjeta del panel funcionan sin tocar `tareas.py`
+y sin campos nuevos que el panel tendría que ignorar.
 
 **Reintento con espera (por idea).** `INTENTOS_POR_IDEA = 2` con espera de `ESPERA_ENTRE_INTENTOS = 60`
 segundos entre intentos, ajustable con `--espera` (`--espera 0` los salta). Se anuncia en el avance:

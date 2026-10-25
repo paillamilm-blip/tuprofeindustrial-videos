@@ -219,6 +219,28 @@ de la tarjeta (el panel lo pasa solo al presionar «Hacer este video»).
 *Ley de Ohm* o *Caída libre*), ves las 3 tarjetas, presionas **«Otras 3 ideas»** si no te convencen y en la que
 eliges presionas **«Hacer este video»**. Ahí mismo ves el avance: el guion, el video y el kit.
 
+### Hacer los 3 de una sola vez (el lote)
+
+Si ninguna idea sobra y quieres la semana cubierta de una pasada, presiona **«Hacer los 3 videos»** debajo de las
+tarjetas, o en la Terminal:
+
+```bash
+./tpi lote "Porcentajes"
+```
+
+El motor busca las 3 ideas, y de cada una hace el guion revisado, el **video final** y su kit de publicación.
+Salen **de uno en uno** (los tres videos pelearían por la misma máquina), así que son unos **9 minutos**: lo
+dejas corriendo y vuelves. Al final ves la tabla, con ✅ el que salió, ⚠️ el que quedó con avisos por revisar y
+❌ el que no pudo.
+
+**Si una idea falla, el lote no se detiene:** sigue con las siguientes y guarda lo que alcanzó a salir. Cuando el
+fallo es de los que se arreglan esperando (Gemini saturado o el servicio caído), **espera 60 s y lo vuelve a
+intentar** antes de rendirse; con `--espera 0` se salta la espera. Un guion con avisos pendientes no cuenta como
+fallo: el video sale igual y lo revisas en el panel.
+
+Sirven las mismas opciones de `producir` (`--borrador`, `--estilo`, `--voz`, `--sin-kit`, `--sin-revision`) más
+`--evitar "título"` para no repetir ideas que ya viste.
+
 > 💡 Las ideas usan lo que el motor ya sabe dibujar (fórmulas y texto en la pizarra). Por eso no propone
 > gráficos de funciones ni diagramas de circuitos: eso viene después.
 
@@ -232,6 +254,7 @@ eliges presionas **«Hacer este video»**. Ahí mismo ves el avance: el guion, e
 | `./tpi redactar ENUNCIADO --crear` | La IA escribe el guion desde un texto, foto o PDF (y crea el borrador) |
 | `./tpi ideas "TEMA"` | La IA propone 3 ideas de video; eliges una y la hace completa (`--sin-video` solo las muestra) |
 | `./tpi producir ENUNCIADO` | Del enunciado al video final + kit de publicación, todo en un comando |
+| `./tpi lote "TEMA"` | Los 3 videos de las 3 ideas en una sola pasada (guion + video final + kit de cada uno) |
 | `./tpi clave` | Guarda tu clave de Gemini para `redactar` y el kit de publicación |
 | `./tpi nuevo NOMBRE --materia fisica` | Crea `guiones/NOMBRE.yaml` desde la plantilla |
 | `./tpi revisar GUION.yaml` | Revisa el guion sin crear el video |

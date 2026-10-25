@@ -92,5 +92,12 @@ panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-
    marcados por SymPy), diagrama de fuerzas (bloque o bola, con plano inclinado) y circuito serie/paralelo.
    Se trazan en el pie de la hoja, en los dos estilos, los pide la IA y se editan en el panel.
    Ejemplo: `guiones/ejemplos/visuales_tres_tipos.yaml`.
-7. **Producción:** música de fondo que baja cuando hay voz, voz Azure o voz propia grabada.
-8. **Escala:** crear varios videos en lote y una verificación automática de render en GitHub Actions.
+7. ✅ **Producción (decisión cerrada, sin código):** el video se entrega **solo con voz** (volumen ya
+   normalizado a -14 LUFS) y **sin música**. La música la pone el profesor desde TikTok o Instagram al subir,
+   usando un audio en tendencia, que es lo que empuja el alcance; incrustarla en el mp4 pelearía con ese audio.
+   La voz sigue siendo la sintética de `marca.yaml`. Voz Azure solo si algún día hace falta una licencia
+   comercial garantizada: es cambiar de proveedor en `voces.py`, no una fase.
+8. ✅ **v0.7 · Escala:** `tpi lote "Tema"` y el botón **Crear → Ideas → «Hacer los 3 videos»** producen los
+   3 videos (guion + video final + kit) en un solo trabajo, de uno en uno, con reintento y espera si Gemini está
+   saturado. Verificación automática de render en GitHub Actions: cada PR renderiza un guion de ejemplo y
+   comprueba el mp4, sin claves y sin llamar a la IA.
