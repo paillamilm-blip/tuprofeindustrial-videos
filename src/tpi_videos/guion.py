@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from .errores import ErrorMotor
 from .tex import llaves_balanceadas
+from .visuales import SEGUNDOS_VISUAL, analizar_funcion, normalizar_vectores
 
 MATERIAS: dict[str, str] = {"matematica": "MATEMÁTICA", "fisica": "FÍSICA", "ingenieria": "INGENIERÍA"}
 
@@ -106,6 +107,70 @@ class Dato(_Base):
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
 
 
+class Visual(_Base):
+    """El dibujo de un paso: un gráfico de función, un diagrama de fuerzas o un circuito.
+
+    Sólo se usan los campos del ``tipo`` elegido; los demás quedan vacíos a propósito.
+    """
+
+    tipo: Literal["grafico_funcion", "diagrama_fuerzas", "circuito"]
+
+    # grafico_funcion
+    funcion: str | None = None
+    variable: str | None = None
+    rango: list[float] | None = None
+    marcar: list[float] = []
+    eje_x: str | None = None  # ej. "tiempo (s)"
+    eje_y: str | None = None  # ej. "altura (m)"
+
+    # diagrama_fuerzas
+    cuerpo: Literal["bloque", "bola"] = "bloque"
+    vectores: list[str] = []
+    angulo: float | None = None  # plano inclinado, en grados
+
+    # circuito
+    arreglo: Literal["serie", "paralelo"] = "serie"
+    fuente: str | None = None  # ej. '12 V'
+    resistencias: list[str] = []  # ej. ['4 Ω', '6 Ω']
+
+    _listas = field_validator("rango", "marcar", "vectores", "resistencias", mode="before")(
+        classmethod(lambda cls, v: None if v is None else _como_lista(v))
+    )
+
+    @model_validator(mode="after")
+    def _campos_del_tipo(self) -> Visual:
+        if self.tipo == "grafico_funcion":
+            if not (self.funcion or "").strip():
+                raise ValueError("un gráfico de función necesita la fórmula, ej. funcion: '-x^2 + 4x'")
+            if self.rango is not None and len(self.rango) != 2:
+                raise ValueError("el rango son dos números, ej. rango: [0, 5]")
+        elif self.tipo == "diagrama_fuerzas":
+            self.vectores = normalizar_vectores(self.vectores)
+            if self.angulo is not None:
+                if not 0 < self.angulo < 90:
+                    raise ValueError(f"el ángulo del plano va entre 0 y 90 grados, y dice {self.angulo}")
+                if self.cuerpo != "bloque":
+                    raise ValueError("el ángulo (plano inclinado) solo va con cuerpo: bloque")
+        elif not (self.fuente or "").strip():
+            raise ValueError("un circuito necesita la fuente, ej. fuente: '12 V'")
+        elif not 2 <= len(self.resistencias) <= 4:
+            raise ValueError(
+                f"un circuito va entre 2 y 4 resistencias para que se entienda en el celular, y dice {len(self.resistencias)}"
+            )
+        return self
+
+    @property
+    def segundos(self) -> float:
+        """Lo que el dibujo suma a la duración estimada: la curva se mira un rato más."""
+        return SEGUNDOS_VISUAL[self.tipo]
+
+    def funcion_analizada(self):
+        """La función lista para trazar (raíces, vértice y rango). Sólo en los gráficos."""
+        if self.tipo != "grafico_funcion":
+            raise ValueError(f"«{self.tipo}» no tiene una función que analizar")
+        return analizar_funcion(self.funcion or "", self.variable, self.rango, self.marcar)
+
+
 class Paso(_Base):
     voz: str = Field(min_length=1)
     tex: str | None = None
@@ -113,6 +178,7 @@ class Paso(_Base):
     destacar: list[str] = []
     transformar: bool = True
     emoji: str | None = None
+    visual: Visual | None = None
     # Error típico: la fórmula (equivocada) se tacha con una ✗ roja; no cuenta como paso correcto
     error: bool = False
 
@@ -194,9 +260,10 @@ _MENSAJES = {
     "list_type": "debe ser una lista (cada elemento empieza con '- ')",
     "bool_type": "debe ser true o false",
     "bool_parsing": "debe ser true o false",
+    "float_parsing": "debe ser un número (los decimales llevan punto: 4.9)",
+    "float_type": "debe ser un número (los decimales llevan punto: 4.9)",
     "too_short": "no puede quedar vacío",
     "string_too_short": "no puede quedar vacío",
-    "literal_error": "valor no válido; las opciones son: matematica, fisica, ingenieria",
     "model_type": "debe tener sub-campos (por ejemplo texto: y voz:)",
     "model_attributes_type": "debe tener sub-campos (por ejemplo texto: y voz:)",
 }
@@ -224,12 +291,23 @@ def _ubicacion(loc: tuple[Any, ...]) -> str:
     return " → ".join(partes) or "(raíz)"
 
 
+def _opciones_es(opciones: list[str]) -> str:
+    """['a', 'b'] → «a o b» (en español la lista se cierra con «o», no con «or»)."""
+    if len(opciones) <= 1:
+        return opciones[0] if opciones else "revisa los ejemplos de guiones/"
+    return ", ".join(opciones[:-1]) + " o " + opciones[-1]
+
+
 def explicar_errores(error: ValidationError) -> list[str]:
     lineas = []
     for err in error.errors():
         tipo = err.get("type", "")
         if tipo == "value_error":
             mensaje = str(err.get("msg", "")).removeprefix("Value error, ")
+        elif tipo == "literal_error":
+            # pydantic entrega las opciones en inglés: "'a', 'b' or 'c'"
+            opciones = re.findall(r"'([^']*)'", str(err.get("ctx", {}).get("expected", "")))
+            mensaje = f"valor no válido; las opciones son: {_opciones_es(opciones)}"
         else:
             mensaje = _MENSAJES.get(tipo, err.get("msg", "valor no válido"))
         lineas.append(f"{_ubicacion(err.get('loc', ()))}: {mensaje}")
@@ -283,6 +361,48 @@ def _simples(s: str) -> str:
     return "'" + s.replace("'", "''") + "'"
 
 
+def _numero(valor: Any) -> str:
+    """30.0 → «30», 2.5 → «2.5»: como se escribe un número en un guion a mano."""
+    n = round(float(valor), 4)
+    return str(n).removesuffix(".0")
+
+
+def _numeros(vals: list[Any]) -> str:
+    """[0, 5] con la coma como separador YAML y punto decimal (el que lee el motor)."""
+    return "[" + ", ".join(_numero(v) for v in vals) + "]"
+
+
+def _visual_yaml(v: dict[str, Any]) -> list[str]:
+    """Los campos del visual que corresponden a su tipo, con la sangría de un paso."""
+    tipo = v["tipo"]
+    campos: list[tuple[str, str]] = [("tipo", tipo)]
+    if tipo == "grafico_funcion":
+        campos.append(("funcion", _simples(v.get("funcion") or "")))
+        if v.get("variable"):
+            campos.append(("variable", _dobles(v["variable"])))
+        if v.get("rango"):
+            campos.append(("rango", _numeros(v["rango"])))
+        if v.get("marcar"):
+            campos.append(("marcar", _numeros(v["marcar"])))
+        for clave in ("eje_x", "eje_y"):
+            if v.get(clave):
+                campos.append((clave, _dobles(v[clave])))
+    elif tipo == "diagrama_fuerzas":
+        if v.get("cuerpo") not in (None, "bloque"):
+            campos.append(("cuerpo", v["cuerpo"]))
+        campos.append(("vectores", "[" + ", ".join(_simples(x) for x in v.get("vectores") or []) + "]"))
+        if v.get("angulo") is not None:
+            campos.append(("angulo", _numero(v["angulo"])))
+    else:
+        if v.get("arreglo") not in (None, "serie"):
+            campos.append(("arreglo", v["arreglo"]))
+        campos.append(("fuente", _simples(v.get("fuente") or "")))
+        campos.append(
+            ("resistencias", "[" + ", ".join(_simples(r) for r in v.get("resistencias") or []) + "]")
+        )
+    return [f"      {clave}: {valor}" for clave, valor in campos]
+
+
 def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
     """Escribe un guion (dict con la forma de ``Guion``) como YAML legible. Omite lo que está por defecto."""
     # Un salto de línea dentro de un comentario rompería el YAML
@@ -325,6 +445,9 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
             lineas.append("    transformar: false")
         if p.get("emoji"):
             lineas.append(f"    emoji: {_dobles(p['emoji'])}")
+        if p.get("visual"):
+            lineas.append("    visual:")
+            lineas += _visual_yaml(p["visual"])
         if p.get("error"):
             lineas.append("    error: true   # error típico: se muestra tachado")
     lineas += ["", "resultado:", f"  tex: {_simples(guion['resultado']['tex'])}",

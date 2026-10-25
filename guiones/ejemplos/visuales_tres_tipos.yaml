@@ -1,0 +1,50 @@
+# Ejemplo de guion · Los tres dibujos que el motor sabe hacer
+# Crear el video:   ./tpi crear guiones/ejemplos/visuales_tres_tipos.yaml
+# Cada paso puede llevar un bloque "visual:" que se dibuja en el pie de la hoja:
+#   grafico_funcion · diagrama_fuerzas · circuito. Sin "visual:", el video es solo texto y fórmula.
+
+titulo: "Tres dibujos: gráfico, fuerzas y circuito"
+materia: fisica
+nivel: "2° medio"
+
+gancho:
+  texto: "¿Y si el video te dibujara el ejercicio?"
+  voz: "¿Y si el video te dibujara el ejercicio en vez de solo escribirlo? Aquí van tres."
+  emoji: "📐"
+
+enunciado:
+  texto: "Una parábola, un bloque en un plano inclinado y un circuito en paralelo."
+
+pasos:
+  - nota: "La altura del lanzamiento"
+    tex: 'h(t) = -4{,}9t^2 + 12t'
+    voz: "La altura sigue una parábola: sale del suelo y vuelve a caer."
+    visual:
+      tipo: grafico_funcion
+      funcion: '-4.9t^2 + 12t'
+      variable: t
+      rango: [0, 2.5]
+      eje_x: "tiempo (s)"
+      eje_y: "altura (m)"
+
+  - nota: "Las fuerzas sobre el bloque"
+    tex: '\sum F = 0'
+    voz: "El peso baja, la normal empuja perpendicular al plano y la fricción frena la bajada."
+    visual:
+      tipo: diagrama_fuerzas
+      cuerpo: bloque
+      vectores: ['P', 'N', 'f']
+      angulo: 30
+
+  - nota: "Tres ramas en paralelo"
+    tex: '\dfrac{{1}}{{R_t}} = \dfrac{{1}}{{R_1}} + \dfrac{{1}}{{R_2}} + \dfrac{{1}}{{R_3}}'
+    voz: "En paralelo cada rama recibe el mismo voltaje, y la corriente se reparte."
+    visual:
+      tipo: circuito
+      arreglo: paralelo
+      fuente: '9 V'
+      resistencias: ['4 Ω', '6 Ω', '12 Ω']
+
+resultado:
+  tex: 'h(2{,}45) = 0'
+  voz: "Y ese es el tiempo en que vuelve al suelo."

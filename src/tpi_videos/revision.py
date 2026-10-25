@@ -11,6 +11,7 @@ import re
 from dataclasses import dataclass
 
 from .guion import Guion
+from .visuales import analizar_circuito
 
 # Calibrado con la voz es-CL de edge-tts a +5 % de velocidad (~15 caracteres por segundo,
 # contando espacios y signos) más una pequeña pausa al final de cada bloque.
@@ -59,10 +60,45 @@ def _frases(texto: str) -> list[str]:
     return [f.strip() for f in re.split(r"(?<=[.!?¿¡])\s+", texto) if f.strip()]
 
 
+def _avisos_de_visuales(guion: Guion) -> list[Aviso]:
+    """Que el dibujo se pueda trazar, y que el gráfico diga qué representa cada eje."""
+    avisos: list[Aviso] = []
+    for i, paso in enumerate(guion.pasos, 1):
+        v = paso.visual
+        if v is None:
+            continue
+        donde = f"paso {i} (visual)"
+        if v.tipo == "circuito":
+            # Un rótulo sin número («cuatro ohmios») no revienta hasta el render: lo avisamos aquí.
+            try:
+                analizar_circuito(v.fuente, v.resistencias)
+            except ValueError as e:
+                avisos.append(Aviso("advertencia", donde, str(e)))
+            continue
+        if v.tipo != "grafico_funcion":
+            continue
+        try:
+            f = v.funcion_analizada()
+        except ValueError as e:
+            avisos.append(Aviso("advertencia", donde, str(e)))
+            continue
+        if not (v.eje_x and v.eje_y):
+            avisos.append(
+                Aviso(
+                    "sugerencia",
+                    donde,
+                    f"los ejes salen como «{f.variable}» y «y»; escribe eje_x y eje_y "
+                    "(ej. 'tiempo (s)' y 'altura (m)').",
+                )
+            )
+    return avisos
+
+
 def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
     avisos: list[Aviso] = []
     voces = guion.textos_de_voz(cierre_por_defecto)
     segundos = sum(estimar_segundos(t) for _, t in voces) + SEGUNDOS_ANIMACION_EXTRA
+    segundos += sum(p.visual.segundos for p in guion.pasos if p.visual)  # el dibujo se mira un rato más
     palabras = sum(len(t.split()) for _, t in voces)
 
     # Duración total
@@ -194,7 +230,9 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
         avisos.append(Aviso("sugerencia", "pasos", f"hay {len(errores)} errores típicos; con uno basta para "
                             "llamar la atención."))  # fmt: skip
 
-    return Revision(segundos=segundos, palabras=palabras, bloques=len(voces), avisos=avisos)
+    return Revision(
+        segundos=segundos, palabras=palabras, bloques=len(voces), avisos=avisos + _avisos_de_visuales(guion)
+    )
 
 
 def _textos_visibles(guion: Guion) -> list[tuple[str, str]]:

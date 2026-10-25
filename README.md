@@ -8,6 +8,9 @@ Convierte un ejercicio de **Matemática, Física o Ingeniería** escrito en un a
 - 📓 **Tu estilo «Hoja de desarrollo»**: hoja cuadriculada sobre fondo difuminado, títulos de cómic técnico
   (Comic Neue) que se escriben como con plumón. El estilo original «Pizarra nocturna» sigue disponible.
 - 🧮 **Animaciones con Manim**: las fórmulas (LaTeX) se transforman paso a paso, como en una pizarra.
+- ✏️ **Dibujos que se trazan solos**: un paso puede llevar su **gráfico de función** (con raíces y vértice
+  marcados), su **diagrama de fuerzas** (bloque o bola, con plano inclinado) o su **circuito** (serie o
+  paralelo). Se dibujan en el pie de la hoja mientras suena ese paso. Ejemplo: `guiones/ejemplos/visuales_tres_tipos.yaml`.
 - 🤯 **Emojis 3D y «error típico»**: emojis que aparecen con un salto y un paso que muestra la forma
   equivocada y la tacha con una ✗ roja («¿Resuelves así?»).
 - 🗣️ **Voz sintética chilena** (manim-voiceover + voces neurales `es-CL`), sincronizada con cada animación.
@@ -140,7 +143,8 @@ pasos:
   `mascota.png`, o súbelo en el panel: Ajustes → Tus stickers) y escribe `emoji: mascota`. En el `cierre`
   reemplaza al engranaje de la marca.
 - Ejemplo completo: `guiones/ejemplos/matematica_error_binomio.yaml`. La IA (`./tpi redactar`) también
-  elige emojis y agrega un error típico cuando existe uno famoso.
+  elige emojis y agrega un error típico cuando existe uno famoso — y un dibujo (gráfico, fuerzas o circuito)
+  cuando el ejercicio lo pide. Para verlo en pantalla: `./tpi crear guiones/ejemplos/visuales_tres_tipos.yaml`.
 
 ## 5. Redactar guiones con IA (Gemini)
 
@@ -262,7 +266,7 @@ Así se ve el estilo original «Pizarra nocturna»:
 ## 8. Dónde queda cada cosa
 
 ```
-guiones/ejemplos/     4 guiones de ejemplo (física, matemática, ingeniería y un «error típico»)
+guiones/ejemplos/     5 guiones de ejemplo (física, matemática, ingeniería, un «error típico» y uno con dibujos)
 guiones/              tus guiones (y los que redacta la IA o guardas en el panel)
 enunciados/ejemplos/  enunciados de prueba para ./tpi redactar
 marca.yaml            identidad visual y sonora (y el estilo por defecto)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tpi-videos"
-version = "0.5.0"
+version = "0.6.0"
 description = "Motor de video de Tu Profe Industrial: enunciados de Matemática, Física e Ingeniería → videos verticales 9:16 con animaciones Manim, voz sintética y subtítulos estilo CapCut."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,6 +19,7 @@ dependencies = [
     "python-dotenv>=1.0",  # lee la clave de Gemini desde .env
     "pyyaml>=6.0",
     "rich>=13",
+    "sympy>=1.12,<2",  # lee la «funcion:» de un gráfico y calcula raíces y vértice (visuales.py)
 ]
 
 [project.optional-dependencies]

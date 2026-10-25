@@ -61,6 +61,31 @@ class PasoIA(BaseModel):
     error: bool = Field(
         default=False, description="true solo en el paso 'error típico': su tex es la forma EQUIVOCADA"
     )
+    # Un paso puede pedirse con dibujo. Son campos planos para que el modelo los cumpla fácil;
+    # a_guion() arma el bloque "visual:" anidado que lee el motor.
+    dibujo: Literal["", "grafico", "fuerzas", "circuito"] = Field(
+        default="",
+        description='Dibujo de este paso: "", "grafico", "fuerzas" o "circuito" (máximo 1 en el guion)',
+    )
+    funcion: str = Field(
+        default="", description='Con dibujo="grafico": la fórmula en texto plano, ej. "-4.9t^2 + 20"'
+    )
+    eje_x: str = Field(default="", description='Nombre del eje horizontal con unidades, ej. "tiempo (s)"')
+    eje_y: str = Field(default="", description='Nombre del eje vertical con unidades, ej. "altura (m)"')
+    vectores: list[str] = Field(
+        default_factory=list, description='Con dibujo="fuerzas": flechas entre "P", "N", "f", "v", "a", "T"'
+    )
+    cuerpo: Literal["", "bloque", "bola"] = Field(
+        default="", description='Con dibujo="fuerzas": "bloque" (una caja) o "bola"'
+    )
+    angulo: float = Field(default=0.0, description="Grados del plano inclinado (0 = mesa), solo con bloque")
+    fuente: str = Field(default="", description='Con dibujo="circuito": el voltaje, ej. "12 V"')
+    resistencias: list[str] = Field(
+        default_factory=list, description='Con dibujo="circuito": de 2 a 4 valores, ej. ["4 Ω", "6 Ω"]'
+    )
+    arreglo: Literal["", "serie", "paralelo"] = Field(
+        default="", description='Con dibujo="circuito": "serie" o "paralelo"'
+    )
 
 
 class GuionIA(BaseModel):
@@ -120,6 +145,10 @@ EJEMPLO = GuionIA(
             nota="Caída libre",
             tex=r"h = \frac{1}{2} g t^2",
             voz="Como la piedra parte del reposo, usamos la ecuación de caída libre.",
+            dibujo="grafico",
+            funcion="-4.9t^2 + 20",
+            eje_x="tiempo (s)",
+            eje_y="altura (m)",
         ),
         PasoIA(
             nota="Despejamos t",
@@ -243,6 +272,36 @@ def _emoji(valor: str) -> dict[str, str]:
     return {"emoji": emoji} if emoji else {}
 
 
+_DIBUJOS = {"grafico": "grafico_funcion", "fuerzas": "diagrama_fuerzas", "circuito": "circuito"}
+
+
+def _visual(p: PasoIA) -> dict[str, Any] | None:
+    """Los campos planos del paso, convertidos en el bloque "visual:" que valida el motor.
+
+    Se copian solo los que corresponden al tipo pedido: así un "grafico" con angulo de sobra
+    no tira el guion, y el mensaje de error que vuelve al modelo habla del dibujo que pidió.
+    """
+    tipo = _DIBUJOS.get(p.dibujo)
+    if not tipo:
+        return None
+    visual: dict[str, Any] = {"tipo": tipo}
+    if tipo == "grafico_funcion":
+        visual["funcion"] = _texto(p.funcion)
+        visual |= {k: v for k, v in (("eje_x", _texto(p.eje_x)), ("eje_y", _texto(p.eje_y))) if v}
+    elif tipo == "diagrama_fuerzas":
+        visual["vectores"] = [v.strip() for v in p.vectores if v.strip()]
+        if p.cuerpo:
+            visual["cuerpo"] = p.cuerpo
+        if p.angulo:
+            visual["angulo"] = float(p.angulo)
+    else:
+        visual["fuente"] = _texto(p.fuente)
+        visual["resistencias"] = [r.strip() for r in p.resistencias if r.strip()]
+        if p.arreglo:
+            visual["arreglo"] = p.arreglo
+    return visual
+
+
 def a_guion(g: GuionIA) -> dict[str, Any]:
     """Convierte la respuesta del modelo al formato de guion del motor."""
     enunciado = _texto(g.enunciado_texto)
@@ -256,6 +315,8 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
         paso |= _emoji(p.emoji)
         if p.error and tex:
             paso["error"] = True
+        if (visual := _visual(p)) is not None:
+            paso["visual"] = visual
         pasos.append(paso)
     gancho: dict[str, Any] = {"texto": _texto(g.gancho_texto), "voz": _texto(g.gancho_voz)}
     if limpiar_tex(g.gancho_tex or ""):
