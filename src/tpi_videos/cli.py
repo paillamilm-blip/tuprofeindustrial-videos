@@ -325,10 +325,12 @@ def _producir(
     nivel: str | None = None,
     gancho: str | None = None,
     titulo: str | None = None,
+    segundos: int | None = None,
 ) -> int:
     """Guion revisado + video + kit de publicación en un solo paso, y lo muestra."""
     from .ia import MODELO_POR_DEFECTO
     from .ideas import producir
+    from .redactor import MARGEN_DE_DURACION
 
     json_activo = _modo_json(args)
     proveedor, voz = _dividir_voz(getattr(args, "voz", None))
@@ -342,6 +344,7 @@ def _producir(
     def progreso(etapa: str, avance: float, detalle: str) -> None:
         _progreso_json(etapa, avance, detalle)
 
+    prometido = segundos if segundos is not None else getattr(args, "segundos", None)
     resultado = producir(
         valor,
         materia=materia if materia is not None else getattr(args, "materia", None),
@@ -360,6 +363,7 @@ def _producir(
         con_kit=not getattr(args, "sin_kit", False),
         gancho=gancho if gancho is not None else getattr(args, "gancho", None),
         titulo=titulo if titulo is not None else getattr(args, "titulo", None),
+        segundos=prometido,
         avisar=avisar,
         progreso=progreso if json_activo else None,
     )
@@ -368,7 +372,7 @@ def _producir(
         _emitir(
             etapa="resultado", avance=1.0,
             guion=resultado.ruta_guion, video=resultado.video, srt=resultado.srt,
-            tema=resultado.tema, duracion=round(resultado.duracion, 1),
+            tema=resultado.tema, duracion=round(resultado.duracion, 1), prometido=prometido,
             portada=resultado.portada, publicacion=resultado.publicacion,
             supuestos=resultado.redaccion.supuestos, pendientes=resultado.redaccion.pendientes,
             revisado_por_ia=resultado.redaccion.revisado_por_ia,
@@ -384,6 +388,14 @@ def _producir(
     consola.print(
         f"   Estilo: {resultado.tema} · Duración: {resultado.duracion:.1f} s · Subtítulos: {fuentes}"
     )
+    if prometido:
+        if resultado.duracion > prometido + MARGEN_DE_DURACION:
+            consola.print(
+                f"   [yellow]⚠️ La idea prometió ≈{prometido} s y el video duró "
+                f"{resultado.duracion:.1f} s: acorta pasos en el guion.[/]"
+            )
+        else:
+            consola.print(f"   [dim]Prometido en la idea: ≈{prometido} s · cumplido.[/]")
     for supuesto in resultado.redaccion.supuestos:
         consola.print(f"   [cyan]ℹ Supuesto de la IA:[/] {supuesto}")
     for pendiente in resultado.redaccion.pendientes:
@@ -485,6 +497,7 @@ def cmd_ideas(args: argparse.Namespace) -> int:
             nivel=elegida.nivel,
             gancho=elegida.gancho,
             titulo=elegida.titulo,
+            segundos=elegida.segundos,
         )
 
 
@@ -764,6 +777,11 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     s.add_argument(
         "--titulo", help="título de la idea elegida, para que el guion siga esa línea (lo usa el panel)"
+    )
+    s.add_argument(
+        "--segundos",
+        type=int,
+        help="duración prometida al elegir la idea: el guion se achica para cumplirla (lo usa el panel)",
     )
     s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
     s.add_argument("--nombre", help="nombre del archivo del guion")

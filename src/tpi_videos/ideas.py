@@ -172,14 +172,16 @@ def producir(
     con_kit: bool = True,
     gancho: str | None = None,
     titulo: str | None = None,
+    segundos: int | None = None,
     avisar: Callable[[str], None] = lambda mensaje: None,
     progreso: Callable[[str, float, str], None] | None = None,
 ) -> ResultadoProduccion:
     """Guion revisado + video + kit de publicación, en un solo llamado.
 
     Es lo que hace ``tpi ideas`` cuando eliges una idea, y sirve igual con cualquier enunciado.
-    ``gancho`` y ``titulo`` son los de la idea elegida: se los pasamos a ``redactar`` para que el
-    video mantenga el gancho que frenó el scroll, en vez de que la IA escriba otro.
+    ``gancho``, ``titulo`` y ``segundos`` son los de la idea elegida: se los pasamos a ``redactar``
+    para que el video mantenga el gancho que frenó el scroll y dure lo que anunciamos, en vez de que
+    la IA escriba otro gancho y se vaya a 70 s cuando la tarjeta decía 45.
     """
     from .publicar import crear_kit
     from .render import crear_video
@@ -202,6 +204,7 @@ def producir(
         forzar=forzar,
         revisar_con_ia=revisar_con_ia,
         pistas=pistas or None,
+        segundos_prometidos=segundos,
         avisar=avisar,
     )
 
