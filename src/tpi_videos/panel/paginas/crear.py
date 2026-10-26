@@ -14,6 +14,7 @@ from ...entorno import PLANTILLAS_DIR, raiz_proyecto
 from ...errores import ErrorMotor
 from ...guion import cabecera_de, cargar_guion
 from ...ideas import ANGULOS
+from ...moldes import nombre_molde
 from ...revision import Revision
 from ...temas import listar_temas
 from .. import biblioteca
@@ -205,7 +206,17 @@ class PaginaCrear:
                         ui.icon(ANGULOS_ICONO.get(angulo, "bolt")).classes("text-2xl text-primary")
                         ui.label(ANGULOS.get(angulo, "Idea")).classes("tpi-titulo text-sm")
                         ui.label(f"{emoji} {idea.get('titulo', '')}".strip()).classes("text-lg font-bold")
-                    ui.label(f"«{idea.get('gancho', '')}»").classes("text-base")
+                    molde = str(idea.get("molde") or "")
+                    if molde:
+                        ui.chip(nombre_molde(molde), icon="movie_filter").props("dense outline size=sm")
+                    elegido_label = ui.label(f"«{idea.get('gancho', '')}»").classes("text-base")
+                    ganchos = list(idea.get("ganchos") or [])
+                    if ganchos:
+                        with ui.expansion(f"Ver los {len(ganchos)} ganchos", icon="bolt").classes("w-full"):
+                            for g in ganchos:
+                                ui.label(f"{g.get('estilo', '')}: «{g.get('texto', '')}»").classes(
+                                    "tpi-ayuda"
+                                )
                     ui.label(str(idea.get("enunciado", ""))).classes("tpi-ayuda")
                     ui.label(str(idea.get("porque", ""))).classes("text-sm italic")
                     with ui.row().classes("w-full items-center gap-3"):
@@ -218,6 +229,12 @@ class PaginaCrear:
                                 if etiqueta:
                                     ui.chip(etiqueta).props("dense outline size=sm")
                         ui.space()
+                        if ganchos:
+                            ui.button(
+                                "Probar ganchos",
+                                icon="videocam",
+                                on_click=lambda i=idea: self._probar_ganchos(i, elegido_label),
+                            ).props("outline")
                         ui.button(
                             "Hacer este video",
                             icon="movie",
@@ -237,8 +254,15 @@ class PaginaCrear:
             args += ["--materia", str(idea["materia"])]
         if idea.get("nivel"):
             args += ["--nivel", str(idea["nivel"])]
-        if idea.get("gancho"):
+        variante = idea.get("gancho_elegido")
+        if variante:
+            args += ["--gancho-json", json.dumps(variante, ensure_ascii=False)]
+        elif idea.get("gancho"):
             args += ["--gancho", str(idea["gancho"])]
+        if idea.get("ganchos"):
+            args += ["--ganchos-json", json.dumps(idea["ganchos"], ensure_ascii=False)]
+        if idea.get("molde"):
+            args += ["--molde", str(idea["molde"])]
         if idea.get("titulo"):
             args += ["--titulo", str(idea["titulo"])]
         if idea.get("segundos"):
@@ -274,6 +298,76 @@ class PaginaCrear:
             return
         boton_cancelar.set_visibility(False)
         self._mostrar_video_ideas(tarea.resultado, idea)
+
+    async def _probar_ganchos(self, idea: dict, etiqueta) -> None:
+        if TAREAS.ocupado():
+            ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+            return
+        if not idea.get("ganchos"):
+            ui.notify("Esta idea no trae variantes: busca otras 3.", type="warning")
+            return
+        self.zona_idea_video.clear()
+        with self.zona_idea_video:
+            with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
+                ui.label(f"🎣 Probando los ganchos de «{idea.get('titulo', '')}»").classes(
+                    "text-lg font-bold"
+                )
+                barra = ui.linear_progress(value=0, show_value=False).classes("w-full")
+                estado = ui.label("Preparando los clips…").classes("tpi-ayuda")
+                boton_cancelar = ui.button("Cancelar", icon="stop", on_click=TAREAS.cancelar).props(
+                    "flat color=negative"
+                )
+                fila = ui.row().classes("w-full gap-4 items-start flex-wrap")
+
+        def avance(t: Tarea) -> None:
+            barra.value = t.avance
+            estado.text = t.texto_etapa
+
+        tarea = await TAREAS.ejecutar(
+            "Ganchos",
+            ["ganchos", "--idea-json", json.dumps(idea, ensure_ascii=False)],
+            al_cambiar=avance,
+        )
+        boton_cancelar.set_visibility(False)
+        if not tarea.ok:
+            if tarea.cancelada:
+                ui.notify(
+                    "Cancelado: los clips que alcanzaron a salir quedan en salida/ganchos/.", type="info"
+                )
+                return
+            self._error(tarea)
+            return
+        estado.text = "Elige el que más frena el scroll."
+        clips = list(tarea.resultado.get("clips") or [])
+        if not clips:
+            ui.notify("No se generó ningún clip.", type="warning")
+            return
+
+        def usar(clip: dict) -> None:
+            idea["gancho"] = clip["texto"]
+            idea["gancho_elegido"] = clip
+            idea["ganchos"] = [clip] + [
+                g for g in idea.get("ganchos", []) if g.get("texto") != clip["texto"]
+            ]
+            etiqueta.text = f"«{clip['texto']}»"
+            ui.notify("Ese gancho viaja al video cuando toques «Hacer este video».", type="positive")
+
+        with fila:
+            for clip in clips:
+                archivo = Path(str(clip.get("archivo", "")))
+                with ui.column().classes("items-center gap-2 w-44"):
+                    ui.video(url_medio(archivo)).classes(
+                        "w-full aspect-[9/16] rounded-lg bg-black"
+                    ).props('preload="metadata"')
+                    ui.label(f"{clip.get('numero')}. «{clip.get('texto', '')}»").classes(
+                        "text-sm font-bold text-center"
+                    )
+                    ui.label(f"{clip.get('estilo', '')} · {clip.get('segundos', 0)} s").classes(
+                        "tpi-ayuda"
+                    )
+                    ui.button("Usar este", icon="check", on_click=lambda c=clip: usar(c)).props(
+                        "outline dense"
+                    )
 
     async def _hacer_lote(self) -> None:
         """Los 3 videos de las ideas que ya están en pantalla, en un solo trabajo de cola."""
@@ -334,6 +428,8 @@ class PaginaCrear:
                                 ui.label(
                                     f"{duracion}" + (f" · prometidos ≈{promesa} s" if promesa else "")
                                 ).classes("tpi-ayuda")
+                                if item.get("molde"):
+                                    ui.label(nombre_molde(str(item["molde"]))).classes("tpi-ayuda")
                             else:
                                 ui.label(f"❌ {item.get('emoji', '')} {item.get('titulo', '')}").classes(
                                     "font-bold"

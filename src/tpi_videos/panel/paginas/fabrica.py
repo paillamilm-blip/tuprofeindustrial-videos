@@ -20,6 +20,7 @@ from nicegui import ui
 from ... import ia
 from ...entorno import raiz_proyecto
 from ...ideas import ANGULOS, DIFICULTADES
+from ...moldes import nombre_molde
 from ..comun import AZUL, GRIS, ROJO, VERDE, abrir_en_mac, marco
 from ..tareas import TAREAS, Tarea
 from .crear import TEMAS_SUGERIDOS
@@ -215,6 +216,7 @@ class PaginaFabrica:
             str(texto)
             for texto in (
                 f"≈{item.get('duracion')} s" if ok and item.get("duracion") else "",
+                nombre_molde(str(item.get("molde"))) if item.get("molde") else "",
                 ANGULOS.get(str(item.get("angulo")), ""),
                 DIFICULTADES.get(str(item.get("dificultad")), ""),
             )
