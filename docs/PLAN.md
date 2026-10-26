@@ -27,6 +27,7 @@ panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-
 | `cli.py` | Comandos `tpi` en español; errores sin trazas técnicas (`--debug` para verlas) |
 | `redactor.py` / `ia.py` | `tpi redactar`: Gemini escribe el guion, el motor lo valida y Gemini lo revisa / clave y errores de la API |
 | `ideas.py` | `tpi ideas` (3 ángulos distintos para un tema, con el ejercicio ya numerado) y `tpi producir` (guion → video → kit en un solo paso) |
+| `cola.py` | Cola persistente (`salida/.cola/trabajos.json`): estado, fase, avance e hitos de cada video, candado de proceso y reanudación |
 | `guion.py` | Formato del guion (pydantic) y mensajes claros (incluye la trampa de comillas dobles con LaTeX) |
 | `revision.py` | Reglas de guion corto y de pedagogía; estimación de duración calibrada con la voz es-CL |
 | `voces.py` | Servicios de voz para manim-voiceover; edge-tts entrega la marca de tiempo de cada palabra |
@@ -111,3 +112,9 @@ panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-
    cada variante (`--elegir N` fija uno) y el panel lo ofrece con **«Probar ganchos»**. Todo campo nuevo es
    opcional: los guiones v0.8 y el estilo original no cambian.
    Spec: `docs/superpowers/specs/2026-10-26-ganchos-y-moldes-virales-design.md`.
+11. ✅ **v0.10 · Cola y progreso:** cada video del lote tiene su barra, su fase y su estado en la Fábrica.
+    El estado vive en `salida/.cola/trabajos.json` (escritura atómica y candado), los hitos (guion, video,
+    kit) evitan repetir trabajo y la IA se espera con 60 s, 2 min, 5 min y luego cada 5 min, sin límite.
+    Al reabrir el panel se retoma solo lo pendiente de conexión; un render interrumpido se reanuda con un
+    botón. `tpi lote --reanudar` hace lo mismo desde la terminal.
+    Spec: `docs/superpowers/specs/2026-10-26-cola-y-progreso-design.md`.

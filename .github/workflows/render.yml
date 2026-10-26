@@ -31,6 +31,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
+      - name: Pruebas del motor
+        # Cola, hitos, espera de la IA y eventos del panel: sin Manim, sin NiceGUI y sin internet.
+        run: python -m unittest discover -s pruebas -t . -v
+
       - name: Render de un guion de ejemplo
         # El ejemplo más completo: fórmula con LaTeX, gráfico de función, diagrama de fuerzas y circuito.
         # --voz silencio: la voz sintética necesita internet y no es lo que se quiere comprobar acá.
