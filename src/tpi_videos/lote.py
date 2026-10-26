@@ -339,13 +339,14 @@ def _emitidores(
 ) -> tuple[Progreso, Callable[[str, str], None], Callable[[str], None]]:
     """Los tres emisores de avance de un video del lote, con su número y su 0–1 propio."""
     etiqueta = f"Video {posicion} de {total}"
-    ultimo = {"avance": 0.0}
+    ultimo = {"avance": 0.0, "fase": "redactando", "estado": "redactando"}
 
     def emitir(
         etapa: str, detalle: str, fase: str, estado: str, video_avance: float | None = None
     ) -> None:
         if video_avance is not None:
             ultimo["avance"] = max(ultimo["avance"], video_avance)
+        ultimo["fase"], ultimo["estado"] = fase, estado
         if progreso:
             progreso(
                 etapa,
@@ -376,7 +377,8 @@ def _emitidores(
 
     def aviso(detalle: str) -> None:
         if progreso:
-            paso("redactando", detalle)
+            # Reemite con la fase y el avance actuales: un aviso del kit no hace retroceder la barra.
+            emitir(ultimo["fase"], detalle, ultimo["fase"], ultimo["estado"])
         else:
             avisar(detalle)
 
