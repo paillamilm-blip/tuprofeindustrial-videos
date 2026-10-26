@@ -1,11 +1,15 @@
 import json
 import os
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from tpi_videos import cola
+from tpi_videos.errores import ErrorMotor
 from tpi_videos.ideas import GanchoIdea, Idea
 
 
@@ -100,6 +104,122 @@ class ColaTest(BaseCola):
         datos = {"version": 99, "lotes": []}
         with self.assertRaises(Exception):
             cola.guardar(datos)
+
+
+class ColaLifecycleTest(BaseCola):
+    def _video(self, lote_id: str) -> str:
+        return cola.videos_del_lote(lote_id)[0]["id"]
+
+    def test_candado_propio_y_liberado(self) -> None:
+        self.assertTrue(cola.tomar_candado())
+        self.assertTrue(cola.candado_tomado())
+        cola.soltar_candado()
+        self.assertFalse(cola.candado_tomado())
+
+    def test_candado_de_un_proceso_muerto_se_toma(self) -> None:
+        ruta = self.raiz / "salida" / ".cola" / "lote.lock"
+        ruta.parent.mkdir(parents=True)
+        proceso = subprocess.Popen([sys.executable, "-c", ""])
+        proceso.wait()
+        ruta.write_text(
+            json.dumps({"pid": proceso.pid, "inicio": time.time()}), encoding="utf-8"
+        )
+
+        self.assertFalse(cola.candado_tomado())
+        self.assertTrue(cola.tomar_candado())
+
+    def test_candado_viejo_se_considera_abandonado(self) -> None:
+        ruta = self.raiz / "salida" / ".cola" / "lote.lock"
+        ruta.parent.mkdir(parents=True)
+        ruta.write_text(
+            json.dumps({"pid": os.getpid(), "inicio": time.time() - 13 * 3600}),
+            encoding="utf-8",
+        )
+        self.assertFalse(cola.candado_tomado())
+
+    def test_normalizar_no_toca_nada_con_el_candado_tomado(self) -> None:
+        lote_id = self._lote_con_video()
+        cola.actualizar_video(self._video(lote_id), estado="animando", fase="animando", avance=0.55)
+        cola.tomar_candado()
+        try:
+            self.assertEqual(cola.normalizar_interrumpidos(), 0)
+            self.assertEqual(cola.videos_del_lote(lote_id)[0]["estado"], "animando")
+        finally:
+            cola.soltar_candado()
+
+    def test_normalizar_marca_interrumpido_y_deriva_el_lote(self) -> None:
+        lote_id = self._lote_con_video()
+        cola.actualizar_video(self._video(lote_id), estado="animando", fase="animando", avance=0.55)
+
+        self.assertEqual(cola.normalizar_interrumpidos(), 1)
+        video = cola.videos_del_lote(lote_id)[0]
+        self.assertEqual(video["estado"], "interrumpido")
+        self.assertIn("55", video["detalle"])
+        self.assertEqual(cola.cargar()["lotes"][0]["estado"], "interrumpido")
+
+    def test_normalizar_un_lote_sin_ideas_lo_deja_pendiente(self) -> None:
+        lote_id = cola.nuevo_lote("Porcentajes", {})
+        cola.normalizar_interrumpidos()
+        lote = cola.cargar()["lotes"][0]
+        self.assertEqual(lote["id"], lote_id)
+        self.assertEqual(lote["estado"], "pendiente_ia")
+
+    def test_elegir_lote_pendiente_y_saltar_interrumpido(self) -> None:
+        listo = self._lote_con_video()
+        cola.actualizar_video(self._video(listo), estado="listo")
+        cola.recalcular_lote(listo)
+
+        pendiente = self._lote_con_video()
+        video_id = self._video(pendiente)
+        cola.actualizar_video(video_id, estado="pendiente_ia")
+        cola.recalcular_lote(pendiente)
+
+        self.assertEqual(cola.elegir_lote(solo_pendientes=True)["id"], pendiente)
+
+        cola.actualizar_video(video_id, estado="interrumpido")
+        cola.recalcular_lote(pendiente)
+        self.assertIsNone(cola.elegir_lote(solo_pendientes=True))
+        self.assertEqual(cola.elegir_lote(cola_id=pendiente)["id"], pendiente)
+
+    def test_pendientes_ia_encuentra_lotes_y_videos(self) -> None:
+        sin_ideas = cola.nuevo_lote("Porcentajes", {})
+        cola.normalizar_interrumpidos()
+        con_video = self._lote_con_video()
+        cola.actualizar_video(self._video(con_video), estado="pendiente_ia")
+        cola.recalcular_lote(con_video)
+
+        ids = [lote["id"] for lote in cola.pendientes_ia()]
+        self.assertEqual(ids, [sin_ideas, con_video])
+
+    def test_descartar_con_el_candado_tomado_avisa(self) -> None:
+        lote_id = self._lote_con_video()
+        cola.tomar_candado()
+        try:
+            with self.assertRaises(ErrorMotor):
+                cola.descartar_lote(lote_id)
+        finally:
+            cola.soltar_candado()
+        cola.descartar_lote(lote_id)
+        self.assertEqual(cola.cargar()["lotes"][0]["estado"], "descartado")
+        self.assertEqual(cola.lotes_visibles(), [])
+
+    def test_lotes_visibles_muestra_pendientes_y_el_ultimo(self) -> None:
+        viejo = self._lote_con_video()
+        cola.actualizar_video(self._video(viejo), estado="listo")
+        cola.recalcular_lote(viejo)
+        nuevo = self._lote_con_video()
+
+        ids = [lote["id"] for lote in cola.lotes_visibles()]
+        self.assertEqual(ids, [nuevo])
+        self.assertEqual(cola.ultimo_lote()["id"], nuevo)
+
+    def test_podar_no_toca_nada_si_otro_proceso_trabaja(self) -> None:
+        self._lote_con_video()
+        with (
+            patch("tpi_videos.cola.candado_tomado", return_value=True),
+            patch("tpi_videos.cola._candado_es_mio", return_value=False),
+        ):
+            self.assertEqual(cola.podar(), 0)
 
 
 if __name__ == "__main__":

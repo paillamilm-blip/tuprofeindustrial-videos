@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -199,6 +200,8 @@ def videos_del_lote(lote_id: str) -> list[dict[str, Any]]:
 
 def podar() -> int:
     """Conserva lo pendiente y los últimos 20 videos terminados; los archivos no se tocan."""
+    if candado_tomado() and not _candado_es_mio():
+        return 0  # hay un lote trabajando: no se reescribe la cola bajo sus pies
     datos = cargar()
     if datos.get("version") != VERSION:
         return 0
@@ -224,3 +227,210 @@ def podar() -> int:
         datos["lotes"] = list(reversed(conservar))
         guardar(datos)
     return quitados
+
+
+def _ruta_candado() -> Path:
+    return _ruta().parent / "lote.lock"
+
+
+def _pid_vivo(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        # PROCESS_QUERY_LIMITED_INFORMATION: alcanza para preguntar si sigue corriendo
+        handle = kernel32.OpenProcess(0x1000, False, pid)
+        if not handle:
+            return False
+        try:
+            codigo = ctypes.c_ulong()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(codigo)):
+                return False
+            return codigo.value == 259  # STILL_ACTIVE: el proceso terminado sigue con su handle abierto
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _candado() -> dict[str, Any] | None:
+    try:
+        datos = json.loads(_ruta_candado().read_text(encoding="utf-8"))
+        return {"pid": int(datos.get("pid", 0)), "inicio": float(datos.get("inicio", 0))}
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return None
+
+
+def candado_tomado() -> bool:
+    """¿Hay otro ``tpi lote`` vivo escribiendo la cola? (12 h sin renovar = abandonado)."""
+    datos = _candado()
+    if datos is None:
+        return False
+    return _pid_vivo(datos["pid"]) and time.time() - datos["inicio"] < 12 * 3600
+
+
+def _candado_es_mio() -> bool:
+    """``podar`` también corre con el candado puesto (lo toma ``tpi lote --reanudar``)."""
+    datos = _candado()
+    return datos is not None and datos["pid"] == os.getpid() and candado_tomado()
+
+
+def tomar_candado() -> bool:
+    if candado_tomado() and not _candado_es_mio():
+        return False
+    ruta = _ruta_candado()
+    try:
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        ruta.write_text(
+            json.dumps({"pid": os.getpid(), "inicio": time.time()}), encoding="utf-8"
+        )
+    except OSError:
+        return True  # sin candado se puede trabajar igual; no es motivo para no hacer el video
+    return True
+
+
+def soltar_candado() -> None:
+    try:
+        _ruta_candado().unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def estado_derivado(lote: dict[str, Any]) -> str:
+    """El estado del lote sale de sus videos: nunca se adivina ni se deja «en curso» de mentira."""
+    estados = [video.get("estado") for video in lote.get("videos", [])]
+    if not estados:
+        return "pendiente_ia" if lote.get("estado") == "pensando_ideas" else lote.get("estado", "en_curso")
+    vivos = [estado for estado in estados if estado != "descartado"]
+    if not vivos:
+        return "descartado"
+    if "interrumpido" in vivos:
+        return "interrumpido"
+    if "pendiente_ia" in vivos:
+        return "pendiente_ia"
+    if any(estado in ESTADOS_ACTIVOS for estado in vivos):
+        return "en_curso"
+    if "en_cola" in vivos:
+        return "interrumpido"
+    if all(estado == "listo" for estado in vivos):
+        return "listo"
+    if "fallo" in vivos:
+        return "fallo"
+    return lote.get("estado", "en_curso")
+
+
+def recalcular_lote(lote_id: str) -> None:
+    datos = cargar()
+    lote = _lote(datos, lote_id)
+    if lote is None or lote.get("estado") == "descartado":
+        return
+    lote["estado"] = estado_derivado(lote)
+    lote["fase"] = lote["estado"]
+    lote["actualizado"] = _ahora()
+    guardar(datos)
+
+
+def normalizar_interrumpidos() -> int:
+    """Al abrir el panel: lo que quedó a medio hacer pasa a «interrumpido». Respeta el candado."""
+    if candado_tomado():
+        return 0  # hay un tpi lote vivo: la cola es suya
+    datos = cargar()
+    if datos.get("version") != VERSION:
+        return 0
+    cambiados, tocados = 0, 0
+    for lote in datos["lotes"]:
+        if lote.get("estado") in ("listo", "fallo", "descartado"):
+            continue
+        for video in lote.get("videos", []):
+            if video.get("estado") in ESTADOS_ACTIVOS:
+                fase = FASES.get(video.get("fase", ""), "el video")
+                porcentaje = round(float(video.get("avance") or 0.0) * 100)
+                video["estado"] = "interrumpido"
+                video["detalle"] = f"Se interrumpió {fase.lower()} ({porcentaje} %)"
+                cambiados += 1
+        nuevo = estado_derivado(lote)
+        if nuevo != lote.get("estado"):
+            tocados += 1
+        lote["estado"] = nuevo
+        lote["fase"] = nuevo
+        lote["actualizado"] = _ahora()
+    if cambiados or tocados:  # un lote que solo cambió de estado (sin ideas) igual se guarda
+        guardar(datos)
+    return cambiados
+
+
+def pendientes_ia() -> list[dict[str, Any]]:
+    return [
+        lote
+        for lote in cargar()["lotes"]
+        if lote.get("estado") == "pendiente_ia"
+        or any(video.get("estado") == "pendiente_ia" for video in lote.get("videos", []))
+    ]
+
+
+def elegir_lote(
+    solo_pendientes: bool = False, cola_id: str | None = None
+) -> dict[str, Any] | None:
+    """El lote que hay que retomar: el más antiguo no terminado, o el que se pide por id."""
+    lotes = [lote for lote in cargar()["lotes"] if lote.get("estado") != "descartado"]
+    if cola_id:
+        lote = next((lote for lote in lotes if lote.get("id") == cola_id), None)
+        if lote is None:
+            raise ErrorMotor(
+                "No encuentro ese lote en la cola.",
+                ayuda="Mira la tarjeta «Cola de videos» en Fábrica.",
+            )
+        return lote
+    for lote in lotes:
+        if lote.get("estado") == "listo":
+            continue
+        if not solo_pendientes:
+            return lote
+        videos = lote.get("videos", [])
+        if any(video.get("estado") == "interrumpido" for video in videos):
+            continue
+        if not videos:  # le faltan las 3 ideas: hay que volver a pedirlas (nunca un fallo)
+            if lote.get("estado") in ("pensando_ideas", "pendiente_ia"):
+                return lote
+            continue
+        if any(video.get("estado") in ("pendiente_ia", "en_cola") for video in videos):
+            return lote
+    return None
+
+
+def ultimo_lote() -> dict[str, Any] | None:
+    lotes = [lote for lote in cargar()["lotes"] if lote.get("estado") != "descartado"]
+    return lotes[-1] if lotes else None
+
+
+def lotes_visibles() -> list[dict[str, Any]]:
+    lotes = [lote for lote in cargar()["lotes"] if lote.get("estado") != "descartado"]
+    if not lotes:
+        return []
+    ultimo = lotes[-1]
+    return [lote for lote in lotes if lote.get("estado") != "listo" or lote is ultimo]
+
+
+def descartar_lote(lote_id: str) -> None:
+    datos = cargar()
+    lote = _lote(datos, lote_id)
+    if lote is None:
+        raise ErrorMotor("No encuentro ese lote en la cola.")
+    if lote.get("estado") in ("en_curso", "pensando_ideas") and candado_tomado():
+        raise ErrorMotor(
+            "Ese lote está trabajando ahora.",
+            ayuda="Espera a que termine o cancela el trabajo antes de sacarlo de la cola.",
+        )
+    lote["estado"], lote["fase"] = "descartado", "descartado"
+    lote["actualizado"] = _ahora()
+    for video in lote.get("videos", []):
+        if video.get("estado") != "listo":
+            video["estado"] = "descartado"
+    guardar(datos)

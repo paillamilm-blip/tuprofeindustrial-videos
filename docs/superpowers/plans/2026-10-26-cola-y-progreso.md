@@ -685,8 +685,8 @@ def recalcular_lote(lote_id: str) -> None:
 
 def normalizar_interrumpidos() -> int:
     """Al abrir el panel: lo que quedó a medio hacer pasa a «interrumpido». Respeta el candado."""
-    if candado_tomado() and not _candado_es_mio():
-        return 0
+    if candado_tomado():
+        return 0  # hay un tpi lote vivo: la cola es suya
     datos = cargar()
     if datos.get("version") != VERSION:
         return 0
