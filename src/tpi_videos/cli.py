@@ -27,6 +27,7 @@ import json
 import platform
 import subprocess
 import sys
+import time
 import traceback
 from pathlib import Path
 from typing import Any
@@ -58,8 +59,8 @@ def _modo_json(args: argparse.Namespace) -> bool:
     return _JSON["activo"]
 
 
-def _progreso_json(etapa: str, avance: float, detalle: str) -> None:
-    _emitir(etapa=etapa, avance=avance, detalle=detalle)
+def _progreso_json(etapa: str, avance: float, detalle: str, **extra: object) -> None:
+    _emitir(etapa=etapa, avance=avance, detalle=detalle, **extra)
 
 
 def _ruta_amigable(ruta: Path) -> str:
@@ -621,6 +622,12 @@ def _mostrar_lote(items: list, tema: str | None) -> None:
         nivel_dif = DIFICULTADES.get(item.idea.dificultad, "")
         guion = f"{item.idea.emoji} {angulo}" + (f" · {nivel_dif}" if nivel_dif else "")
         guion = f"{guion} · {item.idea.titulo}".strip()
+        if item.pendiente:
+            consola.print(f" [bold]{n}[/]  [yellow]⏳[/] {guion}")
+            consola.print(f"    [yellow]{item.error}[/]")
+            if item.ayuda:
+                consola.print(f"    [dim]{item.ayuda}[/]")
+            continue
         if not item.ok:
             consola.print(f" [bold]{n}[/]  [red]❌[/] {guion}")
             consola.print(f"    [red]{item.error}[/]")
@@ -648,14 +655,198 @@ def _mostrar_lote(items: list, tema: str | None) -> None:
     consola.print()
 
 
+def _ajustes_lote(
+    args: argparse.Namespace, modelo: str, proveedor: str | None, voz: str | None
+) -> dict:
+    """Todo lo que hace falta para repetir el lote exactamente igual al reanudar."""
+    return {
+        "materia": args.materia,
+        "nivel": args.nivel,
+        "dificultad": args.dificultad,
+        "modelo": modelo,
+        "calidad": "borrador" if args.borrador else "final",
+        "estilo": args.estilo,
+        "proveedor": proveedor,
+        "voz": voz,
+        "velocidad": args.velocidad,
+        "subtitulos": not args.sin_subtitulos,
+        "sincronizar": args.sincronizar,
+        "revisar_con_ia": not args.sin_revision,
+        "con_kit": not args.sin_kit,
+    }
+
+
+def _producir_desde_ajustes(ajustes: dict) -> dict:
+    return {
+        "materia": ajustes.get("materia"),
+        "nivel": ajustes.get("nivel"),
+        "dificultad": ajustes.get("dificultad"),
+        "modelo": ajustes.get("modelo"),
+        "calidad": ajustes.get("calidad") or "final",
+        "estilo": ajustes.get("estilo"),
+        "proveedor": ajustes.get("proveedor"),
+        "voz": ajustes.get("voz"),
+        "velocidad": ajustes.get("velocidad"),
+        "subtitulos": bool(ajustes.get("subtitulos", True)),
+        "sincronizar": ajustes.get("sincronizar") or "auto",
+        "revisar_con_ia": bool(ajustes.get("revisar_con_ia", True)),
+        "con_kit": bool(ajustes.get("con_kit", True)),
+    }
+
+
+def _pedir_ideas(
+    proponer: Any, *, tema: str, ajustes: dict, espera: float, avisar, lote_id: str
+) -> list[Any] | None:
+    """Pide las 3 ideas y espera a la IA con la misma secuencia que los videos."""
+    from . import cola
+    from .ia import MODELO_POR_DEFECTO
+    from .lote import espera_del_intento, hora_en, texto_espera
+
+    intento = 0
+    while True:
+        intento += 1
+        try:
+            return proponer(
+                tema=tema,
+                materia=ajustes.get("materia"),
+                nivel=ajustes.get("nivel"),
+                dificultad=ajustes.get("dificultad"),
+                modelo=ajustes.get("modelo") or MODELO_POR_DEFECTO,
+                avisar=avisar,
+            )
+        except ErrorMotor as e:
+            if not e.transitorio:
+                cola.actualizar_lote(
+                    lote_id, estado="fallo", fase="fallo", error=e.mensaje, ayuda=e.ayuda
+                )
+                raise
+            if espera <= 0:
+                cola.actualizar_lote(
+                    lote_id,
+                    estado="pendiente_ia",
+                    fase="esperando_ia",
+                    error=e.mensaje,
+                    ayuda=e.ayuda,
+                    intentos=intento,
+                )
+                return None
+            segundos = espera_del_intento(intento, espera)
+            cola.actualizar_lote(
+                lote_id,
+                estado="pendiente_ia",
+                fase="esperando_ia",
+                error=e.mensaje,
+                ayuda=e.ayuda,
+                intentos=intento,
+                proximo_intento=hora_en(segundos),
+            )
+            avisar(f"Sin conexión con la IA: reintento en {texto_espera(segundos)}")
+            time.sleep(segundos)
+
+
+def _resultado_lote(
+    items: list,
+    ideas: list,
+    tema: str | None,
+    lote_id: str | None,
+    json_activo: bool,
+    pendiente: bool = False,
+) -> None:
+    pendiente = pendiente or any(item.pendiente for item in items) or len(items) < len(ideas)
+    if json_activo:
+        _emitir(
+            etapa="resultado",
+            avance=1.0,
+            tema=tema or "",
+            lote=[item.como_dict() for item in items],
+            pendiente=pendiente,
+            cola_id=lote_id,
+        )
+    elif pendiente:
+        consola.print(
+            "\n[yellow]La IA no responde.[/] El lote quedó guardado: se reanuda solo cuando vuelva "
+            "(o con ./tpi lote --reanudar).\n"
+        )
+
+
+def _cmd_reanudar(args: argparse.Namespace, *, json_activo: bool, avisar) -> int:
+    from . import cola
+    from .ideas import Idea, proponer_ideas
+    from .lote import producir_lote
+
+    if args.ideas_json:
+        raise ErrorMotor(
+            "Para reanudar no indiques tema ni ideas; usa --cola-id si quieres elegir un lote."
+        )
+    if not cola.tomar_candado():
+        if json_activo:
+            _emitir(
+                etapa="resultado", avance=1.0, lote=[], pendiente=False, cola_id=None,
+                detalle="Ya hay un lote en curso.",
+            )  # fmt: skip
+        else:
+            consola.print("[yellow]Ya hay un lote en curso.[/] Espera a que termine.")
+        return 0
+    try:
+        cola.podar()
+        lote = cola.elegir_lote(solo_pendientes=args.solo_pendientes, cola_id=args.cola_id)
+        if lote is None or lote.get("estado") == "listo":
+            if json_activo:
+                _emitir(etapa="resultado", avance=1.0, lote=[], pendiente=False, cola_id=None)
+            else:
+                consola.print("No hay videos pendientes." if lote is None else "Ese lote ya está listo.")
+            return 0
+
+        ajustes = dict(lote.get("ajustes") or {})
+        if lote.get("videos"):
+            ideas = [Idea.model_validate(video["idea"]) for video in lote["videos"]]
+        else:
+            avisar(f"Retomo el lote de «{lote['tema']}»: pido de nuevo las 3 ideas…")
+            ideas = _pedir_ideas(
+                proponer_ideas,
+                tema=str(lote.get("tema") or ""),
+                ajustes=ajustes,
+                espera=args.espera,
+                avisar=avisar,
+                lote_id=lote["id"],
+            )
+            if ideas is None:
+                if json_activo:
+                    _emitir(
+                        etapa="resultado", avance=1.0, tema=lote.get("tema"), lote=[],
+                        pendiente=True, cola_id=lote["id"],
+                    )  # fmt: skip
+                else:
+                    consola.print(
+                        "\n[yellow]La IA no responde.[/] El lote quedó guardado para cuando vuelva.\n"
+                    )
+                return 0
+            cola.agregar_videos(lote["id"], ideas)
+
+        items = producir_lote(
+            ideas,
+            **_producir_desde_ajustes(ajustes),
+            espera=args.espera,
+            cola_id=lote["id"],
+            reintentos=None,
+            avisar=avisar,
+            progreso=_progreso_json if json_activo else None,
+        )
+        _resultado_lote(items, ideas, lote.get("tema"), lote["id"], json_activo)
+        _mostrar_lote(items, lote.get("tema"))
+        return 0
+    finally:
+        cola.soltar_candado()
+
+
 def cmd_lote(args: argparse.Namespace) -> int:
     """De un tema, los 3 videos de una pasada: guion revisado + video final + kit de cada idea."""
+    from . import cola
     from .ia import MODELO_POR_DEFECTO
     from .ideas import proponer_ideas
     from .lote import ideas_desde_json, producir_lote
 
     json_activo = _modo_json(args)
-    proveedor, voz = _dividir_voz(args.voz)
     modelo = args.modelo or MODELO_POR_DEFECTO
     tema = " ".join(args.tema).strip() or None
 
@@ -665,48 +856,67 @@ def cmd_lote(args: argparse.Namespace) -> int:
         else:
             consola.print(f"[dim]→ {mensaje}[/dim]")
 
-    if args.ideas_json:
-        ideas = ideas_desde_json(args.ideas_json)
-    else:
-        if not tema:
+    if (args.solo_pendientes or args.cola_id) and not args.reanudar:
+        raise ErrorMotor("--solo-pendientes y --cola-id van con --reanudar.")
+    if args.reanudar:
+        if tema:
             raise ErrorMotor(
-                "El lote necesita el tema.",
-                ayuda='Ej. ./tpi lote "Porcentajes"   (o usa el botón «Crear los 3 videos» de Fábrica)',
+                "Para reanudar no indiques tema ni ideas; usa --cola-id si quieres elegir un lote."
             )
-        ideas = proponer_ideas(
-            tema=tema, materia=args.materia, nivel=args.nivel, dificultad=args.dificultad, modelo=modelo,
-            evitar=list(args.evitar or []), avisar=avisar,
-        )  # fmt: skip
+        return _cmd_reanudar(args, json_activo=json_activo, avisar=avisar)
 
-    if not json_activo:
-        consola.print(
-            f"\n[bold]📦 Lote de {len(ideas)} videos[/] · de uno en uno, unos {len(ideas) * 3} minutos.\n"
-            "   Si una idea falla el lote sigue con las otras; lo que salga queda en salida/."
+    # La voz se resuelve recién cuando hay trabajo: así reanudar y los errores de uso no cargan Manim.
+    proveedor, voz = _dividir_voz(args.voz)
+    if cola.candado_tomado():
+        raise ErrorMotor(
+            "Ya hay un lote en curso.",
+            ayuda="Espera a que termine (mira Fábrica) o ciérralo antes de lanzar otro.",
         )
+    ajustes = _ajustes_lote(args, modelo, proveedor, voz)
+    cola.tomar_candado()
+    try:
+        if args.ideas_json:
+            ideas = ideas_desde_json(args.ideas_json)
+            lote_id = cola.nuevo_lote(tema or ideas[0].titulo, ajustes, ideas=ideas)
+        else:
+            if not tema:
+                raise ErrorMotor(
+                    "El lote necesita el tema.",
+                    ayuda='Ej. ./tpi lote "Porcentajes"   (o usa el botón «Crear los 3 videos» de Fábrica)',
+                )
+            lote_id = cola.nuevo_lote(tema, ajustes)
+            ideas = _pedir_ideas(
+                proponer_ideas,
+                tema=tema,
+                ajustes=ajustes,
+                espera=args.espera,
+                avisar=avisar,
+                lote_id=lote_id,
+            )
+            if ideas is None:
+                _resultado_lote([], [], tema, lote_id, json_activo, pendiente=True)
+                return 0
+            cola.agregar_videos(lote_id, ideas)
 
-    items = producir_lote(
-        ideas,
-        materia=args.materia,
-        nivel=args.nivel,
-        dificultad=args.dificultad,
-        modelo=modelo,
-        calidad="borrador" if args.borrador else "final",
-        estilo=args.estilo,
-        proveedor=proveedor,
-        voz=voz,
-        velocidad=args.velocidad,
-        subtitulos=not args.sin_subtitulos,
-        sincronizar=args.sincronizar,
-        revisar_con_ia=not args.sin_revision,
-        con_kit=not args.sin_kit,
-        espera=args.espera,
-        avisar=avisar,
-        progreso=_progreso_json if json_activo else None,
-    )
+        if not json_activo:
+            consola.print(
+                f"\n[bold]📦 Lote de {len(ideas)} videos[/] · de uno en uno, unos {len(ideas) * 3} "
+                "minutos.\n   Si una idea falla el lote sigue con las otras; lo que salga queda en salida/."
+            )
 
-    if json_activo:
-        # Sale 0 aunque fallen ideas: el panel muestra esta tabla con sus motivos, no un error genérico.
-        _emitir(etapa="resultado", avance=1.0, tema=tema or "", lote=[i.como_dict() for i in items])
+        items = producir_lote(
+            ideas,
+            **_producir_desde_ajustes(ajustes),
+            espera=args.espera,
+            cola_id=lote_id,
+            reintentos=None,
+            avisar=avisar,
+            progreso=_progreso_json if json_activo else None,
+        )
+    finally:
+        cola.soltar_candado()
+
+    _resultado_lote(items, ideas, tema, lote_id, json_activo)
     _mostrar_lote(items, tema)
     if args.abrir:
         for item in items:
@@ -1065,10 +1275,20 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
     s.add_argument("--evitar", nargs="+", default=[], help="títulos ya vistos, para que salgan otras 3")
     s.add_argument(
+        "--reanudar",
+        action="store_true",
+        help="sigue el lote que quedó pendiente en la cola (usa los ajustes guardados)",
+    )
+    s.add_argument("--solo-pendientes", action="store_true", help=argparse.SUPPRESS)  # para el panel
+    s.add_argument("--cola-id", help=argparse.SUPPRESS)  # para el panel
+    s.add_argument(
         "--espera",
         type=float,
         default=60.0,
-        help="segundos de espera antes de reintentar una idea si Gemini está saturado (0 = no esperar)",
+        help=(
+            "segundos de la primera espera si Gemini está saturado; luego 2 min, 5 min y cada 5 min "
+            "(0 = dejar pendiente sin esperar)"
+        ),
     )
     s.add_argument("--borrador", action="store_true", help="los 3 como borradores rápidos (en vez del final)")
     s.add_argument("--estilo", help="estilo visual de los videos, ej. pizarra_nocturna (ver ./tpi temas)")

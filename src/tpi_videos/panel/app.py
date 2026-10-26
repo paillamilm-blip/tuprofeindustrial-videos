@@ -23,6 +23,20 @@ def _ya_abierto(puerto: int) -> bool:
         return s.connect_ex((HOST, puerto)) == 0
 
 
+async def _reanudar_cola() -> None:
+    """Al abrir el panel: lo que quedó esperando a la IA se retoma solo (sin tocar renders a medias)."""
+    from .. import cola, ia
+
+    if TAREAS.ocupado() or cola.candado_tomado():
+        return
+    cola.normalizar_interrumpidos()
+    if ia.obtener_clave() is None:
+        return
+    if cola.elegir_lote(solo_pendientes=True) is None:
+        return
+    TAREAS.lanzar("Reanudar cola", ["lote", "--reanudar", "--solo-pendientes"])
+
+
 def iniciar(puerto: int = 8765, abrir: bool = True) -> None:
     from ..cli import consola
 
@@ -49,6 +63,8 @@ def iniciar(puerto: int = 8765, abrir: bool = True) -> None:
 
     for pagina in (fabrica, crear, videos, estilos, ajustes):
         pagina.registrar()
+
+    app.on_startup(_reanudar_cola)
 
     consola.print(f"[green bold]🎛  Panel abierto:[/] {url}")
     consola.print("   Deja esta ventana abierta mientras lo usas. Para cerrar el panel: Control + C")

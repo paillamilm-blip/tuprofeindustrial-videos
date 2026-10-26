@@ -6,6 +6,11 @@
   exactamente lo que hacen los comandos.
 """
 
-from .app import iniciar
-
 __all__ = ["iniciar"]
+
+
+def iniciar(*args, **kwargs):
+    """Se importa recién al abrir el panel: así ``tpi_videos.panel.tareas`` se prueba sin NiceGUI."""
+    from .app import iniciar as _iniciar
+
+    return _iniciar(*args, **kwargs)
