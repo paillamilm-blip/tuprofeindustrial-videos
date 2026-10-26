@@ -118,3 +118,9 @@ panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-
     Al reabrir el panel se retoma solo lo pendiente de conexión; un render interrumpido se reanuda con un
     botón. `tpi lote --reanudar` hace lo mismo desde la terminal.
     Spec: `docs/superpowers/specs/2026-10-26-cola-y-progreso-design.md`.
+12. ✅ **v0.10.1 · Resiliencia de la cola:** el candado (`lote.lock`) es exclusivo de verdad (se crea con
+    `O_EXCL`, se renueva al guardar y solo lo libera su propio proceso), así que dos lotes ya no se pisan y un
+    candado huérfano se recupera solo. Sacar un video de la cola se bloquea mientras hay un lote trabajando. Una
+    cola dañada se aparta y se avisa (en la terminal y en Fábrica) en vez de fallar en silencio, y el aviso del
+    kit ya no hace retroceder la barra del video.
+    Spec: `docs/superpowers/specs/2026-10-26-cola-y-progreso-design.md`.

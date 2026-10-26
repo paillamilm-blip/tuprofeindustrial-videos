@@ -93,6 +93,7 @@ class PaginaFabrica:
         self.filas: list[dict] = []
         self.titulos: list[str] = []
         self.mio = False  # si esta pestaña está siguiendo un trabajo de la Fábrica
+        self._cola_rota = False  # la cola anterior se apartó por dañada; se avisa hasta que hay lotes
 
     def render(self) -> None:
         """Las tres pantallas, una visible a la vez."""
@@ -250,6 +251,9 @@ class PaginaFabrica:
             self.zona_cola.set_visibility(False)
             return
         datos = cola.cargar()
+        if datos.get("roto"):
+            # La cola anterior estaba dañada y se apartó: se avisa hasta que vuelve a haber lotes.
+            self._cola_rota = True
         if datos.get("version") != cola.VERSION:
             # La escribió una versión más nueva del motor: se muestra, no se sobrescribe.
             with self.zona_cola:
@@ -258,15 +262,24 @@ class PaginaFabrica:
                 ).classes("tpi-ayuda")
             self.zona_cola.set_visibility(True)
             return
+        # Con el panel en reposo, lo que quedó a medio hacer pasa a «interrumpido» y se puede reanudar.
+        cola.normalizar_interrumpidos()
         lotes = cola.lotes_visibles()
-        if not lotes:
+        if self._cola_rota and lotes:
+            self._cola_rota = False  # ya hay trabajo nuevo: el aviso cumplió su función
+        if not lotes and not self._cola_rota:
             self.zona_cola.set_visibility(False)
             return
         self.zona_cola.set_visibility(True)
         with self.zona_cola:
-            ui.label("Cola de videos").classes("tpi-titulo text-lg")
-            for lote in reversed(lotes):
-                self._tarjeta_lote(lote)
+            if self._cola_rota:
+                ui.label(
+                    "La cola anterior estaba dañada y se apartó: esos videos no se pudieron reanudar."
+                ).classes("tpi-ayuda text-sm").set_text_color(NARANJA)
+            if lotes:
+                ui.label("Cola de videos").classes("tpi-titulo text-lg")
+                for lote in reversed(lotes):
+                    self._tarjeta_lote(lote)
 
     def _tarjeta_lote(self, lote: dict) -> None:
         estado = str(lote.get("estado") or "")

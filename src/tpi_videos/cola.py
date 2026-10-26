@@ -55,7 +55,11 @@ def _renombrar_roto(ruta: Path) -> None:
 
 
 def cargar() -> dict[str, Any]:
-    """La cola completa, ordenada por fecha. Si el archivo está roto, lo aparta y empieza vacía."""
+    """La cola completa, ordenada por fecha. Si el archivo está roto, lo aparta y empieza vacía.
+
+    Cuando aparta un archivo dañado devuelve además ``"roto": True``: la cola anterior se perdió y
+    empezó de cero, y quien lo lee puede avisar. Es una marca de un solo uso (el archivo ya no está).
+    """
     ruta = _ruta()
     if not ruta.exists():
         return {"version": VERSION, "lotes": []}
@@ -63,10 +67,10 @@ def cargar() -> dict[str, Any]:
         datos = json.loads(ruta.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         _renombrar_roto(ruta)
-        return {"version": VERSION, "lotes": []}
+        return {"version": VERSION, "lotes": [], "roto": True}
     if not isinstance(datos, dict) or not isinstance(datos.get("lotes"), list):
         _renombrar_roto(ruta)
-        return {"version": VERSION, "lotes": []}
+        return {"version": VERSION, "lotes": [], "roto": True}
     datos.setdefault("version", VERSION)
     datos["lotes"].sort(key=lambda lote: lote.get("creado", ""))
     return datos
@@ -79,12 +83,14 @@ def guardar(datos: dict[str, Any]) -> None:
             "La cola la escribió una versión más nueva del motor.",
             ayuda="Actualiza el motor (git pull) antes de reanudar estos videos.",
         )
+    datos = {clave: valor for clave, valor in datos.items() if clave != "roto"}
     ruta = _ruta()
     ruta.parent.mkdir(parents=True, exist_ok=True)
     temporal = ruta.with_name(f"{ruta.name}.tmp")
     try:
         temporal.write_text(json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(temporal, ruta)
+        renovar_candado()
     finally:
         temporal.unlink(missing_ok=True)
 
@@ -240,6 +246,13 @@ def _pid_vivo(pid: int) -> bool:
         import ctypes
 
         kernel32 = ctypes.windll.kernel32
+        # sin los tipos declarados un handle de 64 bits se trunca y se pregunta por otro proceso
+        kernel32.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_bool, ctypes.c_ulong)
+        kernel32.OpenProcess.restype = ctypes.c_void_p
+        kernel32.GetExitCodeProcess.argtypes = (ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong))
+        kernel32.GetExitCodeProcess.restype = ctypes.c_bool
+        kernel32.CloseHandle.argtypes = (ctypes.c_void_p,)
+        kernel32.CloseHandle.restype = ctypes.c_bool
         # PROCESS_QUERY_LIMITED_INFORMATION: alcanza para preguntar si sigue corriendo
         handle = kernel32.OpenProcess(0x1000, False, pid)
         if not handle:
@@ -268,12 +281,26 @@ def _candado() -> dict[str, Any] | None:
         return None
 
 
+def _candado_vivo(datos: dict[str, Any] | None) -> bool:
+    """Un candado está vivo si su proceso sigue corriendo y renovó la marca en las últimas 12 h."""
+    return (
+        datos is not None
+        and _pid_vivo(datos["pid"])
+        and time.time() - datos["inicio"] < 12 * 3600
+    )
+
+
+def _escribir_candado_exclusivo(ruta: Path) -> None:
+    """Crea el candado solo si no existe (``O_EXCL``): dos procesos a la vez no pueden ganarlo ambos."""
+    contenido = json.dumps({"pid": os.getpid(), "inicio": time.time()})
+    descriptor = os.open(ruta, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as archivo:
+        archivo.write(contenido)
+
+
 def candado_tomado() -> bool:
     """¿Hay otro ``tpi lote`` vivo escribiendo la cola? (12 h sin renovar = abandonado)."""
-    datos = _candado()
-    if datos is None:
-        return False
-    return _pid_vivo(datos["pid"]) and time.time() - datos["inicio"] < 12 * 3600
+    return _candado_vivo(_candado())
 
 
 def _candado_es_mio() -> bool:
@@ -283,20 +310,51 @@ def _candado_es_mio() -> bool:
 
 
 def tomar_candado() -> bool:
-    if candado_tomado() and not _candado_es_mio():
-        return False
+    """Toma el candado de forma exclusiva. ``False`` si otro proceso vivo ya lo tiene."""
     ruta = _ruta_candado()
     try:
         ruta.parent.mkdir(parents=True, exist_ok=True)
-        ruta.write_text(
+    except OSError:
+        return True  # sin poder crear la carpeta igual se trabaja; el candado es una cortesía
+    for _ in range(2):
+        try:
+            _escribir_candado_exclusivo(ruta)
+            return True
+        except FileExistsError:
+            datos = _candado()
+            if datos is None:
+                # Existe pero no se pudo leer: puede ser otro proceso a medio escribir. No pisar.
+                return False
+            if datos["pid"] != os.getpid() and _candado_vivo(datos):
+                return False
+            # Abandonado o nuestro: se limpia y se vuelve a intentar una sola vez.
+            try:
+                ruta.unlink()
+            except OSError:
+                return False
+        except OSError:
+            return True  # sin candado se puede trabajar igual; no es motivo para no hacer el video
+    return False
+
+
+def renovar_candado() -> None:
+    """Al escribir la cola se renueva el candado propio: 12 h de trabajo no lo marcan abandonado."""
+    datos = _candado()
+    if datos is None or datos["pid"] != os.getpid():
+        return
+    try:
+        _ruta_candado().write_text(
             json.dumps({"pid": os.getpid(), "inicio": time.time()}), encoding="utf-8"
         )
     except OSError:
-        return True  # sin candado se puede trabajar igual; no es motivo para no hacer el video
-    return True
+        pass
 
 
 def soltar_candado() -> None:
+    """Libera el candado, pero solo si es nuestro: nunca se borra el de otro proceso vivo."""
+    datos = _candado()
+    if datos is None or datos["pid"] != os.getpid():
+        return
     try:
         _ruta_candado().unlink(missing_ok=True)
     except OSError:
@@ -366,15 +424,6 @@ def normalizar_interrumpidos() -> int:
     return cambiados
 
 
-def pendientes_ia() -> list[dict[str, Any]]:
-    return [
-        lote
-        for lote in cargar()["lotes"]
-        if lote.get("estado") == "pendiente_ia"
-        or any(video.get("estado") == "pendiente_ia" for video in lote.get("videos", []))
-    ]
-
-
 def elegir_lote(
     solo_pendientes: bool = False, cola_id: str | None = None
 ) -> dict[str, Any] | None:
@@ -405,11 +454,6 @@ def elegir_lote(
     return None
 
 
-def ultimo_lote() -> dict[str, Any] | None:
-    lotes = [lote for lote in cargar()["lotes"] if lote.get("estado") != "descartado"]
-    return lotes[-1] if lotes else None
-
-
 def lotes_visibles() -> list[dict[str, Any]]:
     lotes = [lote for lote in cargar()["lotes"] if lote.get("estado") != "descartado"]
     if not lotes:
@@ -423,10 +467,11 @@ def descartar_lote(lote_id: str) -> None:
     lote = _lote(datos, lote_id)
     if lote is None:
         raise ErrorMotor("No encuentro ese lote en la cola.")
-    if lote.get("estado") in ("en_curso", "pensando_ideas") and candado_tomado():
+    if candado_tomado():
+        # Con un lote trabajando, escribir la cola acá pisaría lo que ese proceso está guardando.
         raise ErrorMotor(
-            "Ese lote está trabajando ahora.",
-            ayuda="Espera a que termine o cancela el trabajo antes de sacarlo de la cola.",
+            "Hay un lote trabajando ahora.",
+            ayuda="Espera a que termine o cancela el trabajo antes de sacar este de la cola.",
         )
     lote["estado"], lote["fase"] = "descartado", "descartado"
     lote["actualizado"] = _ahora()

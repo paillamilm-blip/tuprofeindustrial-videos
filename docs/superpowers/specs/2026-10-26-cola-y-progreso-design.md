@@ -161,30 +161,38 @@ La normalización de un video activo (`redactando`, `animando`, `subtitulos`, `k
 
 ### 1.4 Funciones públicas
 
-- `cargar() -> dict` y `guardar(datos)` (atómicos).
+- `cargar() -> dict` y `guardar(datos)` (atómicos). Si el archivo está dañado, `cargar()` lo aparta a
+  `trabajos.json.roto-<fecha>` y devuelve la cola vacía con `"roto": True` (una marca de un solo uso que
+  `guardar()` no persiste), para que el panel y la CLI avisen que esos trabajos se perdieron.
 - `nuevo_lote(tema, ajustes, ideas=None) -> str` (id).
 - `agregar_videos(lote_id, ideas)`.
 - `actualizar_lote(lote_id, **campos)` y `actualizar_video(video_id, **campos)`.
 - `hito(video_id, nombre, datos)`.
-- `pendientes_ia() -> list[dict]`: lotes con estado `pendiente_ia` o con videos en ese estado.
 - `normalizar_interrumpidos()`: convierte estados activos en `interrumpido` al arrancar el panel, **solo si
   el candado de §1.5 está libre** (si hay un `tpi lote` vivo, no se toca nada).
-- `ultimo_lote()` y `lotes_visibles()`: lo que muestra la tarjeta de cola.
+- `elegir_lote(solo_pendientes, cola_id)` y `lotes_visibles()`: qué lote se retoma y qué muestra la tarjeta.
 - `podar()`: conserva todos los lotes con algo pendiente y los **últimos 20 videos terminados**; el resto
   se elimina del archivo (los videos siguen en `salida/`). Los lotes descartados se eliminan al podar.
-- `descartar_lote(lote_id)`: no descarta un lote con el candado tomado (`en_curso`/`pensando_ideas`); el
-  panel muestra «Espera a que termine o cancela el trabajo» en vez de borrarlo bajo los pies del proceso.
+- `descartar_lote(lote_id)`: no descarta nada mientras **cualquier** proceso vivo tenga el candado, porque
+  escribir la cola en paralelo pisaría el guardado del que está produciendo; el panel muestra «Espera a que
+  termine o cancela el trabajo» en vez de borrarlo bajo los pies del proceso.
 
 ### 1.5 Candado del lote (`salida/.cola/lote.lock`)
 
 Un solo lote escribe la cola a la vez. El archivo guarda el PID y la hora de inicio.
 
-- `tomar_candado() -> bool`: crea el archivo si no existe o si el PID guardado ya no está vivo (en ese
-  caso lo reemplaza). Devuelve `False` si hay otro proceso vivo.
-- `soltar_candado()`: lo borra; se llama siempre al terminar (con `try/finally`).
-- Un candado con más de 12 h de antigüedad se considera abandonado aunque el PID exista (PID reciclado).
-- Si no se puede tomar el candado, `tpi lote --reanudar` termina con un mensaje claro y código 0: el panel
-  ya evita lanzar dos trabajos, así que esto solo pasa si el profesor abrió dos terminales.
+- `tomar_candado() -> bool`: crea el archivo con `O_CREAT | O_EXCL`, de modo que dos procesos que arrancan
+  a la vez no pueden ganarlo ambos. Si ya existe, lo lee: devuelve `False` si pertenece a otro proceso vivo
+  o si no se puede leer (otro proceso a medio escribir); si está abandonado o es nuestro, lo borra y
+  reintenta una vez. Devuelve `False` si hay otro proceso vivo.
+- `soltar_candado()`: lo borra **solo si el PID guardado es el nuestro**; nunca se lleva el candado ajeno.
+  Se llama siempre al terminar (con `try/finally`).
+- `renovar_candado()`: `guardar()` lo llama para refrescar la hora de inicio cuando el candado es nuestro;
+  así un lote que trabaja más de 12 h no se marca abandonado.
+- Un candado con más de 12 h sin renovar se considera abandonado aunque el PID exista (PID reciclado).
+- `cmd_lote` toma el candado **antes** de cargar la voz (Manim) y falla con «Ya hay un lote en curso» si no
+  lo consigue; `tpi lote --reanudar` termina con un mensaje claro y código 0. El panel ya evita lanzar dos
+  trabajos, así que esto solo pasa si el profesor abrió dos terminales.
 - El panel **no toma el candado** para leer ni para escribir avances: solo lo consulta antes de normalizar
   y de lanzar un trabajo.
 
@@ -389,13 +397,16 @@ Unitarias (stdlib `unittest`, sin Manim ni NiceGUI):
 - `pruebas/test_cola.py`
   - Crear, actualizar y releer un lote y sus videos.
   - Escritura atómica: el archivo anterior sigue válido si falla el reemplazo.
-  - JSON corrupto: se renombra a `.roto-*` y se empieza vacío.
+  - JSON corrupto: se renombra a `.roto-*`, se empieza vacío y `cargar()` lo marca `"roto"` (marca que
+    `guardar()` no persiste).
   - `podar()` conserva pendientes y los últimos 20 terminados.
   - `normalizar_interrumpidos()` convierte `redactando`/`animando`/`kit` en `interrumpido` y deriva el
     estado del lote según la tabla de §1.3.
   - `normalizar_interrumpidos()` no toca nada si el candado está tomado.
-  - `podar()` y `descartar_lote()` respetan el candado.
-  - `pendientes_ia()` encuentra lotes con ideas pendientes y videos pendientes.
+  - `podar()` y `descartar_lote()` respetan el candado: `descartar_lote()` se niega mientras cualquier
+    proceso vivo lo tenga, aunque el lote esté `pendiente_ia`.
+  - Candado: `_pid_vivo` reconoce el propio PID; no pisa uno vivo aunque no se pueda leer; reescribe el
+    abandonado con su PID; `soltar_candado()` no borra el ajeno; `guardar()` renueva el propio y no el ajeno.
 - `pruebas/test_lote_cola.py`
   - Un error transitorio marca `pendiente_ia`, guarda `proximo_intento` y no pasa al siguiente video.
   - Con `dormir` falso y `reintentos=3`, la secuencia de esperas es 60, 120, 300.
@@ -413,6 +424,13 @@ Unitarias (stdlib `unittest`, sin Manim ni NiceGUI):
 - `pruebas/test_tareas.py`
   - Un evento con `video`, `video_avance` y `fase` actualiza `Tarea.videos` y no retrocede.
   - Un evento sin `video` mantiene el comportamiento actual.
+- `pruebas/test_cli_cola.py` (subproceso real, sin Manim ni NiceGUI)
+  - `--reanudar` sin pendientes sale con código 0; con tema o `--solo-pendientes` sueltos, código 1.
+  - Con el candado tomado, `tpi lote` falla con «Ya hay un lote en curso».
+  - Con la cola dañada, `--reanudar` avisa y sale con código 0.
+- `pruebas/test_reanudar_lote.py`
+  - `producir_lote` con hitos guardados no vuelve a renderizar ni a redactar el video ya hecho.
+  - `cmd_lote` y `--reanudar` liberan el candado aunque `producir_lote` lance.
 
 En CI:
 

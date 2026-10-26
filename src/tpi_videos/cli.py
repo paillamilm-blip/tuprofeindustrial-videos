@@ -788,6 +788,8 @@ def _cmd_reanudar(args: argparse.Namespace, *, json_activo: bool, avisar) -> int
             consola.print("[yellow]Ya hay un lote en curso.[/] Espera a que termine.")
         return 0
     try:
+        if cola.cargar().get("roto"):
+            avisar("La cola anterior estaba dañada y se apartó: esos videos no se pudieron reanudar.")
         cola.podar()
         lote = cola.elegir_lote(solo_pendientes=args.solo_pendientes, cola_id=args.cola_id)
         if lote is None or lote.get("estado") == "listo":
@@ -865,16 +867,18 @@ def cmd_lote(args: argparse.Namespace) -> int:
             )
         return _cmd_reanudar(args, json_activo=json_activo, avisar=avisar)
 
-    # La voz se resuelve recién cuando hay trabajo: así reanudar y los errores de uso no cargan Manim.
-    proveedor, voz = _dividir_voz(args.voz)
-    if cola.candado_tomado():
+    # El candado va antes de cargar la voz: si ya hay un lote en curso no tiene sentido cargar Manim.
+    if not cola.tomar_candado():
         raise ErrorMotor(
             "Ya hay un lote en curso.",
             ayuda="Espera a que termine (mira Fábrica) o ciérralo antes de lanzar otro.",
         )
-    ajustes = _ajustes_lote(args, modelo, proveedor, voz)
-    cola.tomar_candado()
     try:
+        if cola.cargar().get("roto"):
+            avisar("La cola anterior estaba dañada y se apartó: esos videos no se pudieron reanudar.")
+        # La voz se resuelve recién cuando hay trabajo: así los errores de uso no cargan Manim.
+        proveedor, voz = _dividir_voz(args.voz)
+        ajustes = _ajustes_lote(args, modelo, proveedor, voz)
         if args.ideas_json:
             ideas = ideas_desde_json(args.ideas_json)
             lote_id = cola.nuevo_lote(tema or ideas[0].titulo, ajustes, ideas=ideas)

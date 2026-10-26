@@ -137,6 +137,29 @@ class LoteColaTest(unittest.TestCase):
         self.assertAlmostEqual(primero["video_avance"], 0.05)
         self.assertAlmostEqual(primero["avance"], 0.025)
 
+    def test_el_aviso_del_kit_no_retrocede_la_fase(self) -> None:
+        lote_id, ideas = self._lote()
+        eventos: list[dict] = []
+
+        def progreso(etapa, avance, detalle, **extra):
+            eventos.append({"etapa": etapa, "avance": avance, **extra})
+
+        def producir_falso(enunciado, **kwargs):
+            kwargs["progreso"]("kit", 0.95, "portada y textos de publicación")
+            kwargs["avisar"]("Creando la portada…")
+            kwargs["progreso"]("kit", 1.0, "kit listo")
+            return _resultado(self.raiz)
+
+        with patch("tpi_videos.lote.producir", side_effect=producir_falso):
+            producir_lote(ideas[:1], cola_id=lote_id, progreso=progreso)
+
+        # El primer evento es «redactando» (el paso inicial); de ahí en adelante nunca vuelve atrás.
+        fases = [evento["fase"] for evento in eventos[1:]]
+        self.assertNotIn("redactando", fases)
+        self.assertEqual(fases[-1], "kit")
+        avances = [evento["video_avance"] for evento in eventos]
+        self.assertEqual(avances, sorted(avances))
+
     def test_si_la_cola_no_se_puede_escribir_el_video_sigue(self) -> None:
         lote_id, ideas = self._lote()
         avisos: list[str] = []

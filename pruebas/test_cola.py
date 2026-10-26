@@ -76,8 +76,20 @@ class ColaTest(BaseCola):
         ruta.parent.mkdir(parents=True)
         ruta.write_text("{esto no es json", encoding="utf-8")
 
-        self.assertEqual(cola.cargar()["lotes"], [])
+        datos = cola.cargar()
+        self.assertEqual(datos["lotes"], [])
+        self.assertTrue(datos.get("roto"))
         self.assertTrue(list(ruta.parent.glob("trabajos.json.roto-*")))
+        # Una vez apartado el archivo dañado, la siguiente lectura ya no viene marcada.
+        self.assertFalse(cola.cargar().get("roto"))
+
+    def test_el_aviso_de_cola_dañada_no_se_persiste(self) -> None:
+        ruta = self.raiz / "salida" / ".cola" / "trabajos.json"
+        ruta.parent.mkdir(parents=True)
+        ruta.write_text("{esto no es json", encoding="utf-8")
+
+        cola.guardar(cola.cargar())
+        self.assertNotIn("roto", json.loads(ruta.read_text(encoding="utf-8")))
 
     def test_hito_se_guarda_y_se_relee(self) -> None:
         lote_id = self._lote_con_video()
@@ -109,6 +121,72 @@ class ColaTest(BaseCola):
 class ColaLifecycleTest(BaseCola):
     def _video(self, lote_id: str) -> str:
         return cola.videos_del_lote(lote_id)[0]["id"]
+
+    def _ruta_candado(self) -> Path:
+        ruta = self.raiz / "salida" / ".cola" / "lote.lock"
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        return ruta
+
+    def _hijo_vivo(self) -> subprocess.Popen:
+        proceso = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(10)"])
+        # addCleanup es LIFO: se registra wait primero para que kill corra antes y no espere los 10 s.
+        self.addCleanup(proceso.wait)
+        self.addCleanup(proceso.kill)
+        return proceso
+
+    def _escribir_candado(self, pid: int, hace: float = 0.0) -> None:
+        self._ruta_candado().write_text(
+            json.dumps({"pid": pid, "inicio": time.time() - hace}), encoding="utf-8"
+        )
+
+    def test_pid_vivo_reconoce_el_propio_y_el_cero(self) -> None:
+        self.assertTrue(cola._pid_vivo(os.getpid()))
+        self.assertFalse(cola._pid_vivo(0))
+
+    def test_no_pisa_un_candado_vivo_aunque_no_se_pueda_leer(self) -> None:
+        hijo = self._hijo_vivo()
+        self._escribir_candado(hijo.pid)
+
+        with patch("tpi_videos.cola._candado", return_value=None):
+            self.assertFalse(cola.tomar_candado())
+        self.assertEqual(json.loads(self._ruta_candado().read_text(encoding="utf-8"))["pid"], hijo.pid)
+
+    def test_reescribe_el_candado_abandonado_con_su_pid(self) -> None:
+        proceso = subprocess.Popen([sys.executable, "-c", ""])
+        proceso.wait()
+        self._escribir_candado(proceso.pid)
+
+        self.assertTrue(cola.tomar_candado())
+        self.assertEqual(json.loads(self._ruta_candado().read_text(encoding="utf-8"))["pid"], os.getpid())
+        cola.soltar_candado()
+
+    def test_soltar_no_borra_el_candado_ajeno(self) -> None:
+        hijo = self._hijo_vivo()
+        self._escribir_candado(hijo.pid)
+
+        cola.soltar_candado()
+        self.assertTrue(self._ruta_candado().exists())
+
+    def test_guardar_renueva_el_candado_propio(self) -> None:
+        self.assertTrue(cola.tomar_candado())
+        try:
+            self._escribir_candado(os.getpid(), hace=11 * 3600)
+            cola.guardar(cola.cargar())
+
+            inicio = json.loads(self._ruta_candado().read_text(encoding="utf-8"))["inicio"]
+            self.assertTrue(cola.candado_tomado())
+            self.assertLess(time.time() - inicio, 60)
+        finally:
+            cola.soltar_candado()
+
+    def test_guardar_no_renueva_el_candado_ajeno(self) -> None:
+        hijo = self._hijo_vivo()
+        self._escribir_candado(hijo.pid, hace=11 * 3600)
+
+        cola.guardar(cola.cargar())
+        datos = json.loads(self._ruta_candado().read_text(encoding="utf-8"))
+        self.assertEqual(datos["pid"], hijo.pid)
+        self.assertGreater(time.time() - datos["inicio"], 10 * 3600)
 
     def test_candado_propio_y_liberado(self) -> None:
         self.assertTrue(cola.tomar_candado())
@@ -181,16 +259,6 @@ class ColaLifecycleTest(BaseCola):
         self.assertIsNone(cola.elegir_lote(solo_pendientes=True))
         self.assertEqual(cola.elegir_lote(cola_id=pendiente)["id"], pendiente)
 
-    def test_pendientes_ia_encuentra_lotes_y_videos(self) -> None:
-        sin_ideas = cola.nuevo_lote("Porcentajes", {})
-        cola.normalizar_interrumpidos()
-        con_video = self._lote_con_video()
-        cola.actualizar_video(self._video(con_video), estado="pendiente_ia")
-        cola.recalcular_lote(con_video)
-
-        ids = [lote["id"] for lote in cola.pendientes_ia()]
-        self.assertEqual(ids, [sin_ideas, con_video])
-
     def test_descartar_con_el_candado_tomado_avisa(self) -> None:
         lote_id = self._lote_con_video()
         cola.tomar_candado()
@@ -203,6 +271,16 @@ class ColaLifecycleTest(BaseCola):
         self.assertEqual(cola.cargar()["lotes"][0]["estado"], "descartado")
         self.assertEqual(cola.lotes_visibles(), [])
 
+    def test_no_descarta_un_pendiente_con_candado_ajeno_vivo(self) -> None:
+        lote_id = self._lote_con_video()
+        cola.actualizar_video(self._video(lote_id), estado="pendiente_ia")
+        cola.recalcular_lote(lote_id)
+        self._escribir_candado(self._hijo_vivo().pid)
+
+        with self.assertRaises(ErrorMotor):
+            cola.descartar_lote(lote_id)
+        self.assertEqual(cola.cargar()["lotes"][0]["estado"], "pendiente_ia")
+
     def test_lotes_visibles_muestra_pendientes_y_el_ultimo(self) -> None:
         viejo = self._lote_con_video()
         cola.actualizar_video(self._video(viejo), estado="listo")
@@ -211,7 +289,6 @@ class ColaLifecycleTest(BaseCola):
 
         ids = [lote["id"] for lote in cola.lotes_visibles()]
         self.assertEqual(ids, [nuevo])
-        self.assertEqual(cola.ultimo_lote()["id"], nuevo)
 
     def test_podar_no_toca_nada_si_otro_proceso_trabaja(self) -> None:
         self._lote_con_video()

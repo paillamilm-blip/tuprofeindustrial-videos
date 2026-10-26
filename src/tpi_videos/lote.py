@@ -22,7 +22,6 @@ from typing import Any
 from .errores import ErrorMotor
 from .ideas import Idea, ResultadoProduccion, producir
 
-INTENTOS_POR_IDEA = 2  # compatibilidad con lo que ya llamaba al lote
 ESPERA_ENTRE_INTENTOS = 60.0  # s: un límite de uso de Gemini se levanta en minutos, no en segundos
 ESPERA_LARGA = 300.0  # s: después del segundo reintento, cada 5 minutos
 
@@ -339,13 +338,14 @@ def _emitidores(
 ) -> tuple[Progreso, Callable[[str, str], None], Callable[[str], None]]:
     """Los tres emisores de avance de un video del lote, con su número y su 0–1 propio."""
     etiqueta = f"Video {posicion} de {total}"
-    ultimo = {"avance": 0.0}
+    ultimo = {"avance": 0.0, "fase": "redactando", "estado": "redactando"}
 
     def emitir(
         etapa: str, detalle: str, fase: str, estado: str, video_avance: float | None = None
     ) -> None:
         if video_avance is not None:
             ultimo["avance"] = max(ultimo["avance"], video_avance)
+        ultimo["fase"], ultimo["estado"] = fase, estado
         if progreso:
             progreso(
                 etapa,
@@ -376,7 +376,8 @@ def _emitidores(
 
     def aviso(detalle: str) -> None:
         if progreso:
-            paso("redactando", detalle)
+            # Reemite con la fase y el avance actuales: un aviso del kit no hace retroceder la barra.
+            emitir(ultimo["fase"], detalle, ultimo["fase"], ultimo["estado"])
         else:
             avisar(detalle)
 
