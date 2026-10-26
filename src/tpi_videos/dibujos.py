@@ -255,6 +255,7 @@ def diagrama_fuerzas(
     alto: float,
     cuerpo: str = "bloque",
     angulo: float | None = None,
+    descomponer: bool = False,
     papel: str = "#FFFFFF",
 ) -> Dibujo:
     """El cuerpo en el centro y una flecha por fuerza, con su símbolo en la punta."""
@@ -322,6 +323,23 @@ def diagrama_fuerzas(
         etiqueta = c.ecuacion(simbolo, 30, col.formulas).move_to(flecha.get_end() + d * 0.3)
         flechas.add(flecha)
         etiquetas.add(_parche(etiqueta, papel, 0.2))
+
+    if descomponer and angulo and not cuelga:
+        # El peso partido en dos, como en el cuaderno: una a lo largo del plano y otra clavada en él.
+        # Nacen del mismo punto que el P para que se vea que son el mismo peso mirado de otro lado.
+        sen, cos = float(np.sin(inclinacion)), float(np.cos(inclinacion))
+        inicio_p = apoyo + DOWN * 0.18
+        partes = [
+            (plano, sen, r"P\,\mathrm{sen}\,\theta"),
+            (-normal, cos, r"P\,\mathrm{cos}\,\theta"),
+        ]
+        for d, factor, tex in partes:
+            punta = inicio_p + d * (1.05 * factor)
+            componente = Arrow(inicio_p, punta, buff=0, stroke_width=5, max_tip_length_to_length_ratio=0.22)
+            componente.set_stroke(col.tenue, 5).set_fill(col.tenue, 1)
+            rotulo = c.ecuacion(tex, 24, col.texto).move_to(punta + d * 0.32)
+            flechas.add(componente)
+            etiquetas.add(_parche(rotulo, papel, 0.2))
 
     todo = VGroup(*soporte, cuerpo_m, flechas, etiquetas).set_z_index(1)
     _encajar(todo, ancho, alto)
@@ -542,7 +560,9 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
             visual.funcion_analizada(), col, ancho, alto, visual.eje_x, visual.eje_y, papel
         )
     if visual.tipo == "diagrama_fuerzas":
-        return diagrama_fuerzas(visual.vectores, col, ancho, alto, visual.cuerpo, visual.angulo)
+        return diagrama_fuerzas(
+            visual.vectores, col, ancho, alto, visual.cuerpo, visual.angulo, visual.descomponer
+        )
     if visual.tipo == "poligono_regular":
         return poligono_regular(visual.poligono(), visual.anotar, col, ancho, alto, papel)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)

@@ -1,0 +1,55 @@
+# Guion escrito a mano el 26-10-2026 para estrenar las componentes del peso en la rampa.
+# REVISA la física antes de publicar.
+
+titulo: "Por qué se descompone el peso"
+materia: fisica
+nivel: "1° medio"
+molde: nadie_te_enseno
+tema: cuaderno_del_profe
+
+gancho:
+  texto: "El peso no sirve tal cual en una rampa"
+  voz: "El peso no sirve tal cual en una rampa."
+  emoji: "⚠️"
+
+enunciado:
+  texto: "Explica por qué en un plano inclinado de 30° el peso de un bloque de 2 kg se descompone."
+  voz: "Mira este bloque de dos kilos en una rampa de treinta grados."
+  destacar: ["30°"]
+
+datos:
+  - tex: 'm = 2\ \text{kg}'
+    voz: "El bloque pesa dos kilos."
+  - tex: '\theta = 30°'
+    voz: "El plano está a treinta grados."
+
+pasos:
+  - nota: "El peso apunta al suelo, no a la rampa"
+    tex: 'P = m\,g = 19{,}6\ \text{N}'
+    voz: "El peso baja derecho y mide diecinueve coma seis newton. Pero el bloque sólo puede moverse por el plano."
+  - nota: "Se parte en dos"
+    tex: 'P_{\parallel} = P\sin\theta \quad P_{\perp} = P\cos\theta'
+    voz: "Por eso se parte en dos. Una componente corre por el plano y la otra lo aprieta."
+    visual:
+      tipo: diagrama_fuerzas
+      cuerpo: bloque
+      vectores: ['P', 'N']
+      angulo: 30
+      descomponer: true
+  - nota: "La mitad del peso empuja a deslizar"
+    tex: 'P_{\parallel} = 19{,}6 \cdot 0{,}5'
+    voz: "Con treinta grados el seno vale medio. La mitad del peso tira a deslizar."
+
+resultado:
+  tex: 'P_{\parallel} = 9{,}8\ \text{N}'
+  voz: "La componente que desliza mide nueve coma ocho newton."
+  emoji: "📐"
+
+verificacion:
+  texto: "9,8 N es menor que 19,6 N y mayor que cero: tiene sentido."
+  voz: "Nueve coma ocho es menor que el peso total y mayor que cero: tiene sentido."
+
+reto:
+  texto: "¿Cuántos newton tiran a deslizar en una rampa de 45° con el mismo bloque?"
+  voz: "Ahora tú: con la misma rampa a cuarenta y cinco grados, ¿cuántos newton deslizan? Piénsalo antes del próximo video."
+  emoji: "✍️"

@@ -134,6 +134,7 @@ class Visual(_Base):
     cuerpo: Literal["bloque", "bola"] = "bloque"
     vectores: list[str] = []
     angulo: float | None = None  # plano inclinado, en grados
+    descomponer: bool = False  # parte el peso en P sen θ y P cos θ sobre el plano
 
     # circuito
     arreglo: Literal["serie", "paralelo"] = "serie"
@@ -163,6 +164,11 @@ class Visual(_Base):
                     raise ValueError(f"el ángulo del plano va entre 0 y 90 grados, y dice {self.angulo}")
                 if self.cuerpo != "bloque":
                     raise ValueError("el ángulo (plano inclinado) solo va con cuerpo: bloque")
+            if self.descomponer:
+                if self.angulo is None:
+                    raise ValueError("descomponer el peso sólo tiene sentido sobre la rampa: ponle angulo:")
+                if "P" not in self.vectores:
+                    raise ValueError("para descomponer el peso el diagrama necesita la flecha «P»")
         elif self.tipo == "poligono_regular":
             if not (self.lado or "").strip():
                 raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
@@ -469,6 +475,8 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
         campos.append(("vectores", "[" + ", ".join(_simples(x) for x in v.get("vectores") or []) + "]"))
         if v.get("angulo") is not None:
             campos.append(("angulo", _numero(v["angulo"])))
+        if v.get("descomponer"):
+            campos.append(("descomponer", "true"))
     elif tipo == "poligono_regular":
         campos.append(("lados", _numero(v.get("lados") or 0)))
         campos.append(("lado", _simples(v.get("lado") or "")))

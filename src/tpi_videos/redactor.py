@@ -81,6 +81,10 @@ class PasoIA(BaseModel):
         default="", description='Con dibujo="fuerzas": "bloque" (una caja) o "bola"'
     )
     angulo: float = Field(default=0.0, description="Grados del plano inclinado (0 = mesa), solo con bloque")
+    descomponer: bool = Field(
+        default=False,
+        description='Con dibujo="fuerzas" y angulo: true para partir el peso en P sen θ y P cos θ',
+    )
     fuente: str = Field(default="", description='Con dibujo="circuito": el voltaje, ej. "12 V"')
     resistencias: list[str] = Field(
         default_factory=list, description='Con dibujo="circuito": de 2 a 4 valores, ej. ["4 Ω", "6 Ω"]'
@@ -309,6 +313,8 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["cuerpo"] = p.cuerpo
         if p.angulo:
             visual["angulo"] = float(p.angulo)
+        if p.descomponer:
+            visual["descomponer"] = True
     elif tipo == "poligono_regular":
         if p.lados:
             visual["lados"] = int(p.lados)
