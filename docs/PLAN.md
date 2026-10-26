@@ -101,3 +101,8 @@ panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-
    3 videos (guion + video final + kit) en un solo trabajo, de uno en uno, con reintento y espera si Gemini está
    saturado. Verificación automática de render en GitHub Actions: cada PR renderiza un guion de ejemplo y
    comprueba el mp4, sin claves y sin llamar a la IA.
+9. ✅ **v0.8 · Fábrica y dificultad:** la portada del panel es **Fábrica** (`/`): un campo y un botón, sin
+   opciones que elegir, con la barra de avance por video y al final la carpeta, el video y el kit a un clic
+   («Intentar solo este» si uno falla). Cada idea trae `dificultad` (`facil` / `media` / `dificil`) y la IA las
+   reparte distintas en el lote; `--dificultad` las fuerza las 3. «Crear» baja a `/crear`.
+   Spec: `docs/superpowers/specs/2026-10-25-fabrica-y-dificultad-design.md`.
