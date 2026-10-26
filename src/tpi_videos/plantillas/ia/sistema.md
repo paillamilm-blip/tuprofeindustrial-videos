@@ -30,6 +30,7 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - dibujo = "fuerzas": vectores con las letras que el motor conoce — "P" (peso), "N" (normal), "f" (fricción), "v" (velocidad), "a" (aceleración), "T" (tensión) — cuerpo "bloque" o "bola", y angulo SOLO con bloque sobre plano inclinado (grados entre 0 y 90, sin angulo es una mesa). Con angulo y descomponer = true, el motor parte el peso en P sen θ y P cos θ sobre el plano: úsalo cuando el ejercicio resuelva por componentes.
 - dibujo = "circuito": fuente con su unidad ("12 V"), resistencias con la suya ("4 Ω", "6 Ω") de 2 a 4, y arreglo "serie" o "paralelo".
 - dibujo = "poligono": un polígono REGULAR con lados de 3 a 8 (3 triángulo equilátero, 4 cuadrado, 5 pentágono, 6 hexágono, 8 octógono) y lado con su unidad ("12 cm"). El motor calcula y escribe solo la apotema, el radio y los ángulos; con anotar eliges como máximo 2 de "apotema", "radio", "angulo_central", "angulo_interior". No puttees los números tú: da lo que dice el ejercicio.
+- dibujo = "proyectil": un lanzamiento sin roce. velocidad con su unidad ("20 m/s") y angulo de lanzamiento en grados (0 a 90). El motor calcula solo el tiempo de vuelo, el alcance y la altura máxima; con anotar eliges como máximo 2 de "alcance", "altura_maxima", "componentes" (las flechas vx y vy en el aire).
 - Los campos que no corresponden al dibujo elegido se dejan vacíos ("" o []). No inventes datos: el dibujo tiene que salir de los números del ejercicio.
 
 ### El molde narrativo (pista MOLDE)

@@ -33,7 +33,7 @@ from manim import (
 )
 
 from . import componentes as c
-from .visuales import Funcion, Poligono, analizar_circuito
+from .visuales import Funcion, Poligono, Proyectil, analizar_circuito
 
 ALTO_DIBUJO = 3.3  # franja del pie de la pizarra que ocupa un dibujo
 
@@ -68,6 +68,11 @@ def _numero_latex(valor: float) -> str:
     n = round(float(valor), 2)
     n = 0.0 if n == 0 else n
     return str(int(n)) if n == int(n) else str(n).replace(".", ",")
+
+
+def _sufijo_proyectil(figura: Proyectil) -> str:
+    """El hueco que sigue al número del vuelo: ' m', ' km/h', o nada si el guion no dijo la unidad."""
+    return " " + figura.unidad if figura.unidad else ""
 
 
 def _sufijo(figura: Poligono) -> str:
@@ -544,6 +549,81 @@ def poligono_regular(
 
 
 # ------------------------------------------------------------------------------------------
+# 5 · Tiro parabólico
+# ------------------------------------------------------------------------------------------
+
+
+def proyectil(figura: Proyectil, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+    """La parábola del vuelo apoyada en el suelo, con la flecha del lanzamiento y las marcas del guion.
+
+    Se escala con el alcance y la altura que calculó ``visuales.py``: la forma de la curva es la
+    verdadera, así una rampa de 45° se ve distinta de una de 30° sin que nadie escriba un número.
+    """
+    escala = min(ancho * 0.9 / figura.alcance, alto * 0.7 / figura.altura)
+    gravedad = 2 * figura.vertical / figura.tiempo
+    paso = figura.tiempo / 48
+    mitad = figura.alcance * escala / 2
+    puntos = []
+    for i in range(49):
+        t = paso * i
+        x = figura.horizontal * t * escala - mitad
+        y = (figura.vertical * t - gravedad * t * t / 2) * escala
+        puntos.append(np.array([x, y, 0.0]))
+    izquierda, derecha = puntos[0], puntos[-1]
+
+    suelo = Line(izquierda + LEFT * 0.3, derecha + RIGHT * 0.3, buff=0).set_stroke(col.tenue, 5)
+    curva = VMobject().set_points_smoothly(puntos).set_stroke(col.formulas, 6)
+    rayas: list = [suelo, curva]
+    parches, rótulos, puntos_vivos = VGroup(), VGroup(), []
+
+    def medida(texto: str, donde: np.ndarray, tam: float = 22) -> None:
+        rotulo = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
+        fondo, rotulo = _parche(rotulo, "#FFFFFF", 0.16)
+        parches.add(fondo)
+        rótulos.add(rotulo)
+
+    # La flecha del lanzamiento sale del punto de partida, con su ángulo contra el suelo.
+    rad = float(np.arctan2(figura.vertical, figura.horizontal))
+    direccion = np.array([np.cos(rad), np.sin(rad), 0.0])
+    lanzamiento = Arrow(izquierda, izquierda + direccion * 1.1, buff=0, stroke_width=7,
+                        max_tip_length_to_length_ratio=0.25)
+    lanzamiento.set_stroke(col.error, 7).set_fill(col.error, 1)
+    rayas.append(lanzamiento)
+    arco = Arc(radius=0.55, start_angle=0, angle=rad, arc_center=izquierda).set_stroke(col.tenue, 3)
+    rayas.append(arco)
+    medida(f"{_numero_latex(figura.angulo)}°", izquierda + np.array([0.95, 0.16, 0.0]))
+    if "alcance" in marcas:
+        medida(f"d ≈ {_numero_latex(figura.alcance)}{_sufijo_proyectil(figura)}", derecha + DOWN * 0.36, 24)
+    cima = puntos[24]
+    if "altura_maxima" in marcas:
+        bajada = DashedLine(cima, cima * np.array([1.0, 0.0, 1.0]), buff=0).set_stroke(col.acento, 4)
+        rayas.append(bajada)
+        puntos_vivos.append(Dot(cima, radius=0.05, color=col.acento))
+        medida(
+            f"h ≈ {_numero_latex(figura.altura)}{_sufijo_proyectil(figura)}",
+            cima + np.array([0.95, -0.3, 0.0]),
+            24,
+        )
+    if "componentes" in marcas:
+        t = figura.tiempo / 4
+        origen = np.array(
+            [figura.horizontal * t * escala - mitad, (figura.vertical * t - gravedad * t * t / 2) * escala, 0.0]
+        )
+        puntos_vivos.append(Dot(origen, radius=0.05, color=col.formulas))
+        vx = Arrow(origen, origen + RIGHT * 0.9, buff=0, stroke_width=5, max_tip_length_to_length_ratio=0.22)
+        vx.set_stroke(col.tenue, 5).set_fill(col.tenue, 1)
+        vy = Arrow(origen, origen + UP * 0.9, buff=0, stroke_width=5, max_tip_length_to_length_ratio=0.22)
+        vy.set_stroke(col.tenue, 5).set_fill(col.tenue, 1)
+        rayas.extend([vx, vy])
+        medida("vx", origen + RIGHT * 1.15 + DOWN * 0.15, 20)
+        medida("vy", origen + UP * 1.1 + RIGHT * 0.2, 20)
+
+    todo = VGroup(suelo, curva, *rayas[2:], parches, *puntos_vivos, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[*puntos_vivos, *rótulos])
+
+
+# ------------------------------------------------------------------------------------------
 # Elección del dibujo según el guion
 # ------------------------------------------------------------------------------------------
 
@@ -565,5 +645,7 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         )
     if visual.tipo == "poligono_regular":
         return poligono_regular(visual.poligono(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "proyectil":
+        return proyectil(visual.proyectil(), visual.anotar, col, ancho, alto)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
     return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)

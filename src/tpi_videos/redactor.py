@@ -65,7 +65,7 @@ class PasoIA(BaseModel):
     )
     # Un paso puede pedirse con dibujo. Son campos planos para que el modelo los cumpla fácil;
     # a_guion() arma el bloque "visual:" anidado que lee el motor.
-    dibujo: Literal["", "grafico", "fuerzas", "circuito", "poligono"] = Field(
+    dibujo: Literal["", "grafico", "fuerzas", "circuito", "poligono", "proyectil"] = Field(
         default="",
         description='Dibujo de este paso: "", "grafico", "fuerzas", "circuito" o "poligono" (máximo 1 en el guion)',
     )
@@ -96,9 +96,15 @@ class PasoIA(BaseModel):
     lado: str = Field(
         default="", description='Con dibujo="poligono": cuánto mide un lado, con su unidad, ej. "12 cm"'
     )
+    velocidad: str = Field(
+        default="", description='Con dibujo="proyectil": la velocidad de lanzamiento, ej. "20 m/s"'
+    )
     anotar: list[str] = Field(
         default_factory=list,
-        description='Con dibujo="poligono": hasta 2 de "apotema", "radio", "angulo_central", "angulo_interior"',
+        description=(
+            'Hasta 2 marcas: con "poligono", de "apotema", "radio", "angulo_central", "angulo_interior"; '
+            'con "proyectil", de "alcance", "altura_maxima", "componentes"'
+        ),
     )
 
 
@@ -291,6 +297,7 @@ _DIBUJOS = {
     "fuerzas": "diagrama_fuerzas",
     "circuito": "circuito",
     "poligono": "poligono_regular",
+    "proyectil": "proyectil",
 }
 
 
@@ -315,6 +322,13 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["angulo"] = float(p.angulo)
         if p.descomponer:
             visual["descomponer"] = True
+    elif tipo == "proyectil":
+        if p.velocidad:
+            visual["velocidad"] = _texto(p.velocidad)
+        if p.angulo:
+            visual["angulo"] = float(p.angulo)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     elif tipo == "poligono_regular":
         if p.lados:
             visual["lados"] = int(p.lados)

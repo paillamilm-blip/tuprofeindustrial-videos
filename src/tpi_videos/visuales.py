@@ -20,10 +20,14 @@ SEGUNDOS_VISUAL = {
     "diagrama_fuerzas": 2.5,
     "circuito": 3.0,
     "poligono_regular": 3.0,
+    "proyectil": 3.0,
 }
 
 # Lo que se puede anotar en un polígono regular.
 MARCAS_POLIGONO = ("apotema", "radio", "angulo_central", "angulo_interior")
+
+# Lo que se puede anotar en un tiro parabólico.
+MARCAS_PROYECTIL = ("alcance", "altura_maxima", "componentes")
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -372,10 +376,51 @@ def analizar_poligono(lados: int, lado: str | None) -> Poligono:
     return Poligono(
         lados=lados,
         lado=valor,
-        unidad=texto[m.end() :].strip(),
+        unidad=texto[m.end() :].strip().split("/")[0],
         apotema=valor / (2 * math.tan(mitad)),
         radio=radio,
         angulo_interior=(lados - 2) * 180.0 / lados,
         angulo_central=360.0 / lados,
         vertices=vertices,
+    )
+
+
+@dataclass
+class Proyectil:
+    """Un lanzamiento sin roce: el vuelo completo resuelto desde la velocidad inicial."""
+
+    velocidad: float
+    angulo: float
+    unidad: str  # la de las distancias: de «20 m/s» sale «m»
+    tiempo: float  # s, del lanzamiento a la caída
+    alcance: float  # m, cuánto avanza en horizontal
+    altura: float  # m, lo más alto que llega
+    horizontal: float  # m/s, la componente que no cambia nunca
+    vertical: float  # m/s, la componente con la que parte hacia arriba
+
+
+def analizar_proyectil(velocidad: str | None, angulo: float, gravedad: float = 9.8) -> Proyectil:
+    """Saca el número de «20 m/s» y resuelve el vuelo con las componentes de la velocidad."""
+    texto = str(velocidad or "")
+    m = re.search(r"-?\d+(?:[.,]\d+)?", texto)
+    if not m:
+        raise ValueError(f"la velocidad de lanzamiento necesita un número con su unidad, ej. «20 m/s», y leí «{texto}»")
+    v0 = float(m.group().replace(",", "."))
+    if v0 <= 0:
+        raise ValueError(f"la velocidad de lanzamiento debe ser positiva, y leí «{texto}»")
+    if not 0 < angulo < 90:
+        raise ValueError(f"el ángulo de lanzamiento va entre 0 y 90 grados, y dice {angulo}")
+    rad = math.radians(angulo)
+    vertical = v0 * math.sin(rad)
+    horizontal = v0 * math.cos(rad)
+    tiempo = 2 * vertical / gravedad
+    return Proyectil(
+        velocidad=v0,
+        angulo=angulo,
+        unidad=texto[m.end() :].strip().split("/")[0],
+        tiempo=tiempo,
+        alcance=horizontal * tiempo,
+        altura=vertical**2 / (2 * gravedad),
+        horizontal=horizontal,
+        vertical=vertical,
     )

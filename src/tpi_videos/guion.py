@@ -19,9 +19,11 @@ from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 from .tex import llaves_balanceadas
 from .visuales import (
     MARCAS_POLIGONO,
+    MARCAS_PROYECTIL,
     SEGUNDOS_VISUAL,
     analizar_funcion,
     analizar_poligono,
+    analizar_proyectil,
     normalizar_vectores,
 )
 
@@ -120,7 +122,7 @@ class Visual(_Base):
     Sólo se usan los campos del ``tipo`` elegido; los demás quedan vacíos a propósito.
     """
 
-    tipo: Literal["grafico_funcion", "diagrama_fuerzas", "circuito", "poligono_regular"]
+    tipo: Literal["grafico_funcion", "diagrama_fuerzas", "circuito", "poligono_regular", "proyectil"]
 
     # grafico_funcion
     funcion: str | None = None
@@ -140,6 +142,9 @@ class Visual(_Base):
     arreglo: Literal["serie", "paralelo"] = "serie"
     fuente: str | None = None  # ej. '12 V'
     resistencias: list[str] = []  # ej. ['4 Ω', '6 Ω']
+
+    # proyectil
+    velocidad: str | None = None  # la del lanzamiento, con su unidad: '20 m/s'
 
     # poligono_regular
     lados: int | None = None  # de 3 a 8
@@ -169,6 +174,18 @@ class Visual(_Base):
                     raise ValueError("descomponer el peso sólo tiene sentido sobre la rampa: ponle angulo:")
                 if "P" not in self.vectores:
                     raise ValueError("para descomponer el peso el diagrama necesita la flecha «P»")
+        elif self.tipo == "proyectil":
+            if not (self.velocidad or "").strip():
+                raise ValueError("un proyectil necesita la velocidad de lanzamiento, ej. velocidad: '20 m/s'")
+            if self.angulo is None:
+                raise ValueError("un proyectil necesita el ángulo de lanzamiento, ej. angulo: 30")
+            analizar_proyectil(self.velocidad, self.angulo)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_PROYECTIL]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de un proyectil; "
+                    f"el motor sabe anotar {', '.join(MARCAS_PROYECTIL)}"
+                )
         elif self.tipo == "poligono_regular":
             if not (self.lado or "").strip():
                 raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
@@ -199,6 +216,12 @@ class Visual(_Base):
         if self.tipo != "grafico_funcion":
             raise ValueError(f"«{self.tipo}» no tiene una función que analizar")
         return analizar_funcion(self.funcion or "", self.variable, self.rango, self.marcar)
+
+    def proyectil(self):
+        """El vuelo ya resuelto (tiempo, alcance y altura). Sólo en los proyectiles."""
+        if self.tipo != "proyectil":
+            raise ValueError(f"«{self.tipo}» no es un proyectil")
+        return analizar_proyectil(self.velocidad or "", self.angulo or 0)
 
     def poligono(self):
         """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
@@ -477,6 +500,11 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
             campos.append(("angulo", _numero(v["angulo"])))
         if v.get("descomponer"):
             campos.append(("descomponer", "true"))
+    elif tipo == "proyectil":
+        campos.append(("velocidad", _simples(v.get("velocidad") or "")))
+        campos.append(("angulo", _numero(v.get("angulo") or 0)))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     elif tipo == "poligono_regular":
         campos.append(("lados", _numero(v.get("lados") or 0)))
         campos.append(("lado", _simples(v.get("lado") or "")))

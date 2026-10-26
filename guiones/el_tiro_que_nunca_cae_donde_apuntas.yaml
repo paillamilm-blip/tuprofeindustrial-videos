@@ -1,0 +1,54 @@
+# Guion escrito a mano el 26-10-2026 para estrenar la figura del tiro parabólico.
+# REVISA la física antes de publicar.
+
+titulo: "El tiro que nunca cae donde apuntas"
+materia: fisica
+nivel: "1° medio"
+molde: nadie_te_enseno
+tema: cuaderno_del_profe
+
+gancho:
+  texto: "Apuntas a 45° y llegas más lejos"
+  voz: "Apuntas a cuarenta y cinco grados y llegas más lejos."
+  emoji: "🎯"
+
+enunciado:
+  texto: "Una pelota sale a 20 m/s con un ángulo de 30°. ¿Hasta dónde llega y qué altura toma?"
+  voz: "Una pelota sale a veinte metros por segundo, a treinta grados."
+  destacar: ["20 m/s"]
+
+datos:
+  - tex: 'v_0 = 20\ \text{m/s}'
+    voz: "La velocidad de salida es veinte metros por segundo."
+  - tex: '\theta = 30°'
+    voz: "El ángulo de lanzamiento es treinta grados."
+
+pasos:
+  - nota: "La velocidad se parte en dos"
+    tex: 'v_x = v_0\cos\theta \quad v_y = v_0\sin\theta'
+    voz: "La velocidad se parte en dos. Una empuja hacia adelante y la otra hacia arriba."
+  - nota: "El vuelo completo"
+    tex: 't = \dfrac{2\,v_0\sin\theta}{g}'
+    voz: "Hacia arriba la frena la gravedad. Sube, se detiene un instante y baja el mismo tiempo."
+    visual:
+      tipo: proyectil
+      velocidad: "20 m/s"
+      angulo: 30
+      anotar: ["alcance", "altura_maxima"]
+  - nota: "Los números del vuelo"
+    tex: 't = 2{,}04\ \text{s}'
+    voz: "El vuelo dura dos coma cero cuatro segundos."
+
+resultado:
+  tex: 'd \approx 35{,}35\ \text{m} \quad h \approx 5{,}1\ \text{m}'
+  voz: "Llega a treinta y cinco coma treinta y cinco metros y sube cinco coma uno."
+  emoji: "📏"
+
+verificacion:
+  texto: "35,35 m en 2,04 s: unos 17 m/s horizontales, coherente con cos 30°."
+  voz: "Treinta y cinco metros en dos segundos son diecisiete por segundo. Coherente con el coseno de treinta."
+
+reto:
+  texto: "Con la misma velocidad, ¿a qué ángulo llega más lejos: 30°, 45° o 60°?"
+  voz: "Ahora tú: con la misma velocidad, ¿a qué ángulo llega más lejos? Piénsalo antes del próximo video."
+  emoji: "✍️"
