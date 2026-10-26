@@ -18,9 +18,11 @@ from .errores import ErrorMotor
 from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 from .tex import llaves_balanceadas
 from .visuales import (
+    MARCAS_CIRCULO,
     MARCAS_POLIGONO,
     MARCAS_PROYECTIL,
     SEGUNDOS_VISUAL,
+    analizar_angulo,
     analizar_funcion,
     analizar_poligono,
     analizar_proyectil,
@@ -122,7 +124,9 @@ class Visual(_Base):
     Sólo se usan los campos del ``tipo`` elegido; los demás quedan vacíos a propósito.
     """
 
-    tipo: Literal["grafico_funcion", "diagrama_fuerzas", "circuito", "poligono_regular", "proyectil"]
+    tipo: Literal[
+        "grafico_funcion", "diagrama_fuerzas", "circuito", "poligono_regular", "proyectil", "circulo_trig"
+    ]
 
     # grafico_funcion
     funcion: str | None = None
@@ -186,6 +190,25 @@ class Visual(_Base):
                     f"«{desconocidas[0]}» no es una marca de un proyectil; "
                     f"el motor sabe anotar {', '.join(MARCAS_PROYECTIL)}"
                 )
+        elif self.tipo == "circulo_trig":
+            if self.angulo is None:
+                raise ValueError("un círculo trigonométrico necesita su ángulo en grados, ej. angulo: 30")
+            if not 0 <= self.angulo < 360:
+                raise ValueError(
+                    f"el ángulo del círculo va de 0 a 360 grados (una vuelta), y dice {self.angulo}"
+                )
+            figura = analizar_angulo(self.angulo)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_CIRCULO]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca del círculo trigonométrico; "
+                    f"el motor sabe anotar {', '.join(MARCAS_CIRCULO)}"
+                )
+            if "tangente" in self.anotar and figura.tangente is None:
+                raise ValueError(
+                    f"a {figura.grados:g}° la tangente no existe (el radio queda paralelo a ella): "
+                    "anota seno o coseno"
+                )
         elif self.tipo == "poligono_regular":
             if not (self.lado or "").strip():
                 raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
@@ -222,6 +245,12 @@ class Visual(_Base):
         if self.tipo != "proyectil":
             raise ValueError(f"«{self.tipo}» no es un proyectil")
         return analizar_proyectil(self.velocidad or "", self.angulo or 0)
+
+    def angulo_trig(self):
+        """El ángulo resuelto en el círculo (seno, coseno, tangente y cuadrante)."""
+        if self.tipo != "circulo_trig":
+            raise ValueError(f"«{self.tipo}» no es un círculo trigonométrico")
+        return analizar_angulo(self.angulo or 0)
 
     def poligono(self):
         """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
@@ -502,6 +531,10 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
             campos.append(("descomponer", "true"))
     elif tipo == "proyectil":
         campos.append(("velocidad", _simples(v.get("velocidad") or "")))
+        campos.append(("angulo", _numero(v.get("angulo") or 0)))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "circulo_trig":
         campos.append(("angulo", _numero(v.get("angulo") or 0)))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))

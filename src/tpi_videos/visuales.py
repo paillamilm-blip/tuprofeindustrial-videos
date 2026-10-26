@@ -21,6 +21,7 @@ SEGUNDOS_VISUAL = {
     "circuito": 3.0,
     "poligono_regular": 3.0,
     "proyectil": 3.0,
+    "circulo_trig": 3.0,
 }
 
 # Lo que se puede anotar en un polígono regular.
@@ -28,6 +29,9 @@ MARCAS_POLIGONO = ("apotema", "radio", "angulo_central", "angulo_interior")
 
 # Lo que se puede anotar en un tiro parabólico.
 MARCAS_PROYECTIL = ("alcance", "altura_maxima", "componentes")
+
+# Lo que se puede anotar en el círculo trigonométrico.
+MARCAS_CIRCULO = ("seno", "coseno", "tangente")
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -404,7 +408,9 @@ def analizar_proyectil(velocidad: str | None, angulo: float, gravedad: float = 9
     texto = str(velocidad or "")
     m = re.search(r"-?\d+(?:[.,]\d+)?", texto)
     if not m:
-        raise ValueError(f"la velocidad de lanzamiento necesita un número con su unidad, ej. «20 m/s», y leí «{texto}»")
+        raise ValueError(
+            f"la velocidad de lanzamiento necesita un número con su unidad, ej. «20 m/s», y leí «{texto}»"
+        )
     v0 = float(m.group().replace(",", "."))
     if v0 <= 0:
         raise ValueError(f"la velocidad de lanzamiento debe ser positiva, y leí «{texto}»")
@@ -423,4 +429,30 @@ def analizar_proyectil(velocidad: str | None, angulo: float, gravedad: float = 9
         altura=vertical**2 / (2 * gravedad),
         horizontal=horizontal,
         vertical=vertical,
+    )
+
+
+@dataclass
+class AnguloTrig:
+    """Un ángulo en el círculo: el punto donde cae el radio y las tres razones que se ven ahí."""
+
+    grados: float  # ya dentro de la vuelta (0 a 360)
+    seno: float
+    coseno: float
+    tangente: float | None  # None en 90° y 270°: ahí la recta del radio nunca toca la tangente
+    cuadrante: int  # 1 a 4
+
+
+def analizar_angulo(grados: float) -> AnguloTrig:
+    """Resuelve el ángulo en el círculo unitario: 390° es lo mismo que 30°."""
+    g = float(grados) % 360.0
+    rad = math.radians(g)
+    seno, coseno = math.sin(rad), math.cos(rad)
+    tangente = None if abs(coseno) < 1e-9 else seno / coseno
+    return AnguloTrig(
+        grados=g,
+        seno=seno,
+        coseno=coseno,
+        tangente=tangente,
+        cuadrante=int(g // 90) % 4 + 1,
     )

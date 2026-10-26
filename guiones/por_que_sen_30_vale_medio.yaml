@@ -1,0 +1,53 @@
+# Guion escrito a mano el 26-10-2026 para estrenar el círculo trigonométrico.
+# REVISA la matemática antes de publicar.
+
+titulo: "Por qué sen 30° vale exactamente medio"
+materia: matematica
+nivel: "2° medio"
+molde: nadie_te_enseno
+tema: cuaderno_del_profe
+
+gancho:
+  texto: "El seno no es un número inventado"
+  voz: "El seno no es un número inventado: se puede ver dibujado."
+  emoji: "🤯"
+
+enunciado:
+  texto: "Explica con el círculo trigonométrico por qué sen 30° = 0,5."
+  voz: "Mira el círculo trigonométrico y un radio que gira treinta grados."
+  destacar: ["30°"]
+
+datos:
+  - tex: 'r = 1'
+    voz: "El círculo tiene radio uno."
+  - tex: '\theta = 30°'
+    voz: "El radio gira treinta grados."
+
+pasos:
+  - nota: "El radio gira y toca el círculo"
+    tex: 'P = (\cos 30°,\ \sin 30°)'
+    voz: "Al girar, el radio toca el círculo en un punto. Ese punto son el coseno y el seno juntos."
+  - nota: "El seno es la altura del punto"
+    tex: '\sin 30° = 0{,}5'
+    voz: "La altura del punto mide justo medio. Eso es el seno: una raya que se ve, no magia."
+    visual:
+      tipo: circulo_trig
+      angulo: 30
+      anotar: ['seno', 'coseno']
+  - nota: "El coseno es lo que avanzó"
+    tex: '\cos 30° \approx 0{,}87'
+    voz: "Y hacia la derecha avanzó cero coma ochenta y siete. Esa raya horizontal es el coseno."
+
+resultado:
+  tex: '\sin 30° = 0{,}5 \quad \cos 30° \approx 0{,}87'
+  voz: "Con radio uno, el seno y el coseno son sólo las coordenadas del punto."
+  emoji: "📐"
+
+verificacion:
+  texto: "0,5² + 0,87² ≈ 1: el punto vive sobre el círculo de radio 1."
+  voz: "Cero cinco al cuadrado más cero ochenta y siete al cuadrado suma uno. Pitágoras no falla."
+
+reto:
+  texto: "¿Qué marcan el seno y el coseno cuando el radio gira 90°?"
+  voz: "Ahora tú: si el radio gira noventa grados, ¿cuánto valen el seno y el coseno? Piénsalo antes del próximo video."
+  emoji: "✍️"

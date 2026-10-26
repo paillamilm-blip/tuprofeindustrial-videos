@@ -106,6 +106,17 @@ def _avisos_de_visuales(guion: Guion) -> list[Aviso]:
                     )
                 )
             continue
+        if v.tipo == "circulo_trig":
+            if len(v.anotar) > 2:
+                avisos.append(
+                    Aviso(
+                        "sugerencia",
+                        donde,
+                        f"{len(v.anotar)} marcas dentro de un círculo que apenas mide 3,3 de alto se "
+                        "aprietan; deja 2 y lo demás lo dice la voz.",
+                    )
+                )
+            continue
         if v.tipo != "grafico_funcion":
             continue
         try:

@@ -33,7 +33,7 @@ from manim import (
 )
 
 from . import componentes as c
-from .visuales import Funcion, Poligono, Proyectil, analizar_circuito
+from .visuales import AnguloTrig, Funcion, Poligono, Proyectil, analizar_circuito
 
 ALTO_DIBUJO = 3.3  # franja del pie de la pizarra que ocupa un dibujo
 
@@ -585,8 +585,9 @@ def proyectil(figura: Proyectil, marcas: list[str], col: Any, ancho: float, alto
     # La flecha del lanzamiento sale del punto de partida, con su ángulo contra el suelo.
     rad = float(np.arctan2(figura.vertical, figura.horizontal))
     direccion = np.array([np.cos(rad), np.sin(rad), 0.0])
-    lanzamiento = Arrow(izquierda, izquierda + direccion * 1.1, buff=0, stroke_width=7,
-                        max_tip_length_to_length_ratio=0.25)
+    lanzamiento = Arrow(
+        izquierda, izquierda + direccion * 1.1, buff=0, stroke_width=7, max_tip_length_to_length_ratio=0.25
+    )
     lanzamiento.set_stroke(col.error, 7).set_fill(col.error, 1)
     rayas.append(lanzamiento)
     arco = Arc(radius=0.55, start_angle=0, angle=rad, arc_center=izquierda).set_stroke(col.tenue, 3)
@@ -607,7 +608,11 @@ def proyectil(figura: Proyectil, marcas: list[str], col: Any, ancho: float, alto
     if "componentes" in marcas:
         t = figura.tiempo / 4
         origen = np.array(
-            [figura.horizontal * t * escala - mitad, (figura.vertical * t - gravedad * t * t / 2) * escala, 0.0]
+            [
+                figura.horizontal * t * escala - mitad,
+                (figura.vertical * t - gravedad * t * t / 2) * escala,
+                0.0,
+            ]
         )
         puntos_vivos.append(Dot(origen, radius=0.05, color=col.formulas))
         vx = Arrow(origen, origen + RIGHT * 0.9, buff=0, stroke_width=5, max_tip_length_to_length_ratio=0.22)
@@ -619,6 +624,65 @@ def proyectil(figura: Proyectil, marcas: list[str], col: Any, ancho: float, alto
         medida("vy", origen + UP * 1.1 + RIGHT * 0.2, 20)
 
     todo = VGroup(suelo, curva, *rayas[2:], parches, *puntos_vivos, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[*puntos_vivos, *rótulos])
+
+
+# ------------------------------------------------------------------------------------------
+# 6 · Círculo trigonométrico
+# ------------------------------------------------------------------------------------------
+
+
+def circulo_trig(figura: AnguloTrig, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+    """El radio girado hasta el ángulo: el seno es su sombra vertical y el coseno la horizontal.
+
+    Los tres segmentos se dibujan sobre el mismo círculo, así «sen 30° = 0,5» deja de ser un
+    número suelto y pasa a ser un alto que se ve.
+    """
+    radio = min(alto * 0.4, ancho * 0.2)
+    rad = float(np.radians(figura.grados))
+    punto = np.array([radio * float(np.cos(rad)), radio * float(np.sin(rad)), 0.0])
+
+    eje_h = Line([-radio - 0.35, 0, 0], [radio + 0.8, 0, 0], buff=0).set_stroke(col.tenue, 3)
+    eje_v = Line([0, -radio - 0.25, 0], [0, radio + 0.25, 0], buff=0).set_stroke(col.tenue, 3)
+    circulo = Circle(radius=radio).set_stroke(col.tenue, 4)
+    rayas: list = [eje_h, eje_v, circulo]
+    parches, rótulos, puntos_vivos = VGroup(), VGroup(), []
+
+    def medida(texto: str, donde: np.ndarray, tam: float = 22) -> None:
+        rotulo = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
+        fondo, rotulo = _parche(rotulo, "#FFFFFF", 0.16)
+        parches.add(fondo)
+        rótulos.add(rotulo)
+
+    radio_linea = Line(np.zeros(3), punto, buff=0).set_stroke(col.formulas, 5)
+    rayas.append(radio_linea)
+    arco = Arc(radius=radio * 0.38, start_angle=0, angle=rad).set_stroke(col.tenue, 3)
+    rayas.append(arco)
+    mitad_arco = np.array([np.cos(rad / 2), np.sin(rad / 2), 0.0]) * radio * 0.45
+    medida(f"{_numero_latex(figura.grados)}°", mitad_arco, 18)
+    puntos_vivos.append(Dot(punto, radius=0.05, color=col.formulas))
+
+    base = np.array([punto[0], 0.0, 0.0])
+    if "seno" in marcas:
+        seno = Line(base, punto, buff=0).set_stroke(col.error, 6)
+        rayas.append(seno)
+        lado = RIGHT if figura.coseno >= 0 else LEFT
+        medida(f"sen = {_numero_latex(figura.seno)}", (base + punto) / 2 + lado * 0.85)
+    if "coseno" in marcas:
+        coseno = Line(np.zeros(3), base, buff=0).set_stroke(col.cuadricula, 6)
+        rayas.append(coseno)
+        arriba = DOWN if figura.seno >= 0 else UP
+        medida(f"cos = {_numero_latex(figura.coseno)}", base / 2 + arriba * 0.3)
+    if "tangente" in marcas and figura.tangente is not None:
+        toque = np.array([radio, radio * figura.tangente, 0.0])
+        pie = np.array([radio, 0.0, 0.0])
+        segmento = Line(pie, toque, buff=0).set_stroke(col.acento, 6)
+        alargo = DashedLine(punto, toque, buff=0).set_stroke(col.tenue, 3)
+        rayas.extend([segmento, alargo])
+        medida(f"tan = {_numero_latex(figura.tangente)}", (pie + toque) / 2 + RIGHT * 0.85)
+
+    todo = VGroup(*rayas, parches, *puntos_vivos, rótulos)
     _encajar(todo, ancho, alto)
     return Dibujo(mobs=todo, trazo=rayas, aparece=[*puntos_vivos, *rótulos])
 
@@ -647,5 +711,7 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         return poligono_regular(visual.poligono(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "proyectil":
         return proyectil(visual.proyectil(), visual.anotar, col, ancho, alto)
+    if visual.tipo == "circulo_trig":
+        return circulo_trig(visual.angulo_trig(), visual.anotar, col, ancho, alto)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
     return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)
