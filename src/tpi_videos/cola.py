@@ -55,7 +55,11 @@ def _renombrar_roto(ruta: Path) -> None:
 
 
 def cargar() -> dict[str, Any]:
-    """La cola completa, ordenada por fecha. Si el archivo está roto, lo aparta y empieza vacía."""
+    """La cola completa, ordenada por fecha. Si el archivo está roto, lo aparta y empieza vacía.
+
+    Cuando aparta un archivo dañado devuelve además ``"roto": True``: la cola anterior se perdió y
+    empezó de cero, y quien lo lee puede avisar. Es una marca de un solo uso (el archivo ya no está).
+    """
     ruta = _ruta()
     if not ruta.exists():
         return {"version": VERSION, "lotes": []}
@@ -63,10 +67,10 @@ def cargar() -> dict[str, Any]:
         datos = json.loads(ruta.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         _renombrar_roto(ruta)
-        return {"version": VERSION, "lotes": []}
+        return {"version": VERSION, "lotes": [], "roto": True}
     if not isinstance(datos, dict) or not isinstance(datos.get("lotes"), list):
         _renombrar_roto(ruta)
-        return {"version": VERSION, "lotes": []}
+        return {"version": VERSION, "lotes": [], "roto": True}
     datos.setdefault("version", VERSION)
     datos["lotes"].sort(key=lambda lote: lote.get("creado", ""))
     return datos
@@ -79,6 +83,7 @@ def guardar(datos: dict[str, Any]) -> None:
             "La cola la escribió una versión más nueva del motor.",
             ayuda="Actualiza el motor (git pull) antes de reanudar estos videos.",
         )
+    datos = {clave: valor for clave, valor in datos.items() if clave != "roto"}
     ruta = _ruta()
     ruta.parent.mkdir(parents=True, exist_ok=True)
     temporal = ruta.with_name(f"{ruta.name}.tmp")
@@ -476,10 +481,11 @@ def descartar_lote(lote_id: str) -> None:
     lote = _lote(datos, lote_id)
     if lote is None:
         raise ErrorMotor("No encuentro ese lote en la cola.")
-    if lote.get("estado") in ("en_curso", "pensando_ideas") and candado_tomado():
+    if candado_tomado():
+        # Con un lote trabajando, escribir la cola acá pisaría lo que ese proceso está guardando.
         raise ErrorMotor(
-            "Ese lote está trabajando ahora.",
-            ayuda="Espera a que termine o cancela el trabajo antes de sacarlo de la cola.",
+            "Hay un lote trabajando ahora.",
+            ayuda="Espera a que termine o cancela el trabajo antes de sacar este de la cola.",
         )
     lote["estado"], lote["fase"] = "descartado", "descartado"
     lote["actualizado"] = _ahora()

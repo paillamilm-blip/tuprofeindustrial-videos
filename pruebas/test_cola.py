@@ -76,8 +76,20 @@ class ColaTest(BaseCola):
         ruta.parent.mkdir(parents=True)
         ruta.write_text("{esto no es json", encoding="utf-8")
 
-        self.assertEqual(cola.cargar()["lotes"], [])
+        datos = cola.cargar()
+        self.assertEqual(datos["lotes"], [])
+        self.assertTrue(datos.get("roto"))
         self.assertTrue(list(ruta.parent.glob("trabajos.json.roto-*")))
+        # Una vez apartado el archivo dañado, la siguiente lectura ya no viene marcada.
+        self.assertFalse(cola.cargar().get("roto"))
+
+    def test_el_aviso_de_cola_dañada_no_se_persiste(self) -> None:
+        ruta = self.raiz / "salida" / ".cola" / "trabajos.json"
+        ruta.parent.mkdir(parents=True)
+        ruta.write_text("{esto no es json", encoding="utf-8")
+
+        cola.guardar(cola.cargar())
+        self.assertNotIn("roto", json.loads(ruta.read_text(encoding="utf-8")))
 
     def test_hito_se_guarda_y_se_relee(self) -> None:
         lote_id = self._lote_con_video()
@@ -116,9 +128,10 @@ class ColaLifecycleTest(BaseCola):
         return ruta
 
     def _hijo_vivo(self) -> subprocess.Popen:
-        proceso = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
-        self.addCleanup(proceso.kill)
+        proceso = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(10)"])
+        # addCleanup es LIFO: se registra wait primero para que kill corra antes y no espere los 10 s.
         self.addCleanup(proceso.wait)
+        self.addCleanup(proceso.kill)
         return proceso
 
     def _escribir_candado(self, pid: int, hace: float = 0.0) -> None:
@@ -267,6 +280,16 @@ class ColaLifecycleTest(BaseCola):
         cola.descartar_lote(lote_id)
         self.assertEqual(cola.cargar()["lotes"][0]["estado"], "descartado")
         self.assertEqual(cola.lotes_visibles(), [])
+
+    def test_no_descarta_un_pendiente_con_candado_ajeno_vivo(self) -> None:
+        lote_id = self._lote_con_video()
+        cola.actualizar_video(self._video(lote_id), estado="pendiente_ia")
+        cola.recalcular_lote(lote_id)
+        self._escribir_candado(self._hijo_vivo().pid)
+
+        with self.assertRaises(ErrorMotor):
+            cola.descartar_lote(lote_id)
+        self.assertEqual(cola.cargar()["lotes"][0]["estado"], "pendiente_ia")
 
     def test_lotes_visibles_muestra_pendientes_y_el_ultimo(self) -> None:
         viejo = self._lote_con_video()
