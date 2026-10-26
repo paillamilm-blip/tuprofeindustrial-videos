@@ -1,0 +1,63 @@
+# Guion redactado con IA (gemini-3.8-flash) el 20-10-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se asume un triángulo rectángulo estándar donde c representa la hipotenusa y a, b los catetos.
+
+titulo: "El error clásico con Pitágoras"
+materia: matematica
+nivel: "1° medio"
+
+gancho:
+  texto: "¿Siempre se suman los catetos al cuadrado?"
+  voz: "¿Siempre se suman los catetos al cuadrado? Mucho cuidado con Pitágoras."
+  tex: 'b = \sqrt{10^2 + 6^2}'
+  emoji: "⚠️"
+
+enunciado:
+  texto: "Un triángulo rectángulo tiene una hipotenusa de 10 metros y un cateto de 6 metros. Calcula la longitud del otro cateto."
+  voz: "Tenemos una hipotenusa de diez metros y un cateto de seis metros. Buscamos el otro cateto."
+  destacar: ["10 metros", "6 metros"]
+
+datos:
+  - tex: 'c = 10\ \text{m}'
+    voz: "La hipotenusa mide diez metros."
+  - tex: 'a = 6\ \text{m}'
+    voz: "Uno de los catetos mide seis metros."
+  - tex: 'b = ?'
+    voz: "Queremos calcular el cateto restante."
+
+pasos:
+  - nota: "Error típico"
+    tex: 'b = \sqrt{10^2 + 6^2}'
+    voz: "Muchos suman directamente los datos, pero la hipotenusa siempre es el lado mayor."
+    destacar: ['+']
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Teorema de Pitágoras"
+    tex: 'a^2 + b^2 = c^2'
+    voz: "Planteamos la fórmula original que relaciona los tres lados del triángulo rectángulo."
+  - nota: "Despejamos b"
+    tex: 'b = \sqrt{c^2 - a^2}'
+    voz: "Para despejar un cateto, a la hipotenusa le restamos el otro cateto."
+    destacar: ['-']
+  - nota: "Reemplazamos"
+    tex: 'b = \sqrt{10^2 - 6^2}'
+    voz: "Reemplazamos los valores conocidos de la hipotenusa y del cateto."
+  - nota: "Calculamos"
+    tex: 'b = \sqrt{64}'
+    voz: "Cien menos treinta y seis nos da sesenta y cuatro."
+
+resultado:
+  tex: 'b = 8\ \text{m}'
+  voz: "La raíz de sesenta y cuatro es ocho: el cateto mide ocho metros."
+  emoji: "📏"
+
+verificacion:
+  texto: "Tiene sentido: es el clásico trío pitagórico 6-8-10 y el cateto es menor a la hipotenusa."
+  voz: "El resultado es menor que diez metros y forma el clásico trío pitagórico."
+
+reto:
+  texto: "¿Cuánto mide el cateto si la hipotenusa mide 5 metros y el otro cateto mide 3 metros?"
+  voz: "Si la hipotenusa mide cinco metros y un cateto mide tres, ¿cuánto mide el otro? Déjalo en los comentarios."
+  emoji: "✍️"
