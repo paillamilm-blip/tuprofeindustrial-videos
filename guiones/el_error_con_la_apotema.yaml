@@ -1,0 +1,63 @@
+# Guion redactado con IA (gemini-3.5-flash-lite) el 26-10-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "El error con la apotema"
+materia: matematica
+nivel: "2° medio"
+molde: mito_realidad
+
+gancho:
+  texto: "¿Calculas mal el área del hexágono con esta fórmula?"
+  voz: "¿Calculas mal el área del hexágono con esta fórmula? Cuidado."
+  emoji: "❌"
+
+gancho_variantes:
+  - texto: ",Cuidado al multiplicar perímetro por apotema en tu prueba"
+    emoji: "⚠️"
+  - texto: "El 90% olvida dividir por dos la apotema"
+    emoji: "🤯"
+
+enunciado:
+  texto: "Calcula el área de un hexágono regular de 6 cm de lado y una apotema de 5,2 cm usando la fórmula de perímetro por apotema dividido por dos."
+  voz: "Hexágono de seis centímetros de lado y cinco coma dos de apotema."
+  destacar: ["6 cm", "5,2 cm"]
+
+datos:
+  - tex: 'l = 6\ \text{cm}'
+    voz: "Lado seis."
+  - tex: 'a = 5,2\ \text{cm}'
+    voz: "Apotema cinco coma dos."
+
+pasos:
+  - nota: "Error común"
+    tex: 'A = l \cdot a'
+    voz: "Muchos multiplican directo, pero ignoran los seis lados."
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Perímetro"
+    tex: 'P = 6 \cdot 6'
+    voz: "Primero sacamos el perímetro multiplicando por seis."
+  - nota: "Área correcta"
+    tex: 'A = \frac{36 \cdot 5,2}{2}'
+    voz: "Mira el hexágono: cada lado mide seis centímetros. La apotema baja del centro hasta la base y mide cinco coma dos. Área es perímetro por apotema, dividido en dos."
+    visual:
+      tipo: poligono_regular
+      lados: 6
+      lado: "6 cm"
+      anotar: ["apotema"]
+
+resultado:
+  tex: 'A = 93,6\ \text{cm}^2'
+  voz: "El área es noventa y tres coma seis."
+  emoji: "📐"
+
+verificacion:
+  texto: "El área usa la mitad del perímetro por la apotema."
+  voz: "Siempre usa la mitad del perímetro."
+
+reto:
+  texto: "Calcula el área de un hexágono de 10 cm de lado y 8,6 cm de apotema."
+  voz: "Calcula con lado diez y apotema ocho coma seis."
+  emoji: "✍️"

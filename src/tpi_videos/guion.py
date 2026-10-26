@@ -17,7 +17,13 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from .errores import ErrorMotor
 from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 from .tex import llaves_balanceadas
-from .visuales import SEGUNDOS_VISUAL, analizar_funcion, normalizar_vectores
+from .visuales import (
+    MARCAS_POLIGONO,
+    SEGUNDOS_VISUAL,
+    analizar_funcion,
+    analizar_poligono,
+    normalizar_vectores,
+)
 
 MATERIAS: dict[str, str] = {"matematica": "MATEMÁTICA", "fisica": "FÍSICA", "ingenieria": "INGENIERÍA"}
 
@@ -109,12 +115,12 @@ class Dato(_Base):
 
 
 class Visual(_Base):
-    """El dibujo de un paso: un gráfico de función, un diagrama de fuerzas o un circuito.
+    """El dibujo de un paso: un gráfico de función, un diagrama de fuerzas, un circuito o un polígono.
 
     Sólo se usan los campos del ``tipo`` elegido; los demás quedan vacíos a propósito.
     """
 
-    tipo: Literal["grafico_funcion", "diagrama_fuerzas", "circuito"]
+    tipo: Literal["grafico_funcion", "diagrama_fuerzas", "circuito", "poligono_regular"]
 
     # grafico_funcion
     funcion: str | None = None
@@ -134,7 +140,12 @@ class Visual(_Base):
     fuente: str | None = None  # ej. '12 V'
     resistencias: list[str] = []  # ej. ['4 Ω', '6 Ω']
 
-    _listas = field_validator("rango", "marcar", "vectores", "resistencias", mode="before")(
+    # poligono_regular
+    lados: int | None = None  # de 3 a 8
+    lado: str | None = None  # la medida de un lado, con su unidad: '12 cm'
+    anotar: list[str] = []  # ej. ['apotema', 'angulo_interior']
+
+    _listas = field_validator("rango", "marcar", "vectores", "resistencias", "anotar", mode="before")(
         classmethod(lambda cls, v: None if v is None else _como_lista(v))
     )
 
@@ -152,6 +163,18 @@ class Visual(_Base):
                     raise ValueError(f"el ángulo del plano va entre 0 y 90 grados, y dice {self.angulo}")
                 if self.cuerpo != "bloque":
                     raise ValueError("el ángulo (plano inclinado) solo va con cuerpo: bloque")
+        elif self.tipo == "poligono_regular":
+            if not (self.lado or "").strip():
+                raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
+            if self.lados is None:
+                raise ValueError("un polígono necesita cuántos lados tiene, ej. lados: 5")
+            analizar_poligono(self.lados, self.lado)  # rechaza lados < 3 o una medida sin número
+            desconocidas = [m for m in self.anotar if m not in MARCAS_POLIGONO]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de un polígono; "
+                    f"el motor sabe anotar {', '.join(MARCAS_POLIGONO)}"
+                )
         elif not (self.fuente or "").strip():
             raise ValueError("un circuito necesita la fuente, ej. fuente: '12 V'")
         elif not 2 <= len(self.resistencias) <= 4:
@@ -170,6 +193,12 @@ class Visual(_Base):
         if self.tipo != "grafico_funcion":
             raise ValueError(f"«{self.tipo}» no tiene una función que analizar")
         return analizar_funcion(self.funcion or "", self.variable, self.rango, self.marcar)
+
+    def poligono(self):
+        """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
+        if self.tipo != "poligono_regular":
+            raise ValueError(f"«{self.tipo}» no es un polígono")
+        return analizar_poligono(self.lados or 0, self.lado)
 
 
 class Paso(_Base):
@@ -440,6 +469,11 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
         campos.append(("vectores", "[" + ", ".join(_simples(x) for x in v.get("vectores") or []) + "]"))
         if v.get("angulo") is not None:
             campos.append(("angulo", _numero(v["angulo"])))
+    elif tipo == "poligono_regular":
+        campos.append(("lados", _numero(v.get("lados") or 0)))
+        campos.append(("lado", _simples(v.get("lado") or "")))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     else:
         if v.get("arreglo") not in (None, "serie"):
             campos.append(("arreglo", v["arreglo"]))

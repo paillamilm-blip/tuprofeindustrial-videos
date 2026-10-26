@@ -1,4 +1,4 @@
-"""Los visuales que el motor sabe dibujar: gráfico de función, diagrama de fuerzas y circuito.
+"""Los visuales que el motor sabe dibujar: gráfico de función, diagrama de fuerzas, circuito y polígono regular.
 
 Un paso del guion puede llevar `visual:`. Aquí se analiza ese contenido (nunca con `eval` suelto)
 y se devuelve lo que `componentes.py` necesita para dibujarlo, con errores en español claro.
@@ -12,10 +12,18 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-TIPOS_VISUAL = ("grafico_funcion", "diagrama_fuerzas", "circuito")
+TIPOS_VISUAL = ("grafico_funcion", "diagrama_fuerzas", "circuito", "poligono_regular")
 
 # Cuánto suma cada dibujo a la duración estimada: se revela mientras se habla, pero el ojo lo sigue mirando.
-SEGUNDOS_VISUAL = {"grafico_funcion": 3.0, "diagrama_fuerzas": 2.5, "circuito": 3.0}
+SEGUNDOS_VISUAL = {
+    "grafico_funcion": 3.0,
+    "diagrama_fuerzas": 2.5,
+    "circuito": 3.0,
+    "poligono_regular": 3.0,
+}
+
+# Lo que se puede anotar en un polígono regular.
+MARCAS_POLIGONO = ("apotema", "radio", "angulo_central", "angulo_interior")
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -71,6 +79,24 @@ class Funcion:
         (x0, x1) = self.rango_x
         paso = (x1 - x0) / (_MUESTREO - 1)
         return [x0 + i * paso for i in range(_MUESTREO)]
+
+
+@dataclass
+class Poligono:
+    """Un polígono regular: su forma y todo lo que vale la pena anotar encima.
+
+    ``vertices`` viene en las mismas unidades de la medida del guion, centrado en el origen, de
+    modo que el dibujo solamente tiene que encajarlo en su franja.
+    """
+
+    lados: int
+    lado: float
+    unidad: str
+    apotema: float
+    radio: float
+    angulo_interior: float
+    angulo_central: float
+    vertices: list[tuple[float, float]] = field(default_factory=list)
 
 
 def _bonito(valor: float) -> float:
@@ -315,3 +341,41 @@ def analizar_circuito(fuente: str | None, resistencias: list[str]) -> tuple[floa
     return numero(fuente, "la fuente", "9 V"), [
         numero(r, f"la resistencia #{i}", "4 Ω") for i, r in enumerate(resistencias, 1)
     ]
+
+
+def analizar_poligono(lados: int, lado: str | None) -> Poligono:
+    """Todo lo que se puede saber de un polígono regular sabiendo cuántos lados tiene y cuánto mide uno.
+
+    La base queda apoyada horizontal a propósito: un cuadrado que se sostiene en una punta se lee
+    mal en la pantalla del celular, aunque geométricamente sea el mismo cuadrado.
+    """
+    if lados < 3:
+        raise ValueError(f"un polígono necesita 3 lados o más, y el guion pide {lados}")
+    texto = str(lado or "").strip()
+    m = re.search(r"\d+(?:[.,]\d+)?", texto)
+    if not m:
+        raise ValueError(f"la medida del lado necesita un número, ej. «12 cm»; el guion dice «{lado}»")
+    valor = float(m.group().replace(",", "."))
+    if valor <= 0:
+        raise ValueError(f"el lado debe medir más que cero, y leí «{lado}»")
+
+    mitad = math.pi / lados
+    radio = valor / (2 * math.sin(mitad))
+    desfase = 90.0 if lados % 2 else 90.0 + 180.0 / lados
+    vertices = [
+        (
+            radio * math.cos(math.radians(desfase + k * 360.0 / lados)),
+            radio * math.sin(math.radians(desfase + k * 360.0 / lados)),
+        )
+        for k in range(lados)
+    ]
+    return Poligono(
+        lados=lados,
+        lado=valor,
+        unidad=texto[m.end() :].strip(),
+        apotema=valor / (2 * math.tan(mitad)),
+        radio=radio,
+        angulo_interior=(lados - 2) * 180.0 / lados,
+        angulo_central=360.0 / lados,
+        vertices=vertices,
+    )

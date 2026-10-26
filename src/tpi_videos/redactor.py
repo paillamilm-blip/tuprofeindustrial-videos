@@ -65,9 +65,9 @@ class PasoIA(BaseModel):
     )
     # Un paso puede pedirse con dibujo. Son campos planos para que el modelo los cumpla fácil;
     # a_guion() arma el bloque "visual:" anidado que lee el motor.
-    dibujo: Literal["", "grafico", "fuerzas", "circuito"] = Field(
+    dibujo: Literal["", "grafico", "fuerzas", "circuito", "poligono"] = Field(
         default="",
-        description='Dibujo de este paso: "", "grafico", "fuerzas" o "circuito" (máximo 1 en el guion)',
+        description='Dibujo de este paso: "", "grafico", "fuerzas", "circuito" o "poligono" (máximo 1 en el guion)',
     )
     funcion: str = Field(
         default="", description='Con dibujo="grafico": la fórmula en texto plano, ej. "-4.9t^2 + 20"'
@@ -87,6 +87,14 @@ class PasoIA(BaseModel):
     )
     arreglo: Literal["", "serie", "paralelo"] = Field(
         default="", description='Con dibujo="circuito": "serie" o "paralelo"'
+    )
+    lados: int = Field(default=0, description='Con dibujo="poligono": cuántos lados tiene, de 3 a 8')
+    lado: str = Field(
+        default="", description='Con dibujo="poligono": cuánto mide un lado, con su unidad, ej. "12 cm"'
+    )
+    anotar: list[str] = Field(
+        default_factory=list,
+        description='Con dibujo="poligono": hasta 2 de "apotema", "radio", "angulo_central", "angulo_interior"',
     )
 
 
@@ -274,7 +282,12 @@ def _emoji(valor: str) -> dict[str, str]:
     return {"emoji": emoji} if emoji else {}
 
 
-_DIBUJOS = {"grafico": "grafico_funcion", "fuerzas": "diagrama_fuerzas", "circuito": "circuito"}
+_DIBUJOS = {
+    "grafico": "grafico_funcion",
+    "fuerzas": "diagrama_fuerzas",
+    "circuito": "circuito",
+    "poligono": "poligono_regular",
+}
 
 
 def _visual(p: PasoIA) -> dict[str, Any] | None:
@@ -296,6 +309,13 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["cuerpo"] = p.cuerpo
         if p.angulo:
             visual["angulo"] = float(p.angulo)
+    elif tipo == "poligono_regular":
+        if p.lados:
+            visual["lados"] = int(p.lados)
+        if p.lado:
+            visual["lado"] = _texto(p.lado)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     else:
         visual["fuente"] = _texto(p.fuente)
         visual["resistencias"] = [r.strip() for r in p.resistencias if r.strip()]

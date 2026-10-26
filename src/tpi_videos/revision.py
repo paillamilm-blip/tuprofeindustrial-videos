@@ -61,7 +61,7 @@ def _frases(texto: str) -> list[str]:
 
 
 def _avisos_de_visuales(guion: Guion) -> list[Aviso]:
-    """Que el dibujo se pueda trazar, y que el gráfico diga qué representa cada eje."""
+    """Que el dibujo se pueda trazar: el gráfico dice qué representa cada eje y la figura se ve en el celular."""
     avisos: list[Aviso] = []
     for i, paso in enumerate(guion.pasos, 1):
         v = paso.visual
@@ -74,6 +74,26 @@ def _avisos_de_visuales(guion: Guion) -> list[Aviso]:
                 analizar_circuito(v.fuente, v.resistencias)
             except ValueError as e:
                 avisos.append(Aviso("advertencia", donde, str(e)))
+            continue
+        if v.tipo == "poligono_regular":
+            if not 3 <= (v.lados or 0) <= 8:
+                avisos.append(
+                    Aviso(
+                        "advertencia",
+                        donde,
+                        f"con {v.lados} lados la figura ya se ve como una pelota en la pantalla del "
+                        "celular; de 3 a 8 lados se dibuja bien (triángulo, cuadrado, pentágono, hexágono).",
+                    )
+                )
+            if len(v.anotar) > 2:
+                avisos.append(
+                    Aviso(
+                        "sugerencia",
+                        donde,
+                        f"{len(v.anotar)} marcas encima de una figura que apenas mide 3,3 de alta se "
+                        "aprietan; deja 2 y lo demás lo dice la voz.",
+                    )
+                )
             continue
         if v.tipo != "grafico_funcion":
             continue

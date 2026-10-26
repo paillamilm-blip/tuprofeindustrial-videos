@@ -1,4 +1,4 @@
-"""Los tres dibujos que el motor sabe hacer en Manim: gráfico de función, fuerzas y circuito.
+"""Los cuatro dibujos que el motor sabe hacer en Manim: función, fuerzas, circuito y polígono regular.
 
 Cada constructor devuelve un ``Dibujo`` centrado en el origen y ajustado a una caja (ancho × alto),
 con las piezas separadas entre lo que se **traza** (``Create``) y lo que **aparece** (``FadeIn``).
@@ -26,13 +26,14 @@ from manim import (
     Dot,
     Line,
     Mobject,
+    Polygon,
     Rectangle,
     VGroup,
     VMobject,
 )
 
 from . import componentes as c
-from .visuales import Funcion, analizar_circuito
+from .visuales import Funcion, Poligono, analizar_circuito
 
 ALTO_DIBUJO = 3.3  # franja del pie de la pizarra que ocupa un dibujo
 
@@ -67,6 +68,11 @@ def _numero_latex(valor: float) -> str:
     n = round(float(valor), 2)
     n = 0.0 if n == 0 else n
     return str(int(n)) if n == int(n) else str(n).replace(".", ",")
+
+
+def _sufijo(figura: Poligono) -> str:
+    """El hueco que sigue al número: ' cm', ' m', o nada si el guion no dijo la unidad."""
+    return " " + figura.unidad if figura.unidad else ""
 
 
 def _encajar(todo: VGroup, ancho: float, alto: float) -> VGroup:
@@ -422,6 +428,94 @@ def circuito(
 
 
 # ------------------------------------------------------------------------------------------
+# 4 · Polígono regular
+# ------------------------------------------------------------------------------------------
+
+
+def poligono_regular(
+    figura: Poligono,
+    marcas: list[str],
+    col: Any,
+    ancho: float,
+    alto: float,
+    papel: str = "#FFFFFF",
+) -> Dibujo:
+    """La figura cerrada de un solo trazo, con la medida del lado escrita y las marcas del guion.
+
+    Se dibuja con circunradio 1 y se agranda hasta la franja, así el tamaño en pantalla no depende
+    de si el lado del guion mide 4 cm o 4 km. Cada medida va encima de su línea con su parche de
+    papel (el mismo truco de las resistencias): en el cuaderno el número se escribe pegado a la raya.
+    """
+    puntas = [np.array([x / figura.radio, y / figura.radio, 0.0]) for x, y in figura.vertices]
+    xs, ys = [p[0] for p in puntas], [p[1] for p in puntas]
+    escala = min(ancho * 0.58 / (max(xs) - min(xs)), alto * 0.66 / (max(ys) - min(ys)))
+    esquinas = [p * escala for p in puntas]
+    centro = np.zeros(3)
+
+    abajo = min(p[1] for p in esquinas)
+    de_base = [p for p in esquinas if abs(p[1] - abajo) < 1e-6]
+    izq_base, der_base = min(de_base, key=lambda p: p[0]), max(de_base, key=lambda p: p[0])
+    arriba = max(p[1] for p in esquinas)
+    i_punta = max(
+        (i for i, p in enumerate(esquinas) if abs(p[1] - arriba) < 1e-6), key=lambda i: esquinas[i][0]
+    )
+    punta, vecino = esquinas[i_punta], esquinas[i_punta - 1]  # el vecino gira hacia la derecha
+
+    contorno = Polygon(*esquinas, color=col.formulas, stroke_width=6).set_fill(col.formulas, 0.07)
+    rayas, parches, rótulos = [contorno], VGroup(), VGroup()
+
+    def medida(texto: str, donde: np.ndarray, tam: float = 24) -> None:
+        rotulo = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
+        fondo, rotulo = _parche(rotulo, papel, 0.16)
+        parches.add(fondo)
+        rótulos.add(rotulo)
+
+    def raya(tinta: str, p, q) -> None:
+        linea = DashedLine(p, q, buff=0).set_stroke(tinta, 4)
+        rayas.append(linea)
+
+    # La medida del lado, colgada de la base: es el dato que el guion trajo de casa.
+    medida(
+        f"{_numero_latex(figura.lado)}{_sufijo(figura)}",
+        [(izq_base[0] + der_base[0]) / 2, abajo - 0.36, 0.0],
+        26,
+    )
+
+    if "apotema" in marcas:
+        pie = (izq_base + der_base) / 2  # la apotema baja recta desde el centro hasta el medio de la base
+        raya(col.acento, centro, pie)
+        medida(f"a ≈ {_numero_latex(figura.apotema)}{_sufijo(figura)}", pie / 2)
+    if "radio" in marcas:
+        raya(col.acento, centro, punta)
+        medida(f"R ≈ {_numero_latex(figura.radio)}{_sufijo(figura)}", punta / 2)
+    radio_arco = min(0.42, escala * 0.35)
+    if "angulo_central" in marcas:
+        # Se abre hacia arriba, entre dos radios vecinos: abajo ya están la base y la apotema.
+        raya(col.tenue, centro, vecino)
+        raya(col.tenue, centro, punta)
+        arranque = float(np.arctan2(vecino[1], vecino[0]))
+        giro = 2 * PI / figura.lados
+        rayas.append(Arc(radius=radio_arco, start_angle=arranque, angle=giro).set_stroke(col.tenue, 4))
+        bisección = arranque + giro / 2
+        medida(
+            f"{_numero_latex(figura.angulo_central)}°",
+            centro + np.array([np.cos(bisección), np.sin(bisección), 0.0]) * (radio_arco + 0.3),
+        )
+    if "angulo_interior" in marcas:
+        giro = PI * (figura.lados - 2) / figura.lados
+        rayas.append(
+            Arc(radius=radio_arco, start_angle=0, angle=giro, arc_center=izq_base).set_stroke(col.tenue, 4)
+        )
+        rincon = izq_base + np.array([np.cos(giro / 2), np.sin(giro / 2), 0.0]) * (radio_arco + 0.3)
+        medida(f"{_numero_latex(figura.angulo_interior)}°", rincon)
+
+    vertices = [Dot(p, radius=0.045, color=col.formulas) for p in esquinas]
+    todo = VGroup(contorno, *rayas[1:], parches, *vertices, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[*vertices, *rótulos])
+
+
+# ------------------------------------------------------------------------------------------
 # Elección del dibujo según el guion
 # ------------------------------------------------------------------------------------------
 
@@ -430,7 +524,7 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
     """El ``visual:`` de un paso convertido en dibujo, centrado en el origen.
 
     ``papel`` es el color sobre el que se dibuja: sirve para 'cortar' un cable con una caja del
-    mismo color (resistencias y batería) sin que se note el truco.
+    mismo color (resistencias, batería y las medidas del polígono) sin que se note el truco.
     """
     papel = papel or col.fondo
     if visual.tipo == "grafico_funcion":
@@ -439,5 +533,7 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         )
     if visual.tipo == "diagrama_fuerzas":
         return diagrama_fuerzas(visual.vectores, col, ancho, alto, visual.cuerpo, visual.angulo)
+    if visual.tipo == "poligono_regular":
+        return poligono_regular(visual.poligono(), visual.anotar, col, ancho, alto, papel)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
     return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)
