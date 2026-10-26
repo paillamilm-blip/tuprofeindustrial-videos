@@ -865,16 +865,16 @@ def cmd_lote(args: argparse.Namespace) -> int:
             )
         return _cmd_reanudar(args, json_activo=json_activo, avisar=avisar)
 
-    # La voz se resuelve recién cuando hay trabajo: así reanudar y los errores de uso no cargan Manim.
-    proveedor, voz = _dividir_voz(args.voz)
-    if cola.candado_tomado():
+    # El candado va antes de cargar la voz: si ya hay un lote en curso no tiene sentido cargar Manim.
+    if not cola.tomar_candado():
         raise ErrorMotor(
             "Ya hay un lote en curso.",
             ayuda="Espera a que termine (mira Fábrica) o ciérralo antes de lanzar otro.",
         )
-    ajustes = _ajustes_lote(args, modelo, proveedor, voz)
-    cola.tomar_candado()
     try:
+        # La voz se resuelve recién cuando hay trabajo: así los errores de uso no cargan Manim.
+        proveedor, voz = _dividir_voz(args.voz)
+        ajustes = _ajustes_lote(args, modelo, proveedor, voz)
         if args.ideas_json:
             ideas = ideas_desde_json(args.ideas_json)
             lote_id = cola.nuevo_lote(tema or ideas[0].titulo, ajustes, ideas=ideas)

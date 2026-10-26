@@ -1,7 +1,9 @@
+import json
 import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -47,6 +49,16 @@ class CliColaTest(unittest.TestCase):
         resultado = self._correr("lote", "--solo-pendientes", "Porcentajes")
         self.assertEqual(resultado.returncode, 1)
         self.assertIn("van con --reanudar", resultado.stdout)
+
+    def test_lote_no_arranca_con_el_candado_tomado(self) -> None:
+        candado = Path(self.tmp.name) / "salida" / ".cola" / "lote.lock"
+        candado.parent.mkdir(parents=True, exist_ok=True)
+        candado.write_text(
+            json.dumps({"pid": os.getpid(), "inicio": time.time()}), encoding="utf-8"
+        )
+        resultado = self._correr("lote", "Porcentajes")
+        self.assertEqual(resultado.returncode, 1)
+        self.assertIn("Ya hay un lote en curso", resultado.stdout)
 
 
 if __name__ == "__main__":

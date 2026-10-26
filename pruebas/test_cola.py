@@ -110,6 +110,71 @@ class ColaLifecycleTest(BaseCola):
     def _video(self, lote_id: str) -> str:
         return cola.videos_del_lote(lote_id)[0]["id"]
 
+    def _ruta_candado(self) -> Path:
+        ruta = self.raiz / "salida" / ".cola" / "lote.lock"
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        return ruta
+
+    def _hijo_vivo(self) -> subprocess.Popen:
+        proceso = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+        self.addCleanup(proceso.kill)
+        self.addCleanup(proceso.wait)
+        return proceso
+
+    def _escribir_candado(self, pid: int, hace: float = 0.0) -> None:
+        self._ruta_candado().write_text(
+            json.dumps({"pid": pid, "inicio": time.time() - hace}), encoding="utf-8"
+        )
+
+    def test_pid_vivo_reconoce_el_propio_y_el_cero(self) -> None:
+        self.assertTrue(cola._pid_vivo(os.getpid()))
+        self.assertFalse(cola._pid_vivo(0))
+
+    def test_no_pisa_un_candado_vivo_aunque_no_se_pueda_leer(self) -> None:
+        hijo = self._hijo_vivo()
+        self._escribir_candado(hijo.pid)
+
+        with patch("tpi_videos.cola._candado", return_value=None):
+            self.assertFalse(cola.tomar_candado())
+        self.assertEqual(json.loads(self._ruta_candado().read_text(encoding="utf-8"))["pid"], hijo.pid)
+
+    def test_reescribe_el_candado_abandonado_con_su_pid(self) -> None:
+        proceso = subprocess.Popen([sys.executable, "-c", ""])
+        proceso.wait()
+        self._escribir_candado(proceso.pid)
+
+        self.assertTrue(cola.tomar_candado())
+        self.assertEqual(json.loads(self._ruta_candado().read_text(encoding="utf-8"))["pid"], os.getpid())
+        cola.soltar_candado()
+
+    def test_soltar_no_borra_el_candado_ajeno(self) -> None:
+        hijo = self._hijo_vivo()
+        self._escribir_candado(hijo.pid)
+
+        cola.soltar_candado()
+        self.assertTrue(self._ruta_candado().exists())
+
+    def test_guardar_renueva_el_candado_propio(self) -> None:
+        self.assertTrue(cola.tomar_candado())
+        try:
+            self._escribir_candado(os.getpid(), hace=11 * 3600)
+            cola.guardar(cola.cargar())
+
+            inicio = json.loads(self._ruta_candado().read_text(encoding="utf-8"))["inicio"]
+            self.assertTrue(cola.candado_tomado())
+            self.assertLess(time.time() - inicio, 60)
+        finally:
+            cola.soltar_candado()
+
+    def test_guardar_no_renueva_el_candado_ajeno(self) -> None:
+        hijo = self._hijo_vivo()
+        self._escribir_candado(hijo.pid, hace=11 * 3600)
+
+        cola.guardar(cola.cargar())
+        datos = json.loads(self._ruta_candado().read_text(encoding="utf-8"))
+        self.assertEqual(datos["pid"], hijo.pid)
+        self.assertGreater(time.time() - datos["inicio"], 10 * 3600)
+
     def test_candado_propio_y_liberado(self) -> None:
         self.assertTrue(cola.tomar_candado())
         self.assertTrue(cola.candado_tomado())
