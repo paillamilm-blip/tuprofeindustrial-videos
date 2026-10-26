@@ -261,6 +261,34 @@ def cmd_clave(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_cuota(args: argparse.Namespace) -> int:
+    from .ia import MODELOS_GRATUITOS, URL_CUOTA, cliente, estado_de_cuota
+
+    consola.print(
+        "📊 Reviso qué cupo gratuito queda en cada modelo (una pregunta mínima por modelo, "
+        f"{len(MODELOS_GRATUITOS)} en total)."
+    )
+    conexion = cliente(con_reintentos=False)  # reintentar aquí sería esperar medio minuto por modelo
+    with consola.status("Consultando Gemini…"):
+        estados = estado_de_cuota(conexion, list(MODELOS_GRATUITOS))
+    etiquetas = {"ok": "✅ con cupo", "sin cupo": "❌ sin cupo hoy", "saturado": "🕐 saturado ahora",
+                 "bloqueado": "⚠️  sin permiso"}  # fmt: skip
+    for modelo, estado in estados:
+        consola.print(f"   [bold]{etiquetas.get(estado, estado):17}[/] {modelo}")
+    vivos = [m for m, e in estados if e == "ok"]
+    consola.print()
+    if vivos:
+        consola.print(f"   Puedes redactar ahora con: [bold]./tpi redactar \"…\" --modelo {vivos[0]}[/]")
+        consola.print("   (y si ese se agota a mitad de camino, el motor pasa solo al siguiente).")
+    else:
+        consola.print(
+            "   Ninguno tiene cupo ahora: se reinicia de madrugada (medianoche hora del Pacífico)."
+        )
+        consola.print("   Mientras tanto puedes escribir el guion a mano y crear el video igual.")
+    consola.print(f"   Tu uso, modelo por modelo: {URL_CUOTA}")
+    return 0
+
+
 def cmd_redactar(args: argparse.Namespace) -> int:
     from .ia import MODELO_POR_DEFECTO
     from .redactor import redactar
@@ -1315,6 +1343,12 @@ def construir_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("clave", help="guarda tu clave de Gemini (para redactar con IA)")
     s.add_argument("--sin-probar", action="store_true", help="guardar sin probarla por internet")
     s.set_defaults(func=cmd_clave)
+
+    s = sub.add_parser(
+        "cuota",
+        help="qué modelos de Gemini tienen cupo gratuito hoy (gasta 4 llamadas mínimas)",
+    )
+    s.set_defaults(func=cmd_cuota)
 
     s = sub.add_parser("voces", help="lista las voces en español")
     s.add_argument("--todas", action="store_true", help="todos los países de habla hispana")

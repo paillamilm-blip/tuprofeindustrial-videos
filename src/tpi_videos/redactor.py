@@ -18,7 +18,7 @@ import re
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -500,8 +500,18 @@ def _sistema() -> str:
 
 
 def pedir_json(
-    cliente: Any, modelo: str, sistema: str, contenido: list[Any], esquema: type[BaseModel], pensar: str
+    cliente: Any,
+    modelo: str,
+    sistema: str,
+    contenido: list[Any],
+    esquema: type[BaseModel],
+    pensar: str,
+    avisar: Callable[..., None] | None = None,
 ):
+    """Pide un JSON al modelo, y si ese modelo quedó sin cupo gratuito, prueba el siguiente.
+
+    ``avisar(mensaje, modelo_usado)`` solo suena cuando hubo que cambiar de modelo.
+    """
     from google.genai import types
 
     config = types.GenerateContentConfig(
@@ -514,12 +524,34 @@ def pedir_json(
             disable=True
         ),  # no usamos herramientas
     )
-    try:
-        respuesta = cliente.models.generate_content(model=modelo, contents=contenido, config=config)
-    except ErrorMotor:
-        raise
-    except Exception as e:
-        raise ia.explicar_error(e, modelo) from e
+    cadena = ia.cadena_desde(modelo)
+    errores: list[Exception] = []
+    respuesta = None
+    for puesto, intento in enumerate(cadena):
+        try:
+            respuesta = cliente.models.generate_content(model=intento, contents=contenido, config=config)
+        except ErrorMotor:
+            raise
+        except Exception as e:
+            if not ia.vale_probar_otro_modelo(e):
+                # Un 400 o una clave rechazada se repetirían en los cuatro modelos: mejor decirlo ya.
+                raise ia.explicar_error(e, intento) from e
+            errores.append(e)
+            continue
+        if puesto and avisar:
+            motivo = "se quedó sin cupo" if ia.es_cuota_agotada(errores[-1]) else "está saturado"
+            avisar(f"{modelo} {motivo}: sigo escribiendo con {intento}.", intento)
+        break
+    if respuesta is None:
+        if all(ia.es_cuota_agotada(e) for e in errores):
+            raise ErrorMotor(
+                f"Se acabó el cupo gratuito de los {len(cadena)} modelos de respaldo.",
+                ayuda=f"El cupo se reinicia de madrugada (medianoche hora del Pacífico): mira cuánto "
+                f"te queda con ./tpi cuota. Si apura, escribe el guion a mano y créalo igual: "
+                "./tpi crear guiones/<archivo>.yaml",
+                transitorio=True,
+            ) from errores[-1]
+        raise ia.explicar_error(errores[0], cadena[-1]) from errores[0]
     texto = respuesta.text or ""
     if not texto.strip():
         candidato = (respuesta.candidates or [None])[0]
@@ -635,9 +667,14 @@ def redactar(
     revisor = (PLANTILLAS_DIR / "ia" / "revisor.md").read_text(encoding="utf-8")
     historial: list[str] = []
     sin_latex = False
+    en_uso = {"modelo": modelo}
+
+    def al_cambiar_de_modelo(mensaje: str, nuevo: str) -> None:
+        en_uso["modelo"] = nuevo  # el encabezado del guion debe decir quién lo escribió
+        avisar(mensaje)
 
     avisar("Gemini está resolviendo el ejercicio y escribiendo el guion (30–90 s)…")
-    respuesta = pedir_json(cliente, modelo, sistema, base, GuionIA, "high")
+    respuesta = pedir_json(cliente, modelo, sistema, base, GuionIA, "high", avisar=al_cambiar_de_modelo)
     rondas = 0
     revisado = False
     while True:
@@ -668,7 +705,7 @@ def redactar(
                 avisar("Gemini revisa la matemática como profesor revisor…")
                 guion_json = json.dumps(respuesta.model_dump(), ensure_ascii=False)
                 revision = pedir_json(cliente, modelo, revisor, [*base, f"GUION A REVISAR (JSON):\n{guion_json}"],
-                                  RevisionIA, "high")  # fmt: skip
+                                  RevisionIA, "low", avisar=al_cambiar_de_modelo)  # fmt: skip
                 revisado = True
                 if not revision.aprobado:
                     problemas += [f"revisor: {p}" for p in revision.problemas] or [
@@ -688,7 +725,8 @@ def redactar(
                 f"RESPUESTA ANTERIOR (JSON):\n{anterior}",
             ]
         )
-        respuesta = pedir_json(cliente, modelo, sistema, [*base, pedido], GuionIA, "high")
+        respuesta = pedir_json(cliente, modelo, sistema, [*base, pedido], GuionIA, "high",
+                               avisar=al_cambiar_de_modelo)
 
     if guion is None:
         detalle = "\n".join(f"  • {p}" for p in problemas[:8])
@@ -697,7 +735,7 @@ def redactar(
 
     destino = _nombre_archivo(guion.titulo, nombre, forzar)
     cabecera = [
-        f"Guion redactado con IA ({modelo}) el {dt.date.today():%d-%m-%Y} a partir de: {entrada.origen}",
+        f"Guion redactado con IA ({en_uso['modelo']}) el {dt.date.today():%d-%m-%Y} a partir de: {entrada.origen}",
         "REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.",
     ]
     if sin_latex:

@@ -15,9 +15,18 @@ from .entorno import raiz_proyecto
 from .errores import ErrorMotor
 
 MODELO_POR_DEFECTO = "gemini-3.8-flash"  # Flash estable con nivel gratuito
+MODELOS_GRATUITOS = (
+    # Google lleva la cuenta diaria por modelo, no por clave: si uno se agota, el siguiente
+    # todavía tiene cupo propio. Son los escalones de respaldo del nivel gratuito.
+    "gemini-3.8-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+)
 NOMBRES_CLAVE = ("GEMINI_API_KEY", "GOOGLE_API_KEY")
 URL_CLAVE = "https://aistudio.google.com/apikey"
 AYUDA_CLAVE = f"1) Créala gratis en {URL_CLAVE}   2) Guárdala con:  ./tpi clave"
+URL_CUOTA = "https://ai.dev/rate-limit"
 
 
 def archivo_env() -> Path:
@@ -62,17 +71,74 @@ def guardar_clave(clave: str) -> Path:
     return ruta
 
 
-def cliente(clave: str | None = None) -> Any:
+def cliente(clave: str | None = None, *, con_reintentos: bool = True) -> Any:
+    """Conexión con Gemini. Sin reintentos para sondear cupos: ahí reintentar es perder un minuto.
+
+    El cliente hay que dejarlo en una variable: si se libera, cierra su conexión y el siguiente
+    pedido falla con «Cannot send a request, as the client has been closed».
+    """
     from google import genai
     from google.genai import types
 
-    reintentos = types.HttpRetryOptions(
-        attempts=3, initial_delay=2.0, max_delay=20.0, http_status_codes=[429, 500, 502, 503, 504]
+    reintentos = (
+        types.HttpRetryOptions(
+            attempts=3, initial_delay=2.0, max_delay=20.0, http_status_codes=[429, 500, 502, 503, 504]
+        )
+        if con_reintentos
+        else None
     )
     return genai.Client(
         api_key=clave or clave_obligatoria(),
         http_options=types.HttpOptions(timeout=15 * 60 * 1000, retry_options=reintentos),  # ms
     )
+
+
+def cadena_desde(modelo: str) -> list[str]:
+    """El modelo pedido primero y después los demás gratuitos, sin repetir ninguno."""
+    return [modelo, *[m for m in MODELOS_GRATUITOS if m != modelo]]
+
+
+def es_cuota_agotada(error: Exception) -> bool:
+    """Si Gemini contestó 429: esperando se levanta, pero cambiando de modelo se levanta ya."""
+    from google.genai import errors
+
+    return isinstance(error, errors.APIError) and getattr(error, "code", None) == 429
+
+
+def saturado(error: Exception) -> bool:
+    """5xx: ese modelo está saturado o caído ahora. Otro gratuito puede estar mejor."""
+    from google.genai import errors
+
+    codigo = getattr(error, "code", None) if isinstance(error, errors.APIError) else None
+    return bool(codigo) and codigo >= 500
+
+
+def vale_probar_otro_modelo(error: Exception) -> bool:
+    """Cuota agotada o saturación son problemas de ESE modelo; un 400 lo sería de todos."""
+    return es_cuota_agotada(error) or saturado(error)
+
+
+def estado_de_cuota(conexion: Any, modelos: list[str]) -> list[tuple[str, str]]:
+    """(modelo, estado) con una pregunta de dos palabras por modelo."""
+    from google.genai import types
+
+    config = types.GenerateContentConfig(
+        max_output_tokens=16, thinking_config=types.ThinkingConfig(thinking_level="low")
+    )
+    estados: list[tuple[str, str]] = []
+    for modelo in modelos:
+        try:
+            conexion.models.generate_content(model=modelo, contents="Responde solo: OK", config=config)
+        except Exception as e:  # noqa: BLE001 - esto es un diagnóstico, no interrumpe nada
+            if es_cuota_agotada(e):
+                estados.append((modelo, "sin cupo"))
+            elif saturado(e):
+                estados.append((modelo, "saturado"))
+            else:
+                estados.append((modelo, "bloqueado"))
+        else:
+            estados.append((modelo, "ok"))
+    return estados
 
 
 def explicar_error(error: Exception, modelo: str) -> ErrorMotor:
