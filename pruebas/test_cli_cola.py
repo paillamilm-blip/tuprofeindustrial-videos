@@ -60,6 +60,15 @@ class CliColaTest(unittest.TestCase):
         self.assertEqual(resultado.returncode, 1)
         self.assertIn("Ya hay un lote en curso", resultado.stdout)
 
+    def test_reanudar_con_cola_dañada_avisa_y_sale_bien(self) -> None:
+        carpeta = Path(self.tmp.name) / "salida" / ".cola"
+        carpeta.mkdir(parents=True, exist_ok=True)
+        (carpeta / "trabajos.json").write_text("{esto no es json", encoding="utf-8")
+        resultado = self._correr("lote", "--reanudar")
+        self.assertEqual(resultado.returncode, 0, resultado.stderr)
+        self.assertIn("dañada", resultado.stdout)
+        self.assertIn("No hay videos pendientes", resultado.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
