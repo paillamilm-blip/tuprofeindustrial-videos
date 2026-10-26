@@ -28,14 +28,15 @@ FAMILIAS: dict[str, dict[int, str]] = {
     "Comic Neue": {400: "ComicNeue-Regular.ttf", 700: "ComicNeue-Bold.ttf"},
     "Caveat": {400: "Caveat-Regular.ttf", 700: "Caveat-Bold.ttf"},
     "Patrick Hand": {400: "PatrickHand-Regular.ttf"},
+    "Shadows Into Light Two": {400: "ShadowsIntoLightTwo-Regular.ttf"},
     "Bangers": {400: "Bangers-Regular.ttf"},
     "Luckiest Guy": {400: "LuckiestGuy-Regular.ttf"},
     "Cinzel": {400: "Cinzel-Regular.ttf"},
 }
 
 # Opciones que ofrece el panel para cada uso
-PARA_TITULOS = ("Comic Neue", "Montserrat", "Caveat", "Patrick Hand")
-PARA_TEXTO = ("Comic Neue", "Montserrat", "Patrick Hand", "Caveat")
+PARA_TITULOS = ("Comic Neue", "Montserrat", "Caveat", "Patrick Hand", "Shadows Into Light Two")
+PARA_TEXTO = ("Comic Neue", "Montserrat", "Patrick Hand", "Caveat", "Shadows Into Light Two")
 # Nombre como lo busca FFmpeg/libass: familia + estilo en el nombre ("Montserrat Black")
 PARA_SUBTITULOS = ("Bangers", "Luckiest Guy", "Montserrat Black", "Comic Neue")
 
