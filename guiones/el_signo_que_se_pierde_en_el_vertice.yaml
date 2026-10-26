@@ -1,0 +1,57 @@
+# Guion escrito a mano (sin IA) el 26-10-2026 · error típico: se pierde el signo de «a» en el vértice
+# Crear el video:  ./tpi crear guiones/el_signo_que_se_pierde_en_el_vertice.yaml
+
+titulo: "El signo que se pierde en el vértice"
+materia: matematica
+nivel: "3° medio"
+
+gancho:
+  texto: "¿A qué precio ganas más?"
+  voz: "¿A qué precio ganas más? Un signo perdido lo arruina."
+  emoji: "🤯"
+  tex: 'U = -2x^2 + 24x - 40'
+
+enunciado:
+  texto: "La ganancia de un negocio, en miles de pesos, es U(x) = -2x² + 24x - 40, donde x es el precio de venta en miles de pesos. ¿Qué precio da la ganancia máxima?"
+  voz: "La ganancia depende del precio, y la función abre hacia abajo. Nos piden el precio que hace máxima la ganancia."
+  destacar: ["ganancia máxima"]
+
+pasos:
+  - nota: "El error clásico"
+    tex: 'x = \dfrac{-24}{2} = -12'
+    voz: "Muchos hacen menos 24 sobre 2 y les da menos 12. Se les perdió la a de adelante, y un precio negativo no existe."
+    emoji: "😱"
+    error: true
+
+  - nota: "Acá vive la a"
+    tex: 'x = \dfrac{-b}{2a} = \dfrac{-24}{2 \cdot (-2)}'
+    voz: "La fórmula es menos b sobre dos a. Con a igual a menos dos, el denominador no es dos: es menos cuatro."
+
+  - nota: "Dividir con signos"
+    tex: 'x = \dfrac{-24}{-4} = 6'
+    voz: "Menos 24 dividido menos cuatro da positivo seis. Menos por menos, más."
+    destacar: ['6']
+
+  - nota: "La ganancia máxima"
+    tex: 'U(6) = -2 \cdot 36 + 24 \cdot 6 - 40 = 32'
+    voz: "Reemplazamos seis: menos 72 más 144 menos 40, y quedan 32."
+    visual:
+      tipo: grafico_funcion
+      funcion: '-2x^2 + 24x - 40'
+      variable: x
+      rango: [0, 12]
+      eje_x: "precio (miles $)"
+      eje_y: "ganancia (miles $)"
+
+resultado:
+  tex: 'x = 6 \ \Rightarrow \ U = 32'
+  voz: "A seis mil pesos el precio, la ganancia máxima es de 32 mil pesos."
+  emoji: "✅"
+
+verificacion:
+  texto: "Las raíces son 2 y 10: el vértice cae justo en el medio."
+  voz: "Tiene sentido. A dos mil y a diez mil la ganancia es cero. El máximo cae en el medio, justo en seis."
+
+reto:
+  texto: "¿Y si U = -x² + 10x - 21?"
+  voz: "Ahora tú, con la misma trampa: ¿a qué precio se gana más?"
