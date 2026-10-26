@@ -15,6 +15,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from .errores import ErrorMotor
+from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 from .tex import llaves_balanceadas
 from .visuales import SEGUNDOS_VISUAL, analizar_funcion, normalizar_vectores
 
@@ -204,10 +205,12 @@ class Guion(_Base):
     titulo: str = Field(min_length=1)
     materia: Literal["matematica", "fisica", "ingenieria"]
     nivel: str | None = None
+    molde: str | None = None  # estructura narrativa (ver moldes.py); opcional
     tema: str | None = None  # estilo visual de este video (ver ./tpi temas)
     voz: str | None = None
     velocidad: str | None = None
     gancho: Gancho
+    gancho_variantes: list[Gancho] = []  # alternativas al gancho elegido; no lo repiten
     enunciado: Enunciado
     datos: list[Dato] = []
     pasos: list[Paso] = Field(min_length=1)
@@ -223,6 +226,18 @@ class Guion(_Base):
             return valor
         limpio = sin_tildes(valor).strip().lower()
         return limpio[:-1] if limpio.endswith("s") else limpio  # "matemáticas" → "matematica"
+
+    @field_validator("molde", mode="before")
+    @classmethod
+    def _normalizar_molde(cls, valor: Any) -> Any:
+        if valor in (None, ""):
+            return None
+        clave = normalizar_molde(str(valor))
+        if not clave:
+            raise ValueError(
+                f"«{valor}» no es un molde conocido; usa {opciones_de_moldes()} o quita el campo"
+            )
+        return clave
 
     @field_validator("velocidad")
     @classmethod
@@ -279,6 +294,38 @@ def emojis_del_guion(guion: Guion) -> list[tuple[str, str]]:
         if bloque is not None:
             usados.append((nombre, bloque.emoji))
     return [(donde, valor) for donde, valor in usados if valor]
+
+
+def _hay_correcto_despues(pasos: list[Paso], desde: int) -> bool:
+    return any(not p.error for p in pasos[desde + 1 :])
+
+
+def problemas_de_molde(guion: Guion) -> list[str]:
+    """Las reglas objetivas del molde: avisos corregibles, nunca un bloqueo del render."""
+    if not guion.molde:
+        return []
+    molde = MOLDES.get(guion.molde)
+    if molde is None:
+        return [f"«{guion.molde}» no es un molde conocido; usa {opciones_de_moldes()}."]
+    errores = [i for i, p in enumerate(guion.pasos) if p.error]
+    if molde.regla == "un_error":
+        if not errores:
+            return [f"«{molde.nombre}» necesita al menos un paso con «error: true»."]
+        if not _hay_correcto_despues(guion.pasos, errores[0]):
+            return [f"«{molde.nombre}» necesita un paso correcto después del error."]
+    elif molde.regla == "tres_errores":
+        if len(errores) != 3:
+            return [
+                f"«{molde.nombre}» necesita exactamente 3 pasos con «error: true» y este guion tiene "
+                f"{len(errores)}."
+            ]
+        if not _hay_correcto_despues(guion.pasos, errores[-1]):
+            return [f"«{molde.nombre}» necesita un paso correcto después de los 3 errores."]
+    elif molde.regla == "reto" and guion.reto is None:
+        return [f"«{molde.nombre}» necesita el bloque «reto:» al final."]
+    elif molde.regla == "verificacion" and guion.verificacion is None:
+        return [f"«{molde.nombre}» necesita el bloque «verificacion:»."]
+    return []
 
 
 def _ubicacion(loc: tuple[Any, ...]) -> str:
@@ -410,7 +457,11 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
     lineas = [f"# {c}" if c else "#" for c in cabecera] + ([""] if cabecera else [])
     lineas.append(f"titulo: {_dobles(guion['titulo'])}")
     lineas.append(f"materia: {guion['materia']}")
-    for clave in ("nivel", "tema", "voz", "velocidad"):
+    if guion.get("nivel"):
+        lineas.append(f"nivel: {_dobles(guion['nivel'])}")
+    if guion.get("molde"):
+        lineas.append(f"molde: {guion['molde']}")
+    for clave in ("tema", "voz", "velocidad"):
         if guion.get(clave):
             lineas.append(f"{clave}: {_dobles(guion[clave])}")
 
@@ -426,6 +477,17 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
             lineas.append(f"  emoji: {_dobles(b['emoji'])}")
 
     bloque("gancho", guion["gancho"])
+    if guion.get("gancho_variantes"):
+        lineas += ["", "gancho_variantes:"]
+        for v in guion["gancho_variantes"]:
+            lineas.append(f"  - texto: {_dobles(v['texto'])}")
+            for clave in ("voz", "emoji"):
+                if v.get(clave):
+                    lineas.append(f"    {clave}: {_dobles(v[clave])}")
+            if v.get("tex"):
+                lineas.append(f"    tex: {_simples(v['tex'])}")
+            if v.get("destacar"):
+                lineas.append(f"    destacar: [{', '.join(_dobles(d) for d in v['destacar'])}]")
     bloque("enunciado", guion["enunciado"])
     if guion.get("datos"):
         lineas += ["", "datos:"]

@@ -29,6 +29,7 @@ import subprocess
 import sys
 import traceback
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 from rich.table import Table
@@ -327,6 +328,9 @@ def _producir(
     titulo: str | None = None,
     segundos: int | None = None,
     dificultad: str | None = None,
+    molde: str | None = None,
+    gancho_variante: dict | None = None,
+    gancho_variantes: list[dict] | None = None,
 ) -> int:
     """Guion revisado + video + kit de publicación en un solo paso, y lo muestra."""
     from .ia import MODELO_POR_DEFECTO
@@ -335,6 +339,15 @@ def _producir(
 
     json_activo = _modo_json(args)
     proveedor, voz = _dividir_voz(getattr(args, "voz", None))
+    molde = molde if molde is not None else getattr(args, "molde", None)
+    variante = (
+        gancho_variante if gancho_variante is not None else _json_de(getattr(args, "gancho_json", None))
+    )
+    variantes = (
+        gancho_variantes
+        if gancho_variantes is not None
+        else _json_de(getattr(args, "ganchos_json", None))
+    )
 
     def avisar(mensaje: str) -> None:
         if json_activo:
@@ -366,6 +379,9 @@ def _producir(
         titulo=titulo if titulo is not None else getattr(args, "titulo", None),
         segundos=prometido,
         dificultad=dificultad if dificultad is not None else getattr(args, "dificultad", None),
+        molde=molde,
+        gancho_variante=variante,
+        gancho_variantes=variantes,
         avisar=avisar,
         progreso=progreso if json_activo else None,
     )
@@ -378,6 +394,7 @@ def _producir(
             portada=resultado.portada, publicacion=resultado.publicacion,
             supuestos=resultado.redaccion.supuestos, pendientes=resultado.redaccion.pendientes,
             revisado_por_ia=resultado.redaccion.revisado_por_ia,
+            molde=resultado.guion.molde, gancho=resultado.guion.gancho.texto,
         )  # fmt: skip
     rutas = {"guion": resultado.ruta_guion, "video": resultado.video, "portada": resultado.portada,
              "kit": resultado.publicacion}  # fmt: skip
@@ -422,13 +439,16 @@ def cmd_producir(args: argparse.Namespace) -> int:
     return _producir(args, " ".join(args.enunciado))
 
 
-def _mostrar_ideas(ideas: list, tema: str | None) -> None:
+def _mostrar_ideas(ideas: list, tema: str | None, mostrar_ganchos: bool = False) -> None:
     from .ideas import ANGULOS, DIFICULTADES
 
     consola.print(f"\n[bold]🎬 3 ideas[/]{' para «' + tema + '»' if tema else ''}:\n")
     for n, idea in enumerate(ideas, 1):
         consola.print(f" [bold cyan]{n}[/]  [bold]{idea.emoji} {ANGULOS[idea.angulo]}[/] · {idea.titulo}")
         consola.print(f"    [bold]Gancho:[/] {idea.gancho}")
+        if mostrar_ganchos:
+            for g in idea.ganchos:
+                consola.print(f"      [dim]· {g.estilo}: «{g.texto}»[/]")
         consola.print(f"    [bold]El ejercicio:[/] {idea.enunciado}")
         nivel_dif = DIFICULTADES.get(idea.dificultad, "")
         consola.print(
@@ -470,7 +490,7 @@ def cmd_ideas(args: argparse.Namespace) -> int:
             if eleccion is None:
                 return 0
         else:
-            _mostrar_ideas(ideas, tema)
+            _mostrar_ideas(ideas, tema, mostrar_ganchos=args.ganchos)
             if args.sin_video:
                 return 0
         if eleccion is None:
@@ -505,7 +525,89 @@ def cmd_ideas(args: argparse.Namespace) -> int:
             titulo=elegida.titulo,
             segundos=elegida.segundos,
             dificultad=args.dificultad or elegida.dificultad or None,
+            molde=elegida.molde or None,
+            gancho_variante=elegida.ganchos[0].model_dump() if elegida.ganchos else None,
+            gancho_variantes=[g.model_dump() for g in elegida.ganchos] or None,
         )
+
+
+def _json_de(valor: str | None) -> Any:
+    if not valor:
+        return None
+    try:
+        return json.loads(valor)
+    except json.JSONDecodeError as e:
+        raise ErrorMotor("No entendí el JSON que llegó del panel.", ayuda=f"JSON inválido: {e}") from e
+
+
+def _mostrar_ganchos(manifiesto: dict, ruta_guion: Path | None) -> None:
+    clips = manifiesto["clips"]
+    consola.print(f"\n[bold]🎣 Ganchos de «{manifiesto['titulo']}»[/] · {len(clips)} clip(s)\n")
+    for clip in clips:
+        consola.print(
+            f" [bold cyan]{clip['numero']}[/]  [bold]{clip['texto']}[/]  [dim]({clip['estilo']})[/]"
+        )
+        consola.print(
+            f"    [dim]{clip['segundos']} s · {_ruta_amigable(Path(clip['archivo']))}[/]"
+        )
+    if ruta_guion:
+        consola.print(
+            f"\n   Para dejar uno fijo: [bold]./tpi ganchos {ruta_guion.name} --elegir N[/]"
+            f"\n   Para ver el video con ese gancho: [bold]./tpi crear {ruta_guion.name} --borrador[/]"
+        )
+
+
+def cmd_ganchos(args: argparse.Namespace) -> int:
+    """Renderiza los clips de las variantes o cambia el gancho de un guion sin renderizar."""
+    from .ganchos import elegir_gancho, idea_desde_guion, renderizar_ganchos
+    from .ideas import Idea
+
+    json_activo = _modo_json(args)
+    if args.elegir is not None:
+        if not args.guion:
+            raise ErrorMotor(
+                "Para --elegir necesito el guion.",
+                ayuda="Ej. ./tpi ganchos guiones/x.yaml --elegir 2",
+            )
+        ruta = elegir_gancho(args.guion, args.elegir)
+        if json_activo:
+            _emitir(etapa="resultado", avance=1.0, guion=ruta, elegido=args.elegir)
+        else:
+            consola.print(f"[green]✅ Gancho {args.elegir} guardado en {_ruta_amigable(ruta)}.[/]")
+            consola.print("   El video se recrea con: ./tpi crear " + _ruta_amigable(ruta) + " --borrador")
+        return 0
+
+    if args.idea_json:
+        datos = _json_de(args.idea_json)
+        idea = Idea.model_validate(datos.get("idea", datos))
+        ruta_guion = None
+    elif args.guion:
+        from .guion import cargar_guion
+
+        ruta_guion = Path(args.guion)
+        idea = idea_desde_guion(cargar_guion(ruta_guion))
+    else:
+        raise ErrorMotor(
+            "Dime qué ganchos probar.",
+            ayuda="Ej. ./tpi ganchos guiones/x.yaml --sin-voz   (o usa «Probar ganchos» en el panel)",
+        )
+
+    if not json_activo:
+        consola.print(
+            f"\n[bold]🎣 Probando {len(idea.ganchos)} gancho(s)[/] en 540×960, sin subtítulos.\n"
+        )
+    manifiesto = renderizar_ganchos(
+        idea,
+        calidad="borrador",
+        sin_voz=args.sin_voz,
+        progreso=_progreso_json if json_activo else None,
+    )
+    if json_activo:
+        _emitir(
+            etapa="resultado", avance=1.0, titulo=manifiesto["titulo"], clips=manifiesto["clips"]
+        )
+    _mostrar_ganchos(manifiesto, ruta_guion)
+    return 0
 
 
 def _mostrar_lote(items: list, tema: str | None) -> None:
@@ -772,6 +874,8 @@ def cmd_voces(args: argparse.Namespace) -> int:
 
 
 def construir_parser() -> argparse.ArgumentParser:
+    from .moldes import MOLDES
+
     p = argparse.ArgumentParser(
         prog="tpi",
         description="Motor de video de Tu Profe Industrial: guion YAML → video vertical 9:16 con voz y subtítulos.",
@@ -869,6 +973,7 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument(
         "--sin-revision", action="store_true", help="no pedir la segunda revisión a la IA (más rápido)"
     )
+    s.add_argument("--ganchos", action="store_true", help="lista las 3–5 variantes de gancho de cada idea")
     s.add_argument("--borrador", action="store_true", help="crear un borrador rápido en vez del video final")
     s.add_argument("--estilo", help="estilo visual del video, ej. pizarra_nocturna (ver ./tpi temas)")
     s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
@@ -898,6 +1003,11 @@ def construir_parser() -> argparse.ArgumentParser:
         help="gancho de la idea elegida: el guion lo mantiene en vez de escribir otro (lo usa el panel)",
     )
     s.add_argument(
+        "--molde", choices=list(MOLDES), help="molde narrativo del guion (ver ./tpi ideas)"
+    )
+    s.add_argument("--gancho-json", help=argparse.SUPPRESS)  # la variante elegida, desde el panel
+    s.add_argument("--ganchos-json", help=argparse.SUPPRESS)  # todas las variantes, desde el panel
+    s.add_argument(
         "--titulo", help="título de la idea elegida, para que el guion siga esa línea (lo usa el panel)"
     )
     s.add_argument(
@@ -926,6 +1036,17 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_producir)
+
+    s = sub.add_parser(
+        "ganchos",
+        help="prueba clips cortos de cada gancho y elige el mejor antes del video completo",
+    )
+    s.add_argument("guion", nargs="?", help="el .yaml del guion (opcional si usas --idea-json)")
+    s.add_argument("--idea-json", help=argparse.SUPPRESS)  # la idea completa, desde el panel
+    s.add_argument("--elegir", type=int, help="deja ese gancho en el guion sin renderizar")
+    s.add_argument("--sin-voz", action="store_true", help="clips sin voz (más rápidos)")
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)
+    s.set_defaults(func=cmd_ganchos)
 
     s = sub.add_parser(
         "lote",

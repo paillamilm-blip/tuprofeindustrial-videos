@@ -76,6 +76,7 @@ class OpcionesEscena:
     linea_de_tiempo: Path
     # progreso(bloque_actual, total_bloques, seccion): para barras de progreso (panel)
     progreso: Callable[[int, int, str], None] | None = None
+    solo_gancho: bool = False  # laboratorio de ganchos: cabecera + gancho, nada más
 
 
 @dataclass
@@ -208,6 +209,13 @@ class VideoEjercicio(VoiceoverScene):
         self.set_speech_service(servicio, create_subcaption=False)
         self.fondo = c.fondo_tema(self.tema)
         self.add(self.fondo)
+
+        if self.op.solo_gancho:
+            self._gancho()
+            # El bloque ya dura lo que la voz (también la de silencio, que usa la duración estimada).
+            self.wait(0.4)
+            self._guardar_linea_de_tiempo()
+            return
 
         self._gancho()
         self._enunciado()

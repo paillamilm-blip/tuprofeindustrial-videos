@@ -26,7 +26,8 @@ from . import ia
 from .emojis import lista_para_ia, normalizar_para_ia, quitar_emojis
 from .entorno import PLANTILLAS_DIR, raiz_proyecto
 from .errores import ErrorMotor
-from .guion import Guion, a_yaml, cargar_guion, explicar_errores, sin_tildes
+from .guion import Gancho, Guion, a_yaml, cargar_guion, explicar_errores, sin_tildes
+from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 
 RONDAS_DE_CORRECCION = 2
 MARGEN_DE_DURACION = 8.0  # s: «≈45 s» puede llegar a 53 s y sigue siendo lo prometido
@@ -350,6 +351,52 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
     return guion
 
 
+def _variante_limpia(v: dict[str, Any]) -> dict[str, Any] | None:
+    # Las ideas y los clips del panel traen metadatos (estilo, archivo, segundos) que el guion no guarda.
+    datos = {clave: v[clave] for clave in ("texto", "voz", "tex", "emoji", "destacar") if v.get(clave)}
+    try:
+        g = Gancho.model_validate(datos)
+    except ValidationError:
+        return None
+    limpio: dict[str, Any] = {"texto": g.texto}
+    if g.voz:
+        limpio["voz"] = g.voz
+    if g.tex:
+        limpio["tex"] = g.tex
+    if g.emoji:
+        limpio["emoji"] = g.emoji
+    if g.destacar:
+        limpio["destacar"] = g.destacar
+    return limpio
+
+
+def _aplicar_eleccion(
+    datos: dict[str, Any],
+    molde: str | None,
+    gancho_variante: dict[str, Any] | None,
+    gancho_variantes: list[dict[str, Any]] | None,
+) -> dict[str, Any]:
+    """El gancho elegido manda sobre lo que escribió el modelo; las alternativas quedan sin repetirlo."""
+    if molde:
+        datos["molde"] = molde
+    elegido = _variante_limpia(gancho_variante) if gancho_variante else None
+    if elegido:
+        gancho = datos.setdefault("gancho", {})
+        gancho["texto"] = elegido["texto"]
+        for clave in ("voz", "tex", "emoji", "destacar"):
+            if elegido.get(clave):
+                gancho[clave] = elegido[clave]
+    texto_elegido = (elegido or datos.get("gancho") or {}).get("texto", "").strip()
+    clave_elegida = sin_tildes(texto_elegido).casefold()
+    alternativas: list[dict[str, Any]] = []
+    for v in gancho_variantes or []:
+        limpio = _variante_limpia(v)
+        if limpio and sin_tildes(limpio["texto"]).casefold() != clave_elegida:
+            alternativas.append(limpio)
+    datos["gancho_variantes"] = alternativas[:5]
+    return datos
+
+
 # ------------------------------------------------------------------------------------------
 # Revisiones automáticas
 # ------------------------------------------------------------------------------------------
@@ -539,11 +586,21 @@ def redactar(
     revisar_con_ia: bool = True,
     pistas: list[str] | None = None,
     segundos_prometidos: int | None = None,
+    molde: str | None = None,
+    gancho_variante: dict[str, Any] | None = None,
+    gancho_variantes: list[dict[str, Any]] | None = None,
     avisar=lambda mensaje: None,
 ) -> ResultadoRedaccion:
     entrada = leer_entrada(valor)
     cliente = ia.cliente()
     sistema = _sistema()
+    clave_molde = normalizar_molde(molde) if molde else ""
+    if molde and not clave_molde:
+        raise ErrorMotor(
+            f"El molde «{molde}» no existe.",
+            ayuda=f"Opciones: {opciones_de_moldes()}.",
+        )
+    molde = clave_molde or None
     if segundos_prometidos:
         # La tarjeta de la idea ya le mostró esa duración a la persona: es un compromiso, no un deseo.
         pistas = [
@@ -553,6 +610,22 @@ def redactar(
             "para todo el guion (gancho, enunciado, pasos, resultado y cierre): 3 o 4 pasos cortos y "
             "frases de una línea.",
         ]
+    pistas = list(pistas or [])
+    if molde:
+        m = MOLDES[molde]
+        pistas.append(f"MOLDE «{m.nombre}»: {m.estructura}. {m.pista}")
+    if gancho_variante:
+        texto = str(gancho_variante.get("texto") or "").strip()
+        if texto:
+            emoji = str(gancho_variante.get("emoji") or "").strip()
+            tex = str(gancho_variante.get("tex") or "").strip()
+            pistas.append(
+                "GANCHO ELEGIDO: usa tal cual el texto «"
+                f"{texto}»"
+                + (f", el emoji {emoji}" if emoji else "")
+                + (f" y la fórmula {tex}" if tex else "")
+                + ". Solo ajusta gancho_voz para que suene natural."
+            )
     base = _contenido_base(entrada, materia, nivel, pistas)
     revisor = (PLANTILLAS_DIR / "ia" / "revisor.md").read_text(encoding="utf-8")
     historial: list[str] = []
@@ -569,7 +642,7 @@ def redactar(
                 ayuda="Revisa el enunciado (¿está completo y se lee bien en la foto?).",
             )
         problemas: list[str] = []
-        datos = a_guion(respuesta)
+        datos = _aplicar_eleccion(a_guion(respuesta), molde, gancho_variante, gancho_variantes)
         if materia:  # lo que pide la persona manda sobre lo que deduce la IA
             datos["materia"] = materia
         if nivel:

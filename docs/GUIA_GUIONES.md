@@ -211,3 +211,38 @@ Escribe las fórmulas **siempre entre comillas simples** `'…'` (con comillas d
 | "la voz contiene un emoji" / "hay un emoji dentro del texto" | Sácalo de ahí y ponlo en el campo `emoji:` |
 | "un paso con «error: true» necesita la fórmula equivocada" | Agrega `tex:` a ese paso |
 | "el último paso es un error típico" | Agrega después un paso con la forma correcta |
+
+## 8. Moldes y ganchos alternativos (opcional)
+
+`molde:` elige una estructura probada: `mito_realidad` (lo que todos creen contra lo que es),
+`tres_errores` (tres formas equivocadas y después la correcta), `pov` (la escena desde los ojos del
+estudiante), `reto` (el ejercicio termina en un desafío para comentar) o `nadie_te_enseno` (el atajo que
+nunca explicaron). Según el molde, `./tpi revisar` pide los pasos de error o los bloques que faltan:
+
+| Molde | Qué exige el guion |
+|---|---|
+| `mito_realidad` | Al menos un paso con `error: true` y un paso correcto después |
+| `tres_errores` | Exactamente 3 pasos con `error: true` y uno correcto después |
+| `reto` | El bloque `reto:` al final |
+| `pov` | El bloque `verificacion:` |
+| `nadie_te_enseno` | Nada extra: la estructura va en el orden de los pasos |
+
+`gancho_variantes:` guarda los ganchos que no se usaron, para probarlos como clips cortos antes de
+grabar el video completo:
+
+```yaml
+molde: mito_realidad
+
+gancho_variantes:
+  - texto: "El error que casi todos cometen"
+    voz: "El error que casi todos cometen."
+    emoji: "⚠️"
+  - texto: "3 y 4 no dan 7"
+    voz: "Tres y cuatro no dan siete."
+    tex: '3 + 4 \neq 7'
+```
+
+Con `./tpi ganchos GUION.yaml` sale un clip por variante en `salida/ganchos/`; con `--elegir 2` el
+gancho 2 pasa a ser el del guion y los otros quedan como alternativas. Sin estos campos el guion
+funciona igual que antes. Ejemplo completo: `guiones/ejemplos/moldes_virales.yaml`.
+

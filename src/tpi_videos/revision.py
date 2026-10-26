@@ -230,6 +230,11 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
         avisos.append(Aviso("sugerencia", "pasos", f"hay {len(errores)} errores típicos; con uno basta para "
                             "llamar la atención."))  # fmt: skip
 
+    from .guion import problemas_de_molde
+
+    for problema in problemas_de_molde(guion):
+        avisos.append(Aviso("advertencia", "molde", problema))
+
     return Revision(
         segundos=segundos, palabras=palabras, bloques=len(voces), avisos=avisos + _avisos_de_visuales(guion)
     )

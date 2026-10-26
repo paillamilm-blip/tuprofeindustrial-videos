@@ -26,23 +26,40 @@ Tu tarea: proponer 3 IDEAS de video sobre el TEMA que te indican. No resuelves e
 - El motor SABE dibujar tres cosas en el pie de la hoja: el gráfico de una función, un diagrama de fuerzas sobre un bloque (con plano inclinado) o una bola, y un circuito de 2 a 4 resistencias. Un ejercicio que se entienda mejor con uno de esos dibujos es buen material.
 - Lo que NO sirve: lo que dependa de una imagen que no esté en el enunciado. No pidas "según el gráfico de la figura", "observa la figura 3" ni geometría con ángulos dibujados: todos los datos tienen que estar escritos en el enunciado.
 
-## 3. El gancho y el título
-- gancho: la pregunta grande de los primeros 2 segundos, la que frena el pulgar. Máximo 10 palabras, con el número clave en cifras.
-- Crea una brecha de curiosidad: una pregunta cuya respuesta "obvia" es incorrecta, o un número que contradice lo que uno imagina. NUNCA reveles ni insinúes la respuesta en el gancho.
-- Nunca "Hola", "En este video" ni "Hoy veremos". Pregunta, reta o sorprende.
+## 3. El molde narrativo (la estructura del video)
+- Cada idea usa un MOLDE distinto del catálogo. Las 3 ideas de una respuesta no repiten molde.
+- Si el tema no da para un molde, no lo fuerces: elige otro del catálogo. "reto" siempre está disponible.
+- El molde decide los beats; el enunciado y el gancho se escriben para ese molde.
+
+{{MOLDES}}
+
+## 4. Los ganchos (3 a 5 por idea)
+- Cada idea trae de 3 a 5 ganchos distintos, no cinco formas de la misma pregunta.
+- Campos de cada gancho: texto, estilo, emoji y, si aporta, tex y voz.
+- Estilos: "dolor" (lo que le cuesta al estudiante), "curiosidad" (brecha de información),
+  "error" (la equivocación que casi todos cometen), "reto" (desafío con respuesta para comentar)
+  y "dato" (un número que contradice la intuición).
+- Al menos 2 estilos distintos por idea. Ningún par de ganchos dice lo mismo con otras palabras.
+- texto: máximo 10 palabras, con el número clave en cifras. Nunca revela ni insinúa la respuesta.
+- Nada de "Hola", "En este video" ni "Hoy veremos".
+- El campo "gancho" de la idea es el RECOMENDADO: copia el texto del primero de la lista.
+- tex: opcional, una fórmula corta de LaTeX sin $; si no aporta, vacío.
+- voz: opcional, el mismo gancho dicho en palabras (sin cifras ni símbolos); si falta, se usa texto.
+
+## 5. El título
 - titulo: máximo 45 caracteres, que se entienda el tema.
 
-## 4. Nivel, materia y duración
+## 6. Nivel, materia y duración
 - materia: matematica, fisica o ingenieria (la que corresponda; si te piden una materia obligatoria, úsala en las 3).
 - nivel: curso real chileno, ej. "1° medio", "3° medio", "4° medio", "técnico en electricidad", "ingeniería comercial". Es el curso al que le hablas; la dificultad del ejercicio va aparte, en su propio campo.
 - segundos: duración aproximada real del video (30 a 75). Para el alcance, más corto retiene más: apunta a 35–50 salvo que el ejercicio exija más.
 - segundos es una PROMESA, no un deseo: el motor achica el guion para respetarlo. Cuenta unos 8 s por paso hablado, más el gancho y el resultado; si el ejercicio necesita 6 pasos, promete 60–70 s en vez de 40.
 
-## 5. Emojis
+## 7. Emojis
 - Emojis permitidos (SOLO estos): {{EMOJIS}}
-- Van solo en el campo "emoji" de cada idea, NUNCA dentro de titulo, gancho, enunciado o porque.
+- Van solo en el campo "emoji" de cada idea y de cada gancho, NUNCA dentro de titulo, gancho, enunciado o porque.
 
-## 6. "porque"
-- Una frase (máximo 90 caracteres) que nombre el imán del video: el error que creen correcto, el número que no esperaban, el objeto que reconocen de su casa o taller, o la respuesta que van a querer comentar. Sin promesas engañosas.
+## 8. "porque"
+- Una frase (máximo 90 caracteres) que nombre el imán del molde y del gancho recomendado: el error que creen correcto, el número que no esperaban, el objeto que reconocen de su casa o taller, o la respuesta que van a querer comentar. Sin promesas engañosas.
 
 Recuerda: exactamente 3 ideas, en un JSON con la forma pedida. Nada más.
