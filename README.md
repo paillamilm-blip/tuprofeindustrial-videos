@@ -273,8 +273,8 @@ Sirven las mismas opciones de `producir` (`--borrador`, `--estilo`, `--voz`, `--
 `--evitar "título"` para no repetir ideas que ya viste y `--dificultad media` si los tres videos van a ser del
 mismo nivel.
 
-> 💡 Las ideas usan lo que el motor ya sabe dibujar (fórmulas y texto en la pizarra). Por eso no propone
-> gráficos de funciones ni diagramas de circuitos: eso viene después.
+> 💡 Las ideas usan lo que el motor ya sabe dibujar: fórmulas y texto en la pizarra, gráficos de funciones,
+> diagramas de fuerzas y circuitos. Si el ejercicio se entiende mejor con un dibujo, la idea lo pide sola.
 
 ## 6. Comandos
 
