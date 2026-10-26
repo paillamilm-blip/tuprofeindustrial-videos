@@ -19,13 +19,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from . import ia
 from .emojis import lista_para_ia, normalizar_para_ia, quitar_emojis
 from .entorno import PLANTILLAS_DIR
 from .errores import ErrorMotor
-from .guion import Guion
+from .guion import Gancho, Guion, sin_tildes
+from .moldes import moldes_para_ia, normalizar_molde
 from .redactor import ResultadoRedaccion, pedir_json, redactar
 
 IDEAS_PETICION = 3
@@ -56,6 +57,25 @@ DIFICULTAD_PISTA = {
     "pasa por alto, y nombra esa trampa al resolver",
 }
 
+ESTILOS_GANCHO = ("dolor", "curiosidad", "error", "reto", "dato")
+_EQUIVALENCIAS_ESTILO = {"desafio": "reto", "miedo": "dolor", "sorpresa": "dato"}
+
+
+class GanchoIdea(BaseModel):
+    """Una variante del primer segundo. El modelo es tolerante; la limpieza fuerte vive en _limpiar."""
+
+    texto: str = ""
+    estilo: str = ""
+    emoji: str = ""
+    tex: str = ""  # fórmula corta bajo el gancho
+    voz: str = ""  # si falta, se usa texto
+
+
+def _estilo(valor: str) -> str:
+    limpio = "".join(c for c in sin_tildes(valor or "").casefold() if c.isalnum())
+    limpio = _EQUIVALENCIAS_ESTILO.get(limpio, limpio)
+    return limpio if limpio in ESTILOS_GANCHO else ""
+
 
 def dificultad_normal(valor: str | None) -> str:
     """Los tres niveles que conoce el motor, venga como venga lo que escribió la IA (o la persona)."""
@@ -75,7 +95,13 @@ class Idea(BaseModel):
         description="Uno de los 5 ángulos; las 3 ideas usan ángulos DISTINTOS"
     )
     titulo: str = Field(description="Nombre corto del video, máximo 45 caracteres")
-    gancho: str = Field(description="La pregunta grande del inicio, máximo 10 palabras, con los números")
+    gancho: str = Field(default="", description="La pregunta grande del inicio, máximo 10 palabras, con los números")
+    ganchos: list[GanchoIdea] = Field(
+        default_factory=list, description="De 3 a 5 variantes del gancho, con estilos distintos"
+    )
+    molde: str = Field(
+        default="", description="Molde narrativo (ver moldes.py); las 3 ideas usan moldes DISTINTOS"
+    )
     enunciado: str = Field(
         description="El ejercicio completo, resuelto con números concretos y todos sus datos: "
         "de 60 a 260 caracteres"
@@ -91,6 +117,19 @@ class Idea(BaseModel):
     porque: str = Field(description="Una frase: por qué este video funciona en TikTok o Reels")
     segundos: int = Field(description="Duración aproximada del video, entre 30 y 75 segundos")
 
+    @field_validator("molde", mode="before")
+    @classmethod
+    def _molde(cls, valor: Any) -> str:
+        return normalizar_molde(str(valor)) if valor else ""
+
+    @model_validator(mode="after")
+    def _gancho_y_ganchos(self) -> "Idea":
+        if not self.ganchos and self.gancho.strip():
+            self.ganchos = [GanchoIdea(texto=self.gancho.strip(), estilo="curiosidad")]
+        if not self.gancho.strip() and self.ganchos:
+            self.gancho = self.ganchos[0].texto
+        return self
+
 
 class PropuestaIA(BaseModel):
     ideas: list[Idea] = Field(description="Exactamente 3 ideas", min_length=3, max_length=3)
@@ -101,12 +140,45 @@ def _texto(valor: str) -> str:
     return " ".join(quitar_emojis(valor or "").split())
 
 
+def _gancho_limpio(g: GanchoIdea) -> GanchoIdea | None:
+    texto = " ".join((g.texto or "").split())
+    if not texto or len(texto.split()) > 10 or quitar_emojis(texto) != texto:
+        return None
+    voz = " ".join((g.voz or "").split())
+    if quitar_emojis(voz) != voz:
+        return None
+    estilo = _estilo(g.estilo)
+    if not estilo:
+        return None
+    try:
+        valido = Gancho(texto=texto, voz=voz or None, tex=(g.tex or None))
+    except ValidationError:
+        return None
+    return GanchoIdea(
+        texto=texto,
+        estilo=estilo,
+        emoji=normalizar_para_ia(g.emoji) or "",
+        tex=valido.tex or "",
+        voz=valido.voz or "",
+    )
+
+
 def _idea(idea: Idea, materia: str | None, nivel: str | None, dificultad: str | None) -> Idea:
     """Lo que pide la persona manda sobre lo que deduce la IA; nada de emojis sueltos en los textos."""
+    limpios = [g for g in (_gancho_limpio(x) for x in idea.ganchos) if g is not None]
+    unicos: list[GanchoIdea] = []
+    vistos: set[str] = set()
+    for g in limpios:
+        clave = sin_tildes(g.texto).casefold()
+        if clave not in vistos:
+            vistos.add(clave)
+            unicos.append(g)
     return idea.model_copy(
         update={
             "titulo": _texto(idea.titulo)[:45],
-            "gancho": _texto(idea.gancho),
+            "gancho": _texto(idea.gancho) or (unicos[0].texto if unicos else ""),
+            "ganchos": unicos,
+            "molde": normalizar_molde(idea.molde),
             "enunciado": _texto(idea.enunciado),
             "porque": _texto(idea.porque),
             "materia": materia or idea.materia,
@@ -124,12 +196,18 @@ def _limpiar(
     """Ideas normales, sin repetidas y con un enunciado que sí se puede resolver."""
     limpia: list[Idea] = []
     vistos: set[str] = set()
+    moldes_vistos: set[str] = set()
     for idea in ideas:
         nueva = _idea(idea, materia, nivel, dificultad)
         clave = nueva.enunciado.casefold().replace(" ", "")[:80]
         if len(nueva.enunciado) < 30 or clave in vistos:
             continue
+        if len(nueva.ganchos) < 3 or len({g.estilo for g in nueva.ganchos}) < 2:
+            continue
+        if not nueva.molde or nueva.molde in moldes_vistos:
+            continue
         vistos.add(clave)
+        moldes_vistos.add(nueva.molde)
         limpia.append(nueva)
     return limpia
 
@@ -148,6 +226,7 @@ def proponer_ideas(
         (PLANTILLAS_DIR / "ia" / "ideas.md")
         .read_text(encoding="utf-8")
         .replace("{{EMOJIS}}", lista_para_ia())
+        .replace("{{MOLDES}}", moldes_para_ia())
     )
     contenido: list[Any] = [
         f"TEMA: {tema.strip()}" if tema and tema.strip() else "TEMA: elige tú los temas.",
@@ -221,6 +300,9 @@ def producir(
     titulo: str | None = None,
     segundos: int | None = None,
     dificultad: str | None = None,
+    molde: str | None = None,
+    gancho_variante: dict[str, Any] | None = None,
+    gancho_variantes: list[dict[str, Any]] | None = None,
     avisar: Callable[[str], None] = lambda mensaje: None,
     progreso: Callable[[str, float, str], None] | None = None,
 ) -> ResultadoProduccion:
@@ -236,6 +318,8 @@ def producir(
     from .render import crear_video
 
     pistas = []
+    if gancho_variante and str(gancho_variante.get("texto") or "").strip():
+        gancho = str(gancho_variante["texto"]).strip()
     if gancho:
         pistas.append(
             f"GANCHO YA ELEGIDO para este video: «{gancho}». Úsalo tal cual (o casi) en gancho_texto "
@@ -260,6 +344,9 @@ def producir(
         revisar_con_ia=revisar_con_ia,
         pistas=pistas or None,
         segundos_prometidos=segundos,
+        molde=molde,
+        gancho_variante=gancho_variante,
+        gancho_variantes=gancho_variantes,
         avisar=avisar,
     )
 
