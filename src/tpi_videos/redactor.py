@@ -352,8 +352,10 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
 
 
 def _variante_limpia(v: dict[str, Any]) -> dict[str, Any] | None:
+    # Las ideas y los clips del panel traen metadatos (estilo, archivo, segundos) que el guion no guarda.
+    datos = {clave: v[clave] for clave in ("texto", "voz", "tex", "emoji", "destacar") if v.get(clave)}
     try:
-        g = Gancho.model_validate(v)
+        g = Gancho.model_validate(datos)
     except ValidationError:
         return None
     limpio: dict[str, Any] = {"texto": g.texto}

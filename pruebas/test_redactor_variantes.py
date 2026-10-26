@@ -36,6 +36,21 @@ class RedactorVariantesTest(unittest.TestCase):
         datos = _aplicar_eleccion(datos_base(), None, elegido, otras)
         self.assertEqual(len(datos["gancho_variantes"]), 5)
 
+    def test_acepta_la_forma_de_una_idea_con_estilo_y_metadatos(self):
+        elegido = {
+            "texto": "El elegido",
+            "voz": "El elegido.",
+            "estilo": "curiosidad",
+            "numero": 1,
+            "archivo": "salida/ganchos/x/gancho-1.mp4",
+            "segundos": 4.2,
+        }
+        datos = _aplicar_eleccion(datos_base(), None, elegido, [elegido])
+        self.assertEqual(datos["gancho"]["texto"], "El elegido")
+        self.assertEqual(datos["gancho"]["voz"], "El elegido.")
+        self.assertNotIn("estilo", datos["gancho"])
+        self.assertEqual(datos["gancho_variantes"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

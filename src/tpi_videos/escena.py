@@ -212,8 +212,8 @@ class VideoEjercicio(VoiceoverScene):
 
         if self.op.solo_gancho:
             self._gancho()
-            # Sin voz el bloque dura ~1 s: se espera para que el clip no dure medio segundo.
-            self.wait(3.2 if self.op.proveedor == "silencio" or self.op.voz == "silencio" else 0.4)
+            # El bloque ya dura lo que la voz (también la de silencio, que usa la duración estimada).
+            self.wait(0.4)
             self._guardar_linea_de_tiempo()
             return
 

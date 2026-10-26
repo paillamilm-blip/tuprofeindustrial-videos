@@ -41,7 +41,10 @@ def _carpeta(idea: Idea) -> Path:
             return carpeta
         if datos.get("huella") == _huella(idea):
             return carpeta
-    raise ErrorMotor("Hay demasiadas carpetas de ganchos con el mismo título.", ayuda="Borra salida/ganchos/.")
+    raise ErrorMotor(
+        "Hay demasiadas carpetas de ganchos con el mismo título.",
+        ayuda="Borra salida/ganchos/.",
+    )
 
 
 def idea_desde_guion(guion: Guion) -> Idea:
@@ -120,6 +123,11 @@ def renderizar_ganchos(
     for numero, variante in enumerate(variantes, 1):
         if progreso:
             progreso("animacion", (numero - 1) / len(variantes), f"Gancho {numero} de {len(variantes)}")
+
+        def avance_clip(etapa: str, valor: float, detalle: str, n: int = numero) -> None:
+            if progreso:
+                progreso(etapa, (n - 1 + valor) / len(variantes), detalle)
+
         archivo = carpeta / f"gancho-{numero}.mp4"
         crear_clip_gancho(
             guion_de_vista_previa(idea, variante),
@@ -128,7 +136,7 @@ def renderizar_ganchos(
             voz="silencio" if sin_voz else voz,
             velocidad=velocidad,
             salida=archivo,
-            progreso=progreso,
+            progreso=avance_clip if progreso else None,
         )
         clips.append(
             {
