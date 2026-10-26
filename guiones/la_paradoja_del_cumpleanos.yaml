@@ -1,0 +1,65 @@
+# Guion redactado con IA (Qoder) el 26-10-2026, a pedido de: «un dato curioso de la matemática».
+# Cálculos comprobados uno a uno en Python antes de escribirlos (23 → 50,73%; 30 → 70,63%; 57 → 99,01%; 40 → 89,12%).
+
+titulo: "La paradoja del cumpleaños"
+materia: matematica
+nivel: "4° medio · PAES"
+tema: cuaderno_del_profe
+velocidad: "+12%"
+
+gancho:
+  texto: "¿Cuántos hacen falta para apostar?"
+  voz: "¿Cuántas personas necesitas para apostar a que dos cumplen años el mismo día? La respuesta incomoda a cualquiera."
+  emoji: "🥳"
+  tex: 'P = 1 - \frac{365!}{342!\cdot 365^{23}}'
+
+enunciado:
+  texto: "23 personas al azar: ¿dos cumplen el mismo día?"
+  voz: "Supón un año de trescientos sesenta y cinco días, nacimientos repartidos por igual y un grupo de veintitrés personas al azar."
+  destacar: ["23 personas", "mismo día"]
+
+datos:
+  - tex: 'n = 23'
+    voz: "El grupo tiene veintitrés personas."
+  - tex: 'd = 365\ \text{días}'
+    voz: "Y trescientos sesenta y cinco días posibles."
+  - tex: 'P(\text{dos coinciden}) = ?'
+    voz: "Buscamos la probabilidad de que al menos dos compartan la fecha."
+
+pasos:
+  - nota: "Lo que dice tu intuición"
+    tex: 'n = \frac{365}{2} \approx 183'
+    voz: "Tu intuición diría: para llegar a la mitad necesito la mitad del año, ciento ochenta y tres personas."
+    error: true
+  - nota: "Contemos al revés"
+    tex: 'P = 1 - P(\text{todos distintos})'
+    voz: "El truco es contar al revés, porque nadie repitiendo es mucho más fácil de calcular."
+    emoji: "💡"
+  - nota: "Nadie repite"
+    tex: 'P_d = \frac{365}{365}\cdot\frac{364}{365}\cdot\frac{363}{365}\cdots\frac{343}{365}'
+    voz: "El primero elige libre, el segundo evita un día, el tercero evita dos, y así hasta veintitrés personas."
+  - nota: "Multiplicamos"
+    tex: 'P_d \approx 0{,}4927'
+    voz: "Multiplicando los veintitrés términos quedan cuarenta y nueve centésimas."
+  - nota: "El complemento"
+    tex: 'P = 1 - 0{,}4927 = 0{,}5073'
+    voz: "Y su complemento pasa la mitad por muy poco."
+
+resultado:
+  tex: 'P \approx 50{,}7\%'
+  voz: "Con solo veintitrés personas, apostar a que dos cumplen el mismo día te favorece."
+  emoji: "🎉"
+
+verificacion:
+  texto: "30 personas: 70%. 57 personas: 99%."
+  voz: "Sigue subiendo: con treinta personas ya es setenta por ciento, y con cincuenta y siete, noventa y nueve."
+
+reto:
+  texto: "En un curso de 40 estudiantes, ¿qué probabilidad hay?"
+  voz: "Ahora practica tú: calcula la probabilidad en un curso de cuarenta estudiantes. La respuesta es ochenta y nueve por ciento."
+  emoji: "✍️"
+
+cierre:
+  texto: "Más matemática que se entiende en un minuto"
+  voz: "Más matemática que se entiende en un minuto, en el próximo video."
+  emoji: logo

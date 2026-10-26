@@ -643,8 +643,7 @@ class VideoEjercicio(VoiceoverScene):
             ancho_max=c.ANCHO_UTIL - 0.8,
             alineacion="left",
         )
-        pie = c.texto("Responde en los comentarios", 22, MEDIUM, self.col.tenue)
-        contenido = VGroup(etiqueta, cuerpo, pie).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+        contenido = VGroup(etiqueta, cuerpo).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
         tarjeta = c.tarjeta(contenido, c.ANCHO_UTIL, self.col.panel, self.color_materia)
         tarjeta.move_to([0, c.CENTRO_ZONA + 0.8, 0])
         emoji = self._emoji(reto.emoji, 1.0)
