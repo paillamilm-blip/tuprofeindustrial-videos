@@ -1,0 +1,51 @@
+# Guion redactado con IA (gemini-3.8-flash) el 25-10-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se aplica la propiedad conmutativa: a% de b = b% de a.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "El truco mental del porcentaje"
+materia: matematica
+nivel: "1° medio"
+
+gancho:
+  texto: "¿Cuánto es el 16% de 50 sin calculadora?"
+  voz: "¿Cuánto es el dieciséis por ciento de cincuenta sin calculadora? Muy fácil."
+  tex: '16\% \cdot 50'
+  emoji: "🤯"
+
+enunciado:
+  texto: "Calcula mentalmente el 16% de 50 aplicando la propiedad que permite invertir el orden del porcentaje."
+  voz: "Calcular esto de frente asusta, pero podemos usar una propiedad."
+  destacar: ["16% de 50"]
+
+pasos:
+  - nota: "Invertimos el orden"
+    tex: '16\% \cdot 50 = 50\% \cdot 16'
+    voz: "Invertimos el orden: calculamos el cincuenta por ciento de dieciséis."
+    destacar: ['50\% \cdot 16']
+    emoji: "💡"
+  - nota: "Cincuenta por ciento"
+    tex: '50\% \cdot 16 = \frac{16}{2}'
+    voz: "El cincuenta por ciento de cualquier número es su mitad."
+    destacar: ['\frac{16}{2}']
+  - nota: "Dividimos en dos"
+    tex: '\frac{16}{2} = 8'
+    voz: "Dieciséis dividido en dos es ocho."
+    destacar: ['8']
+
+resultado:
+  tex: '16\% \cdot 50 = 8'
+  voz: "El resultado es ocho, resuelto en tres segundos."
+  emoji: "🎯"
+
+verificacion:
+  texto: "El porcentaje es conmutativo: a% de b es igual a b% de a."
+  voz: "Recuerda: el porcentaje de un número siempre es conmutativo."
+
+reto:
+  texto: "¿Cuánto es el 18% de 50? ¡Mentalmente!"
+  voz: "¿Cuánto es el dieciocho por ciento de cincuenta? Déjalo en los comentarios."
+  emoji: "✍️"

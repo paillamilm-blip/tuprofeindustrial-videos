@@ -1,0 +1,48 @@
+# Guion redactado con IA (gemini-3.8-flash) el 26-10-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "El error clásico en MCM"
+materia: matematica
+nivel: "1° medio"
+
+gancho:
+  texto: "¿El MCM de 6 y 8 es 48?"
+  voz: "¿El mínimo común múltiplo entre seis y ocho es cuarenta y ocho? Cuidado."
+  tex: '\text{MCM}(6, 8) \neq 48'
+  emoji: "🚨"
+
+enunciado:
+  texto: "Calcula el mínimo común múltiplo entre 6 y 8 usando descomposición en factores primos."
+  voz: "Vamos a calcular su mínimo común múltiplo con factores primos."
+  destacar: ["6", "8"]
+
+pasos:
+  - nota: "Error común"
+    tex: '6 \cdot 8 = 48'
+    voz: "Muchos solo multiplican seis por ocho, pero cuarenta y ocho no es el mínimo."
+    destacar: ['48']
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Factores primos"
+    tex: '6 = 2 \cdot 3 \quad \text{y} \quad 8 = 2^3'
+    voz: "Descomponemos en primos: seis es dos por tres, y ocho es dos al cubo."
+  - nota: "Mayor exponente"
+    tex: '\text{MCM}(6, 8) = 2^3 \cdot 3'
+    voz: "Para el mínimo común múltiplo, tomamos los factores con mayor exponente."
+    destacar: ['2^3 \cdot 3']
+
+resultado:
+  tex: '\text{MCM}(6, 8) = 24'
+  voz: "Calculamos dos al cubo por tres, y nos da veinticuatro."
+  emoji: "✅"
+
+verificacion:
+  texto: "24 es divisible por 6 y por 8."
+  voz: "Veinticuatro es divisible por seis y ocho."
+
+reto:
+  texto: "¿Cuál es el MCM entre 4 y 10?"
+  voz: "¿Y entre cuatro y diez? Comenta tu respuesta."
+  emoji: "✍️"

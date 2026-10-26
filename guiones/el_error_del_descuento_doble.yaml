@@ -1,0 +1,55 @@
+# Guion redactado con IA (gemini-3.8-flash) el 25-10-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - El descuento del 20% se aplica sobre el precio resultante tras el aumento.
+#
+# Quedaron observaciones por revisar:
+#   - duración: la idea se anunció en ≈40 s y este guion se estima en ~54 s. Achícalo a ~40 s: quédate con los 3 o 4 pasos imprescindibles, quita la verificación o el reto y acorta las frases. No cambies los resultados ni los números del ejercicio.
+
+titulo: "El error del descuento doble"
+materia: matematica
+nivel: "1° medio"
+
+gancho:
+  texto: "¿Subió 20% y bajó 20%? ¿Quedó igual?"
+  voz: "¿Subió veinte por ciento y bajó veinte por ciento? No, no queda igual."
+  emoji: "🤔"
+
+enunciado:
+  texto: "Una polera cuesta 10000 pesos. Su precio sube un 20% y luego el nuevo precio baja un 20%. ¿Cuál es el precio final de la polera?"
+  voz: "Una polera cuesta diez mil pesos. Sube un veinte por ciento y luego baja un veinte por ciento."
+  destacar: ["10000 pesos", "sube un 20%", "baja un 20%"]
+
+datos:
+  - tex: 'P_0 = 10000\ \text{pesos}'
+    voz: "El precio original de la prenda es de diez mil pesos."
+
+pasos:
+  - nota: "Error típico"
+    tex: 'P_f = 10000\ \text{pesos}'
+    voz: "Mucha gente cree que vuelve al mismo valor, pero las cantidades base son distintas."
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Aumento del 20%"
+    tex: 'P_1 = 10000 \cdot 1,20 = 12000\ \text{pesos}'
+    voz: "Primero calculamos la subida multiplicando por uno coma dos. Da doce mil pesos."
+    destacar: ['12000\ \text{pesos}']
+  - nota: "Rebaja del 20%"
+    tex: 'P_f = 12000 \cdot 0,80 = 9600\ \text{pesos}'
+    voz: "Ahora aplicamos el descuento sobre doce mil, multiplicando por cero coma ocho."
+    destacar: ['9600\ \text{pesos}']
+
+resultado:
+  tex: 'P_f = 9600\ \text{pesos}'
+  voz: "El precio final de la polera resulta en nueve mil seiscientos pesos."
+  emoji: "💡"
+
+verificacion:
+  texto: "El 20% de 12000 es 2400 pesos, que supera al aumento inicial de 2000 pesos."
+  voz: "El descuento se calcula sobre una cantidad más grande."
+
+reto:
+  texto: "Si costara 20000 pesos, ¿cuál es el precio final?"
+  voz: "Si partiera en veinte mil pesos, ¿cuál sería el precio final? Déjalo en los comentarios."
+  emoji: "✍️"
