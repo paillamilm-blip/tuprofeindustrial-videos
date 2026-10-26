@@ -31,6 +31,20 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - dibujo = "circuito": fuente con su unidad ("12 V"), resistencias con la suya ("4 Ω", "6 Ω") de 2 a 4, y arreglo "serie" o "paralelo".
 - Los campos que no corresponden al dibujo elegido se dejan vacíos ("" o []). No inventes datos: el dibujo tiene que salir de los números del ejercicio.
 
+### El molde narrativo (pista MOLDE)
+- Si la petición trae una pista MOLDE, respeta sus beats y su regla al pie de la letra.
+- "mito_realidad": un paso con error = true y un paso correcto después.
+- "tres_errores": exactamente tres pasos con error = true, seguidos de la forma correcta.
+- "pov": cuenta la situación en segunda persona y resuélvela con los datos del enunciado.
+- "reto": incluye el bloque reto.
+- "nadie_te_enseno": incluye el bloque verificacion.
+- Si el molde pide más errores de los que el ejercicio permite con honestidad, no inventes: resuelve bien y deja el aviso para que el profesor lo revise.
+
+### El gancho elegido (pista GANCHO ELEGIDO)
+- El texto, el emoji y la fórmula del gancho llegan fijos: úsalos tal cual en gancho_texto, gancho_emoji y gancho_tex.
+- Solo puedes ajustar gancho_voz para que suene natural al decirlo.
+- No generes gancho_variantes: las variantes las escribe el motor.
+
 ## 3. Lo que se ESCUCHA (campos *_voz) — voz sintética chilena
 - Español de Chile neutro, trato de "tú", cercano y claro, sin modismos exagerados.
 - Frases cortas (máximo 15 palabras), una idea por frase, voz activa.
@@ -53,7 +67,7 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - Usa de 2 a 4 en todo el guion: gancho_emoji casi siempre; en los pasos solo donde aporte (💡 idea clave, ⚠️ cuidado). Deja vacío el resto.
 - Error típico (opcional y muy efectivo): si existe un error MUY frecuente en este ejercicio (ej. (a+b)^2 = a^2 + b^2, olvidar convertir unidades, sumar resistencias en paralelo como si fueran en serie), agrega UN paso con error = true justo ANTES del paso correcto:
   - su tex es la forma EQUIVOCADA (LaTeX válido); su nota, "Error típico"; su voz dice que mucha gente lo hace y por qué está mal (en el video se tacha con una ✗ roja).
-  - el paso siguiente muestra la forma correcta. Nunca es el último paso. Máximo uno.
+  - el paso siguiente muestra la forma correcta. Nunca es el último paso. Máximo uno, salvo que la pista MOLDE pida tres.
   - si no hay un error típico real y frecuente, no lo inventes: error = false en todos los pasos.
   - con un error típico, el gancho puede retar: gancho_texto "¿Resuelves así?" y gancho_tex con la forma equivocada.
 - gancho_tex (opcional): una fórmula corta que acompaña al gancho; si no aporta, déjalo vacío.
