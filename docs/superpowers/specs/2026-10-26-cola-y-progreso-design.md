@@ -73,8 +73,8 @@ pueden apuntar a una carpeta temporal con `TPI_RAIZ`.
       "proximo_intento": null,
       "ajustes": {
         "materia": null, "nivel": null, "dificultad": null, "modelo": "gemini-3.8-flash",
-        "calidad": "final", "estilo": null, "proveedor": null, "voz": null,
-        "subtitulos": true, "con_kit": true
+        "calidad": "final", "estilo": null, "proveedor": null, "voz": null, "velocidad": null,
+        "subtitulos": true, "sincronizar": "auto", "revisar_con_ia": true, "con_kit": true
       },
       "videos": [
         {
@@ -167,7 +167,6 @@ La normalización de un video activo (`redactando`, `animando`, `subtitulos`, `k
 - `actualizar_lote(lote_id, **campos)` y `actualizar_video(video_id, **campos)`.
 - `hito(video_id, nombre, datos)`.
 - `pendientes_ia() -> list[dict]`: lotes con estado `pendiente_ia` o con videos en ese estado.
-- `interrumpidos() -> list[dict]`.
 - `normalizar_interrumpidos()`: convierte estados activos en `interrumpido` al arrancar el panel, **solo si
   el candado de §1.5 está libre** (si hay un `tpi lote` vivo, no se toca nada).
 - `ultimo_lote()` y `lotes_visibles()`: lo que muestra la tarjeta de cola.
@@ -313,7 +312,7 @@ En `app.iniciar()`, después de registrar las páginas, un `app.on_startup`:
 
 ### 5.2 `Tarea` y los eventos
 
-- `Tarea` gana `videos: dict[int, dict]` con `{estado, fase, avance, detalle, video_id}` y `cola_id`.
+- `Tarea` gana `videos: dict[int, dict]` con `{estado, fase, avance, detalle, total}` y `cola_id`.
 - `Tareas._aplicar()` guarda esos datos cuando el evento trae `video`; si no, se comporta como hoy.
 - `texto_etapa` sigue igual para el detalle global.
 
