@@ -61,6 +61,7 @@ def renderizar_manim(
     velocidad: str,
     carpeta: Path,
     progreso: Callable[[int, int, str], None] | None = None,
+    solo_gancho: bool = False,
 ) -> tuple[Path, dict]:
     entorno.preparar()
     entorno.registrar_fuentes()
@@ -93,7 +94,9 @@ def renderizar_manim(
             guion=guion,
             marca=marca,
             tema=tema,
-            opciones=OpcionesEscena(proveedor, voz, velocidad, linea, progreso=progreso),
+            opciones=OpcionesEscena(
+                proveedor, voz, velocidad, linea, progreso=progreso, solo_gancho=solo_gancho
+            ),
         )
         escena.render()
         video = Path(escena.renderer.file_writer.final_file_path)
@@ -233,3 +236,43 @@ def subtitular_video(
     escribir_srt(palabras, carpeta / f"{nombre}.srt")
     salida = carpeta / f"{nombre}_subtitulado.mp4"
     return quemar_subtitulos(video, ass, salida, CALIDADES["final"])
+
+
+def crear_clip_gancho(
+    guion: Guion,
+    calidad: str = "borrador",
+    proveedor: str | None = None,
+    voz: str | None = None,
+    velocidad: str | None = None,
+    salida: Path | None = None,
+    progreso: Progreso | None = None,
+) -> Path:
+    """Renderiza solo cabecera + gancho (sin subtítulos ni recodificación). Devuelve el mp4."""
+    import shutil
+
+    marca = cargar_marca()
+    estilo = cargar_tema(guion.tema, marca)
+    verificar_requisitos(subtitulos=False)
+    if proveedor == "silencio" or voz == "silencio":
+        proveedor, voz = "silencio", "silencio"
+    else:
+        proveedor = proveedor or marca.voz.proveedor
+        voz = voz or marca.voz.nombre
+    velocidad = velocidad or marca.voz.velocidad
+    destino = salida or entorno.raiz_proyecto() / "salida" / "ganchos" / slug(guion.titulo) / "gancho.mp4"
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    if calidad not in CALIDADES:
+        raise ErrorMotor(f"Calidad «{calidad}» no existe.", ayuda=f"Opciones: {', '.join(CALIDADES)}")
+
+    def por_bloque(actual: int, total: int, seccion: str) -> None:
+        if progreso:
+            progreso("animacion", 0.1 + 0.85 * actual / max(total, 1), "gancho")
+
+    crudo, _ = renderizar_manim(
+        guion, marca, estilo, calidad, proveedor, voz, velocidad, destino.parent,
+        progreso=por_bloque if progreso else None, solo_gancho=True,
+    )  # fmt: skip
+    shutil.copyfile(crudo, destino)
+    if progreso:
+        progreso("animacion", 1.0, "clip listo")
+    return destino
