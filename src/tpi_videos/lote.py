@@ -49,6 +49,7 @@ class ItemLote:
             "titulo": self.idea.titulo,
             "angulo": self.idea.angulo,
             "dificultad": self.idea.dificultad,
+            "molde": self.idea.molde,
             "emoji": self.idea.emoji,
             # la idea completa detrás del ítem: así el panel reintenta una sin volverle a pedir nada a Gemini
             "idea": self.idea.model_dump(),
@@ -231,6 +232,9 @@ def _una_idea(
                 revisar_con_ia=revisar_con_ia,
                 con_kit=con_kit,
                 gancho=idea.gancho,
+                molde=idea.molde or None,
+                gancho_variante=idea.ganchos[0].model_dump() if idea.ganchos else None,
+                gancho_variantes=[g.model_dump() for g in idea.ganchos] or None,
                 titulo=idea.titulo,
                 segundos=idea.segundos,
                 avisar=avisar,
