@@ -51,11 +51,13 @@ jobs:
         # Sin voz: los clips del laboratorio se prueban sin internet, igual que el render de arriba.
         run: |
           tpi ganchos guiones/ejemplos/moldes_virales.yaml --sin-voz
-          clip=$(find salida/ganchos -name 'gancho-1.mp4' | head -1)
-          test -n "$clip" || { echo "❌ No salió ningún clip de gancho"; exit 1; }
-          lee() { ffprobe -v error -select_streams v:0 -show_entries stream=$1 -of csv=p=0 "$clip"; }
-          ancho=$(lee width); alto=$(lee height); dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$clip")
-          echo "Clip: ${ancho}×${alto}, ${dur} s"
-          [ "$ancho" = "540" ] && [ "$alto" = "960" ] || { echo "❌ El clip no es vertical 9:16."; exit 1; }
-          awk "BEGIN { exit !($dur >= 3 && $dur <= 6) }" || { echo "❌ El clip dura ${dur} s: fuera de 3–6 s."; exit 1; }
-          echo "✅ El laboratorio de ganchos renderiza el clip."
+          clips=$(find salida/ganchos -name 'gancho-*.mp4' | sort)
+          test -n "$clips" || { echo "❌ No salió ningún clip de gancho"; exit 1; }
+          for clip in $clips; do
+            lee() { ffprobe -v error -select_streams v:0 -show_entries stream=$1 -of csv=p=0 "$clip"; }
+            ancho=$(lee width); alto=$(lee height); dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$clip")
+            echo "Clip $clip: ${ancho}×${alto}, ${dur} s"
+            [ "$ancho" = "540" ] && [ "$alto" = "960" ] || { echo "❌ $clip no es vertical 9:16."; exit 1; }
+            awk "BEGIN { exit !($dur >= 3 && $dur <= 6) }" || { echo "❌ $clip dura ${dur} s: fuera de 3–6 s."; exit 1; }
+          done
+          echo "✅ El laboratorio de ganchos renderiza todos los clips."

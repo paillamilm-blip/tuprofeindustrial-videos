@@ -224,8 +224,8 @@ nunca explicaron). Según el molde, `./tpi revisar` pide los pasos de error o lo
 | `mito_realidad` | Al menos un paso con `error: true` y un paso correcto después |
 | `tres_errores` | Exactamente 3 pasos con `error: true` y uno correcto después |
 | `reto` | El bloque `reto:` al final |
-| `pov` | El bloque `verificacion:` |
-| `nadie_te_enseno` | Nada extra: la estructura va en el orden de los pasos |
+| `pov` | Nada extra: la estructura va en el orden de los pasos |
+| `nadie_te_enseno` | El bloque `verificacion:` |
 
 `gancho_variantes:` guarda los ganchos que no se usaron, para probarlos como clips cortos antes de
 grabar el video completo:

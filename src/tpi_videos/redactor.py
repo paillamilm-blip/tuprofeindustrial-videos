@@ -383,9 +383,14 @@ def _aplicar_eleccion(
     if elegido:
         gancho = datos.setdefault("gancho", {})
         gancho["texto"] = elegido["texto"]
-        for clave in ("voz", "tex", "emoji", "destacar"):
+        if elegido.get("voz"):
+            gancho["voz"] = elegido["voz"]
+        # La variante manda: si no trae fórmula ni emoji, no se heredan los del modelo para otro gancho.
+        for clave in ("tex", "emoji", "destacar"):
             if elegido.get(clave):
                 gancho[clave] = elegido[clave]
+            else:
+                gancho.pop(clave, None)
     texto_elegido = (elegido or datos.get("gancho") or {}).get("texto", "").strip()
     clave_elegida = sin_tildes(texto_elegido).casefold()
     alternativas: list[dict[str, Any]] = []

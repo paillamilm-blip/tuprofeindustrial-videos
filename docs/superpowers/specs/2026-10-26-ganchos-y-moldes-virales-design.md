@@ -172,9 +172,10 @@ dibujan**. La escena corta solo ejecuta cabecera + gancho, así que no hay riesg
 - `render.crear_clip_gancho(guion, calidad="borrador", voz=..., salida=...)` reutiliza la configuración de
   `renderizar_manim()` (540×960, 15 fps de borrador, misma hoja, fuentes y plantilla LaTeX), sin subtítulos, sin
   recodificación final. Devuelve la ruta del mp4.
-- Voz: por defecto la de `marca.yaml` (o la de la idea, si trae). Con `--sin-voz` se usa `silencio` y la escena
-  espera **3,2 s fijos** además de las animaciones, para que el clip no dure medio segundo. El clip con voz dura
-  lo que dura la voz más 0,4 s; se mide con `ffprobe` para el manifiesto.
+- Voz: por defecto la de `marca.yaml` (o la de la idea, si trae). Con `--sin-voz` se usa `silencio`, que igual
+  estima una duración para el bloque, y la escena rellena con espera hasta **4 s como mínimo** (nunca más de lo
+  que ya duró el bloque), para que el clip no dure medio segundo. El clip con voz dura lo que dura la voz más
+  0,4 s, también con el mismo piso de 4 s; se mide con `ffprobe` para el manifiesto y CI exige 3–6 s.
 - Salida: `salida/ganchos/<slug-del-titulo-de-la-idea>/gancho-1.mp4 … gancho-5.mp4` y `clips.json` con
   `{texto, estilo, emoji, archivo, segundos}` por variante. Si dos ideas del mismo tema producen el mismo slug,
   se agrega `-2`, `-3` para no pisarse. `salida/` ya está ignorado por Git y el panel ya sirve esa carpeta.

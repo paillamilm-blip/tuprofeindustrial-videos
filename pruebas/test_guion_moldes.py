@@ -78,6 +78,19 @@ class GuionMoldesTest(unittest.TestCase):
         self.assertNotIn("molde:", texto)
         self.assertNotIn("gancho_variantes:", texto)
 
+    def test_tres_errores_no_sugiere_quitar_errores(self):
+        from tpi_videos.revision import revisar
+
+        datos = base(molde="tres_errores")
+        datos["pasos"] = [
+            {"voz": "Uno.", "tex": "1+1=3", "error": True},
+            {"voz": "Dos.", "tex": "2+2=5", "error": True},
+            {"voz": "Tres.", "tex": "3+3=7", "error": True},
+            {"voz": "Bien.", "tex": "3+3=6"},
+        ]
+        revision = revisar(Guion.model_validate(datos), "Sígueme.")
+        self.assertFalse(any("con uno basta" in a.mensaje for a in revision.avisos))
+
 
 if __name__ == "__main__":
     unittest.main()

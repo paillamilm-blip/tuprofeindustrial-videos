@@ -76,6 +76,31 @@ class IdeasTest(unittest.TestCase):
     def test_texto_limpia_espacios(self):
         self.assertEqual(_texto("  hola   mundo  "), "hola mundo")
 
+    def test_el_gancho_recomendado_es_el_primero_limpio(self):
+        cruda = Idea(
+            angulo="reto",
+            titulo="A",
+            gancho="El del modelo",
+            enunciado="Resuelve el ejercicio con números concretos y unidades.",
+            materia="matematica",
+            nivel="1° medio",
+            porque="Porque frena el scroll.",
+            segundos=45,
+            molde="reto",
+            ganchos=[
+                GanchoIdea(texto="Uno", estilo="dolor"),
+                GanchoIdea(texto="Dos", estilo="curiosidad"),
+                GanchoIdea(texto="Tres", estilo="dato"),
+            ],
+        )
+        limpia = _limpiar([cruda], None, None)[0]
+        self.assertEqual(limpia.gancho, "Uno")
+
+    def test_recorta_a_cinco_ganchos(self):
+        textos = ["uno", "dos", "tres", "cuatro", "cinco", "seis"]
+        limpias = _limpiar([idea("A", "reto", textos)], None, None)
+        self.assertEqual([g.texto for g in limpias[0].ganchos], textos[:5])
+
 
 if __name__ == "__main__":
     unittest.main()
