@@ -201,6 +201,10 @@ redondos, media el ejercicio estándar de prueba, difícil un paso más de lo es
 **no es el curso** (eso sigue siendo `--nivel`): es qué tan hondo llega el ejercicio. Si este mes quieres una
 serie de un solo nivel, mándalo tú con `--dificultad facil` (o `media`, `dificil`) en `ideas`, `producir` o `lote`.
 
+Cada idea trae además un **molde** (la estructura del video: `mito_realidad`, `tres_errores`, `pov`, `reto` o
+`nadie_te_enseno`) y **de 3 a 5 ganchos alternativos**. El primero es el recomendado y es el que llega al video;
+los otros quedan guardados para probarlos.
+
 Aparecen numeradas. Escribe `1`, `2` o `3` para hacer ese video, `[Enter]` si ninguna te convence (pide otras
 3 sin repetir las que ya viste) o `q` para salir. Si solo quieres leer las ideas: `./tpi ideas "Porcentajes" --sin-video`.
 
@@ -224,6 +228,26 @@ de la tarjeta (el panel lo pasa solo al presionar «Hacer este video»).
 **En el panel es todavía más fácil:** solapa **Crear → Ideas**. Escribes el tema (o tocas uno sugerido, como
 *Ley de Ohm* o *Caída libre*), ves las 3 tarjetas, presionas **«Otras 3 ideas»** si no te convencen y en la que
 eliges presionas **«Hacer este video»**. Ahí mismo ves el avance: el guion, el video y el kit.
+
+### Probar los ganchos antes de grabar el video entero
+
+El gancho es lo que decide si el video se ve o se pasa de largo. En vez de grabar 45 s para descubrirlo, el
+motor renderiza **solo la cabecera y el gancho** de cada alternativa (unos 4 s por clip, calidad de borrador):
+
+```bash
+./tpi ganchos guiones/ejemplos/moldes_virales.yaml
+```
+
+Quedan en `salida/ganchos/<título>/gancho-1.mp4`, `gancho-2.mp4`… con un `clips.json` que dice qué gancho es
+cada uno. Los ves, eliges el que más frena el pulgar y lo dejas fijo en el guion:
+
+```bash
+./tpi ganchos guiones/mi_guion.yaml --elegir 2
+```
+
+El elegido pasa a ser el gancho del guion y los demás quedan como alternativas. En el panel es el botón
+**«Probar ganchos»** de cada tarjeta: los clips aparecen ahí mismo y **«Usar este»** deja ese gancho listo para
+«Hacer este video». Con `--sin-voz` los clips salen sin internet, para revisar solo el texto.
 
 ### Hacer los 3 de una sola vez (el lote)
 
@@ -263,6 +287,7 @@ mismo nivel.
 | `./tpi ideas "TEMA"` | La IA propone 3 ideas de video; eliges una y la hace completa (`--sin-video` solo las muestra) |
 | `./tpi producir ENUNCIADO` | Del enunciado al video final + kit de publicación, todo en un comando |
 | `./tpi lote "TEMA"` | Los 3 videos de las 3 ideas en una sola pasada (guion + video final + kit de cada uno) |
+| `./tpi ganchos GUION.yaml` | Prueba los ganchos alternativos del guion como clips cortos (`--elegir N` deja uno fijo) |
 | `./tpi clave` | Guarda tu clave de Gemini para `redactar` y el kit de publicación |
 | `./tpi nuevo NOMBRE --materia fisica` | Crea `guiones/NOMBRE.yaml` desde la plantilla |
 | `./tpi revisar GUION.yaml` | Revisa el guion sin crear el video |

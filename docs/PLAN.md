@@ -106,3 +106,8 @@ panel/ (NiceGUI, solo 127.0.0.1) ─► los mismos comandos `tpi … --progreso-
    («Intentar solo este» si uno falla). Cada idea trae `dificultad` (`facil` / `media` / `dificil`) y la IA las
    reparte distintas en el lote; `--dificultad` las fuerza las 3. «Crear» baja a `/crear`.
    Spec: `docs/superpowers/specs/2026-10-25-fabrica-y-dificultad-design.md`.
+10. ✅ **v0.9 · Ganchos y moldes:** cada idea trae un molde narrativo (`mito_realidad`, `tres_errores`,
+   `pov`, `reto`, `nadie_te_enseno`) y de 3 a 5 ganchos. `tpi ganchos` renderiza solo cabecera + gancho de
+   cada variante (`--elegir N` fija uno) y el panel lo ofrece con **«Probar ganchos»**. Todo campo nuevo es
+   opcional: los guiones v0.8 y el estilo original no cambian.
+   Spec: `docs/superpowers/specs/2026-10-26-ganchos-y-moldes-virales-design.md`.

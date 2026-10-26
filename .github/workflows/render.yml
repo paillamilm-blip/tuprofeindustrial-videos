@@ -46,3 +46,16 @@ jobs:
           [ "$ancho" = "540" ] && [ "$alto" = "960" ] || { echo "❌ No es vertical 9:16 (540×960)."; exit 1; }
           awk "BEGIN { exit !($dur > 20) }" || { echo "❌ El video dura menos de 20 s: se cortó."; exit 1; }
           echo "✅ El render completo (LaTeX → Manim → subtítulos → volumen) sigue funcionando."
+
+      - name: Clip de gancho (campos «molde» y «gancho_variantes»)
+        # Sin voz: los clips del laboratorio se prueban sin internet, igual que el render de arriba.
+        run: |
+          tpi ganchos guiones/ejemplos/moldes_virales.yaml --sin-voz
+          clip=$(find salida/ganchos -name 'gancho-1.mp4' | head -1)
+          test -n "$clip" || { echo "❌ No salió ningún clip de gancho"; exit 1; }
+          lee() { ffprobe -v error -select_streams v:0 -show_entries stream=$1 -of csv=p=0 "$clip"; }
+          ancho=$(lee width); alto=$(lee height); dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$clip")
+          echo "Clip: ${ancho}×${alto}, ${dur} s"
+          [ "$ancho" = "540" ] && [ "$alto" = "960" ] || { echo "❌ El clip no es vertical 9:16."; exit 1; }
+          awk "BEGIN { exit !($dur >= 3 && $dur <= 6) }" || { echo "❌ El clip dura ${dur} s: fuera de 3–6 s."; exit 1; }
+          echo "✅ El laboratorio de ganchos renderiza el clip."

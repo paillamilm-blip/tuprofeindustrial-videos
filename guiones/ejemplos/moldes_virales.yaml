@@ -1,0 +1,72 @@
+# Ejemplo de la fase 0.9: un molde narrativo (mito vs realidad) y ganchos alternativos.
+# Crear el video:        ./tpi crear guiones/ejemplos/moldes_virales.yaml --borrador
+# Probar los ganchos:    ./tpi ganchos guiones/ejemplos/moldes_virales.yaml --sin-voz
+# Los campos «molde» y «gancho_variantes» son opcionales: sin ellos el guion funciona igual que antes.
+
+titulo: "¿Pitágoras era a + b = c?"
+materia: matematica
+nivel: "1° medio"
+molde: mito_realidad
+
+gancho:
+  texto: "¿Pitágoras era a + b = c?"
+  voz: "¿Pitágoras era a más b igual a c?"
+  emoji: "🤔"
+  tex: 'a + b = c'
+
+gancho_variantes:
+  - texto: "El error que casi todos cometen"
+    voz: "El error que casi todos cometen."
+    emoji: "⚠️"
+  - texto: "3 y 4 no dan 7"
+    voz: "Tres y cuatro no dan siete."
+    tex: '3 + 4 \neq 7'
+  - texto: "La hipotenusa no se suma"
+    voz: "La hipotenusa no se suma."
+    emoji: "📐"
+
+enunciado:
+  texto: "Calcula la hipotenusa de un triángulo rectángulo cuyos catetos miden 3 m y 4 m."
+  voz: "Calcula la hipotenusa de un triángulo rectángulo cuyos catetos miden tres y cuatro metros."
+  destacar: ["3 m", "4 m"]
+
+datos:
+  - tex: 'a = 3\ \text{m}'
+    voz: "Un cateto mide tres metros."
+  - tex: 'b = 4\ \text{m}'
+    voz: "El otro cateto mide cuatro metros."
+  - tex: 'c = ?'
+    voz: "Y buscamos la hipotenusa."
+
+pasos:
+  - nota: "Error típico"
+    tex: 'c = 3 + 4'
+    voz: "Casi todos suman los catetos y dicen que la hipotenusa mide siete."
+    error: true
+  - nota: "Pitágoras"
+    tex: 'c = \sqrt{a^2 + b^2}'
+    voz: "Pero Pitágoras dice que la hipotenusa es la raíz de la suma de los cuadrados."
+  - nota: "Reemplazamos"
+    tex: 'c = \sqrt{3^2 + 4^2}'
+    voz: "Reemplazamos los catetos: tres al cuadrado más cuatro al cuadrado."
+  - nota: "Calculamos"
+    tex: 'c = \sqrt{25} = 5\ \text{m}'
+    voz: "Nueve más dieciséis es veinticinco, y su raíz es cinco."
+
+resultado:
+  tex: 'c = 5\ \text{m}'
+  voz: "La hipotenusa mide cinco metros."
+  emoji: "✅"
+
+verificacion:
+  texto: "5 m es mayor que cada cateto y menor que su suma: tiene sentido."
+  voz: "Cinco es mayor que cada cateto y menor que su suma: tiene sentido."
+
+reto:
+  texto: "¿Y si los catetos miden 6 m y 8 m?"
+  voz: "¿Y si los catetos miden seis y ocho metros? Déjalo en los comentarios."
+  emoji: "💬"
+
+cierre:
+  texto: "Sígueme para más ejercicios resueltos"
+  voz: "Sígueme para más ejercicios resueltos. ¡Nos vemos en el próximo!"
