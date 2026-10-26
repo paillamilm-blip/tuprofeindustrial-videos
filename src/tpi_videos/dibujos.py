@@ -463,6 +463,7 @@ def poligono_regular(
 
     contorno = Polygon(*esquinas, color=col.formulas, stroke_width=6).set_fill(col.formulas, 0.07)
     rayas, parches, rótulos = [contorno], VGroup(), VGroup()
+    puntos = [Dot(p, radius=0.045, color=col.formulas) for p in esquinas]
 
     def medida(texto: str, donde: np.ndarray, tam: float = 24) -> None:
         rotulo = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
@@ -485,9 +486,19 @@ def poligono_regular(
         pie = (izq_base + der_base) / 2  # la apotema baja recta desde el centro hasta el medio de la base
         raya(col.acento, centro, pie)
         medida(f"a ≈ {_numero_latex(figura.apotema)}{_sufijo(figura)}", pie / 2)
+        # La escuadra del pie dice, sin palabras, que la apotema cae a plomo sobre el lado.
+        canto = min(0.15, float(np.linalg.norm(pie - centro)) * 0.3)
+        escuadra = VMobject(color=col.acento, stroke_width=3)
+        escuadra.set_points_as_corners(
+            [pie + RIGHT * canto, pie + RIGHT * canto + UP * canto, pie + UP * canto]
+        )
+        rayas.append(escuadra)
     if "radio" in marcas:
         raya(col.acento, centro, punta)
         medida(f"R ≈ {_numero_latex(figura.radio)}{_sufijo(figura)}", punta / 2)
+    if "apotema" in marcas or "radio" in marcas:
+        # En un triángulo el radio a la punta y la apotema caen en la misma raya: el punto marca el corte.
+        puntos.append(Dot(centro, radius=0.06, color=col.acento))
     radio_arco = min(0.42, escala * 0.35)
     if "angulo_central" in marcas:
         # Se abre hacia arriba, entre dos radios vecinos: abajo ya están la base y la apotema.
@@ -509,10 +520,9 @@ def poligono_regular(
         rincon = izq_base + np.array([np.cos(giro / 2), np.sin(giro / 2), 0.0]) * (radio_arco + 0.3)
         medida(f"{_numero_latex(figura.angulo_interior)}°", rincon)
 
-    vertices = [Dot(p, radius=0.045, color=col.formulas) for p in esquinas]
-    todo = VGroup(contorno, *rayas[1:], parches, *vertices, rótulos)
+    todo = VGroup(contorno, *rayas[1:], parches, *puntos, rótulos)
     _encajar(todo, ancho, alto)
-    return Dibujo(mobs=todo, trazo=rayas, aparece=[*vertices, *rótulos])
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[*puntos, *rótulos])
 
 
 # ------------------------------------------------------------------------------------------

@@ -1,0 +1,64 @@
+# Guion redactado con IA (gemini-3.5-flash-lite) el 26-10-2026 a partir de: texto
+# Ajustado a mano el 26-10-2026: el radio se deja en forma exacta (10√3/3) para que la
+# apotema salga 2,89 cm y coincida con la que calcula el motor en el dibujo.
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+
+titulo: "Reto de apotema y centro"
+materia: matematica
+nivel: "4° medio"
+molde: reto
+tema: cuaderno_del_profe
+
+gancho:
+  texto: "Resuelve este desafío de apotema en 45 segundos"
+  voz: "Resuelve este desafío de apotema en cuarenta y cinco segundos."
+  emoji: "⏱️"
+
+gancho_variantes:
+  - texto: "Demuestra si puedes calcular esta apotema sin dudar"
+    emoji: "🧠"
+  - texto: "Calcula la apotema de este triángulo equilátero de 10 cm"
+    emoji: "📏"
+
+enunciado:
+  texto: "Calcula la apotema de un triángulo equilátero de 10 cm de lado, sabiendo que su circunferencia circunscrita tiene radio 10√3/3 cm."
+  voz: "Calculamos la apotema de este triángulo equilátero."
+  destacar: ["10 cm"]
+
+datos:
+  - tex: 's = 10\ \text{cm}'
+    voz: "El lado mide diez centímetros."
+  - tex: 'R = \frac{10\sqrt{3}}{3}\ \text{cm}'
+    voz: "El radio es diez raíz de tres sobre tres."
+  - tex: 'a = ?'
+    voz: "Buscamos la apotema."
+
+pasos:
+  - nota: "Triángulo rectángulo clave"
+    tex: 'R^2 = a^2 + \left(\frac{s}{2}\right)^2'
+    voz: "Ojo con la trampa. El radio va del centro a un vértice. La apotema va del centro a la base. Las tres forman un triángulo rectángulo."
+    emoji: "⚠️"
+    visual:
+      tipo: poligono_regular
+      lados: 3
+      lado: "10 cm"
+      anotar: ["apotema", "radio"]
+  - nota: "Despejamos la apotema"
+    tex: 'a = \sqrt{R^2 - \left(\frac{s}{2}\right)^2}'
+    voz: "Despejamos la apotema. Restamos al radio al cuadrado la mitad del lado al cuadrado."
+  - nota: "Reemplazamos exacto"
+    tex: 'a = \sqrt{\frac{100}{3} - 25}'
+    voz: "El radio al cuadrado son cien tercios. La mitad del lado, veinticinco."
+  - nota: "Queda la raíz"
+    tex: 'a = \sqrt{\frac{25}{3}} = \frac{5\sqrt{3}}{3}'
+    voz: "Cien tercios menos veinticinco son veinticinco tercios. Esa raíz se simplifica sola."
+
+resultado:
+  tex: 'a \approx 2,89\ \text{cm}'
+  voz: "La apotema mide aproximadamente dos coma ochenta y nueve centímetros."
+  emoji: "📐"
+
+reto:
+  texto: "¿Cuál es la apotema de un triángulo equilátero de 20 cm de lado?"
+  voz: "Ahora tú: la apotema de un equilátero de veinte centímetros de lado. Piénsalo antes del próximo video."
+  emoji: "✍️"
