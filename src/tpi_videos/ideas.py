@@ -306,6 +306,8 @@ def producir(
     gancho_variantes: list[dict[str, Any]] | None = None,
     avisar: Callable[[str], None] = lambda mensaje: None,
     progreso: Callable[[str, float, str], None] | None = None,
+    reanudar: dict[str, Any] | None = None,
+    hito: Callable[[str, dict[str, Any]], None] | None = None,
 ) -> ResultadoProduccion:
     """Guion revisado + video + kit de publicación, en un solo llamado.
 
@@ -315,8 +317,12 @@ def producir(
     llegue hondo lo que la tarjeta prometía, en vez de que la IA escriba otro gancho y se vaya a 70 s
     con un ejercicio más fácil de la que uno pidió.
     """
+    from .guion import cargar_guion
     from .publicar import crear_kit
-    from .render import crear_video
+    from .redactor import ResultadoRedaccion
+    from .render import ResultadoVideo, crear_video
+
+    guardado = reanudar or {}
 
     pistas = []
     if gancho_variante and str(gancho_variante.get("texto") or "").strip():
@@ -335,35 +341,90 @@ def producir(
             "No la cambies: el video se anuncia con ese nivel."
         )
 
-    redaccion = redactar(
-        valor,
-        materia=materia,
-        nivel=nivel,
-        modelo=modelo,
-        nombre=nombre,
-        forzar=forzar,
-        revisar_con_ia=revisar_con_ia,
-        pistas=pistas or None,
-        segundos_prometidos=segundos,
-        molde=molde,
-        gancho_variante=gancho_variante,
-        gancho_variantes=gancho_variantes,
-        avisar=avisar,
-    )
+    datos_guion = guardado.get("guion") or {}
+    ruta_guion = Path(datos_guion["ruta"]) if datos_guion.get("ruta") else None
+    if ruta_guion and ruta_guion.exists():
+        redaccion = ResultadoRedaccion(
+            ruta=ruta_guion,
+            guion=cargar_guion(ruta_guion),
+            supuestos=list(datos_guion.get("supuestos") or []),
+            pendientes=list(datos_guion.get("pendientes") or []),
+            rondas=int(datos_guion.get("rondas") or 0),
+            modelo=str(datos_guion.get("modelo") or ""),
+            revisado_por_ia=bool(datos_guion.get("revisado_por_ia")),
+        )
+        avisar("El guion ya estaba escrito: no se vuelve a llamar a la IA.")
+    else:
+        redaccion = redactar(
+            valor,
+            materia=materia,
+            nivel=nivel,
+            modelo=modelo,
+            nombre=nombre,
+            forzar=forzar,
+            revisar_con_ia=revisar_con_ia,
+            pistas=pistas or None,
+            segundos_prometidos=segundos,
+            molde=molde,
+            gancho_variante=gancho_variante,
+            gancho_variantes=gancho_variantes,
+            avisar=avisar,
+        )
+        if hito:
+            hito(
+                "guion",
+                {
+                    "ruta": str(redaccion.ruta),
+                    "pendientes": list(redaccion.pendientes),
+                    "supuestos": list(redaccion.supuestos),
+                    "rondas": redaccion.rondas,
+                    "modelo": redaccion.modelo,
+                    "revisado_por_ia": redaccion.revisado_por_ia,
+                },
+            )
 
-    avisar(f"Creando el video ({calidad})… puede tardar unos minutos.")
-    video = crear_video(
-        redaccion.ruta,
-        calidad=calidad,
-        proveedor=proveedor,
-        voz=voz,
-        velocidad=velocidad,
-        subtitulos=subtitulos,
-        sincronizar=sincronizar,
-        carpeta_salida=None,
-        tema=tema,
-        progreso=progreso,
-    )
+    datos_video = guardado.get("video") or {}
+    ruta_video = Path(datos_video["video"]) if datos_video.get("video") else None
+    if ruta_video and ruta_video.exists():
+        video = ResultadoVideo(
+            video=ruta_video,
+            carpeta=Path(datos_video.get("carpeta") or ruta_video.parent),
+            duracion=float(datos_video.get("duracion") or 0.0),
+            segundos_proceso=float(datos_video.get("segundos_proceso") or 0.0),
+            srt=Path(datos_video["srt"]) if datos_video.get("srt") else None,
+            fuentes_tiempo=set(datos_video.get("fuentes_tiempo") or []),
+            tema=str(datos_video.get("tema") or ""),
+        )
+        avisar("El video ya estaba creado: solo falta el kit.")
+        if progreso:
+            progreso("video final", 0.93, "video ya creado")
+    else:
+        avisar(f"Creando el video ({calidad})… puede tardar unos minutos.")
+        video = crear_video(
+            redaccion.ruta,
+            calidad=calidad,
+            proveedor=proveedor,
+            voz=voz,
+            velocidad=velocidad,
+            subtitulos=subtitulos,
+            sincronizar=sincronizar,
+            carpeta_salida=None,
+            tema=tema,
+            progreso=progreso,
+        )
+        if hito:
+            hito(
+                "video",
+                {
+                    "video": str(video.video),
+                    "carpeta": str(video.carpeta),
+                    "duracion": video.duracion,
+                    "segundos_proceso": video.segundos_proceso,
+                    "srt": str(video.srt) if video.srt else None,
+                    "fuentes_tiempo": sorted(video.fuentes_tiempo),
+                    "tema": video.tema,
+                },
+            )
 
     resultado = ResultadoProduccion(
         guion=redaccion.guion,
@@ -377,16 +438,43 @@ def producir(
     )
 
     if con_kit:
-        kit = crear_kit(video.carpeta, con_ia=True, modelo=modelo, avisar=avisar)
-        resultado.portada = kit.portada
-        resultado.publicacion = kit.archivo
-        resultado.kit_aviso = kit.aviso
-        t = kit.textos
-        resultado.texto_kit = (
-            f"YouTube: {t.titulo_youtube}\n"
-            f"Descripción: {t.descripcion_youtube}\n"
-            f"TikTok: {t.texto_tiktok}\n"
-            f"Instagram: {t.texto_instagram}\n"
-            f"Hashtags: {' '.join(t.hashtags)}"
-        )
+        datos_kit = guardado.get("kit") or {}
+        archivo_kit = Path(datos_kit["publicacion"]) if datos_kit.get("publicacion") else None
+        portada_kit = Path(datos_kit["portada"]) if datos_kit.get("portada") else None
+        if archivo_kit and archivo_kit.exists() and portada_kit and portada_kit.exists():
+            resultado.portada = portada_kit
+            resultado.publicacion = archivo_kit
+            resultado.texto_kit = datos_kit.get("texto_kit")
+            resultado.kit_aviso = datos_kit.get("aviso")
+            if progreso:
+                progreso("kit", 1.0, "kit ya creado")
+        else:
+            if progreso:
+                progreso("kit", 0.95, "portada y textos de publicación")
+            kit = crear_kit(video.carpeta, con_ia=True, modelo=modelo, avisar=avisar)
+            resultado.portada = kit.portada
+            resultado.publicacion = kit.archivo
+            resultado.kit_aviso = kit.aviso
+            t = kit.textos
+            resultado.texto_kit = (
+                f"YouTube: {t.titulo_youtube}\n"
+                f"Descripción: {t.descripcion_youtube}\n"
+                f"TikTok: {t.texto_tiktok}\n"
+                f"Instagram: {t.texto_instagram}\n"
+                f"Hashtags: {' '.join(t.hashtags)}"
+            )
+            if hito:
+                hito(
+                    "kit",
+                    {
+                        "carpeta": str(kit.carpeta),
+                        "portada": str(kit.portada),
+                        "publicacion": str(kit.archivo),
+                        "texto_kit": resultado.texto_kit,
+                        "aviso": kit.aviso,
+                    },
+                )
+            if progreso:
+                progreso("kit", 1.0, "kit listo")
+
     return resultado
