@@ -291,6 +291,20 @@ def texto(
     return Text(contenido, font=familia, weight=grosor, font_size=tam * escala, color=color)
 
 
+def _resaltados_sin_solapamiento(frases: tuple[str, ...]) -> list[str]:
+    """Los tramos a resaltar, sin ninguno metido dentro de otro.
+
+    Manim lanza «Ambiguous style» si dos resaltos comparten letras, aunque el color sea
+    el mismo (text_mobject.py `_merge_settings`). Gana el trecho más largo: en «6, 8 y 48»
+    el «8» suelto queda cubierto por el «48», que también lo pinta.
+    """
+    largos: list[str] = []
+    for frase in sorted(set(frases), key=len, reverse=True):
+        if not any(frase in k for k in largos):
+            largos.append(frase)
+    return largos
+
+
 def parrafo(
     contenido: str,
     tam: float,
@@ -322,7 +336,11 @@ def parrafo(
     while max_lineas and len(lineas) > max_lineas and tam * 0.93 >= minimo:
         tam *= 0.93
         lineas = envolver_equilibrado(contenido, tam, peso, ancho_max, atomicos=destacar)
-    t2c = {f: color_destacado for f in destacar if color_destacado and any(f in linea for linea in lineas)}
+    t2c = {
+        f: color_destacado
+        for f in (_resaltados_sin_solapamiento(destacar) if color_destacado else ())
+        if any(f in linea for linea in lineas)
+    }
     p = Paragraph(
         *lineas,
         font=familia,
