@@ -176,8 +176,9 @@ def _idea(idea: Idea, materia: str | None, nivel: str | None, dificultad: str | 
     return idea.model_copy(
         update={
             "titulo": _texto(idea.titulo)[:45],
-            "gancho": _texto(idea.gancho) or (unicos[0].texto if unicos else ""),
-            "ganchos": unicos,
+            # La tarjeta, el CLI y el lote deben mandar el mismo gancho: el primero que queda limpio.
+            "gancho": unicos[0].texto if unicos else "",
+            "ganchos": unicos[:5],
             "molde": normalizar_molde(idea.molde),
             "enunciado": _texto(idea.enunciado),
             "porque": _texto(idea.porque),

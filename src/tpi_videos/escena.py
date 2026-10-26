@@ -212,8 +212,9 @@ class VideoEjercicio(VoiceoverScene):
 
         if self.op.solo_gancho:
             self._gancho()
-            # El bloque ya dura lo que la voz (también la de silencio, que usa la duración estimada).
-            self.wait(0.4)
+            # El clip es más corto que el video entero: se rellena hasta 4 s para que la vista previa
+            # alcance a leerse. El bloque ya dura lo que la voz (también la de silencio, estimada).
+            self.wait(max(0.2, 4.0 - self.renderer.time))
             self._guardar_linea_de_tiempo()
             return
 

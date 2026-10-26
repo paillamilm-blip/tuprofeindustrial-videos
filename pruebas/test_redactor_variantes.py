@@ -51,6 +51,12 @@ class RedactorVariantesTest(unittest.TestCase):
         self.assertNotIn("estilo", datos["gancho"])
         self.assertEqual(datos["gancho_variantes"], [])
 
+    def test_la_variante_no_hereda_tex_ni_emoji_del_modelo(self):
+        elegido = {"texto": "El elegido", "voz": "El elegido."}
+        datos = _aplicar_eleccion(datos_base(), None, elegido, [elegido])
+        self.assertNotIn("tex", datos["gancho"])
+        self.assertNotIn("emoji", datos["gancho"])
+
 
 if __name__ == "__main__":
     unittest.main()

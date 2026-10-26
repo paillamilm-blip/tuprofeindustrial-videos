@@ -226,7 +226,7 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
     if errores and errores[-1] == len(guion.pasos):
         avisos.append(Aviso("advertencia", f"paso {errores[-1]}", "el último paso es un error típico: agrega "
                             "después la forma correcta."))  # fmt: skip
-    if len(errores) > 1:
+    if len(errores) > 1 and guion.molde != "tres_errores":
         avisos.append(Aviso("sugerencia", "pasos", f"hay {len(errores)} errores típicos; con uno basta para "
                             "llamar la atención."))  # fmt: skip
 
