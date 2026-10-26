@@ -220,8 +220,8 @@ class PaginaVideos:
             with ui.card().classes("tpi-hoja w-full p-10 items-center gap-2"):
                 ui.label("🎬").classes("text-5xl")
                 ui.label("Todavía no hay videos").classes("tpi-titulo text-lg")
-                ui.label("Crea el primero en la pestaña Crear.").classes("tpi-ayuda")
-                ui.button("Ir a Crear", on_click=lambda: ui.navigate.to("/"))
+                ui.label("Crea el primero en Fábrica.").classes("tpi-ayuda")
+                ui.button("Ir a Crear", on_click=lambda: ui.navigate.to("/crear"))
             return
         with ui.row().classes("w-full gap-4"):
             imagenes = [(video, self._tarjeta(video)) for video in encontrados]

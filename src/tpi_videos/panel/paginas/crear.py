@@ -689,10 +689,10 @@ class PaginaCrear:
 
 
 def registrar() -> None:
-    @ui.page("/", title="Crear · Tu Profe Industrial")
+    @ui.page("/crear", title="Crear · Tu Profe Industrial")
     def pagina(guion: str | None = None) -> None:
         estado = PaginaCrear()
-        with marco("/"):
+        with marco("/crear"):
             estado.seccion_ejercicio()
             estado.zona_guion = ui.column().classes("w-full gap-4")
             estado.seccion_video()

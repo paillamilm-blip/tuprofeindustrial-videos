@@ -74,7 +74,8 @@ cierra esa ventana (o presiona `Control + C`).
 
 | Pestaña | Para qué sirve |
 |---|---|
-| **Crear** | 4 pestañas: **Ideas** (escribes un tema, la IA te propone 3 videos y tú eliges uno; el motor hace todo lo demás), **Escribir con IA** (el enunciado, una foto o un PDF → el guion), **Abrir un guion** y **Empezar en blanco**. El guion se edita en tarjetas: lo que se ve, lo que se escucha, emojis y «error típico», con cada fórmula dibujada tal como saldrá en el video. Luego eliges el estilo y creas el borrador o el video final: verás una barra de avance y el video aparece ahí mismo. |
+| **Fábrica** (la que se abre primero) | Un campo y un botón: escribes el tema, aprietas **«Crear los 3 videos»** y listo. La IA reparte sola los tres ángulos y las tres dificultades, ves en qué video vamos, y al terminar la misma pantalla te da **«Abrir la carpeta»**, el video y el kit de cada uno. Si uno no sale, tiene su botón **«Intentar solo este»**. |
+| **Crear** | 4 pestañas, para revisar todo a mano: **Ideas** (la IA propone 3 y tú eliges una), **Escribir con IA** (el enunciado, una foto o un PDF → el guion), **Abrir un guion** y **Empezar en blanco**. El guion se edita en tarjetas: lo que se ve, lo que se escucha, emojis y «error típico», con cada fórmula dibujada tal como saldrá en el video. Luego eliges el estilo y creas el borrador o el video final: verás una barra de avance y el video aparece ahí mismo. |
 | **Mis videos** | Ver tus videos, mostrarlos en Finder, rehacerlos con otro estilo, borrarlos y abrir el 📦 **kit de publicación**. |
 | **Estilos** | Ver una vista previa de cada estilo y elegir el que usas siempre. Para cambiar colores, letras, el fondo (¡también con tu foto!), la hoja o los subtítulos, duplica un estilo y edita la copia. |
 | **Ajustes** | Tu clave de Gemini, tu marca, la voz (con muestra ▶), tus stickers y el diagnóstico. |
@@ -189,11 +190,16 @@ funciona con la cuenta gratuita).
 
 No tienes que partir con el ejercicio listo. Escribe un tema y Gemini propone **3 ideas distintas** (un error
 típico, una aplicación real, un dato curioso), pensadas para frenar el scroll, cada una con su gancho, el
-ejercicio con números, el nivel y la duración que se promete y después se cumple:
+ejercicio con números, el nivel, **la dificultad** y la duración que se promete y después se cumple:
 
 ```bash
 ./tpi ideas "Teorema de Pitágoras"
 ```
+
+Las tres ideas salen en **distinta dificultad** (Fácil, Media, Difícil): fácil es una sola fórmula con números
+redondos, media el ejercicio estándar de prueba, difícil un paso más de lo esperado o una trampa. La dificultad
+**no es el curso** (eso sigue siendo `--nivel`): es qué tan hondo llega el ejercicio. Si este mes quieres una
+serie de un solo nivel, mándalo tú con `--dificultad facil` (o `media`, `dificil`) en `ideas`, `producir` o `lote`.
 
 Aparecen numeradas. Escribe `1`, `2` o `3` para hacer ese video, `[Enter]` si ninguna te convence (pide otras
 3 sin repetir las que ya viste) o `q` para salir. Si solo quieres leer las ideas: `./tpi ideas "Porcentajes" --sin-video`.
@@ -215,14 +221,15 @@ Sirven las mismas opciones de `crear` y `redactar`: `--borrador`, `--estilo piza
 `--voz es-CL-CatalinaNeural`, `--sin-kit`, `--sin-revision`, y `--segundos 45` para exigir la duración
 de la tarjeta (el panel lo pasa solo al presionar «Hacer este video»).
 
-**En el panel es todavía más fácil:** pestaña **Crear → Ideas**. Escribes el tema (o tocas uno sugerido, como
+**En el panel es todavía más fácil:** solapa **Crear → Ideas**. Escribes el tema (o tocas uno sugerido, como
 *Ley de Ohm* o *Caída libre*), ves las 3 tarjetas, presionas **«Otras 3 ideas»** si no te convencen y en la que
 eliges presionas **«Hacer este video»**. Ahí mismo ves el avance: el guion, el video y el kit.
 
 ### Hacer los 3 de una sola vez (el lote)
 
-Si ninguna idea sobra y quieres la semana cubierta de una pasada, presiona **«Hacer los 3 videos»** debajo de las
-tarjetas, o en la Terminal:
+Si ninguna idea sobra y quieres la semana cubierta de una pasada, usa la portada del panel (**Fábrica**): un
+campo, el botón **«Crear los 3 videos»** y a otra cosa. O, debajo de las tarjetas de Crear → Ideas, el mismo
+botón. En la Terminal:
 
 ```bash
 ./tpi lote "Porcentajes"
@@ -239,7 +246,8 @@ intentar** antes de rendirse; con `--espera 0` se salta la espera. Un guion con 
 fallo: el video sale igual y lo revisas en el panel.
 
 Sirven las mismas opciones de `producir` (`--borrador`, `--estilo`, `--voz`, `--sin-kit`, `--sin-revision`) más
-`--evitar "título"` para no repetir ideas que ya viste.
+`--evitar "título"` para no repetir ideas que ya viste y `--dificultad media` si los tres videos van a ser del
+mismo nivel.
 
 > 💡 Las ideas usan lo que el motor ya sabe dibujar (fórmulas y texto en la pizarra). Por eso no propone
 > gráficos de funciones ni diagramas de circuitos: eso viene después.

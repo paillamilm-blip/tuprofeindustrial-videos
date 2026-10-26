@@ -326,6 +326,7 @@ def _producir(
     gancho: str | None = None,
     titulo: str | None = None,
     segundos: int | None = None,
+    dificultad: str | None = None,
 ) -> int:
     """Guion revisado + video + kit de publicación en un solo paso, y lo muestra."""
     from .ia import MODELO_POR_DEFECTO
@@ -364,6 +365,7 @@ def _producir(
         gancho=gancho if gancho is not None else getattr(args, "gancho", None),
         titulo=titulo if titulo is not None else getattr(args, "titulo", None),
         segundos=prometido,
+        dificultad=dificultad if dificultad is not None else getattr(args, "dificultad", None),
         avisar=avisar,
         progreso=progreso if json_activo else None,
     )
@@ -421,15 +423,18 @@ def cmd_producir(args: argparse.Namespace) -> int:
 
 
 def _mostrar_ideas(ideas: list, tema: str | None) -> None:
-    from .ideas import ANGULOS
+    from .ideas import ANGULOS, DIFICULTADES
 
     consola.print(f"\n[bold]🎬 3 ideas[/]{' para «' + tema + '»' if tema else ''}:\n")
     for n, idea in enumerate(ideas, 1):
         consola.print(f" [bold cyan]{n}[/]  [bold]{idea.emoji} {ANGULOS[idea.angulo]}[/] · {idea.titulo}")
         consola.print(f"    [bold]Gancho:[/] {idea.gancho}")
         consola.print(f"    [bold]El ejercicio:[/] {idea.enunciado}")
+        nivel_dif = DIFICULTADES.get(idea.dificultad, "")
         consola.print(
-            f"    [bold]Nivel:[/] {idea.nivel} · {idea.materia.upper()} · [yellow]≈{idea.segundos} s[/]"
+            f"    [bold]Nivel:[/] {idea.nivel} · {idea.materia.upper()}"
+            + (f" · [cyan]{nivel_dif}[/]" if nivel_dif else "")
+            + f" · [yellow]≈{idea.segundos} s[/]"
         )
         consola.print(f"    [dim]{idea.porque}[/]\n")
 
@@ -449,6 +454,7 @@ def cmd_ideas(args: argparse.Namespace) -> int:
             tema=tema,
             materia=args.materia,
             nivel=args.nivel,
+            dificultad=args.dificultad,
             modelo=modelo,
             evitar=evitadas,
             avisar=lambda m: _emitir(etapa="redactando", avance=0.0, detalle=m)
@@ -498,18 +504,21 @@ def cmd_ideas(args: argparse.Namespace) -> int:
             gancho=elegida.gancho,
             titulo=elegida.titulo,
             segundos=elegida.segundos,
+            dificultad=args.dificultad or elegida.dificultad or None,
         )
 
 
 def _mostrar_lote(items: list, tema: str | None) -> None:
     """La tabla del lote: qué salió, qué quedó con avisos y qué falló (con su motivo)."""
-    from .ideas import ANGULOS
+    from .ideas import ANGULOS, DIFICULTADES
 
     consola.print(f"\n[bold]🎬 Lote[/]{' de «' + tema + '»' if tema else ''}: "
                   f"{sum(i.ok for i in items)} de {len(items)} video(s) listos.\n")  # fmt: skip
     for n, item in enumerate(items, 1):
         angulo = ANGULOS.get(item.idea.angulo, item.idea.angulo)
-        guion = f"{item.idea.emoji} {angulo} · {item.idea.titulo}".strip()
+        nivel_dif = DIFICULTADES.get(item.idea.dificultad, "")
+        guion = f"{item.idea.emoji} {angulo}" + (f" · {nivel_dif}" if nivel_dif else "")
+        guion = f"{guion} · {item.idea.titulo}".strip()
         if not item.ok:
             consola.print(f" [bold]{n}[/]  [red]❌[/] {guion}")
             consola.print(f"    [red]{item.error}[/]")
@@ -531,8 +540,8 @@ def _mostrar_lote(items: list, tema: str | None) -> None:
     faltan = [f"{n}. {item.idea.titulo}" for n, item in enumerate(items, 1) if not item.ok]
     if faltan:
         consola.print(
-            "\n[yellow]Los que faltan quedan con su tarjeta en el panel[/] (Crear → Ideas → «Hacer este "
-            'video»), o en la terminal con el enunciado: ./tpi producir "…"'
+            "\n[yellow]Los que faltan quedan con su tarjeta en el panel[/] (en el panel: Fábrica → «Intentar "
+            'solo este»), o en la terminal con el enunciado: ./tpi producir "…"'
         )
     consola.print()
 
@@ -560,10 +569,10 @@ def cmd_lote(args: argparse.Namespace) -> int:
         if not tema:
             raise ErrorMotor(
                 "El lote necesita el tema.",
-                ayuda='Ej. ./tpi lote "Porcentajes"   (o usa el botón «Hacer los 3 videos» del panel)',
+                ayuda='Ej. ./tpi lote "Porcentajes"   (o usa el botón «Crear los 3 videos» de Fábrica)',
             )
         ideas = proponer_ideas(
-            tema=tema, materia=args.materia, nivel=args.nivel, modelo=modelo,
+            tema=tema, materia=args.materia, nivel=args.nivel, dificultad=args.dificultad, modelo=modelo,
             evitar=list(args.evitar or []), avisar=avisar,
         )  # fmt: skip
 
@@ -577,6 +586,7 @@ def cmd_lote(args: argparse.Namespace) -> int:
         ideas,
         materia=args.materia,
         nivel=args.nivel,
+        dificultad=args.dificultad,
         modelo=modelo,
         calidad="borrador" if args.borrador else "final",
         estilo=args.estilo,
@@ -847,6 +857,11 @@ def construir_parser() -> argparse.ArgumentParser:
         "--materia", choices=["matematica", "fisica", "ingenieria"], help="opcional: la IA la deduce"
     )
     s.add_argument("--nivel", help='opcional, ej. "2° medio" o "técnico en electricidad"')
+    s.add_argument(
+        "--dificultad",
+        choices=["facil", "media", "dificil"],
+        help="qué tan hondo llega el ejercicio (por defecto, la IA reparte los 3 niveles)",
+    )
     s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
     s.add_argument("--evitar", nargs="+", default=[], help="títulos ya vistos, para que salgan otras 3")
     s.add_argument("--elegir", type=int, help="hacer el video de esa idea (1, 2 o 3) sin preguntar")
@@ -873,6 +888,11 @@ def construir_parser() -> argparse.ArgumentParser:
         "--materia", choices=["matematica", "fisica", "ingenieria"], help="opcional: la IA la deduce"
     )
     s.add_argument("--nivel", help='opcional, ej. "2° medio" o "técnico en electricidad"')
+    s.add_argument(
+        "--dificultad",
+        choices=["facil", "media", "dificil"],
+        help="qué tan hondo llega el ejercicio (por defecto, la IA reparte los 3 niveles)",
+    )
     s.add_argument(
         "--gancho",
         help="gancho de la idea elegida: el guion lo mantiene en vez de escribir otro (lo usa el panel)",
@@ -916,6 +936,11 @@ def construir_parser() -> argparse.ArgumentParser:
         "--materia", choices=["matematica", "fisica", "ingenieria"], help="opcional: la IA la deduce"
     )
     s.add_argument("--nivel", help='opcional, ej. "2° medio" o "técnico en electricidad"')
+    s.add_argument(
+        "--dificultad",
+        choices=["facil", "media", "dificil"],
+        help="qué tan hondo llega el ejercicio (por defecto, la IA reparte los 3 niveles)",
+    )
     s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
     s.add_argument("--evitar", nargs="+", default=[], help="títulos ya vistos, para que salgan otras 3")
     s.add_argument(

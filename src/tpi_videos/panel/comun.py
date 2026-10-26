@@ -16,9 +16,11 @@ from .tareas import TAREAS
 AZUL = "#1C3D74"
 ROJO = "#D32F2F"
 VERDE = "#2E7D32"
+GRIS = "#6B6B6B"  # el gris que sí se lee sobre el blanco (4,5:1)
 
 PAGINAS = (
-    ("/", "Crear", "movie_creation"),
+    ("/", "Fábrica", "bolt"),
+    ("/crear", "Crear", "movie_creation"),
     ("/videos", "Mis videos", "video_library"),
     ("/estilos", "Estilos", "palette"),
     ("/ajustes", "Ajustes", "tune"),

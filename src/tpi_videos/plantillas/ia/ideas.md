@@ -12,6 +12,8 @@ Tu tarea: proponer 3 IDEAS de video sobre el TEMA que te indican. No resuelves e
   - "paso_a_paso": el ejercicio clásico de prueba o examen, resuelto sin atajos.
   - "reto": un desafío con números redondos que invita a comentar la respuesta (los comentarios empujan el video).
 - Prioriza los ángulos con imán: error_tipico, dato_curioso y aplicacion_real frenan el scroll; deja paso_a_paso solo si el tema no da para más.
+- Cada idea lleva su **dificultad**: "facil" (una sola fórmula, números redondos, ningún truco), "media" (el ejercicio estándar de prueba, con despeje completo y unidades) o "dificil" (un paso más: un dato que hay que convertir o la trampa que la mayoría pasa por alto). Las 3 ideas usan dificultades DISTINTAS: un "facil", un "media" y un "dificil".
+- La dificultad no es el curso: en el mismo curso caben los tres niveles. Subirla significa más pasos o una trampa, NO un tema de un año superior.
 - Distinto ángulo, distinto ejercicio y distinto gancho: no son tres versiones del mismo problema.
 - Si te pasan ideas YA MOSTRADAS, no las repitas ni con otros números: propón otra cosa.
 
@@ -32,7 +34,7 @@ Tu tarea: proponer 3 IDEAS de video sobre el TEMA que te indican. No resuelves e
 
 ## 4. Nivel, materia y duración
 - materia: matematica, fisica o ingenieria (la que corresponda; si te piden una materia obligatoria, úsala en las 3).
-- nivel: curso real chileno, ej. "1° medio", "3° medio", "4° medio", "técnico en electricidad", "ingeniería comercial". Adapta la dificultad al nivel.
+- nivel: curso real chileno, ej. "1° medio", "3° medio", "4° medio", "técnico en electricidad", "ingeniería comercial". Es el curso al que le hablas; la dificultad del ejercicio va aparte, en su propio campo.
 - segundos: duración aproximada real del video (30 a 75). Para el alcance, más corto retiene más: apunta a 35–50 salvo que el ejercicio exija más.
 - segundos es una PROMESA, no un deseo: el motor achica el guion para respetarlo. Cuenta unos 8 s por paso hablado, más el gancho y el resultado; si el ejercicio necesita 6 pasos, promete 60–70 s en vez de 40.
 
