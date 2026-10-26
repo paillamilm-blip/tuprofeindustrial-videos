@@ -424,15 +424,6 @@ def normalizar_interrumpidos() -> int:
     return cambiados
 
 
-def pendientes_ia() -> list[dict[str, Any]]:
-    return [
-        lote
-        for lote in cargar()["lotes"]
-        if lote.get("estado") == "pendiente_ia"
-        or any(video.get("estado") == "pendiente_ia" for video in lote.get("videos", []))
-    ]
-
-
 def elegir_lote(
     solo_pendientes: bool = False, cola_id: str | None = None
 ) -> dict[str, Any] | None:
@@ -461,11 +452,6 @@ def elegir_lote(
         if any(video.get("estado") in ("pendiente_ia", "en_cola") for video in videos):
             return lote
     return None
-
-
-def ultimo_lote() -> dict[str, Any] | None:
-    lotes = [lote for lote in cargar()["lotes"] if lote.get("estado") != "descartado"]
-    return lotes[-1] if lotes else None
 
 
 def lotes_visibles() -> list[dict[str, Any]]:

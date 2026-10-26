@@ -265,9 +265,19 @@ dejas corriendo y vuelves. Al final ves la tabla, con ✅ el que salió, ⚠️ 
 ❌ el que no pudo.
 
 **Si una idea falla, el lote no se detiene:** sigue con las siguientes y guarda lo que alcanzó a salir. Cuando el
-fallo es de los que se arreglan esperando (Gemini saturado o el servicio caído), **espera 60 s y lo vuelve a
-intentar** antes de rendirse; con `--espera 0` se salta la espera. Un guion con avisos pendientes no cuenta como
-fallo: el video sale igual y lo revisas en el panel.
+fallo es de los que se arreglan esperando (Gemini saturado o el servicio caído), el video queda **pendiente** y el
+motor espera sin rendirse: 60 s, luego 2 min, 5 min y cada 5 min mientras el proceso viva. Con `--espera 0` lo deja
+pendiente sin esperar. Un guion con avisos pendientes no cuenta como fallo: el video sale igual y lo revisas en el
+panel.
+
+Cada video guarda su avance y sus hitos (guion, video, kit) en una **cola** en `salida/.cola/`, así que si la IA se
+cae, cierras el panel o se corta el render, **no pierdes lo ya hecho**:
+
+- En el **panel (Fábrica)** ves una barra por video con su fase (redactando, animando, subtítulos, kit) y una tarjeta
+  «Cola de videos» con lo pendiente. Al reabrir el panel, lo que quedó a medio hacer se marca «interrumpido» y lo que
+  esperaba a la IA **se reanuda solo**.
+- En la **Terminal**, `./tpi lote --reanudar` retoma el lote pendiente con los mismos ajustes guardados, sin volver a
+  pedirle las ideas a Gemini y sin repetir el guion, el video o el kit que ya salieron.
 
 Sirven las mismas opciones de `producir` (`--borrador`, `--estilo`, `--voz`, `--sin-kit`, `--sin-revision`) más
 `--evitar "título"` para no repetir ideas que ya viste y `--dificultad media` si los tres videos van a ser del

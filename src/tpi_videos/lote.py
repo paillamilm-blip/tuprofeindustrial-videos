@@ -22,7 +22,6 @@ from typing import Any
 from .errores import ErrorMotor
 from .ideas import Idea, ResultadoProduccion, producir
 
-INTENTOS_POR_IDEA = 2  # compatibilidad con lo que ya llamaba al lote
 ESPERA_ENTRE_INTENTOS = 60.0  # s: un límite de uso de Gemini se levanta en minutos, no en segundos
 ESPERA_LARGA = 300.0  # s: después del segundo reintento, cada 5 minutos
 

@@ -259,16 +259,6 @@ class ColaLifecycleTest(BaseCola):
         self.assertIsNone(cola.elegir_lote(solo_pendientes=True))
         self.assertEqual(cola.elegir_lote(cola_id=pendiente)["id"], pendiente)
 
-    def test_pendientes_ia_encuentra_lotes_y_videos(self) -> None:
-        sin_ideas = cola.nuevo_lote("Porcentajes", {})
-        cola.normalizar_interrumpidos()
-        con_video = self._lote_con_video()
-        cola.actualizar_video(self._video(con_video), estado="pendiente_ia")
-        cola.recalcular_lote(con_video)
-
-        ids = [lote["id"] for lote in cola.pendientes_ia()]
-        self.assertEqual(ids, [sin_ideas, con_video])
-
     def test_descartar_con_el_candado_tomado_avisa(self) -> None:
         lote_id = self._lote_con_video()
         cola.tomar_candado()
@@ -299,7 +289,6 @@ class ColaLifecycleTest(BaseCola):
 
         ids = [lote["id"] for lote in cola.lotes_visibles()]
         self.assertEqual(ids, [nuevo])
-        self.assertEqual(cola.ultimo_lote()["id"], nuevo)
 
     def test_podar_no_toca_nada_si_otro_proceso_trabaja(self) -> None:
         self._lote_con_video()
