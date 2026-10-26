@@ -26,6 +26,7 @@ ETAPAS = {
     "video final": "Uniendo el video",
     "listo": "Listo",
     "redactando": "La IA está escribiendo",
+    "esperando_ia": "Esperando conexión",
     "publicando": "Kit de publicación",
 }
 
@@ -37,6 +38,8 @@ class Tarea:
     etapa: str = "preparando"
     avance: float = 0.0
     detalle: str = ""
+    videos: dict[int, dict[str, Any]] = field(default_factory=dict)  # avance y fase de cada video
+    cola_id: str | None = None
     resultado: dict[str, Any] = field(default_factory=dict)
     error: dict[str, Any] | None = None  # {"mensaje": …, "ayuda": …}
     registro: list[str] = field(default_factory=list)  # lo que el comando escribió para personas
@@ -144,11 +147,30 @@ class Tareas:
             return
         if etapa in ("resultado", "guion"):
             tarea.resultado.update({k: v for k, v in evento.items() if k not in ("etapa", "avance")})
+            if evento.get("cola_id"):
+                tarea.cola_id = str(evento["cola_id"])
             return
         tarea.etapa = etapa or tarea.etapa
         if evento.get("avance"):  # los avisos de la IA no traen avance (0): no se retrocede
             tarea.avance = max(tarea.avance, float(evento["avance"]))
         tarea.detalle = str(evento.get("detalle", ""))
+        numero = evento.get("video")
+        if numero is not None:
+            try:
+                n = int(numero)
+            except (TypeError, ValueError):
+                n = 0
+            if n:
+                datos = tarea.videos.setdefault(n, {"total": int(evento.get("total") or 0)})
+                if evento.get("total"):
+                    datos["total"] = int(evento["total"])
+                if evento.get("video_avance") is not None:
+                    datos["avance"] = max(
+                        float(datos.get("avance") or 0.0), float(evento["video_avance"])
+                    )
+                for campo in ("fase", "estado", "detalle"):
+                    if evento.get(campo) is not None:
+                        datos[campo] = evento[campo]
 
     def _cerrar(self, tarea: Tarea, al_cambiar: Callable[[Tarea], Any] | None) -> Tarea:
         tarea.terminada = True
