@@ -1,7 +1,8 @@
 """De un tema al video completo: la IA propone 3 ideas, la persona elige y el motor hace todo.
 
 - ``tpi ideas "Teorema de Pitágoras"`` → 3 ideas distintas, cada una con su gancho, su ejercicio con
-  números, su nivel y su duración aproximada. Con ``--evitar`` se piden otras 3 sin repetir las visibles.
+  números, su nivel, su dificultad y su duración aproximada. Con ``--evitar`` se piden otras 3 sin
+  repetir las visibles.
 - ``tpi producir "…"`` → escribe el guion, lo revisa, crea el video final y arma el kit de publicación.
 
 Cada idea trae un ``enunciado`` con números reales: al elegir, ese enunciado entra tal cual a
@@ -12,6 +13,7 @@ validaciones que un enunciado escrito por el profesor.
 
 from __future__ import annotations
 
+import unicodedata
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -37,6 +39,36 @@ ANGULOS: dict[str, str] = {
     "reto": "Reto para comentar",
 }
 
+# Qué tan lejos llega el ejercicio. No es un filtro de la IA: decide cuántos pasos y qué trampa tiene.
+DIFICULTADES: dict[str, str] = {"facil": "Fácil", "media": "Media", "dificil": "Difícil"}
+_DIFICULTAD_OTRAS_PALABRAS = {
+    "facil": ("facil", "faciles", "baja", "basico", "basica", "principiante", "intro"),
+    "media": ("media", "medio", "medias", "intermedia", "intermedio", "estandar", "normal"),
+    "dificil": ("dificil", "dificiles", "alta", "avanzado", "avanzada", "experto", "desafio"),
+}
+# Lo que la pista le pide al redactor por cada nivel: es la diferencia real entre los tres videos
+DIFICULTAD_PISTA = {
+    "facil": "una sola fórmula, números redondos y ningún truco: explícalo como si el estudiante "
+    "viera el tema por primera vez",
+    "media": "el ejercicio estándar de prueba: la fórmula con sus unidades y el despeje completo, "
+    "sin saltarse pasos",
+    "dificil": "un paso más de lo esperado: un dato que hay que convertir o la trampa que la mayoría "
+    "pasa por alto, y nombra esa trampa al resolver",
+}
+
+
+def dificultad_normal(valor: str | None) -> str:
+    """Los tres niveles que conoce el motor, venga como venga lo que escribió la IA (o la persona)."""
+    limpio = "".join(
+        c
+        for c in unicodedata.normalize("NFKD", (valor or "").casefold().replace("_", ""))
+        if not unicodedata.combining(c)
+    ).strip(" .-")
+    for clave, otras in _DIFICULTAD_OTRAS_PALABRAS.items():
+        if limpio in otras:
+            return clave
+    return ""
+
 
 class Idea(BaseModel):
     angulo: Literal["error_tipico", "aplicacion_real", "dato_curioso", "paso_a_paso", "reto"] = Field(
@@ -50,6 +82,11 @@ class Idea(BaseModel):
     )
     materia: Literal["matematica", "fisica", "ingenieria"]
     nivel: str = Field(description="Curso al que va, ej. '2° medio' o 'técnico en electricidad'")
+    dificultad: str = Field(
+        default="",
+        description="'facil', 'media' o 'dificil'; las 3 ideas usan dificultades DISTINTAS "
+        "(no es el curso: es qué tan hondo llega el ejercicio)",
+    )
     emoji: str = Field(default="", description="1 emoji de la lista permitida (vacío = ninguno)")
     porque: str = Field(description="Una frase: por qué este video funciona en TikTok o Reels")
     segundos: int = Field(description="Duración aproximada del video, entre 30 y 75 segundos")
@@ -64,7 +101,7 @@ def _texto(valor: str) -> str:
     return " ".join(quitar_emojis(valor or "").split())
 
 
-def _idea(idea: Idea, materia: str | None, nivel: str | None) -> Idea:
+def _idea(idea: Idea, materia: str | None, nivel: str | None, dificultad: str | None) -> Idea:
     """Lo que pide la persona manda sobre lo que deduce la IA; nada de emojis sueltos en los textos."""
     return idea.model_copy(
         update={
@@ -74,18 +111,21 @@ def _idea(idea: Idea, materia: str | None, nivel: str | None) -> Idea:
             "porque": _texto(idea.porque),
             "materia": materia or idea.materia,
             "nivel": _texto(nivel or idea.nivel),
+            "dificultad": dificultad or dificultad_normal(idea.dificultad),
             "emoji": normalizar_para_ia(idea.emoji) or "",
             "segundos": max(25, min(90, idea.segundos)),
         }
     )
 
 
-def _limpiar(ideas: Iterable[Idea], materia: str | None, nivel: str | None) -> list[Idea]:
+def _limpiar(
+    ideas: Iterable[Idea], materia: str | None, nivel: str | None, dificultad: str | None = None
+) -> list[Idea]:
     """Ideas normales, sin repetidas y con un enunciado que sí se puede resolver."""
     limpia: list[Idea] = []
     vistos: set[str] = set()
     for idea in ideas:
-        nueva = _idea(idea, materia, nivel)
+        nueva = _idea(idea, materia, nivel, dificultad)
         clave = nueva.enunciado.casefold().replace(" ", "")[:80]
         if len(nueva.enunciado) < 30 or clave in vistos:
             continue
@@ -98,6 +138,7 @@ def proponer_ideas(
     tema: str | None = None,
     materia: str | None = None,
     nivel: str | None = None,
+    dificultad: str | None = None,
     modelo: str = ia.MODELO_POR_DEFECTO,
     evitar: Iterable[str] = (),
     avisar: Callable[[str], None] = lambda mensaje: None,
@@ -114,6 +155,12 @@ def proponer_ideas(
     ]
     if materia:
         contenido.append(f"Materia obligatoria: {materia}.")
+    forzada = dificultad_normal(dificultad)
+    if forzada:
+        contenido.append(
+            f'Las 3 ideas van a dificultad "{forzada}" (NO las repartas esta vez): el ejercicio de cada '
+            "una igual tiene que ser distinto."
+        )
     repetidas = [t for t in (evitar or ()) if t and t.strip()]
     if repetidas:
         contenido.append(
@@ -124,7 +171,7 @@ def proponer_ideas(
 
     avisar("Gemini está pensando 3 ideas de video (unos segundos)…")
     respuesta = pedir_json(ia.cliente(), modelo, sistema, contenido, PropuestaIA, "low")
-    ideas = _limpiar(respuesta.ideas, materia, nivel)
+    ideas = _limpiar(respuesta.ideas, materia, nivel, forzada or None)
     if len(ideas) < IDEAS_PETICION:
         raise ErrorMotor(
             f"Gemini devolvió {len(ideas)} idea(s) aprovechable(s) en vez de {IDEAS_PETICION}.",
@@ -173,15 +220,17 @@ def producir(
     gancho: str | None = None,
     titulo: str | None = None,
     segundos: int | None = None,
+    dificultad: str | None = None,
     avisar: Callable[[str], None] = lambda mensaje: None,
     progreso: Callable[[str, float, str], None] | None = None,
 ) -> ResultadoProduccion:
     """Guion revisado + video + kit de publicación, en un solo llamado.
 
     Es lo que hace ``tpi ideas`` cuando eliges una idea, y sirve igual con cualquier enunciado.
-    ``gancho``, ``titulo`` y ``segundos`` son los de la idea elegida: se los pasamos a ``redactar``
-    para que el video mantenga el gancho que frenó el scroll y dure lo que anunciamos, en vez de que
-    la IA escriba otro gancho y se vaya a 70 s cuando la tarjeta decía 45.
+    ``gancho``, ``titulo``, ``segundos`` y ``dificultad`` son los de la idea elegida: se los pasamos a
+    ``redactar`` para que el video mantenga el gancho que frenó el scroll, dure lo que anunciamos y
+    llegue hondo lo que la tarjeta prometía, en vez de que la IA escriba otro gancho y se vaya a 70 s
+    con un ejercicio más fácil de la que uno pidió.
     """
     from .publicar import crear_kit
     from .render import crear_video
@@ -194,6 +243,12 @@ def producir(
         )
     if titulo:
         pistas.append(f"Título pensado para el video: «{titulo}».")
+    nivel_dificultad = dificultad_normal(dificultad)
+    if nivel_dificultad:
+        pistas.append(
+            f"DIFICULTAD PEDIDA: {DIFICULTADES[nivel_dificultad]} → {DIFICULTAD_PISTA[nivel_dificultad]}. "
+            "No la cambies: el video se anuncia con ese nivel."
+        )
 
     redaccion = redactar(
         valor,

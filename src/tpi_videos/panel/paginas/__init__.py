@@ -1,1 +1,1 @@
-"""Páginas del panel: Crear, Mis videos, Estilos y Ajustes."""
+"""Páginas del panel: Fábrica, Crear, Mis videos, Estilos y Ajustes."""

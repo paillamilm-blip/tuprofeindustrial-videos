@@ -48,7 +48,10 @@ class ItemLote:
         return {
             "titulo": self.idea.titulo,
             "angulo": self.idea.angulo,
+            "dificultad": self.idea.dificultad,
             "emoji": self.idea.emoji,
+            # la idea completa detrás del ítem: así el panel reintenta una sin volverle a pedir nada a Gemini
+            "idea": self.idea.model_dump(),
             "ok": self.ok,
             "guion": self.guion,
             "video": self.video,
@@ -100,6 +103,7 @@ def producir_lote(
     *,
     materia: str | None = None,
     nivel: str | None = None,
+    dificultad: str | None = None,
     modelo: str | None = None,
     calidad: str = "final",
     estilo: str | None = None,
@@ -116,8 +120,9 @@ def producir_lote(
 ) -> list[ItemLote]:
     """Produce las ideas de a una y devuelve un ``ItemLote`` por cada una, en el mismo orden.
 
-    ``nivel`` puede venir de cada idea (``idea.nivel``): lo que la persona eligió en el comando gana.
-    ``espera`` son los segundos antes del reintento; con ``0`` el lote no espera nada.
+    ``nivel`` y ``dificultad`` pueden venir de cada idea (``idea.nivel``, ``idea.dificultad``): lo que la
+    persona eligió en el comando gana sobre las tres. ``espera`` son los segundos antes del reintento;
+    con ``0`` el lote no espera nada.
     """
     total = len(ideas)
     items: list[ItemLote] = []
@@ -130,6 +135,7 @@ def producir_lote(
                 idea,
                 materia=materia,
                 nivel=nivel,
+                dificultad=dificultad,
                 modelo=modelo,
                 calidad=calidad,
                 estilo=estilo,
@@ -187,6 +193,7 @@ def _una_idea(
     *,
     materia: str | None,
     nivel: str | None,
+    dificultad: str | None,
     modelo: str | None,
     calidad: str,
     estilo: str | None,
@@ -212,6 +219,7 @@ def _una_idea(
                 idea.enunciado,
                 materia=materia or idea.materia,
                 nivel=nivel or idea.nivel,
+                dificultad=dificultad or idea.dificultad or None,
                 modelo=modelo or MODELO_POR_DEFECTO,
                 calidad=calidad,
                 tema=estilo,

@@ -62,21 +62,40 @@ class Tarea:
 class Tareas:
     def __init__(self) -> None:
         self.actual: Tarea | None = None
+        self._en_curso: asyncio.Task | None = None
 
     def ocupado(self) -> bool:
         return self.actual is not None and not self.actual.terminada
+
+    def _prender(self, nombre: str, args: list[str]) -> Tarea:
+        if self.ocupado():
+            raise ErrorMotor("Ya hay un trabajo en curso.", ayuda="Espera a que termine o cancélalo.")
+        tarea = Tarea(nombre=nombre, args=args)
+        self.actual = tarea
+        return tarea
+
+    def lanzar(self, nombre: str, args: list[str]) -> Tarea:
+        """Prende el trabajo y no espera por él: la página lo mira con un temporizador.
+
+        El trabajo le pertenece a la app, no a la pestaña: si cierra (o navega a otra página), el
+        video se termina igual y el resultado queda en ``TAREAS.actual`` para cuando se vuelva.
+        """
+        tarea = self._prender(nombre, args)
+        self._en_curso = asyncio.create_task(self._correr(tarea, None))
+        return tarea
 
     async def ejecutar(
         self, nombre: str, args: list[str], al_cambiar: Callable[[Tarea], Any] | None = None
     ) -> Tarea:
         """Ejecuta ``tpi <comando> --progreso-json <resto>`` y devuelve la tarea terminada."""
-        if self.ocupado():
-            raise ErrorMotor("Ya hay un trabajo en curso.", ayuda="Espera a que termine o cancélalo.")
-        tarea = Tarea(nombre=nombre, args=args)
-        self.actual = tarea
+        tarea = self._prender(nombre, args)
+        self._en_curso = asyncio.create_task(self._correr(tarea, al_cambiar))
+        return await asyncio.shield(self._en_curso)
+
+    async def _correr(self, tarea: Tarea, al_cambiar: Callable[[Tarea], Any] | None) -> Tarea:
         entorno = dict(os.environ, PYTHONUNBUFFERED="1", NO_COLOR="1", COLUMNS="120")
         # --progreso-json va junto al comando: después puede venir «--» (un enunciado que empieza con «-»)
-        comando = [args[0], "--progreso-json", *args[1:]]
+        comando = [tarea.args[0], "--progreso-json", *tarea.args[1:]]
         try:
             tarea.proceso = await asyncio.create_subprocess_exec(
                 sys.executable, "-m", "tpi_videos", *comando,

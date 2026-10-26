@@ -9,7 +9,7 @@ from nicegui import app, ui
 
 from ..entorno import FUENTES_DIR, PAQUETE, raiz_proyecto
 from ..icono import IMAGEN
-from .paginas import ajustes, crear, estilos, videos
+from .paginas import ajustes, crear, estilos, fabrica, videos
 from .tareas import TAREAS
 
 HOST = "127.0.0.1"  # NiceGUI escucha en 0.0.0.0 (toda la red) si no se indica: aquí, solo este Mac
@@ -47,7 +47,7 @@ def iniciar(puerto: int = 8765, abrir: bool = True) -> None:
     app.add_media_files("/medios/fondos", raiz / "mis_ajustes" / "fondos")
     app.on_shutdown(TAREAS.cancelar)  # al cerrar el panel no queda un video creándose a escondidas
 
-    for pagina in (crear, videos, estilos, ajustes):
+    for pagina in (fabrica, crear, videos, estilos, ajustes):
         pagina.registrar()
 
     consola.print(f"[green bold]🎛  Panel abierto:[/] {url}")
