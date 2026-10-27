@@ -15,12 +15,13 @@ from pydantic import ValidationError
 from ..config import cargar_marca
 from ..emojis import EMOJIS, stickers_dir
 from ..entorno import raiz_proyecto
+from ..errores import ErrorMotor
 from ..guion import MATERIAS, Guion, Visual, a_yaml, explicar_errores
 from ..render import slug
 from ..revision import Revision, revisar
 from ..temas import cargar_tema
 from ..visuales import CAMPOS, VECTORES, VISUALES, opciones_select
-from . import formulas
+from . import formulas, miniaturas
 from .comun import url_medio
 
 _BLOQUE = {"texto": "", "voz": "", "emoji": ""}
@@ -268,26 +269,41 @@ class EditorGuion:
             for clave in definicion.campos:
                 campo = CAMPOS[clave]
                 if clave == "vectores":
-                    self._chips(v, clave, campo.etiqueta, {k: f"{k} — {n}" for k, n in VECTORES.items()})
+                    w = self._chips(v, clave, campo.etiqueta, {k: f"{k} — {n}" for k, n in VECTORES.items()})
                 elif clave == "anotar":
-                    self._chips(v, clave, campo.etiqueta, {m: m.replace("_", " ") for m in definicion.marcas})
+                    w = self._chips(
+                        v, clave, campo.etiqueta, {m: m.replace("_", " ") for m in definicion.marcas}
+                    )
                 elif campo.forma == "opcion":
-                    (
+                    w = (
                         ui.select(dict(campo.opciones), label=campo.etiqueta)
                         .props("outlined dense")
                         .classes("w-full")
                         .bind_value(v, clave)
                     )
                 elif campo.forma == "booleano":
-                    ui.switch(campo.etiqueta).props("dense").bind_value(v, clave)
+                    w = ui.switch(campo.etiqueta).props("dense").bind_value(v, clave)
                 elif campo.forma == "lista":
-                    self._chips(v, clave, campo.etiqueta, None)
+                    w = self._chips(v, clave, campo.etiqueta, None)
                 else:
-                    self._texto(v, clave, campo.etiqueta, campo.ayuda)
+                    w = self._texto(v, clave, campo.etiqueta, campo.ayuda)
+                # Al salir del campo se rehace la tarjeta: así el dibujo de abajo sigue lo que se escribió.
+                w.on("blur", lambda: self.seccion_pasos.refresh())
             ui.label(
                 f"{definicion.nombre} se dibuja en el pie de la hoja mientras suena la voz de este paso. "
                 "Con un dibujo en todo el video basta."
             ).classes("tpi-ayuda")
+            self._miniatura(v, tipo)
+
+    def _miniatura(self, v: dict, tipo: str) -> None:
+        """El dibujo elegido, visto acá mismo: un fotograma, sin voz y sin IA."""
+        try:
+            png = miniaturas.dibujar_miniatura(_visual_al_guardar(v) or {"tipo": tipo})
+        except ErrorMotor as e:
+            ui.label(f"⏳ Todavía no puedo dibujarlo: {e}").classes("tpi-ayuda")
+            return
+        with ui.row().classes("w-full justify-center"):
+            ui.image(url_medio(png)).classes("w-[150px] rounded-lg border border-[#DCDCD7]")
 
     def _formula(self, d: dict, clave: str, etiqueta: str, ayuda: str = "") -> None:
         """Campo LaTeX con su dibujo debajo (se actualiza al salir del campo o con Enter)."""

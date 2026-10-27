@@ -1444,7 +1444,7 @@ Dos cosas que **no** funcionan y por qué:
   (así salió la primera prueba). Hay que encuadrar desde el tamaño real del `VGroup`, y `_encajar` no sirve
   porque solo achica.
 
-- [ ] **Paso 1 — Prueba que falla**
+- [x] **Paso 1 — Prueba que falla**
 
 `pruebas/test_miniaturas.py`:
 
@@ -1511,10 +1511,10 @@ class DibujarTest(unittest.TestCase):
         self.assertIn("dibujo_imposible", str(sube.exception))
 ```
 
-- [ ] **Paso 2 — Verificar que falla**: `ModuleNotFoundError: No module named
+- [x] **Paso 2 — Verificar que falla**: `ModuleNotFoundError: No module named
   'tpi_videos.panel.miniaturas'`.
 
-- [ ] **Paso 3 — Escribir `panel/miniaturas.py`**
+- [x] **Paso 3 — Escribir `panel/miniaturas.py`**
 
 ```python
 """El dibujo de un paso, visto antes de crear el video: un fotograma, sin voz y sin IA.
@@ -1618,7 +1618,7 @@ def _ANCHO_UTIL() -> float:
 `get_family`); hay que pasar `dibujo.mobs`. `capture_mobject()` devuelve `None`, así que se encadena
 `camara.get_image().save(...)`. Y `ManimColor` no tiene `.get_hex_l()`.
 
-- [ ] **Paso 4 — Verde**
+- [x] **Paso 4 — Verde**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -1630,7 +1630,24 @@ chico, no se baja el umbral, se revisa por qué `marco_para` no lo contuvo (dibu
 `move_to` fuera del origen se salen del marco: medir con `group.width/height` después de `.copy()` y, si
 hace falta, `grupo.move_to(ORIGIN)` antes de capturar).
 
-- [ ] **Paso 5 — Medir el costo real y mirarlo**
+> **Corregido al medir (27-10-2026, al ejecutar B.3).** Tres cosas del diseño de esta tarea estaban mal y
+> se arreglaron con los 24 cuadros medidos, no con la intuición:
+>
+> 1. **`_llenado` (solo el alto) condenaba a la mitad del catálogo.** En un retrato 9:16 un dibujo ancho
+>    llena el *ancho* y nunca el alto: la recta, el proyectil y la torta daban 0,06-0,18 siendo correctos.
+>    La prueba ahora mide las dos dimensiones y exige `max(ancho, alto) > 0,65` sobre la dimensión que
+>    manda. Medido en los 24: ninguna baja de 0,68.
+> 2. **Faltaba `grupo.move_to(ORIGIN)` antes de capturar.** La cámara encuadra alrededor del origen, así que
+>    un dibujo armado con `move_to` aparte salía corrido a un lado y con medio cuadro vacío (la recta
+>    ocupaba 0,43 del ancho y aparecía pegada a la derecha). Con el centrado: 0,86.
+> 3. **`HOLGURA` 1,35 dejaba el dibujo chico.** Con 1,15 el aire sigue existiendo (7 % por lado) y la tinta
+>    pasa de 0,74 a 0,87 del cuadro.
+>
+> Y un detalle de pantalla: el mensaje de un dibujo incompleto salía con el texto crudo de pydantic
+> (`input_value`, `type=value_error`). Ahora pasa por `explicar_errores()`, que es la traducción que ya usa
+> el revisor, y se le quita el prefijo `(raíz):` que no dice nada en este contexto.
+
+- [x] **Paso 5 — Medir el costo real y mirarlo**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -1647,7 +1664,7 @@ for k in ('engranaje','mohr','tanque','cercha','optica'):
 Esperado: cada tipo en menos de ~2 s (los que usan LaTeX tardan más la primera vez). **Abrir 3 de esos PNG
 con `Read` y mirarlos** antes de continuar.
 
-- [ ] **Paso 6 — Mostrarla en el editor**
+- [x] **Paso 6 — Mostrarla en el editor**
 
 En `editor.py::_visual`, dentro del `if tipo:` final, agregar la miniatura con su estado:
 
@@ -1665,7 +1682,7 @@ En `editor.py::_visual`, dentro del `if tipo:` final, agregar la miniatura con s
 
 Importar arriba: `from . import miniaturas` y `from ..errores import ErrorMotor`.
 
-- [ ] **Paso 7 — Panel abierto, mirar, commit**
+- [x] **Paso 7 — Panel abierto, mirar, commit**
 
 Abrir `/crear`, desplegar «Dibujo» en 3 tipos y **ver el dibujo en la pantalla** (si sale «Todavía no puedo
 dibujarlo: …», el mensaje ya es útil: dice qué falta; si sale un cuadro gris, es un defecto y se arregla
