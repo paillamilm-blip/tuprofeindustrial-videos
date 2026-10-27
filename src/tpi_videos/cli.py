@@ -992,7 +992,9 @@ def cmd_vista_previa(args: argparse.Namespace) -> int:
     # Sin --progreso-json: un aviso que no hace nada (así Manim no dibuja sus barras bajo el «Creando…»)
     progreso = _progreso_json if json_activo else (lambda etapa, avance, detalle: None)
     with consola.status("Creando 3 cuadros de muestra (unos segundos)…"):
-        cuadros = crear_vista_previa(args.tema, progreso=progreso, forzar=args.forzar)
+        cuadros = crear_vista_previa(
+            args.tema, progreso=progreso, forzar=args.forzar, guion=Path(args.guion) if args.guion else None
+        )
     if json_activo:
         _emitir(etapa="resultado", avance=1.0, cuadros=cuadros)
     consola.print("[green bold]✅ Vista previa lista:[/]")
@@ -1360,6 +1362,9 @@ def construir_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("vista-previa", help="3 cuadros de muestra de un estilo (unos segundos)")
     s.add_argument("--tema", help="estilo (por defecto, el de marca.yaml)")
+    s.add_argument(
+        "--guion", help="guion del autor que se muestra en los cuadros (por defecto, la plantilla)"
+    )
     s.add_argument("--forzar", action="store_true", help="crearla de nuevo aunque no haya cambios")
     s.add_argument("--abrir", action="store_true", help="abre las imágenes al terminar")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)

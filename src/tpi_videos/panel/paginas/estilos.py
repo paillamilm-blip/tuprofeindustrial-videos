@@ -4,6 +4,7 @@ fondo (con tu foto), la hoja, los subtítulos y las animaciones. Todo queda en `
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,7 @@ from ...temas import (
 )
 from ...tipografia import PARA_SUBTITULOS, PARA_TEXTO, PARA_TITULOS
 from ...vista_previa import en_cache
+from .. import biblioteca
 from ..comun import confirmar, marco, titulo_seccion, url_medio
 from ..tareas import TAREAS, Tarea
 
@@ -33,6 +35,48 @@ COLORES = (
     ("exito", "Resultado"), ("error", "Error típico"), ("panel", "Tarjetas"), ("borde", "Bordes"),
     ("fondo", "Fondo"),
 )  # fmt: skip
+
+# El guion con el que se miran los estilos esta sesión del panel (None = el último que guardaste).
+GUION_DE_LA_VISTA: Path | None = None
+# Cuántas vistas previas se calculan solas por visita (el resto, al pedirlas en ese estilo).
+MAX_VISTAS_POR_VISITA = 4
+
+
+def guion_de_la_vista() -> Path | None:
+    """Con qué guion se ven los estilos: el que elegiste, o el último que guardaste."""
+    if GUION_DE_LA_VISTA is not None and GUION_DE_LA_VISTA.exists():
+        return GUION_DE_LA_VISTA
+    propios = [g.ruta for g in biblioteca.guiones() if not g.ejemplo]
+    return propios[0] if propios else None
+
+
+def elegir_guion_de_la_vista(al_cambiar: Callable[[], Any] | None = None) -> None:
+    """El «cambiar» de la vista previa: tus guiones, o la plantilla corta del motor."""
+    global GUION_DE_LA_VISTA
+    opciones = {"": "Plantilla del motor (corta, sin tus cuentas)"} | {
+        str(g.ruta): g.nombre for g in biblioteca.guiones()
+    }
+    actual = guion_de_la_vista()
+    with ui.dialog() as dialogo, ui.card().classes("p-6 gap-3 w-[460px]"):
+        ui.label("Con qué guion se ven los estilos").classes("tpi-titulo text-lg")
+        eleccion = (
+            ui.select(opciones, value=str(actual) if actual else "", label="Guion")
+            .props("outlined use-input fill-input hide-selected")
+            .classes("w-full")
+        )
+        ui.label("Los cuadros se rehacen solos la primera vez con cada estilo.").classes("tpi-ayuda")
+
+        def guardar() -> None:
+            global GUION_DE_LA_VISTA
+            GUION_DE_LA_VISTA = Path(eleccion.value) if eleccion.value else None
+            dialogo.close()
+            if al_cambiar:
+                al_cambiar()
+
+        with ui.row().classes("w-full justify-end gap-2"):
+            ui.button("Cancelar", on_click=dialogo.close).props("flat")
+            ui.button("Usar este", on_click=guardar)
+    dialogo.open()
 
 
 def preparar_fondo(origen: Path, destino: Path) -> Path:
@@ -74,7 +118,7 @@ def _opciones(base: tuple[str, ...], actual: str | None) -> list[str]:
 
 def _cuadros(identificador: str, contenedor: ui.element) -> None:
     contenedor.clear()
-    cuadros = en_cache(identificador)
+    cuadros = en_cache(identificador, guion_de_la_vista())
     with contenedor:
         if not cuadros:
             ui.label("Sin vista previa todavía").classes("tpi-ayuda")
@@ -96,7 +140,12 @@ async def generar_vista(
         if estado is not None:
             estado.text = f"Creando vista previa… {round(t.avance * 100)} %"
 
-    args = ["vista-previa", "--tema", identificador] + ([] if automatica else ["--forzar"])
+    guion = guion_de_la_vista()
+    args = (
+        ["vista-previa", "--tema", identificador]
+        + ([f"--guion={guion}"] if guion else [])
+        + ([] if automatica else ["--forzar"])
+    )
     tarea = await TAREAS.ejecutar("Vista previa del estilo", args, al_cambiar=avance)
     if estado is not None:
         estado.text = ""
@@ -128,6 +177,16 @@ def lista_de_temas() -> None:
     def lista() -> None:
         actual = cargar_marca().tema
         pendientes: list[tuple[str, ui.element, ui.label]] = []
+        guion = guion_de_la_vista()
+        with ui.row().classes("w-full items-center gap-2 no-wrap"):
+            ui.label(
+                f"Las vistas previas se hacen con tu guion «{guion.stem}»."
+                if guion
+                else "Las vistas previas se hacen con la plantilla corta del motor."
+            ).classes("tpi-ayuda")
+            ui.button("cambiar", on_click=lambda: elegir_guion_de_la_vista(lista.refresh)).props(
+                "flat dense no-caps size=sm"
+            )
         for identificador, tema, propio in listar_temas():
             with (
                 ui.card().classes("tpi-hoja w-full p-5"),
@@ -144,7 +203,7 @@ def lista_de_temas() -> None:
                             ui.chip("Tuyo", color="grey-7", text_color="white").props("dense")
                     ui.label(tema.descripcion or "—").classes("tpi-ayuda")
                     estado = ui.label("").classes("tpi-ayuda")
-                    if en_cache(identificador) is None:
+                    if en_cache(identificador, guion) is None:
                         pendientes.append((identificador, cuadros, estado))
                     with ui.row().classes("gap-2"):
                         if identificador != actual:
@@ -176,7 +235,12 @@ def lista_de_temas() -> None:
                                 f"¿Borrar tu estilo «{n}»?", lambda: borrar(i))).props("flat round color=grey-7")  # fmt: skip
 
         if pendientes:
-            ui.timer(0.5, lambda: _completar_vistas(pendientes), once=True)
+            ui.timer(0.5, lambda: _completar_vistas(pendientes[:MAX_VISTAS_POR_VISITA]), once=True)
+            if len(pendientes) > MAX_VISTAS_POR_VISITA:
+                ui.label(
+                    f"Los otros {len(pendientes) - MAX_VISTAS_POR_VISITA} estilos calculan su vista al "
+                    "pedir «Ver vista previa»."
+                ).classes("tpi-ayuda")
 
     lista()
 

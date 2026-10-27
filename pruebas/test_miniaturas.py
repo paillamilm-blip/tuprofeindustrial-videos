@@ -79,5 +79,26 @@ class DibujarTest(unittest.TestCase):
         self.assertIn("dibujo_imposible", str(sube.exception))
 
 
+class VistaPreviaConGuionTest(unittest.TestCase):
+    """La vista previa de un estilo sale del guion del autor, y el cache lo sabe."""
+
+    def test_cambiar_el_guion_cambia_la_huella(self):
+        from tpi_videos.vista_previa import carpeta_vistas, huella
+
+        base = huella("neon_cian", None)
+        otro = huella("neon_cian", Path("guiones/ejemplos/moldes_virales.yaml"))
+        self.assertNotEqual(base, otro)
+        self.assertTrue(str(carpeta_vistas("neon_cian", "")).endswith("neon_cian"))
+        self.assertIn(otro[:8], carpeta_vistas("neon_cian", otro[:8]).name)
+
+    def test_la_url_de_un_fondo_del_paquete_no_es_vacia(self):
+        from tpi_videos.entorno import PAQUETE
+        from tpi_videos.panel.comun import url_medio
+
+        fondos = sorted((PAQUETE / "assets" / "fondos").glob("*.png"))
+        self.assertTrue(fondos, "el paquete no trae fondos")
+        self.assertTrue(url_medio(fondos[0]), f"{fondos[0]} no tiene URL en el panel")
+
+
 if __name__ == "__main__":
     unittest.main()

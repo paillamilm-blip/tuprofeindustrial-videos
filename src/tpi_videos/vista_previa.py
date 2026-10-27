@@ -21,53 +21,59 @@ GUION = PLANTILLAS_DIR / "vista_previa.yaml"
 SECCIONES = (("gancho", "gancho"), ("paso 2", "paso"), ("resultado", "resultado"))
 
 
-def carpeta_vistas(tema: str) -> Path:
-    return raiz_proyecto() / "salida" / "_vistas" / id_tema(tema)
+def carpeta_vistas(tema: str, sufijo: str = "") -> Path:
+    return raiz_proyecto() / "salida" / "_vistas" / f"{id_tema(tema)}{sufijo}"
 
 
-def _huella(tema: str) -> str:
-    """Cambia si cambia el tema, la marca (nombre, colores…) o la versión del motor."""
+def huella(tema: str, guion: Path | None = None) -> str:
+    """Cambia si cambia el tema, la marca, el guion del autor o la versión del motor."""
     marca = cargar_marca()
     datos = {"tema": cargar_tema(tema, marca).model_dump(mode="json"), "marca": marca.model_dump(mode="json")}
-    texto = (
-        json.dumps(datos, sort_keys=True, ensure_ascii=False)
-        + __version__
-        + GUION.read_text(encoding="utf-8")
-    )
+    contenido = (guion or GUION).read_text(encoding="utf-8")
+    texto = json.dumps(datos, sort_keys=True, ensure_ascii=False) + __version__ + contenido
     return hashlib.sha1(texto.encode("utf-8")).hexdigest()[:16]
+
+
+def _carpeta(tema: str, guion: Path | None) -> Path:
+    """Con guion del autor, una carpeta propia: así el cache de la plantilla no se confunde."""
+    sufijo = f"__{huella(tema, guion)[:8]}" if guion is not None else ""
+    return carpeta_vistas(tema, sufijo)
 
 
 def _cuadros(carpeta: Path) -> list[Path]:
     return [carpeta / f"{i}_{nombre}.png" for i, (_, nombre) in enumerate(SECCIONES, 1)]
 
 
-def en_cache(tema: str) -> list[Path] | None:
+def en_cache(tema: str, guion: Path | None = None) -> list[Path] | None:
     """Los 3 cuadros de la última vista previa, si siguen al día."""
-    carpeta = carpeta_vistas(tema)
-    huella = carpeta / "huella.txt"
+    carpeta = _carpeta(tema, guion)
+    archivo_huella = carpeta / "huella.txt"
     cuadros = _cuadros(carpeta)
     try:
-        al_dia = huella.read_text(encoding="utf-8").strip() == _huella(tema)
+        al_dia = archivo_huella.read_text(encoding="utf-8").strip() == huella(tema, guion)
     except Exception:  # sin vista previa o tema dañado: se genera de nuevo
         return None
     return cuadros if al_dia and all(c.exists() for c in cuadros) else None
 
 
 def crear_vista_previa(
-    tema: str | None = None, progreso: Progreso | None = None, forzar: bool = False
+    tema: str | None = None,
+    progreso: Progreso | None = None,
+    forzar: bool = False,
+    guion: Path | None = None,
 ) -> list[Path]:
     from .postproduccion import extraer_cuadro
     from .render import crear_video
     from .subtitulos import momento_con_subtitulo, tiempos_ass
 
     tema = tema or cargar_marca().tema
-    if not forzar and (guardados := en_cache(tema)):
+    if not forzar and (guardados := en_cache(tema, guion)):
         if progreso:
             progreso("listo", 1.0, "vista previa guardada")
         return guardados
-    carpeta = carpeta_vistas(tema)
+    carpeta = _carpeta(tema, guion)
     resultado = crear_video(
-        GUION, calidad="borrador", proveedor="silencio", sincronizar="estimado",
+        guion or GUION, calidad="borrador", proveedor="silencio", sincronizar="estimado",
         carpeta_salida=carpeta, tema=tema, progreso=progreso,
     )  # fmt: skip
     linea = json.loads((resultado.carpeta / "linea_de_tiempo.json").read_text(encoding="utf-8"))
@@ -78,5 +84,5 @@ def crear_vista_previa(
         b = bloques[seccion]
         t = momento_con_subtitulo(b["inicio"], b["inicio"] + b["duracion"], tiempos)
         extraer_cuadro(resultado.video, t, destino)
-    (carpeta / "huella.txt").write_text(_huella(tema), encoding="utf-8")
+    (carpeta / "huella.txt").write_text(huella(tema, guion), encoding="utf-8")
     return cuadros

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from nicegui import ui
 
-from ..entorno import raiz_proyecto
+from ..entorno import PAQUETE, raiz_proyecto
 from .tareas import TAREAS
 
 # La piel del panel, en un solo lugar. Las páginas leen de acá; no reciben colores nuevos.
@@ -94,6 +94,7 @@ def url_medio(ruta: Path | None) -> str:
         (raiz / "salida", "/medios/salida"),
         (raiz / "mis_ajustes" / "stickers", "/medios/stickers"),
         (raiz / "mis_ajustes" / "fondos", "/medios/fondos"),
+        (PAQUETE / "assets" / "fondos", "/medios/fondos_paquete"),
     ):
         try:
             relativa = ruta.relative_to(base.resolve())

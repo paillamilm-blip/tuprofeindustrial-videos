@@ -9,6 +9,7 @@ from nicegui import app, ui
 
 from ..entorno import FUENTES_DIR, PAQUETE, raiz_proyecto
 from ..icono import IMAGEN
+from ..temas import FONDOS_DIR
 from .paginas import ajustes, crear, estilos, fabrica, videos
 from .tareas import TAREAS
 
@@ -59,6 +60,7 @@ def iniciar(puerto: int = 8765, abrir: bool = True) -> None:
     app.add_media_files("/medios/salida", raiz / "salida")
     app.add_media_files("/medios/stickers", raiz / "mis_ajustes" / "stickers")
     app.add_media_files("/medios/fondos", raiz / "mis_ajustes" / "fondos")
+    app.add_media_files("/medios/fondos_paquete", FONDOS_DIR)  # las texturas incluidas
     app.on_shutdown(TAREAS.cancelar)  # al cerrar el panel no queda un video creándose a escondidas
 
     for pagina in (fabrica, crear, videos, estilos, ajustes):
