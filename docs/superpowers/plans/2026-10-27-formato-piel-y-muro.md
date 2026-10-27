@@ -2190,7 +2190,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 
 **Archivos:** `src/tpi_videos/panel/paginas/crear.py`, `src/tpi_videos/panel/editor.py`.
 
-- [ ] **Paso 1 — Prueba de que nada bloquea** (agregar a `pruebas/test_formatos_ui.py`)
+- [x] **Paso 1 — Prueba de que nada bloquea** (agregar a `pruebas/test_formatos_ui.py`)
 
 ```python
 class CaminoTest(unittest.TestCase):
@@ -2207,9 +2207,9 @@ class CaminoTest(unittest.TestCase):
         self.assertIn("idea", motivo.lower())
 ```
 
-- [ ] **Paso 2 — Verificar que falla**: `ImportError: cannot import name 'puede_continuar'`.
+- [x] **Paso 2 — Verificar que falla**: `ImportError: cannot import name 'puede_continuar'`.
 
-- [ ] **Paso 3 — El paso del camino como dato, no como estado escondido**
+- [x] **Paso 3 — El paso del camino como dato, no como estado escondido**
 
 En `crear.py`, arriba de `PaginaCrear`:
 
@@ -2225,7 +2225,7 @@ def puede_continuar(estado: dict) -> tuple[bool, str]:
     return True, ""
 ```
 
-- [ ] **Paso 4 — Redibujar la página como camino**
+- [x] **Paso 4 — Redibujar la página como camino**
 
 Hoy `PaginaCrear` apila `titulo_seccion("1", …)`, `("2", …)`, `("3", …)` y la sección 1 nunca se retira (falla
 2 del diagnóstico). Cambio: una barra arriba con los cuatro nombres (`_NOMBRES`), el activo en `tinta` y los
@@ -2233,20 +2233,20 @@ demás en `tpi-tenue`, todos clicables; el cuerpo muestra **una** pantalla en `s
 `self.paso = "idea"`. Al elegir familia, `self.paso = "hoja"` y el editor abre con `molde` y `tema` puestos
 desde `self.eleccion` (el guion nuevo se arma con `VACIO | {"molde": …, "tema": …}`).
 
-- [ ] **Paso 5 — La hoja con las tres cosas a la vez**
+- [x] **Paso 5 — La hoja con las tres cosas a la vez**
 
 En `editor.py`, la tarjeta de cada paso muestra **a la vez** su nota, su `tex` con el dibujo en vivo (B.4) y
 su voz. No hay stepper «paso 2 de 3» (decisión textual: «mejor las 3 a la vez»). Cada bloque con su
 «cambiar». El botón «Crear el video» nunca se deshabilita por no haber tocado una sugerencia; solo cuando el
 guion no valida, y entonces el motivo ya lo dice `explicar_errores`.
 
-- [ ] **Paso 6 — Un origen visible en cada texto de la IA**
+- [x] **Paso 6 — Un origen visible en cada texto de la IA**
 
 Donde un bloque viene de la IA (`_escribir_con_ia`, `_buscar_ideas`, `fabrica`), agregar
 `ui.label("lo escribió la IA").classes("tpi-tenue")` en el título del bloque. Es la regla de su memoria
 «todo elegible, nada obligatorio»: el valor queda a la vista y se puede cambiar.
 
-- [ ] **Paso 7 — Video: el clip de 5 s y «otra vez con este estilo»**
+- [x] **Paso 7 — Video: el clip de 5 s y «otra vez con este estilo»**
 
 En `seccion_video` (líneas 696-722), debajo del reproductor: el primary sigue siendo el crear normal, y una
 acción nueva «Solo el gancho (≈5 s)» que llama a `render.crear_clip_gancho(guion, ...)` por el mismo camino
@@ -2254,7 +2254,7 @@ de `TAREAS.lanzar` que usan los lotes en `crear.py` (el laboratorio de ganchos y
 ruta**, no escribir un render paralelo). En las familias con `gancho_corto: true` va marcada como sugerida.
 «Otra vez con este estilo» reusa el rehacer con otro tema que ya existe en `videos.py`.
 
-- [ ] **Paso 8 — Verde, recorrer el camino, commit**
+- [x] **Paso 8 — Verde, recorrer el camino, commit**
 
 Recorrer en el navegador con una idea propia **sin tocar ninguna sugerencia** hasta llegar a un video, y
 también el camino inverso (elegir familia, cambiar el estilo, mantener la familia). Cuatro capturas en la
@@ -2279,7 +2279,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 **Hoy:** `biblioteca.miniatura()` (`:92-107`) devuelve `None` ante cualquier error y `videos.py:187` pinta un
 cuadro gris `bg-[#2A2A2C]` en una pila de ~24 tarjetas. Falla 6 del diagnóstico.
 
-- [ ] **Paso 1 — Prueba que falla**
+- [x] **Paso 1 — Prueba que falla**
 
 ```python
 class PortadaTest(unittest.TestCase):
@@ -2307,9 +2307,9 @@ class PortadaTest(unittest.TestCase):
         )
 ```
 
-- [ ] **Paso 2 — Verificar que falla**: `ImportError: cannot import name 'portada_de_reserva'`.
+- [x] **Paso 2 — Verificar que falla**: `ImportError: cannot import name 'portada_de_reserva'`.
 
-- [ ] **Paso 3 — Implementarla (PIL, sin render, sin IA)**
+- [x] **Paso 3 — Implementarla (PIL, sin render, sin IA)**
 
 ```python
 def portada_de_reserva(titulo: str, color_fondo: str, color_texto: str, destino: Path) -> Path:
@@ -2343,7 +2343,7 @@ def portada_de_reserva(titulo: str, color_fondo: str, color_texto: str, destino:
     return destino
 ```
 
-- [ ] **Paso 4 — La clave del tema tiene que viajar en el tiempo**
+- [x] **Paso 4 — La clave del tema tiene que viajar en el tiempo**
 
 `Video.tema` guarda el **nombre visible** (`linea.get("tema", …)`), que no sirve para cargar los colores.
 Verificar primero qué guarda `Tema.nombre`:
@@ -2369,7 +2369,7 @@ con `tema_usado = tema or guion.tema or marca.tema` resuelto **antes** de `carga
 `cargar_tema` devuelve el tema ya cargado). Y en `biblioteca.Video` agregar el campo
 `tema_clave: str | None = None`, leyendo `linea.get("tema_clave")`.
 
-- [ ] **Paso 5 — Usarla en `miniatura()`**
+- [x] **Paso 5 — Usarla en `miniatura()`**
 
 ```python
     except (ErrorMotor, OSError, KeyError, IndexError, json.JSONDecodeError):
@@ -2388,7 +2388,7 @@ con `tema_usado = tema or guion.tema or marca.tema` resuelto **antes** de `carga
 Y en `videos.py::_tarjeta`, el `ui.image("")` recibe siempre `url_medio(biblioteca.miniatura(video))` — el
 `bg-[#2A2A2C]` queda solo como fondo del `<div>` mientras carga, no como resultado final.
 
-- [ ] **Paso 6 — Buscador, filtro y grilla**
+- [x] **Paso 6 — Buscador, filtro y grilla**
 
 Sobre la lista en `videos.py`: `ui.input("Buscar por título o materia")` y `ui.select` con
 `{"todo": "Todo", "borrador": "Borradores", "publicable": "Publicables"}`, filtrando `self._todos` (atributo
@@ -2404,7 +2404,7 @@ dentro de la cual `_tarjeta` usa `w-full` en vez de `w-[250px]`, y cada portada 
 la **etiqueta de la familia** (`formato_de_guion(guion).nombre` de la tarea A.1; si el guion va libre, la
 etiqueta es el nombre del molde con `nombre_molde`).
 
-- [ ] **Paso 7 — Comprobarlo con un video roto de propósito**
+- [x] **Paso 7 — Comprobarlo con un video roto de propósito**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -2433,7 +2433,7 @@ print('restauradas')
 `salida/preview_cuaderno_hd/` (corrupta, detectada antes) es el caso real de prueba: ahí tiene que aparecer
 la portada de reserva.
 
-- [ ] **Paso 8 — Suite, lint, commit**
+- [x] **Paso 8 — Suite, lint, commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -2457,7 +2457,7 @@ cache viejo. Y `app.py:59-61` monta `/medios/fondos` sobre `mis_ajustes/fondos`,
 promoción: un estilo con textura del paquete no muestra su fondo en el panel (aunque `ruta_fondo()`
 `temas.py:204` sí la encuentra para el render).
 
-- [ ] **Paso 1 — Pruebas que fallan**
+- [x] **Paso 1 — Pruebas que fallan**
 
 ```python
 class VistaPreviaConGuionTest(unittest.TestCase):
@@ -2482,10 +2482,10 @@ class VistaPreviaConGuionTest(unittest.TestCase):
 La primera aserción de `carpeta_vistas` es enredada: reemplazarla por
 `self.assertTrue(str(carpeta_vistas("neon_cian", "")).endswith("neon_cian"))`.
 
-- [ ] **Paso 2 — Verificar que fallan**: `ImportError: cannot import name 'huella'` (hoy `_huella`) y
+- [x] **Paso 2 — Verificar que fallan**: `ImportError: cannot import name 'huella'` (hoy `_huella`) y
   `AssertionError` en la URL.
 
-- [ ] **Paso 3 — Huella y carpeta con el guion**
+- [x] **Paso 3 — Huella y carpeta con el guion**
 
 En `vista_previa.py`:
 
@@ -2512,7 +2512,7 @@ de siempre. Actualizar todos los llamadores:
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && grep -rn 'vista_previa\.\|en_cache\|crear_vista_previa\|carpeta_vistas' src/tpi_videos/ --include='*.py'
 ```
 
-- [ ] **Paso 4 — La ruta de los fondos del paquete**
+- [x] **Paso 4 — La ruta de los fondos del paquete**
 
 En `app.py`, junto a las otras tres:
 
@@ -2530,13 +2530,13 @@ y en `comun.url_medio`, una pareja más en la tupla `for base, prefijo in (...)`
 
 con `from ..entorno import PAQUETE, raiz_proyecto`.
 
-- [ ] **Paso 5 — Estilos pide la miniatura con el guion abierto**
+- [x] **Paso 5 — Estilos pide la miniatura con el guion abierto**
 
 En `estilos.py`, donde se calculan las vistas de cada tema, pasar la ruta del guion abierto; el estado ya
 existe en el panel (`guion_permitido` en `crear.py` y `EditorGuion` guardan la ruta). **Máximo 4 estilos
 calculados por visita** (el riesgo del spec: 17 × 3 renders) y el resto al abrir ese estilo.
 
-- [ ] **Paso 6 — Verde, mirar, commit**
+- [x] **Paso 6 — Verde, mirar, commit**
 
 Verificar que la miniatura de `neon_cian` muestra **una fórmula del guion propio** y no `(a+b)²`, y que
 `kraft_tiza` muestra su papel.
@@ -2559,7 +2559,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 **Corrección al spec:** `fondo.imagen`, `formulas_negrita`, `emojis` y la hoja **ya** están expuestos
 (`:256`, `:266`, `:278`, `:323`). Falta `nota` y nada más.
 
-- [ ] **Paso 1 — Prueba** (agregar a `pruebas/test_piel.py`)
+- [x] **Paso 1 — Prueba** (agregar a `pruebas/test_piel.py`)
 
 ```python
 class NotaTest(unittest.TestCase):
@@ -2573,15 +2573,15 @@ class NotaTest(unittest.TestCase):
         self.assertIn('"materia"', fuente)  # las tres opciones reales de Nota.color
 ```
 
-- [ ] **Paso 2 — Verificar que falla** (hoy `nota` no aparece en `estilos.py`).
-- [ ] **Paso 3 — La fila, con las opciones del modelo**
+- [x] **Paso 2 — Verificar que falla** (hoy `nota` no aparece en `estilos.py`).
+- [x] **Paso 3 — La fila, con las opciones del modelo**
 
 Junto a la fila de la hoja (`:323`), una tarjeta «Nota al margen» con: `ui.select` sobre las tres claves de
 `Nota.color` (`temas.py:77`: `materia | titulos | acento`), `ui.select` sobre `Nota.rol`
 (`texto | titulos`) y `ui.number("Tamaño", min=0.5, max=2.5, step=0.1)` para `Nota.escala`. Guardar con el
 mismo camino que usan las otras filas del archivo (`guardar_tema(...)`); **no** escribir un guardado paralelo.
 
-- [ ] **Paso 4 — Verde, mirar dos estilos, commit**
+- [x] **Paso 4 — Verde, mirar dos estilos, commit**
 
 Cambiar la nota de `hoja_de_desarrollo` a `acento` y verificar en la vista previa que la nota se pinta de
 acento.
