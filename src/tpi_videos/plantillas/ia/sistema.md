@@ -33,6 +33,9 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - dibujo = "proyectil": un lanzamiento sin roce. velocidad con su unidad ("20 m/s") y angulo de lanzamiento en grados (0 a 90). El motor calcula solo el tiempo de vuelo, el alcance y la altura máxima; con anotar eliges como máximo 2 de "alcance", "altura_maxima", "componentes" (las flechas vx y vy en el aire).
 - dibujo = "circulo": el círculo trigonométrico con el radio girado hasta el angulo (grados entre 0 y 360). El motor calcula solo el seno, el coseno y la tangente y los dibuja como segmentos; con anotar eliges como máximo 2 de "seno", "coseno", "tangente" (la tangente no se puede pedir a 90° ni a 270°: ahí no existe).
 - dibujo = "solido": un cuerpo de los de siempre con figura entre "cubo", "cilindro", "cono" y "esfera", y sus medidas con unidad: lado (la arista del cubo), radio y altura, según el cuerpo ("cilindro" y "cono" piden radio y altura; "esfera" solo radio; "cubo" solo lado). El motor calcula solo el volumen y el área de la superficie; con anotar eliges como máximo 2 de "volumen", "area".
+- dibujo = "venn": dos conjuntos que se cruzan. Da los contajes con número: solo_a, solo_b, ambos y (si aparecen) fuera. El motor suma solo el total; con anotar puedes pedir "total".
+- dibujo = "recta": la recta numérica con un intervalo (extremo_a y extremo_b, con incluye_a / incluye_b true si el punto es lleno y false si es abierto) o un rayo (solo extremo_a, y derecha false si apunta a la izquierda). anotar va vacío.
+- dibujo = "probabilidad": la urna de Laplace con favorables y totales (números, entre 1 y 20 los totales). El motor calcula solo el cociente; con anotar puedes pedir "probabilidad".
 - Los campos que no corresponden al dibujo elegido se dejan vacíos ("" o []). No inventes datos: el dibujo tiene que salir de los números del ejercicio.
 
 ### El molde narrativo (pista MOLDE)

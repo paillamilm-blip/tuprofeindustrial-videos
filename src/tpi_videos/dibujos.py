@@ -34,7 +34,17 @@ from manim import (
 )
 
 from . import componentes as c
-from .visuales import AnguloTrig, Funcion, Poligono, Proyectil, Solido, analizar_circuito
+from .visuales import (
+    AnguloTrig,
+    Funcion,
+    Poligono,
+    Probabilidad,
+    Proyectil,
+    Recta,
+    Solido,
+    Venn,
+    analizar_circuito,
+)
 
 ALTO_DIBUJO = 3.3  # franja del pie de la pizarra que ocupa un dibujo
 
@@ -809,6 +819,102 @@ def solido(figura: Solido, marcas: list[str], col: Any, ancho: float, alto: floa
 
 
 # ------------------------------------------------------------------------------------------
+# 8 · Venn, recta numérica y probabilidad
+# ------------------------------------------------------------------------------------------
+
+
+def venn(figura: Venn, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+    """Los dos círculos que se cruzan con su número en cada región: el total lo saca el motor."""
+    r = min(alto * 0.33, ancho * 0.15)
+    d = r * 0.62
+    ca, cb = np.array([-d, 0.0, 0.0]), np.array([d, 0.0, 0.0])
+    circ_a = Circle(radius=r).move_to(ca).set_stroke(col.formulas, 4)
+    circ_b = Circle(radius=r).move_to(cb).set_stroke(col.formulas, 4)
+    rayas: list = [circ_a, circ_b]
+    parches, rótulos = VGroup(), VGroup()
+
+    def rotulo(texto: str, donde: np.ndarray, color: str, tam: float = 24) -> None:
+        m = c.texto(texto, tam, SEMIBOLD, color).move_to(donde)
+        fondo, m = _parche(m, "#FFFFFF", 0.16)
+        parches.add(fondo)
+        rótulos.add(m)
+
+    rotulo(_numero_latex(figura.solo_a), ca + LEFT * r * 0.55, col.texto, 26)
+    rotulo(_numero_latex(figura.ambos), np.zeros(3), col.acento, 26)
+    rotulo(_numero_latex(figura.solo_b), cb + RIGHT * r * 0.55, col.texto, 26)
+    rotulo(_numero_latex(figura.fuera), np.array([d + r + 0.5, r * 0.7, 0.0]), col.tenue, 22)
+    rotulo("A", ca + UP * (r + 0.28), col.tenue, 20)
+    rotulo("B", cb + UP * (r + 0.28), col.tenue, 20)
+    if "total" in marcas:
+        rotulo(f"total = {_numero_latex(figura.total)}", np.array([0.0, -r - 0.45, 0.0]), col.texto, 24)
+
+    todo = VGroup(*rayas, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[*rótulos])
+
+
+def recta(figura: Recta, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+    """La recta con sus rayitas y números, y el intervalo (o rayo) subrayado en amarillo."""
+    x0, x1 = figura.x0, figura.x1
+    eje = Line([x0, 0, 0], [x1, 0, 0], buff=0).set_stroke(col.tenue, 4)
+    rayas: list = [eje]
+    parches, rótulos, puntos = VGroup(), VGroup(), []
+
+    for t in _graduacion(x0, x1, maximo=7):
+        rayas.append(Line([t, -0.08, 0], [t, 0.08, 0], buff=0).set_stroke(col.tenue, 3))
+        m = c.texto(_numero_latex(t), 16, SEMIBOLD, col.tenue).move_to([t, -0.34, 0])
+        fondo, m = _parche(m, "#FFFFFF", 0.12)
+        parches.add(fondo)
+        rótulos.add(m)
+
+    def extremo(x: float, cerrado: bool) -> Mobject:
+        if cerrado:
+            return Dot([x, 0, 0], radius=0.09, color=col.formulas)
+        return Circle(radius=0.09).move_to([x, 0, 0]).set_stroke(col.formulas, 4).set_fill("#FFFFFF", 1)
+
+    if figura.es_rayo:
+        fin = x1 - 0.2 if figura.derecha else x0 + 0.2
+        rayas.append(Line([figura.a, 0, 0], [fin, 0, 0], buff=0).set_stroke(col.acento, 6))
+        puntos.append(extremo(figura.a, figura.incluye_a))
+    else:
+        rayas.append(Line([figura.a, 0, 0], [figura.b, 0, 0], buff=0).set_stroke(col.acento, 6))
+        puntos.extend([extremo(figura.a, figura.incluye_a), extremo(figura.b, figura.incluye_b)])
+
+    todo = VGroup(*rayas, *puntos, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[*puntos, *rótulos])
+
+
+def probabilidad(figura: Probabilidad, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+    """La urna dibujada: los casos favorables en rojo, el resto en gris, y el cociente escrito."""
+    paso = 0.42
+    columnas = min(10, figura.totales)
+    filas = -(-figura.totales // columnas)  # techo sin importar math
+    puntos = []
+    for i in range(figura.totales):
+        x = (i % columnas - (columnas - 1) / 2) * paso
+        y = ((filas - 1) / 2 - i // columnas) * paso
+        color = col.error if i < figura.favorables else col.tenue
+        puntos.append(Dot([x, y, 0], radius=0.13, color=color))
+    parches, rótulos = VGroup(), VGroup()
+    if "probabilidad" in marcas:
+        m = c.texto(
+            f"P = {_numero_latex(figura.favorables)}/{_numero_latex(figura.totales)} "
+            f"≈ {_numero_latex(figura.p)}",
+            24,
+            SEMIBOLD,
+            col.texto,
+        ).move_to([0.0, -((filas - 1) / 2) * paso - 0.5, 0.0])
+        fondo, m = _parche(m, "#FFFFFF", 0.16)
+        parches.add(fondo)
+        rótulos.add(m)
+
+    todo = VGroup(*puntos, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=puntos, aparece=[*rótulos])
+
+
+# ------------------------------------------------------------------------------------------
 # Elección del dibujo según el guion
 # ------------------------------------------------------------------------------------------
 
@@ -836,5 +942,11 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         return circulo_trig(visual.angulo_trig(), visual.anotar, col, ancho, alto)
     if visual.tipo == "solido":
         return solido(visual.solido(), visual.anotar, col, ancho, alto)
+    if visual.tipo == "venn":
+        return venn(visual.venn(), visual.anotar, col, ancho, alto)
+    if visual.tipo == "recta":
+        return recta(visual.recta(), visual.anotar, col, ancho, alto)
+    if visual.tipo == "probabilidad":
+        return probabilidad(visual.probabilidad(), visual.anotar, col, ancho, alto)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
     return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)

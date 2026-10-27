@@ -20,14 +20,19 @@ from .tex import llaves_balanceadas
 from .visuales import (
     MARCAS_CIRCULO,
     MARCAS_POLIGONO,
+    MARCAS_PROBABILIDAD,
     MARCAS_PROYECTIL,
     MARCAS_SOLIDO,
+    MARCAS_VENN,
     SEGUNDOS_VISUAL,
     analizar_angulo,
     analizar_funcion,
     analizar_poligono,
+    analizar_probabilidad,
     analizar_proyectil,
+    analizar_recta,
     analizar_solido,
+    analizar_venn,
     normalizar_vectores,
 )
 
@@ -134,6 +139,9 @@ class Visual(_Base):
         "proyectil",
         "circulo_trig",
         "solido",
+        "venn",
+        "recta",
+        "probabilidad",
     ]
 
     # grafico_funcion
@@ -167,6 +175,23 @@ class Visual(_Base):
     figura: Literal["", "cubo", "cilindro", "cono", "esfera"] = ""
     radio: str | None = None  # con su unidad: '3 cm'
     altura: str | None = None  # con su unidad: '5 cm'
+
+    # venn
+    solo_a: int | None = None  # cuántos viven sólo en A
+    solo_b: int | None = None
+    ambos: int | None = None  # la intersección
+    fuera: int | None = None  # los que no están en ninguno
+
+    # recta
+    extremo_a: float | None = None  # el extremo izquierdo del intervalo (o el origen del rayo)
+    extremo_b: float | None = None  # sin extremo_b la recta marca un rayo
+    incluye_a: bool = True  # punto lleno; false = punto abierto
+    incluye_b: bool = True
+    derecha: bool = True  # hacia dónde apunta el rayo
+
+    # probabilidad
+    favorables: int | None = None
+    totales: int | None = None
 
     _listas = field_validator("rango", "marcar", "vectores", "resistencias", "anotar", mode="before")(
         classmethod(lambda cls, v: None if v is None else _como_lista(v))
@@ -234,6 +259,32 @@ class Visual(_Base):
                     f"«{desconocidas[0]}» no es una marca de un sólido; "
                     f"el motor sabe anotar {', '.join(MARCAS_SOLIDO)}"
                 )
+        elif self.tipo == "venn":
+            if self.solo_a is None or self.solo_b is None or self.ambos is None:
+                raise ValueError("el diagrama de Venn necesita los tres contajes: solo_a, solo_b y ambos")
+            analizar_venn(self.solo_a, self.solo_b, self.ambos, self.fuera or 0)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_VENN]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca del diagrama de Venn; "
+                    f"el motor sabe anotar {', '.join(MARCAS_VENN)}"
+                )
+        elif self.tipo == "recta":
+            if self.extremo_a is None:
+                raise ValueError("la recta numérica necesita su extremo, ej. extremo_a: 2")
+            analizar_recta(self.extremo_a, self.extremo_b, self.incluye_a, self.incluye_b, self.derecha)
+            if self.anotar:
+                raise ValueError("la recta numérica no lleva marcas: deja anotar vacío")
+        elif self.tipo == "probabilidad":
+            if self.favorables is None or self.totales is None:
+                raise ValueError("la probabilidad necesita sus casos, ej. favorables: 3 y totales: 8")
+            analizar_probabilidad(self.favorables, self.totales)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_PROBABILIDAD]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de la probabilidad; "
+                    f"el motor sabe anotar {', '.join(MARCAS_PROBABILIDAD)}"
+                )
         elif self.tipo == "poligono_regular":
             if not (self.lado or "").strip():
                 raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
@@ -282,6 +333,26 @@ class Visual(_Base):
         if self.tipo != "solido":
             raise ValueError(f"«{self.tipo}» no es un sólido")
         return analizar_solido(self.figura or "", self.lado, self.radio, self.altura)
+
+    def venn(self):
+        """Las cuatro regiones del diagrama ya sumadas. Sólo en los venn."""
+        if self.tipo != "venn":
+            raise ValueError(f"«{self.tipo}» no es un diagrama de Venn")
+        return analizar_venn(self.solo_a or 0, self.solo_b or 0, self.ambos or 0, self.fuera or 0)
+
+    def recta(self):
+        """El intervalo o rayo con su ventana de dibujo. Sólo en las rectas."""
+        if self.tipo != "recta":
+            raise ValueError(f"«{self.tipo}» no es una recta numérica")
+        return analizar_recta(
+            self.extremo_a or 0, self.extremo_b, self.incluye_a, self.incluye_b, self.derecha
+        )
+
+    def probabilidad(self):
+        """El cociente de Laplace ya resuelto. Sólo en las probabilidades."""
+        if self.tipo != "probabilidad":
+            raise ValueError(f"«{self.tipo}» no es una probabilidad")
+        return analizar_probabilidad(self.favorables or 0, self.totales or 0)
 
     def poligono(self):
         """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
@@ -574,6 +645,25 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
         for clave in ("lado", "radio", "altura"):
             if v.get(clave):
                 campos.append((clave, _simples(v[clave])))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "venn":
+        for clave in ("solo_a", "solo_b", "ambos"):
+            campos.append((clave, _numero(v.get(clave) or 0)))
+        if v.get("fuera"):
+            campos.append(("fuera", _numero(v["fuera"])))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "recta":
+        campos.append(("extremo_a", _numero(v.get("extremo_a") or 0)))
+        if v.get("extremo_b") is not None:
+            campos.append(("extremo_b", _numero(v["extremo_b"])))
+        for clave in ("incluye_a", "incluye_b", "derecha"):
+            if v.get(clave) is False:
+                campos.append((clave, "false"))
+    elif tipo == "probabilidad":
+        campos.append(("favorables", _numero(v.get("favorables") or 0)))
+        campos.append(("totales", _numero(v.get("totales") or 0)))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     elif tipo == "poligono_regular":

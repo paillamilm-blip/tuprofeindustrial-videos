@@ -1,0 +1,56 @@
+# Guion escrito a mano el 26-10-2026 para estrenar el diagrama de Venn.
+# REVISA la matemática antes de publicar.
+
+titulo: "¿Por qué 16 + 14 no da 30?"
+materia: matematica
+nivel: "1° medio"
+molde: nadie_te_enseno
+tema: cuaderno_del_profe
+
+gancho:
+  texto: "Sumar los dos grupos siempre da mal"
+  voz: "Sumar los dos grupos y siempre te va a salir mal."
+  emoji: "🤯"
+
+enunciado:
+  texto: "En un curso de 30, 16 juegan fútbol y 14 básquetbol. ¿Por qué 16 + 14 no da 30?"
+  voz: "En un curso de treinta estudiantes, dieciséis juegan fútbol y catorce juegan básquetbol."
+  destacar: ["16 + 14"]
+
+datos:
+  - tex: 'n(A) = 16'
+    voz: "Dieciséis juegan fútbol."
+  - tex: 'n(B) = 14'
+    voz: "Catorce juegan básquetbol."
+
+pasos:
+  - nota: "Seis juegan las dos cosas"
+    tex: 'n(A \cap B) = 6'
+    voz: "El problema que nadie te dice: seis juegan los dos deportes a la vez."
+  - nota: "La intersección se cuenta dos veces"
+    tex: 'n(A \cup B) = 16 + 14 - 6 = 24'
+    voz: "Si los sumas, cuentas dos veces a esos seis. Si los restas una vez, quedan veinticuatro."
+    visual:
+      tipo: venn
+      solo_a: 10
+      solo_b: 8
+      ambos: 6
+      fuera: 6
+      anotar: ['total']
+  - nota: "Seis no juegan ninguna"
+    tex: '30 - 24 = 6'
+    voz: "Y como en el curso son treinta, seis no juegan ningún deporte."
+
+resultado:
+  tex: 'n(A \cup B) = 24 \quad n(A \cap B) = 6'
+  voz: "Veinticuatro juegan algún deporte: el truco estaba no contar dos veces a nadie."
+  emoji: "📐"
+
+verificacion:
+  texto: "10 + 8 + 6 + 6 = 30: las regiones suman el curso completo."
+  voz: "Solo uno, solo el otro, ambos y los de afuera dan treinta: el curso completo."
+
+reto:
+  texto: "En un curso de 25, 20 juegan fútbol y 12 básquetbol. ¿Cuántos juegan ambas cosas como mínimo?"
+  voz: "Ahora tú: en un curso de veinticinco, veinte juegan fútbol y doce básquetbol. ¿Cuántos juegan ambas cosas mínimo? Piénsalo antes del próximo video."
+  emoji: "✍️"

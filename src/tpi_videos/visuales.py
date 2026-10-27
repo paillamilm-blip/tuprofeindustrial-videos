@@ -23,6 +23,9 @@ SEGUNDOS_VISUAL = {
     "proyectil": 3.0,
     "circulo_trig": 3.0,
     "solido": 3.0,
+    "venn": 3.0,
+    "recta": 2.5,
+    "probabilidad": 3.0,
 }
 
 # Lo que se puede anotar en un polígono regular.
@@ -39,6 +42,10 @@ MARCAS_SOLIDO = ("volumen", "area")
 
 # Los cuerpos que el motor sabe dibujar como lámina de libro.
 SOLIDOS = ("cubo", "cilindro", "cono", "esfera")
+
+# Lo que se puede anotar en un diagrama de Venn y en una urna de probabilidad.
+MARCAS_VENN = ("total",)
+MARCAS_PROBABILIDAD = ("probabilidad",)
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -538,3 +545,73 @@ def analizar_solido(
         altura=medidas.get("altura"),
         lado=medidas.get("lado"),
     )
+
+
+@dataclass
+class Venn:
+    """Dos conjuntos que se cruzan: cuántos viven en cada una de las cuatro regiones."""
+
+    solo_a: int
+    solo_b: int
+    ambos: int
+    fuera: int
+    total: int
+
+
+def analizar_venn(solo_a: int, solo_b: int, ambos: int, fuera: int = 0) -> Venn:
+    """Suma las cuatro regiones; ningún contaje puede faltar ni ser negativo."""
+    regiones = {"solo A": solo_a, "solo B": solo_b, "ambos": ambos, "fuera": fuera}
+    for nombre, valor in regiones.items():
+        if valor is None or int(valor) < 0:
+            raise ValueError(f"el contaje de «{nombre}» no puede ser negativo ni faltar, y leí «{valor}»")
+    valores = [int(v) for v in regiones.values()]
+    return Venn(valores[0], valores[1], valores[2], valores[3], sum(valores))
+
+
+@dataclass
+class Recta:
+    """La recta numérica con un intervalo o un rayo marcado, y la ventana donde se dibuja."""
+
+    a: float
+    b: float | None
+    incluye_a: bool
+    incluye_b: bool
+    derecha: bool  # hacia dónde apunta el rayo cuando no hay b
+    es_rayo: bool
+    x0: float  # ventana visible de la recta
+    x1: float
+
+
+def analizar_recta(
+    a: float, b: float | None = None, incluye_a: bool = True, incluye_b: bool = True, derecha: bool = True
+) -> Recta:
+    """Deja la ventana con aire a los lados: el intervalo nunca toca el borde de la hoja."""
+    a = float(a)
+    if b is None:
+        x0, x1 = (a - 1.5, a + 4.5) if derecha else (a - 4.5, a + 1.5)
+        return Recta(a, None, incluye_a, incluye_b, derecha, True, x0, x1)
+    b = float(b)
+    if b <= a:
+        raise ValueError(
+            f"el extremo derecho de la recta debe ser mayor que el izquierdo: {b} no es mayor que {a}"
+        )
+    pad = max(1.0, (b - a) * 0.35)
+    return Recta(a, b, incluye_a, incluye_b, derecha, False, a - pad, b + pad)
+
+
+@dataclass
+class Probabilidad:
+    """La regla de Laplace: casos favorables sobre casos totales."""
+
+    favorables: int
+    totales: int
+    p: float
+
+
+def analizar_probabilidad(favorables: int, totales: int) -> Probabilidad:
+    f, t = int(favorables), int(totales)
+    if t <= 0:
+        raise ValueError(f"los casos totales deben ser al menos 1, y leí {t}")
+    if not 0 <= f <= t:
+        raise ValueError(f"los casos favorables van entre 0 y los totales ({t}), y leí {f} favorables")
+    return Probabilidad(f, t, f / t)

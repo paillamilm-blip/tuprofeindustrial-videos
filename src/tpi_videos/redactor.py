@@ -65,14 +65,15 @@ class PasoIA(BaseModel):
     )
     # Un paso puede pedirse con dibujo. Son campos planos para que el modelo los cumpla fácil;
     # a_guion() arma el bloque "visual:" anidado que lee el motor.
-    dibujo: Literal["", "grafico", "fuerzas", "circuito", "poligono", "proyectil", "circulo", "solido"] = (
-        Field(
-            default="",
-            description=(
-                'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
-                '"circulo" o "solido" (máximo 1 en el guion)'
-            ),
-        )
+    dibujo: Literal[
+        "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", "circulo", "solido",
+        "venn", "recta", "probabilidad",
+    ] = Field(
+        default="",
+        description=(
+            'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
+            '"circulo", "solido", "venn", "recta" o "probabilidad" (máximo 1 en el guion)'
+        ),
     )
     funcion: str = Field(
         default="", description='Con dibujo="grafico": la fórmula en texto plano, ej. "-4.9t^2 + 20"'
@@ -118,13 +119,47 @@ class PasoIA(BaseModel):
     altura: str = Field(
         default="", description='Con dibujo="solido": la altura con su unidad, ej. "5 cm"'
     )
+    solo_a: int | None = Field(
+        default=None, description='Con dibujo="venn": cuántos viven sólo en el conjunto A'
+    )
+    solo_b: int | None = Field(
+        default=None, description='Con dibujo="venn": cuántos viven sólo en el conjunto B'
+    )
+    ambos: int | None = Field(
+        default=None, description='Con dibujo="venn": cuántos viven en la intersección'
+    )
+    fuera: int | None = Field(
+        default=None, description='Con dibujo="venn": cuántos no están en ninguno (0 si no se menciona)'
+    )
+    extremo_a: float | None = Field(
+        default=None, description='Con dibujo="recta": el extremo izquierdo del intervalo o el origen del rayo'
+    )
+    extremo_b: float | None = Field(
+        default=None, description='Con dibujo="recta": el extremo derecho; sin él la recta marca un rayo'
+    )
+    incluye_a: bool = Field(
+        default=True, description='Con dibujo="recta": true = punto lleno en extremo_a, false = abierto'
+    )
+    incluye_b: bool = Field(
+        default=True, description='Con dibujo="recta": true = punto lleno en extremo_b, false = abierto'
+    )
+    derecha: bool = Field(
+        default=True, description='Con dibujo="recta" sin extremo_b: hacia dónde apunta el rayo'
+    )
+    favorables: int | None = Field(
+        default=None, description='Con dibujo="probabilidad": los casos favorables'
+    )
+    totales: int | None = Field(
+        default=None, description='Con dibujo="probabilidad": los casos totales'
+    )
     anotar: list[str] = Field(
         default_factory=list,
         description=(
             'Hasta 2 marcas: con "poligono", de "apotema", "radio", "angulo_central", "angulo_interior"; '
             'con "proyectil", de "alcance", "altura_maxima", "componentes"; '
             'con "circulo", de "seno", "coseno", "tangente"; '
-            'con "solido", de "volumen", "area"'
+            'con "solido", de "volumen", "area"; '
+            'con "venn", "total"; con "probabilidad", "probabilidad"; con "recta" va vacío'
         ),
     )
 
@@ -321,6 +356,9 @@ _DIBUJOS = {
     "proyectil": "proyectil",
     "circulo": "circulo_trig",
     "solido": "solido",
+    "venn": "venn",
+    "recta": "recta",
+    "probabilidad": "probabilidad",
 }
 
 
@@ -364,6 +402,28 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             valor = _texto(getattr(p, clave))
             if valor:
                 visual[clave] = valor
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "venn":
+        for clave in ("solo_a", "solo_b", "ambos", "fuera"):
+            valor = getattr(p, clave)
+            if valor is not None:
+                visual[clave] = int(valor)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "recta":
+        if p.extremo_a is not None:
+            visual["extremo_a"] = float(p.extremo_a)
+        if p.extremo_b is not None:
+            visual["extremo_b"] = float(p.extremo_b)
+        for clave in ("incluye_a", "incluye_b", "derecha"):
+            if getattr(p, clave) is False:
+                visual[clave] = False
+    elif tipo == "probabilidad":
+        if p.favorables is not None:
+            visual["favorables"] = int(p.favorables)
+        if p.totales is not None:
+            visual["totales"] = int(p.totales)
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     elif tipo == "poligono_regular":
