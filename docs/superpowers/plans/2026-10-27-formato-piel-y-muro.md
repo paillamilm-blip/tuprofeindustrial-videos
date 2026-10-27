@@ -1973,7 +1973,27 @@ si algo se ve distinto, está mal.
 **Layout aprobado** (mockup del 27-10-2026, después de su «al costado»): muro de 4 tarjetas a la izquierda y
 `<aside>` de 392 px pegajoso a la derecha, con la miniatura 9:16 de 78 px en la testera del costado.
 
-- [ ] **Paso 1 — Prueba de la lógica, separada del widget**
+> **Corregido al medir (Paso 6, mirándolo de verdad).** Cinco cosas estaban mal en el código de este plan y
+> solo se vieron con la pantalla abierta.
+> (1) `listar_temas()` entrega `(id, Tema, es_propio)`: desestructurar el `Tema` como si fuera un string
+> imprimió la definición completa del estilo en la fila «Estilo:» del costado. Ahora toma `tema.nombre`.
+> (2) `dibujar_miniatura({"tipo": f.dibujos[0]})` **nunca dibuja**: sin los datos del dibujo el motor contesta
+> «aún no está completo» y las cuatro tarjetas salieron con el texto de relleno. Se agregó
+> `visual_de_portada(clave)`, que arma `{"tipo": …, **VISUALES[tipo].ejemplo}` (el ejemplo que ya existía
+> gracias a B.1) y una prueba que lo exige para las cuatro familias.
+> (3) El costado decía «Sugerida por lo que escribiste» también cuando la frase no sugería nada y la familia
+> era la de defecto: ahora son tres estados honestos (elegida por ti / sugerida por la frase / viene por
+> defecto). (4) La prueba del pie y su texto no coincidían (`assertIn("va en el pie", …)` contra «Para el pie
+> del post…»); se reescribió la frase, que es lo que lee él. (5) El ejemplo del paso 6, «32 por 11 sin lápiz»,
+> no llega al umbral de `puntuar_idea` (dos palabras clave) y deja la familia por defecto: con «un atajo de
+> dos segundos para multiplicar 32 por 11» sí marca Hacks.
+>
+> **Medición:** el navegador de la app mide 590 px de ancho, así que el costado se veía abajo (la rama
+> `max-width: 900px`, que es la aprobada). Para ver la rama de escritorio se montó `/crear` en un `<iframe>`
+> del mismo origen de 1440 px: `grid-template-columns: 678px 392px`, las cuatro tarjetas en una fila y el
+> costado a la derecha (x 871).
+
+- [x] **Paso 1 — Prueba de la lógica, separada del widget**
 
 `pruebas/test_formatos_ui.py`:
 
@@ -2009,10 +2029,10 @@ class PieTest(unittest.TestCase):
         self.assertIn("va en el pie", texto_del_pie("hacks"))
 ```
 
-- [ ] **Paso 2 — Verificar que falla**: `ModuleNotFoundError: No module named
+- [x] **Paso 2 — Verificar que falla**: `ModuleNotFoundError: No module named
   'tpi_videos.panel.formatos_ui'`.
 
-- [ ] **Paso 3 — Escribir `panel/formatos_ui.py`**
+- [x] **Paso 3 — Escribir `panel/formatos_ui.py`**
 
 ```python
 """El muro de familias y su detalle al costado.
@@ -2124,14 +2144,14 @@ def _costado(f: Formato, al_cambiar_pieza: Callable[[str, str], Any]) -> None:
 Import que falta en `typing`: `Callable` va en `from collections.abc import Callable` (no en `typing`), y
 `Any` en `typing`. Corregir la línea de imports al escribirlo.
 
-- [ ] **Paso 4 — Verde la lógica**
+- [x] **Paso 4 — Verde la lógica**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 .venv/bin/python -m unittest pruebas.test_formatos_ui -v 2>&1 | tail -10
 ```
 
-- [ ] **Paso 5 — Montarlo en la pantalla Idea**
+- [x] **Paso 5 — Montarlo en la pantalla Idea**
 
 En `crear.py::seccion_ejercicio`, la pestaña «Ideas» (`_panel_ideas`, líneas 112-142) termina con
 `muro_y_costado(...)`: la idea escrita arriba, el muro abajo, el costado al lado. Atributos nuevos en
@@ -2147,13 +2167,13 @@ pieza)` abre un `ui.dialog` con un `ui.select` de las opciones reales de esa pie
 `self.eleccion[pieza.lower()]`. Cambiar una pieza **no** deshace la familia: sigue activa, con la pieza
 distinta a la vista (su regla: «todo elegible, nada obligatorio»).
 
-- [ ] **Paso 6 — Verlo con los ojos**
+- [x] **Paso 6 — Verlo con los ojos**
 
 Panel abierto → `/crear` → escribir «32 por 11 sin lápiz» → confirmar: la tarjeta **Hacks** aparece marcada,
 el detalle está **al costado** y no debajo, cada pieza tiene su «cambiar», y tocar otra tarjeta no deshabilita
 ningún botón. Captura en la conversación antes del commit.
 
-- [ ] **Paso 7 — Suite, lint, commit**
+- [x] **Paso 7 — Suite, lint, commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \

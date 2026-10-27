@@ -17,7 +17,7 @@ from ...ideas import ANGULOS
 from ...moldes import nombre_molde
 from ...revision import Revision
 from ...temas import listar_temas
-from .. import biblioteca
+from .. import biblioteca, formatos_ui
 from ..comun import abrir_en_mac, marco, titulo_seccion, url_medio
 from ..editor import EditorGuion
 from ..tareas import TAREAS, Tarea
@@ -78,6 +78,10 @@ class PaginaCrear:
         self.subida: Path | None = None
         self.ideas_vistas: list[str] = []
         self.ideas_mostradas: list[dict] = []
+        # Lo que él tocó en el muro de familias. Vacío = manda lo que sugiere la máquina; nada de esto
+        # bloquea el paso siguiente.
+        self.eleccion: dict[str, str | None] = {"clave": None, "molde": None, "tema": None, "dibujo": None}
+        self.zona_muro: ui.column | None = None
 
     # --------------------------------------------------------------------------------------
     # 1 · El ejercicio
@@ -117,7 +121,7 @@ class PaginaCrear:
                 ui.link("Configurarla en Ajustes", "/ajustes").classes("font-bold")
         self.tema_idea = ui.input(
             "¿De qué tema quieres un video?", placeholder="Ej. Teorema de Pitágoras"
-        ).props("outlined").classes("w-full")  # fmt: skip
+        ).props("outlined input-debounce=400").classes("w-full")  # fmt: skip
         with ui.row().classes("w-full items-center flex-wrap gap-2"):
             ui.label("O toca un tema sugerido:").classes("tpi-ayuda")
             for sugerido in TEMAS_SUGERIDOS:
@@ -140,6 +144,56 @@ class PaginaCrear:
                 "tpi-ayuda"
             )
         self.zona_idea_video = ui.column().classes("w-full gap-3")
+        ui.separator().classes("w-full opacity-30")
+        ui.label("¿Qué familia de videos es esto?").classes("tpi-titulo text-base")
+        ui.label(
+            "Toca una tarjeta para cambiar la que está marcada. Si no tocas ninguna, se queda la que "
+            "reconoce lo que escribiste arriba."
+        ).classes("tpi-ayuda -mt-2")
+        self.zona_muro = ui.column().classes("w-full")
+        self.tema_idea.on_value_change(lambda _e: self._pintar_muro())
+        self._pintar_muro()
+
+    # --------------------------------------------------------------------------------------
+    # El muro de las cuatro familias
+    # --------------------------------------------------------------------------------------
+
+    def _pintar_muro(self) -> None:
+        if self.zona_muro is None:
+            return
+        self.zona_muro.clear()
+        with self.zona_muro:
+            formatos_ui.muro_y_costado(
+                self.eleccion["clave"],
+                self.tema_idea.value or "",
+                self._elegir_familia,
+                self._cambiar_pieza,
+            )
+
+    def _elegir_familia(self, clave: str) -> None:
+        self.eleccion["clave"] = clave
+        self._pintar_muro()
+
+    def _cambiar_pieza(self, clave: str, pieza: str) -> None:
+        """La pieza que trajo la familia, editable sin deshacer la familia."""
+        campo = {"Molde": "molde", "Estilo": "tema", "Dibujos": "dibujo"}[pieza]
+        f = formatos_ui.formato(clave)
+        por_defecto = {"Molde": f.moldes[0], "Estilo": f.tema, "Dibujos": f.dibujos[0]}[pieza]
+        opciones = dict(next(op for nombre, _valor, op in formatos_ui.piezas(clave) if nombre == pieza))
+        with ui.dialog() as dialogo, ui.card().classes("tpi-hoja w-96 p-4 gap-3"):
+            ui.label(f"{pieza} de «{f.nombre}»").classes("tpi-titulo text-base")
+            valor = ui.select(opciones, value=self.eleccion[campo] or por_defecto, label=pieza).props(
+                "outlined dense"
+            )
+            ui.button(
+                "Listo", icon="check", on_click=lambda: self._aplicar_pieza(dialogo, campo, valor)
+            ).props("unelevated")
+        dialogo.open()
+
+    def _aplicar_pieza(self, dialogo: ui.dialog, campo: str, selector: ui.select) -> None:
+        self.eleccion[campo] = selector.value
+        dialogo.close()
+        self._pintar_muro()
 
     async def _buscar_ideas(self, tema: str | None = None) -> None:
         texto = (tema or self.tema_idea.value or "").strip()
