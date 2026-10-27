@@ -1,0 +1,54 @@
+# Las cuatro familias de contenido del canal (decisión del autor, 27-10-2026).
+#   moldes: claves de src/tpi_videos/moldes.py
+#   tema:   clave de plantillas/temas/  (el estilo que sugiere la tarjeta)
+#   dibujos: tipos de Visual            (los que suelen cargar la explicación)
+#   cta:    SOLO para el pie del post. En el video no se pide seguir ni comentar.
+#   gancho_corto: la tarjeta ofrece el clip de gancho suelto (crear_clip_gancho) como video de ~5 s.
+
+trampas:
+  nombre: Desafíos y trampas cognitivas
+  que_es: >-
+    Un reto de cinco segundos, un error sutil que hay que encontrar o un resultado que parece magia.
+    El espectador se queda para comprobar si tenía razón.
+  moldes: [reto, mito_realidad]
+  tema: neon_reja
+  dibujos: [poligono_regular, venn, probabilidad, solido]
+  color: "#FF3B5C"
+  cta: "¿Lo viste o te engañó? Cuéntame en el pie."
+  gancho_corto: true
+
+paso_a_paso:
+  nombre: Paso a paso dinámico
+  que_es: >-
+    Una explicación cronometrada: el método tradicional contra la forma rápida, o POV escribiéndolo en la
+    hoja. Sirve cuando lo que se enseña es un procedimiento.
+  moldes: [pov]
+  tema: kraft_tiza
+  dibujos: [bloques, engranaje, viga, circuito]
+  color: "#FDE047"
+  cta: "¿Qué paso te tomaría más tiempo a ti?"
+  gancho_corto: false
+
+datos:
+  nombre: Visualización de datos e historias
+  que_es: >-
+    Una paradoja famosa, una escala visual o las cuentas de algo que ya conoce. El dibujo carga el peso:
+    primero se ve, después se explica.
+  moldes: [nadie_te_enseno]
+  tema: plano_azul
+  dibujos: [barras, torta, tanque, energia]
+  color: "#38BDF8"
+  cta: "¿Con qué número te quedas?"
+  gancho_corto: false
+
+hacks:
+  nombre: Operaciones eficientes y hacks de cálculo mental
+  que_es: >-
+    Un truco exprés, un atajo numérico o una comprobación en dos segundos. Se vende como lo que no te
+    enseñaron en la sala.
+  moldes: [tres_errores, mito_realidad]
+  tema: rotulador
+  dibujos: [recta, grafico_funcion, pendulo, mohr]
+  color: "#A78BFA"
+  cta: "¿Cuál usabas tú antes de esto?"
+  gancho_corto: false

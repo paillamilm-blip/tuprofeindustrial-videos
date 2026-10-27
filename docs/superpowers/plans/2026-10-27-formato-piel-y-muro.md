@@ -532,10 +532,11 @@ mire qué cuenta el puntador con una REPL y corrija `_PISTAS`.
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 .venv/bin/python -c "
+from typing import get_args
 from tpi_videos.formatos import cargar_formatos
 from tpi_videos.temas import existe_tema
 from tpi_videos.guion import Visual
-tipos = set(Visual.model_fields['tipo'].metadata[0]['literal_arguments'])
+tipos = set(get_args(Visual.model_fields['tipo'].annotation))
 for k, f in cargar_formatos().items():
     assert existe_tema(f.tema), (k, f.tema)
     assert set(f.dibujos) <= tipos, (k, set(f.dibujos) - tipos)
@@ -543,8 +544,9 @@ print('familias coherentes con temas y Visual')
 "
 ```
 
-Esperado: `familias coherentes con temas y Visual`. (Los temas `neon_reja`, `kraft_tiza`, `plano_azul` y
-`rotulador` existen desde la promoción de `677f195`.)
+Esperado: `familias coherentes con temas y Visual` (con `pydantic` 2.x el `Literal` vive en
+`model_fields['tipo'].annotation`, no en `metadata`: esto se verificó al ejecutar). (Los temas `neon_reja`,
+`kraft_tiza`, `plano_azul` y `rotulador` existen desde la promoción de `677f195`.)
 
 - [ ] **Paso 7 — Suite completa, lint y commit**
 
