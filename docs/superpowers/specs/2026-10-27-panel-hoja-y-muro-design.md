@@ -218,8 +218,13 @@ textura del paquete no muestra su fondo en el panel. Sale una ruta más (`/medio
 
 Descubiertos al escribir los 17 temas; sin ellos, estos estilos no se pueden elegir desde el panel:
 
-1. **`hoja.etiqueta` se pinta en blanco fijo** (`componentes.py:579`): sobre papel claro desaparece. Pasa a
-   usar `tema.colores.tenue`.
+1. **`hoja.etiqueta` se pinta en blanco fijo** (`componentes.py:579`): desaparece en los temas de papel claro.
+   Pasa a elegirse por contraste contra `colores.fondo`, con `hoja.color` (papel) si el fondo es oscuro y
+   `colores.tenue` si es claro.
+   > **Corregido al medir (27-10-2026, al ejecutar A.2):** aquí decía «usa `tema.colores.tenue`» a secas. Al
+   > renderizar `salida/_vistas/hoja_de_desarrollo/1_gancho.png` se vio que la etiqueta **no pisa el papel**:
+   > va arriba y a la izquierda, sobre el fondo (el `#2A2A2C` difuminado), así que el `tenue` la dejaba gris
+   > sobre gris — peor que el blanco de antes. De ahí la regla por luminancia, no un token fijo.
 2. **El borde de los subtítulos es negro fijo** (`subtitulos.py:229`, `&H00000000`): con texto oscuro sobre
    crema se embarra. Sale un `subtitulos.color_borde: str` con default `#000000` (nadie cambia el default,
    los temas claros lo ponen en su color de fondo).

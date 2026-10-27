@@ -551,6 +551,16 @@ def fondo_tema(tema) -> Mobject:
     return capa if capa is not None else VGroup()
 
 
+def _legible_sobre(fondo: str, claro: str, oscuro: str) -> str:
+    """Claro u oscuro según cuánto peso tenga el fondo (luminancia percibida).
+
+    La etiqueta de la hoja vive fuera del papel, sobre ``colores.fondo``; medir ahí evita el blanco fijo
+    que desaparecía en los temas de papel claro y el gris que desaparecía sobre el fondo oscuro.
+    """
+    r, g, b = (int(fondo[i : i + 2], 16) / 255 for i in (1, 3, 5))
+    return oscuro if 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 else claro
+
+
 def marco_hoja(tema, capa: Mobject | None = None) -> Group:
     """Fondo + "Notas" + "Fecha:" + hoja cuadriculada con encabezado, como en tus videos."""
     h = tema.hoja
@@ -576,7 +586,13 @@ def marco_hoja(tema, capa: Mobject | None = None) -> Group:
             encabezado.scale_to_fit_width(HOJA_ANCHO - 1.0)
         piezas.append(encabezado.move_to([0, hoja.get_top()[1] - 0.42, 0]))
     if h.etiqueta.strip():
-        etiqueta = Text(h.etiqueta.strip(), font="Montserrat", weight=MEDIUM, font_size=34, color="#FFFFFF")
+        etiqueta = Text(
+            h.etiqueta.strip(),
+            font="Montserrat",
+            weight=MEDIUM,
+            font_size=34,
+            color=_legible_sobre(tema.colores.fondo, h.color, tema.colores.tenue),
+        )
         piezas.append(etiqueta.move_to([0, 6.5, 0]).to_edge(LEFT, buff=0.6))
     if h.fecha.strip():
         pastilla = RoundedRectangle(corner_radius=0.25, width=2.3, height=0.5)

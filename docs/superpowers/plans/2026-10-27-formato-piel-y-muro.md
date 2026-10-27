@@ -615,18 +615,23 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 Esperado: `AssertionError: '#FFFFFF' != ...` (en manim 0.22 el color se lee con `str(mobject.color)`; no
 existe `.get_hex_l()` ni `MColor`).
 
-- [ ] **Paso 3 — Arreglo de una línea**
+- [x] **Paso 3 — Arreglo (corregido al medir: no es una línea ni un token fijo)**
 
-En `componentes.py`, dentro de `marco_hoja`, la rama de `h.etiqueta`:
+**Lo que decía este paso estaba mal.** Proponía `color=tema.colores.tenue`. Al renderizar
+`salida/_vistas/hoja_de_desarrollo/1_gancho.png` se vio con los ojos que la etiqueta **no pisa el papel**: vive
+arriba a la izquierda, sobre `colores.fondo` (el `#2A2A2C` difuminado). Con `tenue` quedó gris sobre gris, peor
+que el blanco. El arreglo real elige por luminancia del fondo:
 
 ```python
-    if h.etiqueta.strip():
-        etiqueta = Text(
-            h.etiqueta.strip(), font="Montserrat", weight=MEDIUM, font_size=34, color=tema.colores.tenue
-        )
+def _legible_sobre(fondo: str, claro: str, oscuro: str) -> str:
+    """Claro u oscuro según cuánto peso tenga el fondo (luminancia percibida)."""
+    r, g, b = (int(fondo[i : i + 2], 16) / 255 for i in (1, 3, 5))
+    return oscuro if 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 else claro
 ```
 
-(cambia solo `color="#FFFFFF"`; el alto y la posición quedan igual para no mover el resto del marco).
+y en la rama de `h.etiqueta`, `color=_legible_sobre(tema.colores.fondo, h.color, tema.colores.tenue)`. Así
+`hoja_de_desarrollo` (fondo oscuro) recupera el blanco del papel y `rotulador` (fondo `#E9E7DF`) pasa al
+`tenue`, que era el problema que motivó el arreglo.
 
 - [ ] **Paso 4 — Prueba verde + un cuadro mirado**
 
