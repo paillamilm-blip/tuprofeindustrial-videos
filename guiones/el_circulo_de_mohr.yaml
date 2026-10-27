@@ -1,0 +1,56 @@
+# Guion escrito a mano para probar el dibujo "mohr" (círculo de esfuerzos).
+# El motor calcula solo: centro = 60, radio = 50, σ₁ = 110, σ₂ = 10.
+
+titulo: "El círculo que dice dónde se rompe el acero"
+materia: ingenieria
+nivel: "3° medio"
+
+gancho:
+  texto: "Tres números de un punto de acero, un círculo y el esfuerzo real"
+  voz: "Tres números de un punto de acero. Un círculo dice cuál esfuerzo manda."
+  emoji: "🎯"
+
+enunciado:
+  texto: "En un punto del material σx = 90 MPa, σy = 30 MPa y τxy = 40 MPa. Halla los esfuerzos principales."
+  voz: "Normal en equis noventa, en ye treinta, y cortante cuarenta. ¿Cuál es el esfuerzo máximo?"
+  destacar: ["90 MPa", "30 MPa", "40 MPa"]
+
+datos:
+  - tex: '\sigma_x = 90\ \text{MPa}'
+    voz: "El esfuerzo normal en equis es noventa megapascal."
+  - tex: '\sigma_y = 30\ \text{MPa}'
+    voz: "En ye, treinta."
+  - tex: '\tau_{xy} = 40\ \text{MPa}'
+    voz: "Y el cortante vale cuarenta."
+
+pasos:
+  - nota: "El centro va en el promedio"
+    tex: 'C = \frac{\sigma_x + \sigma_y}{2} = \frac{90 + 30}{2} = 60'
+    voz: "El centro del círculo es el promedio de las dos normales. Sesenta."
+  - nota: "El radio"
+    tex: 'R = \sqrt{\left(\frac{\sigma_x - \sigma_y}{2}\right)^2 + \tau_{xy}^2} = \sqrt{30^2 + 40^2} = 50'
+    voz: "El radio usa trescientos de cateto y cuatrocientos de otro. Un triángulo tres cuatro cinco: cincuenta."
+    emoji: "💡"
+    visual:
+      tipo: mohr
+      sigma_x: '90 MPa'
+      sigma_y: '30 MPa'
+      cortante: '40 MPa'
+      anotar: ['principales', 'cortante']
+  - nota: "Leo los principales en el eje horizontal"
+    tex: '\sigma_1 = C + R = 60 + 50 = 110\ \text{MPa}'
+    voz: "Donde el círculo corta el eje horizontal está el máximo: ciento diez."
+
+resultado:
+  tex: '\sigma_1 = 110\ \text{MPa} \qquad \sigma_2 = 10\ \text{MPa}'
+  voz: "Ciento diez por un lado y diez por el otro. Ahí no hay cortante: esos son los principales."
+  emoji: "✅"
+
+verificacion:
+  texto: "El cortante máximo vale lo mismo que el radio: 50 MPa, y aparece girado el elemento 26,6°."
+  voz: "El cortante máximo vale lo mismo que el radio: cincuenta. Y ocurre en otro plano."
+
+reto:
+  texto: "Si el cortante fuera cero, ¿qué forma toma el círculo y cuánto valen los principales?"
+  voz: "Baja el cortante a cero. ¿Qué le pasa al círculo y quién manda entonces?"
+  emoji: "✍️"

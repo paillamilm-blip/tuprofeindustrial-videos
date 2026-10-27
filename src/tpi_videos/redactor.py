@@ -88,12 +88,16 @@ class PasoIA(BaseModel):
         "tanque",
         "viga",
         "cercha",
+        "bloques",
+        "engranaje",
+        "mohr",
     ] = Field(
         default="",
         description=(
             'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
             '"circulo", "solido", "venn", "recta", "probabilidad", "torta", "barras", "onda", "energia", '
-            '"optica", "pendulo", "resorte", "polea", "tanque", "viga" o "cercha" (máximo 1 en el guion)'
+            '"optica", "pendulo", "resorte", "polea", "tanque", "viga", "cercha", "bloques", '
+            '"engranaje" o "mohr" (máximo 1 en el guion)'
         ),
     )
     funcion: str = Field(
@@ -212,6 +216,29 @@ class PasoIA(BaseModel):
         default=False, description='Con dibujo="viga": true si la carga va repartida en "N/m"'
     )
     base: str = Field(default="", description='Con dibujo="cercha": la luz entre apoyos, ej. "6 m"')
+    adelante: str = Field(
+        default="", description='Con dibujo="bloques": la ganancia del bloque directo, sin unidad, ej. "10"'
+    )
+    retro: str = Field(
+        default="", description='Con dibujo="bloques": la ganancia de la realimentación, ej. "0.2"'
+    )
+    negativa: bool = Field(
+        default=True, description='Con dibujo="bloques": false sólo para mostrar un lazo que se descontrola'
+    )
+    dientes_a: str = Field(
+        default="", description='Con dibujo="engranaje": cuántos dientes tiene la conductora, ej. "20"'
+    )
+    dientes_b: str = Field(
+        default="", description='Con dibujo="engranaje": cuántos tiene la conducida, otro número, ej. "60"'
+    )
+    rpm: str = Field(
+        default="", description='Con dibujo="engranaje": las vueltas del eje de entrada, ej. "1200 rpm"'
+    )
+    sigma_x: str = Field(default="", description='Con dibujo="mohr": el esfuerzo normal en X, ej. "80 MPa"')
+    sigma_y: str = Field(default="", description='Con dibujo="mohr": el esfuerzo normal en Y, ej. "20 MPa"')
+    cortante: str = Field(
+        default="", description='Con dibujo="mohr": el esfuerzo cortante, ej. "30 MPa" (o "0 MPa")'
+    )
     anotar: list[str] = Field(
         default_factory=list,
         description=(
@@ -222,7 +249,8 @@ class PasoIA(BaseModel):
             'con "venn", "total"; con "probabilidad", "probabilidad"; con "onda", "velocidad"; '
             'con "pendulo", "periodo"; con "resorte", "fuerza"; con "polea", "aceleracion" o "tension"; '
             'con "tanque", "llenado" o "vaciado"; con "viga", "reacciones" o "momento"; '
-            'con "cercha", "esfuerzo" o "angulo"; '
+            'con "cercha", "esfuerzo" o "angulo"; con "bloques", "lazo_cerrado"; '
+            'con "engranaje", "velocidad" o "relacion"; con "mohr", "principales" o "cortante"; '
             'con "recta", "torta", "barras", "energia" u "optica" va vacío'
         ),
     )
@@ -312,8 +340,7 @@ EJEMPLO = GuionIA(
     verificacion_texto="Con el doble de altura no tarda el doble: el tiempo crece con la raíz de la altura.",
     verificacion_voz="Ojo: con el doble de altura no tarda el doble. El tiempo crece con la raíz de la altura.",
     reto_texto="¿Cuánto tarda en caer desde 45 metros? Usa g = 10 m/s².",
-    reto_voz="Ahora tú. ¿Cuánto tarda desde cuarenta y cinco metros, con g igual a diez? "
-    "Déjalo en los comentarios.",
+    reto_voz="Ahora tú. ¿Cuánto tarda desde cuarenta y cinco metros, con g igual a diez?",
     reto_emoji="✍️",
     supuestos=[],
 )
@@ -434,6 +461,9 @@ _DIBUJOS = {
     "tanque": "tanque",
     "viga": "viga",
     "cercha": "cercha",
+    "bloques": "bloques",
+    "engranaje": "engranaje",
+    "mohr": "mohr",
 }
 
 
@@ -561,6 +591,26 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     elif tipo == "cercha":
         for clave, valor in (("base", p.base), ("altura", p.altura), ("carga", p.carga)):
+            if valor:
+                visual[clave] = _texto(valor)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "bloques":
+        for clave, valor in (("adelante", p.adelante), ("retro", p.retro)):
+            if valor:
+                visual[clave] = _texto(valor)
+        if not p.negativa:
+            visual["negativa"] = False
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "engranaje":
+        for clave, valor in (("dientes_a", p.dientes_a), ("dientes_b", p.dientes_b), ("rpm", p.rpm)):
+            if valor:
+                visual[clave] = _texto(valor)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "mohr":
+        for clave, valor in (("sigma_x", p.sigma_x), ("sigma_y", p.sigma_y), ("cortante", p.cortante)):
             if valor:
                 visual[clave] = _texto(valor)
         if p.anotar:

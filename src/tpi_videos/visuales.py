@@ -37,6 +37,9 @@ SEGUNDOS_VISUAL = {
     "tanque": 3.0,
     "viga": 3.0,
     "cercha": 3.0,
+    "bloques": 3.0,
+    "engranaje": 3.0,
+    "mohr": 3.0,
 }
 
 # Lo que se puede anotar en un polígono regular.
@@ -70,6 +73,11 @@ MARCAS_POLEA = ("aceleracion", "tension")
 MARCAS_TANQUE = ("llenado", "vaciado")
 MARCAS_VIGA = ("reacciones", "momento")
 MARCAS_CERCHA = ("esfuerzo", "angulo")
+
+# Lo que se puede anotar en el taller: el lazo cerrado, la vuelta del eje lento y los esfuerzos.
+MARCAS_BLOQUES = ("lazo_cerrado",)
+MARCAS_ENGRANAJE = ("velocidad", "relacion")
+MARCAS_MOHR = ("principales", "cortante")
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -952,3 +960,122 @@ def analizar_cercha(base: str, altura: str, carga: str) -> Cercha:
     p, uni_carga = _medida_solido(carga, "carga de la cercha")
     angulo = math.degrees(math.atan2(h, b / 2.0))
     return Cercha(b, h, uni, p, uni_carga, angulo, p / (2.0 * math.sin(math.radians(angulo))), p / 2.0)
+
+
+# ------------------------------------------------------------------ lazo, engranajes y Mohr
+
+
+@dataclass
+class Bloques:
+    """El lazo de control: la realimentación se come ganancia, y con signo equivocado lo vuelve loco."""
+
+    adelante: float  # la ganancia del bloque directo
+    retro: float  # la ganancia del tramo de realimentación
+    lazo_cerrado: float  # G / (1 ± G·H)
+    negativa: bool = True  # la resta en el comparador, que es la que estabiliza
+
+
+def _ganancia(texto: str | None, nombre: str) -> float:
+    """Una ganancia va suelta, sin unidad: «10», «0.2», «-3,5»."""
+    crudo = str(texto or "").strip().replace(",", ".")
+    try:
+        valor = float(crudo)
+    except ValueError:
+        raise ValueError(
+            f"la ganancia de {nombre} necesita un número solo, ej. «10» o «0.2», y leí «{texto}»"
+        ) from None
+    if not math.isfinite(valor):
+        raise ValueError(f"la ganancia de {nombre} tiene que ser un número finito, y leí «{texto}»")
+    return valor
+
+
+def analizar_bloques(adelante: str, retro: str, negativa: bool = True) -> Bloques:
+    """Cierra el lazo con la fórmula que se aprende en el primer ramo de control."""
+    g = _ganancia(adelante, "el bloque directo")
+    h = _ganancia(retro, "la realimentación")
+    malla = g * h
+    denom = 1 + malla if negativa else 1 - malla
+    if abs(denom) < 1e-9 or (not negativa and malla >= 1):
+        raise ValueError(
+            f"con G·H = {malla:g} el lazo es inestable: la salida se va al infinito y no hay video"
+        )
+    return Bloques(g, h, g / denom, negativa)
+
+
+@dataclass
+class Engranaje:
+    """La pareja de dientes: el grande gira menos veces, y siempre al revés."""
+
+    z1: int  # dientes de la conductora
+    z2: int  # dientes de la conducida
+    entrada: float  # las vueltas del eje rápido
+    salida: float
+    relacion: float  # z2 / z1: cuánto se multiplicó el torque
+    unidad: str  # de «1200 rpm» sale «rpm»
+    invertida: bool = True
+
+
+def analizar_engranajes(dientes_a: str, dientes_b: str, rpm: str) -> Engranaje:
+    """La relación de transmisión: los dientes mandan y el sentido se invierte en cada contacto."""
+
+    def dientes(texto: str | None, nombre: str) -> int:
+        valor = _ganancia(texto, nombre)
+        if valor <= 0 or valor != int(valor):
+            raise ValueError(f"los dientes de {nombre} se cuentan con un entero positivo, y leí «{texto}»")
+        return int(valor)
+
+    z1, z2 = dientes(dientes_a, "la rueda conductora"), dientes(dientes_b, "la rueda conducida")
+    if z1 == z2:
+        raise ValueError(
+            f"con los mismos {z1} dientes no hay relación de transmisión: las dos ruedas dan lo mismo"
+        )
+    n, uni = _medida_solido(rpm, "la velocidad de entrada", hasta_barra=True)
+    return Engranaje(z1, z2, n, n * z1 / z2, z2 / z1, uni or "rpm")
+
+
+@dataclass
+class Mohr:
+    """El círculo de Mohr del estado plano de esfuerzos, con sus principales ya leídos."""
+
+    sigma_x: float
+    sigma_y: float
+    cortante: float
+    unidad: str  # de «80 MPa» sale «MPa»
+    centro: float  # (σx + σy) / 2, sobre el eje horizontal
+    radio: float
+    principal_1: float  # el esfuerzo normal mayor
+    principal_2: float
+    max_cortante: float  # vale lo mismo que el radio
+    angulo: float  # cuánto hay que girar el elemento para llegar al plano principal, en grados
+
+
+def _esfuerzo(texto: str | None, nombre: str) -> tuple[float, str]:
+    """Un esfuerzo con su unidad, admitiendo cero y negativos (que en Mohr son compresión)."""
+    crudo = str(texto or "")
+    m = re.search(r"-?\d+(?:[.,]\d+)?", crudo)
+    if not m:
+        raise ValueError(
+            f"el esfuerzo de {nombre} necesita un número con su unidad, ej. «80 MPa», y leí «{crudo}»"
+        )
+    return float(m.group().replace(",", ".")), crudo[m.end() :].strip()
+
+
+def analizar_mohr(sigma_x: str, sigma_y: str, cortante: str) -> Mohr:
+    """Traza el círculo: su centro, su radio y los dos esfuerzos principales que lee el ingeniero."""
+    sx, uni = _esfuerzo(sigma_x, "σx")
+    sy, _ = _esfuerzo(sigma_y, "σy")
+    t, _ = _esfuerzo(cortante, "τxy")
+    centro = (sx + sy) / 2.0
+    radio = math.hypot((sx - sy) / 2.0, t)
+    return Mohr(
+        sx,
+        sy,
+        t,
+        uni,
+        centro,
+        radio,
+        centro + radio,
+        centro - radio,
+        radio,
+        math.degrees(math.atan2(2.0 * t, sx - sy)) / 2.0,
+    )

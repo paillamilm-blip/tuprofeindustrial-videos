@@ -22,6 +22,7 @@ from manim import (
     Arc,
     Arrow,
     Circle,
+    CurvedArrow,
     DashedLine,
     Dot,
     Ellipse,
@@ -38,9 +39,12 @@ from . import componentes as c
 from .visuales import (
     AnguloTrig,
     Barras,
+    Bloques,
     Cercha,
     Energia,
+    Engranaje,
     Funcion,
+    Mohr,
     Onda,
     Optica,
     Pendulo,
@@ -1826,6 +1830,304 @@ def cercha(
 
 
 # ------------------------------------------------------------------------------------------
+# 13) El taller: el lazo de control, la pareja de engranajes y el círculo de Mohr
+# ------------------------------------------------------------------------------------------
+
+
+def bloques(
+    figura: Bloques, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """El diagrama de bloques: la realimentación vuelve con signo menos y le come ganancia al lazo."""
+    y_lazo = alto * 0.16
+    caja_g = Rectangle(width=ancho * 0.22, height=alto * 0.30).move_to([ancho * 0.06, y_lazo, 0.0])
+    caja_g.set_stroke(col.formulas, 5).set_fill(papel, 1)
+    x_in, x_out = caja_g.get_left()[0], caja_g.get_right()[0]
+
+    sumidero = Circle(radius=alto * 0.10).move_to([x_in - ancho * 0.14, y_lazo, 0.0])
+    sumidero.set_stroke(col.formulas, 4).set_fill(papel, 1)
+    x_sum = sumidero.get_center()[0]
+
+    señal = [
+        Arrow([-ancho * 0.46, y_lazo, 0], [x_sum - alto * 0.10, y_lazo, 0], buff=0, stroke_width=5),
+        Arrow([x_sum + alto * 0.10, y_lazo, 0], [x_in, y_lazo, 0], buff=0, stroke_width=5),
+        Arrow([x_out, y_lazo, 0], [ancho * 0.46, y_lazo, 0], buff=0, stroke_width=5),
+    ]
+    for saeta in señal:
+        saeta.set_stroke(col.formulas, 5).set_fill(col.formulas, 1)
+
+    # La realimentación sale de la propia señal, baja, cruza por debajo y vuelve al comparador.
+    x_toma = ancho * 0.36
+    y_retro = -alto * 0.22
+    puntos = [
+        Line([x_toma, y_lazo, 0], [x_toma, y_retro, 0]),
+        Line([x_toma, y_retro, 0], [x_sum, y_retro, 0]),
+        Arrow([x_sum, y_retro, 0], [x_sum, y_lazo - alto * 0.10, 0], buff=0, stroke_width=5),
+    ]
+    puntos[2].set_stroke(col.acento, 5).set_fill(col.acento, 1)
+    for tramo in puntos[:2]:
+        tramo.set_stroke(col.acento, 5)
+    toma = Dot([x_toma, y_lazo, 0.0], radius=0.06).set_fill(col.formulas, 1)
+
+    caja_h = Rectangle(width=ancho * 0.17, height=alto * 0.24).move_to(
+        [(x_sum + x_toma) / 2 + ancho * 0.04, y_retro, 0.0]
+    )
+    caja_h.set_stroke(col.acento, 5).set_fill(papel, 1)
+
+    parches, rótulos = VGroup(), VGroup()
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"G = {_numero_latex(figura.adelante)}",
+        np.array([caja_g.get_center()[0], y_lazo, 0.0]),
+        18,
+    )
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"H = {_numero_latex(figura.retro)}",
+        np.array([caja_h.get_center()[0], y_retro, 0.0]),
+        17,
+    )
+    _cartela(col, papel, parches, rótulos, "entrada", np.array([-ancho * 0.40, y_lazo + 0.34, 0.0]), 14)
+    _cartela(col, papel, parches, rótulos, "salida", np.array([ancho * 0.40, y_lazo + 0.34, 0.0]), 14)
+    # El signo del comparador: ahí se decide si el lazo se calma o se descontrola.
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        "−" if figura.negativa else "+",
+        np.array([x_sum - 0.10, y_lazo - 0.16, 0.0]),
+        16,
+    )
+    if "lazo_cerrado" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"T = G/(1{'+' if figura.negativa else '-'}GH) ≈ {_numero_latex(figura.lazo_cerrado)}",
+            np.array([0.0, -alto * 0.44, 0.0]),
+            17,
+        )
+
+    rayas = [caja_g, sumidero, *señal, *puntos, caja_h, toma]
+    todo = VGroup(*rayas, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=[caja_g, caja_h, sumidero], aparece=[*señal, *puntos, toma, *rótulos])
+
+
+def _rueda(col: Any, centro: np.ndarray, radio: float, dientes: int, tinta: str, papel: str) -> VGroup:
+    """La lámina de un engranaje: su circunferencia con los dientes marcados y su chumquera al centro."""
+    paso = 2 * PI / dientes
+    punta = radio * 1.09
+    bordes = []
+    for i in range(dientes):
+        base = paso * i
+        for fr, r in ((0.0, punta), (0.42, punta), (0.58, radio), (1.0, radio)):
+            a = base + paso * fr
+            bordes.append(centro + np.array([r * np.cos(a), r * np.sin(a), 0.0]))
+    cuerpo = Polygon(*bordes)
+    cuerpo.set_stroke(tinta, 4).set_fill(papel, 0)
+    chumbrera = Circle(radius=radio * 0.22).move_to(centro)
+    chumbrera.set_stroke(tinta, 4).set_fill(papel, 1)
+    eje = Dot(centro, radius=0.05).set_fill(tinta, 1)
+    return VGroup(cuerpo, chumbrera, eje)
+
+
+def engranaje(
+    figura: Engranaje, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """La pareja que se muerde: el chico da más vueltas y el grande sale al revés y más lento."""
+    mayor, menor = max(figura.z1, figura.z2), min(figura.z1, figura.z2)
+    r_grande = min(alto * 0.28, ancho * 0.20)
+    r_chica = r_grande * menor / mayor
+    r1 = r_chica if figura.z1 <= figura.z2 else r_grande
+    r2 = r_grande if figura.z1 <= figura.z2 else r_chica
+    y = alto * 0.10
+    c1 = np.array([-r2, y, 0.0])  # la conductora empuja desde la izquierda
+    c2 = np.array([r1, y, 0.0])
+
+    rueda_1 = _rueda(col, c1, r1, figura.z1, col.formulas, papel)
+    rueda_2 = _rueda(col, c2, r2, figura.z2, col.formulas, papel)
+
+    def giro(centro: np.ndarray, radio: float, horario: bool) -> CurvedArrow:
+        r = radio * 1.30
+        a0, a1 = (np.radians(58), np.radians(122)) if horario else (np.radians(122), np.radians(58))
+        p0 = centro + np.array([r * np.cos(a0), r * np.sin(a0), 0.0])
+        p1 = centro + np.array([r * np.cos(a1), r * np.sin(a1), 0.0])
+        saeta = CurvedArrow(p0, p1, angle=(62 if horario else -62) * PI / 180)
+        saeta.set_stroke(col.acento, 5).set_fill(col.acento, 1)
+        return saeta
+
+    da_vuelta_1 = giro(c1, r1, True)
+    da_vuelta_2 = giro(c2, r2, False)
+
+    uni = figura.unidad
+    parches, rótulos = VGroup(), VGroup()
+    # El z₁ crece hacia afuera: si queda centrado bajo su rueda, le pisa los dientes a la grande.
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"z₁ = {figura.z1}",
+        np.array([c1[0] - r1, y - r1 - 0.26, 0.0]),
+        16,
+        RIGHT,
+    )
+    _cartela(col, papel, parches, rótulos, f"z₂ = {figura.z2}", np.array([c2[0], y - r2 - 0.26, 0.0]), 16)
+    # Las vueltas van a los costados, a la altura de su eje: arriba están las flechas del giro.
+    if "velocidad" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"{_numero_latex(figura.entrada)} {uni}",
+            np.array([c1[0] - r1 - 0.20, y, 0.0]),
+            16,
+            LEFT,
+        )
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"{_numero_latex(figura.salida)} {uni}",
+            np.array([c2[0] + r2 + 0.20, y, 0.0]),
+            16,
+            RIGHT,
+        )
+    if "relacion" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"i = z₂/z₁ ≈ {_numero_latex(figura.relacion)}",
+            np.array([0.0, -alto * 0.44, 0.0]),
+            16,
+        )
+
+    rayas = [rueda_1, rueda_2, da_vuelta_1, da_vuelta_2]
+    todo = VGroup(*rayas, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=[rueda_1, rueda_2], aparece=[da_vuelta_1, da_vuelta_2, *rótulos])
+
+
+def mohr(
+    figura: Mohr, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """El círculo de Mohr: el diámetro que une los dos puntos conocidos y lo que lee el ingeniero."""
+    bajo = min(0.0, figura.centro - figura.radio)
+    arriba = max(0.0, figura.centro + figura.radio)
+    escala = min(ancho * 0.60 / max(arriba - bajo, 1e-9), alto * 0.70 / max(2 * figura.radio, 1e-9))
+    x_cero = -((arriba + bajo) / 2.0) * escala
+
+    def px(sigma: float) -> float:
+        return x_cero + sigma * escala
+
+    def py(t: float) -> float:
+        return t * escala + alto * 0.02
+
+    centro = np.array([px(figura.centro), py(0.0), 0.0])
+    r = figura.radio * escala
+    circulo = Circle(radius=max(r, 0.05)).move_to(centro)
+    circulo.set_stroke(col.acento, 5).set_fill(col.acento, 0.10)
+
+    eje_sigma = Arrow([px(bajo) - 0.30, py(0.0), 0], [px(arriba) + 0.42, py(0.0), 0], buff=0, stroke_width=4)
+    eje_tau = Arrow(
+        [px(0.0), py(0.0) - alto * 0.36, 0], [px(0.0), py(0.0) + alto * 0.38, 0], buff=0, stroke_width=4
+    )
+    for eje in (eje_sigma, eje_tau):
+        eje.set_stroke(col.tenue, 4).set_fill(col.tenue, 1)
+
+    # El diámetro de Mohr: (σx, τ) arriba y (σy, −τ) abajo; sus extremos son los principales.
+    x_ref = np.array([px(figura.sigma_x), py(figura.cortante), 0.0])
+    y_ref = np.array([px(figura.sigma_y), py(-figura.cortante), 0.0])
+    diametro = Line(x_ref, y_ref).set_stroke(col.cuadricula, 4)
+    puntos_ref = VGroup(
+        *[Dot(p, radius=0.07).set_fill(col.cuadricula, 1).set_stroke(col.formulas, 2) for p in (x_ref, y_ref)]
+    )
+    p1 = np.array([px(figura.principal_1), py(0.0), 0.0])
+    p2 = np.array([px(figura.principal_2), py(0.0), 0.0])
+    radio_vertical = Line(centro, [centro[0], py(figura.radio), 0.0]).set_stroke(col.error, 4)
+
+    uni = figura.unidad
+    parches, rótulos = VGroup(), VGroup()
+    _cartela(col, papel, parches, rótulos, "σ", np.array([px(arriba) + 0.42, py(0.0) + 0.26, 0.0]), 16)
+    _cartela(col, papel, parches, rótulos, "τ", np.array([px(0.0) + 0.26, py(0.0) + alto * 0.36, 0.0]), 16)
+    # El centro se escribe a la izquierda del radio vertical: a la derecha está el punto X.
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"C = {_numero_latex(figura.centro)} {uni}",
+        np.array([centro[0] - 0.14, py(0.0) + 0.30, 0.0]),
+        15,
+        RIGHT,
+    )
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"X({_numero_latex(figura.sigma_x)}, {_numero_latex(figura.cortante)})",
+        np.array([x_ref[0] + 0.12, x_ref[1] + 0.22, 0.0]),
+        14,
+        LEFT,
+    )
+    # Los dos principales bajan del eje y se van cada uno a su orilla: en el medio quedaría C.
+    if "principales" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"σ₁ ≈ {_numero_latex(figura.principal_1)} {uni}",
+            np.array([p1[0] + 0.16, py(0.0) - 0.38, 0.0]),
+            15,
+            LEFT,
+        )
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"σ₂ ≈ {_numero_latex(figura.principal_2)} {uni}",
+            np.array([p2[0] - 0.16, py(0.0) - 0.38, 0.0]),
+            15,
+            RIGHT,
+        )
+    if "cortante" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"τ máx ≈ {_numero_latex(figura.max_cortante)} {uni}",
+            np.array([centro[0] - 0.12, py(figura.radio) + 0.22, 0.0]),
+            15,
+            RIGHT,
+        )
+
+    rayas = [eje_sigma, eje_tau, circulo, diametro, puntos_ref, radio_vertical]
+    todo = VGroup(*rayas, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(
+        mobs=todo,
+        trazo=[eje_sigma, eje_tau, circulo],
+        aparece=[diametro, puntos_ref, radio_vertical, *rótulos],
+    )
+
+
+# ------------------------------------------------------------------------------------------
 # Elección del dibujo según el guion
 # ------------------------------------------------------------------------------------------
 
@@ -1881,5 +2183,11 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         return viga(visual.viga(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "cercha":
         return cercha(visual.cercha(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "bloques":
+        return bloques(visual.bloques(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "engranaje":
+        return engranaje(visual.engranaje(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "mohr":
+        return mohr(visual.mohr(), visual.anotar, col, ancho, alto, papel)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
     return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)

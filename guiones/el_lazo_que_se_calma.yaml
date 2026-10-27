@@ -1,0 +1,53 @@
+# Guion escrito a mano para probar el dibujo "bloques" (lazo de control).
+# Los números coinciden con lo que el motor calcula solo: GH = 4 y T = 8/(1+4) = 1,6.
+
+titulo: "Por qué tu termostato no se vuelve loco"
+materia: ingenieria
+nivel: "3° medio"
+
+gancho:
+  texto: "Ganancia 8: al cerrar el lazo queda 1,6"
+  voz: "Ganancia ocho. Cierro el lazo y quedan uno coma seis."
+  emoji: "🌡️"
+
+enunciado:
+  texto: "Un lazo de realimentación negativa tiene G = 8 y H = 0,5. ¿Cuánto vale la ganancia total?"
+  voz: "El bloque directo gana ocho veces. El sensor devuelve medio punto. ¿Cuánto gana el lazo completo?"
+  destacar: ["G = 8", "H = 0,5"]
+
+datos:
+  - tex: 'G = 8'
+    voz: "La ganancia del bloque directo es ocho, sin unidad."
+  - tex: 'H = 0{,}5'
+    voz: "La realimentación devuelve medio."
+
+pasos:
+  - nota: "La malla"
+    tex: 'GH = 8 \cdot 0{,}5 = 4'
+    voz: "Primero multiplico los dos bloques. La malla vale cuatro."
+  - nota: "El lazo cerrado"
+    tex: 'T = \frac{G}{1 + GH} = \frac{8}{1 + 4}'
+    voz: "La realimentación negativa resta en el comparador. Por eso el denominador crece."
+    emoji: "💡"
+    visual:
+      tipo: bloques
+      adelante: '8'
+      retro: '0.5'
+      anotar: ['lazo_cerrado']
+  - nota: "Resultado"
+    tex: 'T = \frac{8}{5} = 1{,}6'
+    voz: "Ocho entre cinco. La ganancia baja de ocho a uno coma seis."
+
+resultado:
+  tex: 'T = 1{,}6'
+  voz: "El lazo cambia la ganancia, no la multiplica: de ocho a uno coma seis."
+  emoji: "✅"
+
+verificacion:
+  texto: "Si H fuera negativa el denominador sería 1 − GH. Con GH = 1 el lazo se descontrola."
+  voz: "Cambia el signo y el denominador se hace uno menos cuatro. Con malla uno, el lazo se descontrola."
+
+reto:
+  texto: "Con G = 8 y H = 0,125 la malla vale 1. ¿Qué le pasa a T?"
+  voz: "Ahora tú: con una malla de uno, la ganancia no tiene respuesta. ¿Por qué?"
+  emoji: "✍️"

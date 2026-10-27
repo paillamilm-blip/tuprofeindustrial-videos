@@ -1,0 +1,56 @@
+# Guion escrito a mano para probar el dibujo "engranaje" (pareja de ruedas dentadas).
+# El motor calcula solo: salida = 1200 · 20/60 = 400 rpm y i = 60/20 = 3.
+
+titulo: "El piñón chico que hace girar lento el eje grande"
+materia: ingenieria
+nivel: "3° medio"
+
+gancho:
+  texto: "20 dientes arrastran 60: las vueltas caen a un tercio"
+  voz: "Veinte dientes arrastran sesenta. Las vueltas quedan a un tercio."
+  emoji: "⚙️"
+
+enunciado:
+  texto: "Una conductora de 20 dientes gira a 1200 rpm y mueve una rueda de 60. ¿A cuánto gira el eje lento?"
+  voz: "La conductora tiene veinte dientes y gira a mil doscientas vueltas. Arrastra una de sesenta."
+  destacar: ["20 dientes", "60 dientes", "1200 rpm"]
+
+datos:
+  - tex: 'z_1 = 20'
+    voz: "La conductora cuenta veinte dientes."
+  - tex: 'z_2 = 60'
+    voz: "La conducida cuenta sesenta."
+  - tex: 'n_1 = 1200\ \text{rpm}'
+    voz: "El eje rápido da mil doscientas vueltas por minuto."
+
+pasos:
+  - nota: "Los dientes se muerden de a uno"
+    tex: 'z_1 n_1 = z_2 n_2'
+    voz: "Por cada diente que pasa entra uno que sale. El producto de dientes y vueltas se conserva."
+  - nota: "Despejo el eje lento"
+    tex: 'n_2 = n_1 \cdot \frac{z_1}{z_2} = 1200 \cdot \frac{20}{60}'
+    voz: "Despejo: las vueltas del eje lento son mil doscientos por veinte sobre sesenta."
+    emoji: "💡"
+    visual:
+      tipo: engranaje
+      dientes_a: '20'
+      dientes_b: '60'
+      rpm: '1200 rpm'
+      anotar: ['velocidad', 'relacion']
+  - nota: "Cuenta vueltas"
+    tex: 'n_2 = 400\ \text{rpm}'
+    voz: "Cuatrocientas vueltas por minuto. Un tercio de las de entrada."
+
+resultado:
+  tex: 'n_2 = 400\ \text{rpm} \qquad i = 3'
+  voz: "Cuatrocientas vueltas y una relación de tres. Menos rápido, más torque."
+  emoji: "✅"
+
+verificacion:
+  texto: "Los dos ejes giran en sentidos opuestos: la relación 3 se paga con el cambio de sentido."
+  voz: "Mira las flechas: los dos ejes giran al revés. Eso también lo pone la relación."
+
+reto:
+  texto: "Si la conductora fuera la de 60 y la conducida la de 20, ¿qué pasa con las vueltas?"
+  voz: "Invierte la pareja: sesenta arrastra a veinte. ¿Cuánto dan ahora las vueltas de salida?"
+  emoji: "✍️"

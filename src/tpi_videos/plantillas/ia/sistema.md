@@ -47,6 +47,9 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - dibujo = "tanque": la cuba con su llave arriba y su válvula abajo: capacidad ("120 L"), entrada ("8 L/min") y salida ("2 L/min", opcional). Los caudales se escriben SIEMPRE "por" algo: "8 L" no sirve, tiene que ser "8 L/min". El motor calcula solo el tiempo de llenado V/(entrada−salida); con anotar eliges "llenado" o "vaciado" (el vaciado pide salida).
 - dibujo = "viga": la viga apoyada en dos pies: longitud = el vano ("4 m") y carga al centro ("200 N"), o repartida = true con la carga en "50 N/m". El motor calcula solo la reacción de cada apoyo y el momento máximo del centro; con anotar eliges "reacciones", "momento" o las dos.
 - dibujo = "cercha": el triángulo simétrico que aguanta una carga en el vértice: base ("6 m"), altura ("4 m") y carga ("300 N"). El motor calcula solo la inclinación del paño, su esfuerzo P/(2·sen θ) y la reacción P/2; con anotar eliges "esfuerzo", "angulo" o las dos.
+- dibujo = "bloques": el lazo de control con su comparador: adelante (la ganancia del bloque directo, NÚMERO SOLO sin unidad: "8") y retro (la de la realimentación: "0.5"). negativa va en true casi siempre; ponla false solo para mostrar un lazo que se descontrola, y ojo que con G·H ≥ 1 el motor rechaza el ejercicio porque la salida se va al infinito. El motor calcula solo T = G/(1±GH); con anotar puedes pedir "lazo_cerrado".
+- dibujo = "engranaje": la pareja que se muerde: dientes_a (los de la conductora, "20"), dientes_b (los de la conducida, OTRO número: con los mismos dientes no hay transmisión) y rpm (las vueltas de entrada con su unidad, "1200 rpm"). El motor calcula solo n₂ = n₁·z₁/z₂ y la relación i = z₂/z₁, y gira las flechas en sentidos opuestos; con anotar eliges "velocidad", "relacion" o las dos.
+- dibujo = "mohr": el círculo de esfuerzos de un punto: sigma_x ("90 MPa"), sigma_y ("30 MPa") y cortante ("40 MPa"; escribe "0 MPa" si no hay corte). Admite negativos porque en Mohr la compresión existe. El motor calcula solo el centro (σx+σy)/2, el radio, los dos principales y el cortante máximo; con anotar eliges "principales", "cortante" o las dos.
 - Los campos que no corresponden al dibujo elegido se dejan vacíos ("" o []). No inventes datos: el dibujo tiene que salir de los números del ejercicio.
 
 ### El molde narrativo (pista MOLDE)
@@ -72,7 +75,7 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - La primera vez que uses un símbolo, di qué es ("g, la aceleración de gravedad").
 - La voz de cada paso dice POR QUÉ se hace ese paso, no solo qué se hace.
 - Entre todas las voces: de 110 a 170 palabras.
-- reto_voz termina invitando a comentar (por ejemplo, "Déjalo en los comentarios").
+- reto_voz deja la pregunta abierta y se va. Nunca pidas comentarios, likes, seguir ni compartir: eso dentro del video es gancho vacío. La invitación a responder va en el texto del pie, no en la voz.
 
 ## 4. Pedagogía
 - Primero lo concreto (la situación) y después la fórmula.

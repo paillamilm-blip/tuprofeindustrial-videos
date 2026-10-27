@@ -18,8 +18,11 @@ from .errores import ErrorMotor
 from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 from .tex import llaves_balanceadas
 from .visuales import (
+    MARCAS_BLOQUES,
     MARCAS_CERCHA,
     MARCAS_CIRCULO,
+    MARCAS_ENGRANAJE,
+    MARCAS_MOHR,
     MARCAS_ONDA,
     MARCAS_PENDULO,
     MARCAS_POLEA,
@@ -34,9 +37,12 @@ from .visuales import (
     SEGUNDOS_VISUAL,
     analizar_angulo,
     analizar_barras,
+    analizar_bloques,
     analizar_cercha,
     analizar_energia,
+    analizar_engranajes,
     analizar_funcion,
+    analizar_mohr,
     analizar_onda,
     analizar_optica,
     analizar_pendulo,
@@ -171,6 +177,9 @@ class Visual(_Base):
         "tanque",
         "viga",
         "cercha",
+        "bloques",
+        "engranaje",
+        "mohr",
     ]
 
     # grafico_funcion
@@ -255,6 +264,21 @@ class Visual(_Base):
     carga: str | None = None  # '200 N' al centro, o '50 N/m' repartida
     repartida: bool = False
     base: str | None = None  # '6 m'
+
+    # bloques (la realimentación negativa es la regla; positiva = true para el contraejemplo)
+    adelante: str | None = None  # la ganancia del bloque directo, sin unidad: '10'
+    retro: str | None = None  # la ganancia del tramo de realimentación: '0.2'
+    negativa: bool = True
+
+    # engranaje
+    dientes_a: str | None = None  # los de la conductora: '20'
+    dientes_b: str | None = None  # los de la conducida, distintos: '60'
+    rpm: str | None = None  # las vueltas del eje de entrada: '1200 rpm'
+
+    # mohr
+    sigma_x: str | None = None  # '80 MPa'
+    sigma_y: str | None = None  # '20 MPa'
+    cortante: str | None = None  # '30 MPa'
 
     _listas = field_validator(
         "rango", "marcar", "vectores", "resistencias", "anotar", "categorias", mode="before"
@@ -458,6 +482,52 @@ class Visual(_Base):
                     f"«{desconocidas[0]}» no es una marca de la cercha; "
                     f"el motor sabe anotar {', '.join(MARCAS_CERCHA)}"
                 )
+        elif self.tipo == "bloques":
+            if not (self.adelante or "").strip() or not (self.retro or "").strip():
+                raise ValueError("el lazo necesita sus dos ganancias, ej. adelante: '10' y retro: '0.2'")
+            analizar_bloques(self.adelante, self.retro, self.negativa)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_BLOQUES]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca del lazo; "
+                    f"el motor sabe anotar {', '.join(MARCAS_BLOQUES)}"
+                )
+        elif self.tipo == "engranaje":
+            if (
+                not (self.dientes_a or "").strip()
+                or not (self.dientes_b or "").strip()
+                or not (self.rpm or "").strip()
+            ):
+                raise ValueError(
+                    "la pareja de engranajes necesita sus dientes y su entrada, "
+                    "ej. dientes_a: '20', dientes_b: '60' y rpm: '1200 rpm'"
+                )
+            analizar_engranajes(self.dientes_a, self.dientes_b, self.rpm)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_ENGRANAJE]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de la pareja; "
+                    f"el motor sabe anotar {', '.join(MARCAS_ENGRANAJE)}"
+                )
+        elif self.tipo == "mohr":
+            if (
+                not (self.sigma_x or "").strip()
+                or not (self.sigma_y or "").strip()
+                or self.cortante is None
+                or not str(self.cortante).strip()
+            ):
+                raise ValueError(
+                    "el círculo de Mohr necesita sus dos normales y su cortante, "
+                    "ej. sigma_x: '80 MPa', sigma_y: '20 MPa' y cortante: '30 MPa' "
+                    "(escribe '0 MPa' si no hay corte)"
+                )
+            analizar_mohr(self.sigma_x, self.sigma_y, self.cortante)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_MOHR]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca del círculo de Mohr; "
+                    f"el motor sabe anotar {', '.join(MARCAS_MOHR)}"
+                )
         elif self.tipo == "poligono_regular":
             if not (self.lado or "").strip():
                 raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
@@ -592,6 +662,24 @@ class Visual(_Base):
         if self.tipo != "cercha":
             raise ValueError(f"«{self.tipo}» no es una cercha")
         return analizar_cercha(self.base or "", self.altura or "", self.carga or "")
+
+    def bloques(self):
+        """El lazo cerrado con su ganancia ya calculada."""
+        if self.tipo != "bloques":
+            raise ValueError(f"«{self.tipo}» no es un lazo de control")
+        return analizar_bloques(self.adelante or "", self.retro or "", self.negativa)
+
+    def engranaje(self):
+        """La pareja de engranajes con la vuelta del eje lento."""
+        if self.tipo != "engranaje":
+            raise ValueError(f"«{self.tipo}» no es una pareja de engranajes")
+        return analizar_engranajes(self.dientes_a or "", self.dientes_b or "", self.rpm or "")
+
+    def mohr(self):
+        """El círculo de Mohr con su centro, su radio y sus esfuerzos principales."""
+        if self.tipo != "mohr":
+            raise ValueError(f"«{self.tipo}» no es un círculo de Mohr")
+        return analizar_mohr(self.sigma_x or "", self.sigma_y or "", self.cortante or "")
 
     def poligono(self):
         """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
@@ -955,6 +1043,24 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
         campos.append(("base", _simples(v.get("base") or "")))
         campos.append(("altura", _simples(v.get("altura") or "")))
         campos.append(("carga", _simples(v.get("carga") or "")))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "bloques":
+        campos.append(("adelante", _simples(str(v.get("adelante") or ""))))
+        campos.append(("retro", _simples(str(v.get("retro") or ""))))
+        if v.get("negativa") is False:
+            campos.append(("negativa", "false"))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "engranaje":
+        campos.append(("dientes_a", _simples(str(v.get("dientes_a") or ""))))
+        campos.append(("dientes_b", _simples(str(v.get("dientes_b") or ""))))
+        campos.append(("rpm", _simples(v.get("rpm") or "")))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "mohr":
+        for clave in ("sigma_x", "sigma_y", "cortante"):
+            campos.append((clave, _simples(v.get(clave) or "")))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     else:
