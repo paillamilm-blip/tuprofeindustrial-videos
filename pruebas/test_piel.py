@@ -104,5 +104,53 @@ class LetrasTest(unittest.TestCase):
             self.assertTrue(existe(tema.tipografia.texto.familia), f"{ident} texto")
 
 
+class PielTest(unittest.TestCase):
+    """La piel del panel: los colores viven en un solo diccionario, no repartidos por las páginas."""
+
+    def test_los_tokens_de_la_piel_existen_y_son_hex(self):
+        from tpi_videos.panel.comun import PIEL
+
+        for clave in (
+            "muro",
+            "tarjeta",
+            "borde_muro",
+            "texto_muro",
+            "tenue_muro",
+            "hoja",
+            "tinta",
+            "marca",
+            "error",
+            "exito",
+            "gris",
+            "costado_px",
+        ):
+            self.assertIn(clave, PIEL, clave)
+        for clave, valor in PIEL.items():
+            if clave.endswith("_px"):
+                self.assertRegex(valor, r"^\d+$", clave)
+            else:
+                self.assertRegex(valor, r"^#[0-9A-Fa-f]{6}$", clave)
+
+    def test_no_quedan_hexadecimales_sueltos_en_el_css_del_panel(self):
+        import re
+
+        fuente = Path("src/tpi_videos/panel/comun.py").read_text(encoding="utf-8")
+        self.assertNotIn("AZUL = ", fuente)
+        sueltos = re.findall(r"background:\s*#[0-9A-Fa-f]{6}", fuente)
+        self.assertEqual(sueltos, [], f"colores escritos a mano: {sueltos}")
+
+    def test_ningun_archivo_del_panel_usa_las_constantes_viejas(self):
+        import re
+
+        viejas = re.compile(r"\b(AZUL|ROJO|VERDE|GRIS)\b")
+        raiz = Path("src/tpi_videos/panel")
+        tocados = [
+            str(p.relative_to(raiz))
+            for p in sorted(raiz.rglob("*.py"))
+            if viejas.search(p.read_text(encoding="utf-8"))
+        ]
+        self.assertEqual(tocados, [], f"todavía nombran una constante suelta: {tocados}")
+
+
 if __name__ == "__main__":
     unittest.main()

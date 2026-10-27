@@ -1845,7 +1845,18 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 **Medido, no supuesto:** `AZUL`/`ROJO`/`VERDE`/`GRIS` solo se usan en `comun.py` y `paginas/fabrica.py`. El
 refactor es de dos archivos, no de cinco páginas.
 
-- [ ] **Paso 1 — Prueba que falla** (agregar a `pruebas/test_piel.py`)
+> **Corregido al medir.** Tres cosas no salieron como estaban escritas acá.
+> (1) La puerta «ninguna página cambió de aspecto» es falsa **a propósito**: `hoja` vale `#FBF7EC` porque el
+> spec (§3, piel «muro + hoja») manda editar sobre papel crema, y las tarjetas estaban en `#FFFFFF`. Se
+> miraron Fábrica y Mis videos con el panel abierto: el texto se lee igual y el crema es el aprobado.
+> (2) `pruebas/test_piel.py` **ya existía** (es del papel de los *videos*, no del panel): la clase `PielTest`
+> se agregó al final, no se creó el archivo. (3) En `fabrica.py` había un hexadecimal suelto más,
+> `NARANJA = "#B26A00"`, de la misma clase que las cuatro constantes borradas: pasó a `PIEL["aviso"]`. El CSS
+> además necesitaba claves que la tabla del plan no traía (`borde_hoja`, `papel_panel`, `renglon_panel`,
+> `secundario`, `blanco`), que se agregaron a `PIEL`. Como prueba extra quedó la tercera: ningún `.py` del
+> panel vuelve a nombrar `AZUL`, `ROJO`, `VERDE`, `GRIS` ni `NARANJA`.
+
+- [x] **Paso 1 — Prueba que falla** (agregar a `pruebas/test_piel.py`)
 
 ```python
 class PielTest(unittest.TestCase):
@@ -1871,9 +1882,9 @@ class PielTest(unittest.TestCase):
         self.assertEqual(sueltos, [], f"colores escritos a mano: {sueltos}")
 ```
 
-- [ ] **Paso 2 — Verificar que falla**: `ImportError: cannot import name 'PIEL'`.
+- [x] **Paso 2 — Verificar que falla**: `ImportError: cannot import name 'PIEL'`.
 
-- [ ] **Paso 3 — Definir los tokens**
+- [x] **Paso 3 — Definir los tokens**
 
 En `comun.py`, reemplazar las cuatro constantes (líneas 16-19) por:
 
@@ -1900,7 +1911,7 @@ PIEL = {
 `PIEL["marca"]`, `PIEL["error"]`, `PIEL["exito"]` y `PIEL["gris"]`. Dejar los cuatro nombres «por si acaso»
 es justo lo que este hito está quitando.
 
-- [ ] **Paso 4 — CSS del muro y del costado**
+- [x] **Paso 4 — CSS del muro y del costado**
 
 Dentro de `CSS` (que ya es un f-string), agregar:
 
@@ -1919,7 +1930,7 @@ Y los `background:#F3F3F0` / `#262626` / `#FFFFFF` / `#DCDCD7` que ya están en 
 leer de `PIEL` (`tinta`, `hoja`) o a una clave nueva si hacen falta (`papel_panel`, `borde_hoja`). La prueba
 del paso 1 exige que no quede ningún `background:#…` literal.
 
-- [ ] **Paso 5 — Las dos páginas leen de `PIEL`**
+- [x] **Paso 5 — Las dos páginas leen de `PIEL`**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -1929,7 +1940,7 @@ grep -rn 'AZUL\|ROJO\|VERDE\|GRIS' src/tpi_videos/panel --include='*.py'
 Reemplazar cada coincidencia (en `comun.py`: `ui.colors(...)` y `marco()`; en `fabrica.py`: sus chips y
 bordes). Al final, el `grep` no debe devolver nada en `.py` del panel.
 
-- [ ] **Paso 6 — `DESIGN.md` en la raíz**
+- [x] **Paso 6 — `DESIGN.md` en la raíz**
 
 `DESIGN.md` con: la tabla de tokens (clave, valor, para qué), la rejilla del muro y el costado
 (`minmax(0,1fr)` + `392px`, `position: sticky`, breakpoint 900 px), las tipografías embebidas que usa el panel
@@ -1937,7 +1948,7 @@ bordes). Al final, el `grep` no debe devolver nada en `.py` del panel.
 con su valor y un «cambiar»; ningún botón primario se deshabilita por no haber tocado una sugerencia». Sin
 inventario de componentes ni teoría: solo lo que otro agente necesita para no romper la piel.
 
-- [ ] **Paso 7 — Verde, panel abierto y visto, commit**
+- [x] **Paso 7 — Verde, panel abierto y visto, commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \

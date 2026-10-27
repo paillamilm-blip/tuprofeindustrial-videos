@@ -22,7 +22,7 @@ from ...entorno import raiz_proyecto
 from ...errores import ErrorMotor
 from ...ideas import ANGULOS, DIFICULTADES
 from ...moldes import nombre_molde
-from ..comun import AZUL, GRIS, ROJO, VERDE, abrir_en_mac, marco
+from ..comun import PIEL, abrir_en_mac, marco
 from ..tareas import TAREAS, Tarea
 from .crear import TEMAS_SUGERIDOS
 from .videos import abrir_kit
@@ -30,21 +30,19 @@ from .videos import abrir_kit
 # «Video 2 de 3 · animando la fórmula»: el prefijo que el lote pone en cada aviso
 VIDEO_DE = re.compile(r"^Video (\d+) de (\d+) · (.*)$")
 TITULO = re.compile(r"^Voy con «(.+?)»")
-# El naranja del panel para los avisos que no son errores
-NARANJA = "#B26A00"
 # Los nombres de los trabajos que esta pantalla sabe retomar si se recarga a medio lote
 PROPIOS = ("3 videos de", "Reintento", "Reanudar")
 
 ESTADOS_FILA = {
-    "en_cola": ("radio_button_unchecked", GRIS, "En espera"),
-    "redactando": ("edit_note", AZUL, "La IA está escribiendo…"),
-    "animando": ("movie", AZUL, "Animando"),
-    "subtitulos": ("subtitles", AZUL, "Subtítulos"),
-    "kit": ("content_copy", AZUL, "Kit de publicación"),
-    "pendiente_ia": ("wifi_off", NARANJA, "Pendiente de conexión"),
-    "interrumpido": ("pause_circle", NARANJA, "Se interrumpió"),
-    "listo": ("task_alt", VERDE, "Listo"),
-    "fallo": ("cancel", ROJO, "Falló"),
+    "en_cola": ("radio_button_unchecked", PIEL["gris"], "En espera"),
+    "redactando": ("edit_note", PIEL["marca"], "La IA está escribiendo…"),
+    "animando": ("movie", PIEL["marca"], "Animando"),
+    "subtitulos": ("subtitles", PIEL["marca"], "Subtítulos"),
+    "kit": ("content_copy", PIEL["marca"], "Kit de publicación"),
+    "pendiente_ia": ("wifi_off", PIEL["aviso"], "Pendiente de conexión"),
+    "interrumpido": ("pause_circle", PIEL["aviso"], "Se interrumpió"),
+    "listo": ("task_alt", PIEL["exito"], "Listo"),
+    "fallo": ("cancel", PIEL["error"], "Falló"),
 }
 ESTADOS_QUE_PENDEN = ("pendiente_ia", "interrumpido", "fallo")
 NOMBRES_ESTADO = {
@@ -156,7 +154,7 @@ class PaginaFabrica:
                 ui.label("Unos 9 minutos. Puedes dejarlo corriendo y volver.").classes("tpi-ayuda")
 
             with ui.row().classes("w-full items-center gap-2 pt-2"):
-                ui.icon("info", size="18px").set_text_color(GRIS)
+                ui.icon("info", size="18px").set_text_color(PIEL["gris"])
                 ui.label("Usa la voz y el estilo que elegiste en Ajustes. ¿Prefieres revisar las ideas?")
                 ui.link("Elegirlas una por una", "/crear").classes("font-bold")
 
@@ -180,7 +178,7 @@ class PaginaFabrica:
             self.detalle = ui.label("").classes("tpi-ayuda")
             self.filas_videos = ui.column().classes("w-full")
             with ui.row().classes("w-full items-center gap-2 pt-2"):
-                ui.icon("hourglass_top", size="18px").set_text_color(GRIS)
+                ui.icon("hourglass_top", size="18px").set_text_color(PIEL["gris"])
                 ui.label(
                     "Si la IA está saturada, espera y reintenta sola: el video queda pendiente hasta "
                     "que vuelva la conexión."
@@ -195,7 +193,7 @@ class PaginaFabrica:
         with self.filas_videos:
             for n in range(total):
                 with ui.row().classes("w-full items-center gap-3 no-wrap border-t pt-3"):
-                    icono = ui.icon("radio_button_unchecked").set_text_color(GRIS)
+                    icono = ui.icon("radio_button_unchecked").set_text_color(PIEL["gris"])
                     with ui.column().classes("gap-1 flex-1"):
                         titulo = ui.label(f"Video {n + 1}").classes("font-bold")
                         estado = ui.label("En espera").classes("tpi-ayuda text-sm")
@@ -273,7 +271,7 @@ class PaginaFabrica:
             if self._cola_rota:
                 ui.label(
                     "La cola anterior estaba dañada y se apartó: esos videos no se pudieron reanudar."
-                ).classes("tpi-ayuda text-sm").set_text_color(NARANJA)
+                ).classes("tpi-ayuda text-sm").set_text_color(PIEL["aviso"])
             if lotes:
                 ui.label("Cola de videos").classes("tpi-titulo text-lg")
                 for lote in reversed(lotes):
@@ -325,7 +323,7 @@ class PaginaFabrica:
                     extra = f" · reintento {_hora(video['proximo_intento'])}"
                 ui.label(f"{etiqueta}{extra}").classes("tpi-ayuda text-xs")
                 if estado == "fallo" and video.get("error"):
-                    ui.label(str(video["error"])).classes("text-xs").style(f"color:{ROJO}")
+                    ui.label(str(video["error"])).classes("text-xs").style(f"color:{PIEL['error']}")
                 if estado != "listo":
                     ui.linear_progress(value=float(video.get("avance") or 0.0), show_value=False).props(
                         "size=4px rounded"
@@ -385,7 +383,7 @@ class PaginaFabrica:
                 self._fila_resultado(item)
 
             with ui.row().classes("w-full items-center gap-2 pt-2 border-t"):
-                ui.icon("tips_and_updates", size="18px").set_text_color(GRIS)
+                ui.icon("tips_and_updates", size="18px").set_text_color(PIEL["gris"])
                 ui.label("Revísalos antes de publicar: la IA puede equivocarse con un número.").classes(
                     "tpi-ayuda"
                 )
@@ -405,18 +403,20 @@ class PaginaFabrica:
             if texto
         )
         with ui.row().classes("w-full items-start gap-4 no-wrap border-t pt-4"):
-            icono, color = "task_alt", VERDE
+            icono, color = "task_alt", PIEL["exito"]
             if not ok:
-                icono, color = "cancel", ROJO
+                icono, color = "cancel", PIEL["error"]
             elif not pasado:
-                icono, color = "priority_high", NARANJA
+                icono, color = "priority_high", PIEL["aviso"]
             ui.icon(icono).classes("text-2xl").set_text_color(color)
             with ui.column().classes("gap-1 flex-1"):
                 ui.label(str(item.get("titulo") or "La idea")).classes("font-bold text-base")
                 if etiqueta:
                     ui.label(etiqueta).classes("tpi-ayuda text-sm")
                 if not ok:
-                    ui.label(str(item.get("error") or "No salió")).classes("text-sm").style(f"color:{ROJO}")
+                    ui.label(str(item.get("error") or "No salió")).classes("text-sm").style(
+                        f"color:{PIEL['error']}"
+                    )
                     if item.get("ayuda"):
                         ui.label(str(item["ayuda"])).classes("tpi-ayuda text-sm")
                     if item.get("idea"):
@@ -441,16 +441,16 @@ class PaginaFabrica:
                             "text-sm font-bold self-center"
                         )
                 for pendiente in item.get("pendientes") or []:
-                    ui.label(f"Por revisar: {pendiente}").classes("text-sm").style(f"color:{NARANJA}")
+                    ui.label(f"Por revisar: {pendiente}").classes("text-sm").style(f"color:{PIEL['aviso']}")
 
     def _pantalla_error(self, mensaje: str, ayuda: str | None) -> None:
         with ui.card().classes("tpi-hoja w-full p-6 gap-3 tpi-error"):
             with ui.row().classes("items-center gap-2"):
-                ui.icon("error").classes("text-2xl").set_text_color(ROJO)
+                ui.icon("error").classes("text-2xl").set_text_color(PIEL["error"])
                 ui.label("Nada salió").classes("tpi-titulo text-lg")
             ui.label(mensaje).classes("whitespace-pre-wrap")
             if ayuda:
-                ui.label(f"→ {ayuda}").classes("text-sm").style(f"color:{NARANJA}")
+                ui.label(f"→ {ayuda}").classes("text-sm").style(f"color:{PIEL['aviso']}")
             with ui.row().classes("gap-3 items-center"):
                 ui.button("Volver a intentar", icon="refresh", on_click=self._arrancar).props("outline")
                 ui.link("Revisar Ajustes", "/ajustes").classes("font-bold")

@@ -13,10 +13,28 @@ from nicegui import ui
 from ..entorno import raiz_proyecto
 from .tareas import TAREAS
 
-AZUL = "#1C3D74"
-ROJO = "#D32F2F"
-VERDE = "#2E7D32"
-GRIS = "#6B6B6B"  # el gris que sí se lee sobre el blanco (4,5:1)
+# La piel del panel, en un solo lugar. Las páginas leen de acá; no reciben colores nuevos.
+# MODO Operate (impeccable): la expresión vive en el muro y en la hoja, no en los controles.
+PIEL = {
+    "muro": "#080A0D",  # la pantalla del muro de portadas
+    "tarjeta": "#11161C",
+    "borde_muro": "#223041",
+    "texto_muro": "#EAF2FF",
+    "tenue_muro": "#8A97A8",
+    "hoja": "#FBF7EC",  # el papel crema donde se escribe
+    "borde_hoja": "#DCDCD7",
+    "tinta": "#1B2430",
+    "papel_panel": "#F3F3F0",  # el fondo con renglones de las páginas
+    "renglon_panel": "#E4E4E0",
+    "marca": "#1C3D74",
+    "secundario": "#5B6B86",
+    "error": "#D32F2F",
+    "aviso": "#B26A00",  # lo que conviene mirar, sin ser un error
+    "exito": "#2E7D32",
+    "gris": "#6B6B6B",  # el gris que sí se lee sobre blanco (4,5:1)
+    "blanco": "#FFFFFF",
+    "costado_px": "392",  # el ancho del panel de detalle aprobado en el mockup
+}
 
 PAGINAS = (
     ("/", "Fábrica", "bolt"),
@@ -32,24 +50,33 @@ CSS = f"""
 @font-face {{ font-family: 'Bangers'; src: url('/fuentes/Bangers-Regular.ttf'); }}
 @font-face {{ font-family: 'Montserrat'; src: url('/fuentes/Montserrat-SemiBold.ttf'); font-weight: 600; }}
 body {{
-  background-color: #F3F3F0;
-  background-image: linear-gradient(#E4E4E0 1px, transparent 1px),
-                    linear-gradient(90deg, #E4E4E0 1px, transparent 1px);
+  background-color: {PIEL["papel_panel"]};
+  background-image: linear-gradient({PIEL["renglon_panel"]} 1px, transparent 1px),
+                    linear-gradient(90deg, {PIEL["renglon_panel"]} 1px, transparent 1px);
   background-size: 24px 24px;
-  color: #262626;
+  color: {PIEL["tinta"]};
 }}
 .tpi-marca {{ font-family: 'Comic Neue', sans-serif; font-weight: 700; letter-spacing: .03em; }}
-.tpi-titulo {{ font-family: 'Comic Neue', sans-serif; font-weight: 700; color: {AZUL}; text-transform: uppercase; }}
-.tpi-hoja {{ background: #FFFFFF; border: 1px solid #DCDCD7; border-radius: 14px; }}
-.tpi-paso-num {{ font-family: 'Comic Neue', sans-serif; font-weight: 700; color: #fff; background: {AZUL};
+.tpi-titulo {{ font-family: 'Comic Neue', sans-serif; font-weight: 700; color: {PIEL["marca"]}; text-transform: uppercase; }}
+.tpi-hoja {{ background: {PIEL["hoja"]}; border: 1px solid {PIEL["borde_hoja"]}; border-radius: 14px; }}
+.tpi-paso-num {{ font-family: 'Comic Neue', sans-serif; font-weight: 700; color: {PIEL["blanco"]};
+  background: {PIEL["marca"]};
   border-radius: 999px; width: 28px; height: 28px; display: inline-flex; align-items: center;
   justify-content: center; flex-shrink: 0; }}
-.tpi-error {{ border-left: 4px solid {ROJO}; }}
-.tpi-nav a {{ color: #fff; text-decoration: none; padding: 6px 12px; border-radius: 8px; opacity: .85; }}
+.tpi-error {{ border-left: 4px solid {PIEL["error"]}; }}
+.tpi-nav a {{ color: {PIEL["blanco"]}; text-decoration: none; padding: 6px 12px; border-radius: 8px; opacity: .85; }}
 .tpi-nav a:hover {{ background: rgba(255,255,255,.12); opacity: 1; }}
-.tpi-nav a.activa {{ background: rgba(255,255,255,.18); opacity: 1; box-shadow: inset 0 -3px 0 {ROJO}; }}
+.tpi-nav a.activa {{ background: rgba(255,255,255,.18); opacity: 1; box-shadow: inset 0 -3px 0 {PIEL["error"]}; }}
 .tpi-bangers {{ font-family: 'Bangers', cursive; letter-spacing: .04em; }}
-.tpi-ayuda {{ color: #6B6B6B; font-size: .85rem; }}
+.tpi-ayuda {{ color: {PIEL["gris"]}; font-size: .85rem; }}
+.tpi-muro {{ background: {PIEL["muro"]}; color: {PIEL["texto_muro"]}; }}
+.tpi-tarjeta {{ background: {PIEL["tarjeta"]}; border: 1px solid {PIEL["borde_muro"]}; border-radius: 12px; }}
+.tpi-tarjetaactiva {{ border-color: {PIEL["texto_muro"]}; box-shadow: 0 0 0 2px {PIEL["texto_muro"]}; }}
+.tpi-tenue {{ color: {PIEL["tenue_muro"]}; }}
+.tpi-columnas {{ display: grid; grid-template-columns: minmax(0, 1fr) {PIEL["costado_px"]}px;
+  gap: 16px; align-items: start; }}
+@media (max-width: 900px) {{ .tpi-columnas {{ grid-template-columns: minmax(0, 1fr); }} }}
+.tpi-costado {{ position: sticky; top: 12px; }}
 """
 
 
@@ -100,8 +127,14 @@ def _estado_tarea(chip: ui.chip) -> None:
 def marco(ruta_activa: str) -> Iterator[None]:
     """Encabezado con la marca y el menú; el contenido de la página va dentro del bloque."""
     ui.add_css(CSS)
-    ui.colors(primary=AZUL, secondary="#5B6B86", accent=ROJO, positive=VERDE, negative=ROJO)
-    with ui.header().classes("items-center justify-between px-6 py-2").style(f"background:{AZUL}"):
+    ui.colors(
+        primary=PIEL["marca"],
+        secondary=PIEL["secundario"],
+        accent=PIEL["error"],
+        positive=PIEL["exito"],
+        negative=PIEL["error"],
+    )
+    with ui.header().classes("items-center justify-between px-6 py-2").style(f"background:{PIEL['marca']}"):
         with ui.row().classes("items-center gap-3"):
             ui.image("/marca/panel.png").classes("w-11 h-11").props('alt="" no-spinner no-transition')
             with ui.column().classes("gap-0"):
