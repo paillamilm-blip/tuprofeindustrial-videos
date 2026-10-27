@@ -66,13 +66,24 @@ class PasoIA(BaseModel):
     # Un paso puede pedirse con dibujo. Son campos planos para que el modelo los cumpla fácil;
     # a_guion() arma el bloque "visual:" anidado que lee el motor.
     dibujo: Literal[
-        "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", "circulo", "solido",
-        "venn", "recta", "probabilidad",
+        "",
+        "grafico",
+        "fuerzas",
+        "circuito",
+        "poligono",
+        "proyectil",
+        "circulo",
+        "solido",
+        "venn",
+        "recta",
+        "probabilidad",
+        "torta",
+        "barras",
     ] = Field(
         default="",
         description=(
             'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
-            '"circulo", "solido", "venn", "recta" o "probabilidad" (máximo 1 en el guion)'
+            '"circulo", "solido", "venn", "recta", "probabilidad", "torta" o "barras" (máximo 1 en el guion)'
         ),
     )
     funcion: str = Field(
@@ -113,26 +124,21 @@ class PasoIA(BaseModel):
         default="",
         description='Con dibujo="solido": cuál cuerpo, entre "cubo", "cilindro", "cono" y "esfera"',
     )
-    radio: str = Field(
-        default="", description='Con dibujo="solido": el radio con su unidad, ej. "3 cm"'
-    )
-    altura: str = Field(
-        default="", description='Con dibujo="solido": la altura con su unidad, ej. "5 cm"'
-    )
+    radio: str = Field(default="", description='Con dibujo="solido": el radio con su unidad, ej. "3 cm"')
+    altura: str = Field(default="", description='Con dibujo="solido": la altura con su unidad, ej. "5 cm"')
     solo_a: int | None = Field(
         default=None, description='Con dibujo="venn": cuántos viven sólo en el conjunto A'
     )
     solo_b: int | None = Field(
         default=None, description='Con dibujo="venn": cuántos viven sólo en el conjunto B'
     )
-    ambos: int | None = Field(
-        default=None, description='Con dibujo="venn": cuántos viven en la intersección'
-    )
+    ambos: int | None = Field(default=None, description='Con dibujo="venn": cuántos viven en la intersección')
     fuera: int | None = Field(
         default=None, description='Con dibujo="venn": cuántos no están en ninguno (0 si no se menciona)'
     )
     extremo_a: float | None = Field(
-        default=None, description='Con dibujo="recta": el extremo izquierdo del intervalo o el origen del rayo'
+        default=None,
+        description='Con dibujo="recta": el extremo izquierdo del intervalo o el origen del rayo',
     )
     extremo_b: float | None = Field(
         default=None, description='Con dibujo="recta": el extremo derecho; sin él la recta marca un rayo'
@@ -149,8 +155,13 @@ class PasoIA(BaseModel):
     favorables: int | None = Field(
         default=None, description='Con dibujo="probabilidad": los casos favorables'
     )
-    totales: int | None = Field(
-        default=None, description='Con dibujo="probabilidad": los casos totales'
+    totales: int | None = Field(default=None, description='Con dibujo="probabilidad": los casos totales')
+    categorias: list[str] = Field(
+        default_factory=list,
+        description=(
+            'Con dibujo="torta" o "barras": de 2 a 6 categorías con el valor al final, '
+            'ej. ["Fútbol 12", "Básquetbol 8", "Vóley 5", "Otros 5"]'
+        ),
     )
     anotar: list[str] = Field(
         default_factory=list,
@@ -359,6 +370,8 @@ _DIBUJOS = {
     "venn": "venn",
     "recta": "recta",
     "probabilidad": "probabilidad",
+    "torta": "torta",
+    "barras": "barras",
 }
 
 
@@ -426,6 +439,8 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["totales"] = int(p.totales)
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo in ("torta", "barras"):
+        visual["categorias"] = [c.strip() for c in p.categorias if c.strip()]
     elif tipo == "poligono_regular":
         if p.lados:
             visual["lados"] = int(p.lados)
@@ -862,8 +877,9 @@ def redactar(
                 f"RESPUESTA ANTERIOR (JSON):\n{anterior}",
             ]
         )
-        respuesta = pedir_json(cliente, modelo, sistema, [*base, pedido], GuionIA, "high",
-                               avisar=al_cambiar_de_modelo)
+        respuesta = pedir_json(
+            cliente, modelo, sistema, [*base, pedido], GuionIA, "high", avisar=al_cambiar_de_modelo
+        )
 
     if guion is None:
         detalle = "\n".join(f"  • {p}" for p in problemas[:8])

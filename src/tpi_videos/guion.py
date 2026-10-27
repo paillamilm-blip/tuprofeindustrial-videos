@@ -26,12 +26,14 @@ from .visuales import (
     MARCAS_VENN,
     SEGUNDOS_VISUAL,
     analizar_angulo,
+    analizar_barras,
     analizar_funcion,
     analizar_poligono,
     analizar_probabilidad,
     analizar_proyectil,
     analizar_recta,
     analizar_solido,
+    analizar_torta,
     analizar_venn,
     normalizar_vectores,
 )
@@ -142,6 +144,8 @@ class Visual(_Base):
         "venn",
         "recta",
         "probabilidad",
+        "torta",
+        "barras",
     ]
 
     # grafico_funcion
@@ -193,9 +197,12 @@ class Visual(_Base):
     favorables: int | None = None
     totales: int | None = None
 
-    _listas = field_validator("rango", "marcar", "vectores", "resistencias", "anotar", mode="before")(
-        classmethod(lambda cls, v: None if v is None else _como_lista(v))
-    )
+    # torta / barras: categorías con su valor al final, ej. ['Fútbol 12', 'Básquetbol 8']
+    categorias: list[str] = []
+
+    _listas = field_validator(
+        "rango", "marcar", "vectores", "resistencias", "anotar", "categorias", mode="before"
+    )(classmethod(lambda cls, v: None if v is None else _como_lista(v)))
 
     @model_validator(mode="after")
     def _campos_del_tipo(self) -> Visual:
@@ -285,6 +292,16 @@ class Visual(_Base):
                     f"«{desconocidas[0]}» no es una marca de la probabilidad; "
                     f"el motor sabe anotar {', '.join(MARCAS_PROBABILIDAD)}"
                 )
+        elif self.tipo in ("torta", "barras"):
+            nombre = "la torta" if self.tipo == "torta" else "las barras"
+            if not self.categorias:
+                raise ValueError(
+                    f"{nombre} necesita sus categorías, ej. categorias: ['Fútbol 12', 'Básquetbol 8']"
+                )
+            analizar = analizar_torta if self.tipo == "torta" else analizar_barras
+            analizar(
+                self.categorias
+            )  # rechaza menos de 2, más de 6, valores no positivos y textos sin número
         elif self.tipo == "poligono_regular":
             if not (self.lado or "").strip():
                 raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
@@ -353,6 +370,18 @@ class Visual(_Base):
         if self.tipo != "probabilidad":
             raise ValueError(f"«{self.tipo}» no es una probabilidad")
         return analizar_probabilidad(self.favorables or 0, self.totales or 0)
+
+    def torta(self):
+        """Las porciones con su fracción del total. Sólo en las tortas."""
+        if self.tipo != "torta":
+            raise ValueError(f"«{self.tipo}» no es una torta")
+        return analizar_torta(self.categorias)
+
+    def barras(self):
+        """Las barras con su total y su valor más alto. Sólo en las barras."""
+        if self.tipo != "barras":
+            raise ValueError(f"«{self.tipo}» no son barras")
+        return analizar_barras(self.categorias)
 
     def poligono(self):
         """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
@@ -671,6 +700,8 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
         campos.append(("lado", _simples(v.get("lado") or "")))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo in ("torta", "barras"):
+        campos.append(("categorias", "[" + ", ".join(_simples(c) for c in v.get("categorias") or []) + "]"))
     else:
         if v.get("arreglo") not in (None, "serie"):
             campos.append(("arreglo", v["arreglo"]))

@@ -29,6 +29,7 @@ from manim import (
     Mobject,
     Polygon,
     Rectangle,
+    Sector,
     VGroup,
     VMobject,
 )
@@ -36,12 +37,14 @@ from manim import (
 from . import componentes as c
 from .visuales import (
     AnguloTrig,
+    Barras,
     Funcion,
     Poligono,
     Probabilidad,
     Proyectil,
     Recta,
     Solido,
+    Torta,
     Venn,
     analizar_circuito,
 )
@@ -915,6 +918,82 @@ def probabilidad(figura: Probabilidad, marcas: list[str], col: Any, ancho: float
 
 
 # ------------------------------------------------------------------------------------------
+# 9 · Estadística: torta y barras
+# ------------------------------------------------------------------------------------------
+
+
+def _paleta(col: Any) -> list[str]:
+    """Colores del tema, en un orden que se distingue bien uno del otro en la hoja."""
+    return [col.acento, col.cuadricula, col.exito, col.error, col.tenue, col.formulas]
+
+
+def _porcentaje(fraccion: float) -> str:
+    return f"{_numero_latex(fraccion * 100)}%"
+
+
+def torta(datos: Torta, col: Any, ancho: float, alto: float) -> Dibujo:
+    """La torta de porcentajes: cada porción con su nombre y su porcentaje al lado."""
+    r = min(alto * 0.40, ancho * 0.20)
+    colores = _paleta(col)
+    sectores: list = []
+    parches, rótulos = VGroup(), VGroup()
+    angulo = PI / 2  # se empieza arriba y se gira en sentido contrario a las agujas
+    for i, cat in enumerate(datos.categorias):
+        barrido = cat.fraccion * 2 * PI
+        sector = Sector(radius=r, start_angle=angulo, angle=barrido, fill_opacity=0.82)
+        sector.set_color(colores[i % len(colores)]).set_stroke(col.tenue, 2)
+        sectores.append(sector)
+
+        mitad = angulo + barrido / 2
+        u = np.array([np.cos(mitad), np.sin(mitad), 0.0])
+        pos = u * (r + 0.12)
+        lab = c.texto(f"{cat.nombre} {_porcentaje(cat.fraccion)}", 17, SEMIBOLD, col.texto)
+        lab.move_to(pos + (RIGHT if u[0] >= 0 else LEFT) * (lab.width / 2))
+        fondo, lab = _parche(lab, "#FFFFFF", 0.12)
+        parches.add(fondo)
+        rótulos.add(lab)
+        angulo += barrido
+
+    todo = VGroup(*sectores, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=sectores, aparece=[*rótulos])
+
+
+def barras(datos: Barras, col: Any, ancho: float, alto: float) -> Dibujo:
+    """Las barras de datos: altura proporcional al mayor, valor arriba y categoría abajo."""
+    n = len(datos.categorias)
+    colores = _paleta(col)
+    base = -alto * 0.20
+    max_h = alto * 0.52
+    paso = min(ancho * 0.86 / n, 1.35)
+    ancho_barra = paso * 0.56
+    eje = Line(
+        [-(n - 1) / 2 * paso - paso * 0.4, base, 0], [(n - 1) / 2 * paso + paso * 0.4, base, 0], buff=0
+    )
+    eje.set_stroke(col.tenue, 3)
+    barras_grp, parches, rótulos = [], VGroup(), VGroup()
+    for i, cat in enumerate(datos.categorias):
+        x = (i - (n - 1) / 2) * paso
+        h = max((cat.valor / datos.maximo) * max_h, 0.06)
+        barra = Rectangle(width=ancho_barra, height=h).move_to([x, base + h / 2, 0])
+        barra.set_fill(colores[i % len(colores)], 0.82).set_stroke(col.tenue, 2)
+        barras_grp.append(barra)
+
+        def etiqueta(texto: str, donde: np.ndarray, tam: float) -> None:
+            lab = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
+            fondo, lab = _parche(lab, "#FFFFFF", 0.1)
+            parches.add(fondo)
+            rótulos.add(lab)
+
+        etiqueta(_numero_latex(cat.valor), np.array([x, base + h + 0.24, 0.0]), 18)
+        etiqueta(cat.nombre, np.array([x, base - 0.28, 0.0]), 14)
+
+    todo = VGroup(eje, *barras_grp, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=[eje, *barras_grp], aparece=[*rótulos])
+
+
+# ------------------------------------------------------------------------------------------
 # Elección del dibujo según el guion
 # ------------------------------------------------------------------------------------------
 
@@ -948,5 +1027,9 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         return recta(visual.recta(), visual.anotar, col, ancho, alto)
     if visual.tipo == "probabilidad":
         return probabilidad(visual.probabilidad(), visual.anotar, col, ancho, alto)
+    if visual.tipo == "torta":
+        return torta(visual.torta(), col, ancho, alto)
+    if visual.tipo == "barras":
+        return barras(visual.barras(), col, ancho, alto)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
     return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)

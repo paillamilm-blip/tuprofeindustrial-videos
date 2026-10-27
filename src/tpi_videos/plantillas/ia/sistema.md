@@ -36,6 +36,8 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - dibujo = "venn": dos conjuntos que se cruzan. Da los contajes con número: solo_a, solo_b, ambos y (si aparecen) fuera. El motor suma solo el total; con anotar puedes pedir "total".
 - dibujo = "recta": la recta numérica con un intervalo (extremo_a y extremo_b, con incluye_a / incluye_b true si el punto es lleno y false si es abierto) o un rayo (solo extremo_a, y derecha false si apunta a la izquierda). anotar va vacío.
 - dibujo = "probabilidad": la urna de Laplace con favorables y totales (números, entre 1 y 20 los totales). El motor calcula solo el cociente; con anotar puedes pedir "probabilidad".
+- dibujo = "torta": la torta de porcentajes con categorias (de 2 a 6), cada una con el valor al final, ej. "Fútbol 20". El motor calcula solo el total y cada porcentaje, y los escribe al lado de su porción.
+- dibujo = "barras": las barras de datos con las mismas categorias de la torta (de 2 a 6, valor al final). El motor escala las alturas al valor mayor y escribe cada valor sobre su barra.
 - Los campos que no corresponden al dibujo elegido se dejan vacíos ("" o []). No inventes datos: el dibujo tiene que salir de los números del ejercicio.
 
 ### El molde narrativo (pista MOLDE)

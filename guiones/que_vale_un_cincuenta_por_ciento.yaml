@@ -1,0 +1,49 @@
+# Guion escrito a mano el 27-10-2026 para estrenar la torta de porcentajes.
+# REVISA la matemática antes de publicar.
+
+titulo: "¿Cuánto vale un 50% en tu curso?"
+materia: matematica
+nivel: "1° medio"
+molde: nadie_te_enseno
+tema: cuaderno_del_profe
+
+gancho:
+  texto: "La mitad del curso no siempre gana solo"
+  voz: "Una torta de datos te dice la verdad, pero solo a medias."
+  emoji: "🤔"
+
+enunciado:
+  texto: "En un curso de 40, 20 eligen fútbol, 10 básquetbol, 6 vóley y 4 otros deportes."
+  voz: "En un curso de cuarenta, veinte eligen fútbol, diez básquetbol, seis vóley y cuatro otros deportes."
+  destacar: ["40"]
+
+datos:
+  - tex: '20 \to 50\%'
+    voz: "Veinte de cuarenta es la mitad exacta: cincuenta por ciento."
+  - tex: '10 \to 25\%'
+    voz: "Diez de cuarenta es un cuarto: veinticinco por ciento."
+
+pasos:
+  - nota: "Las porciones chicas"
+    tex: '6 \to 15\% \quad 4 \to 10\%'
+    voz: "Seis son quince por ciento, y cuatro, diez por ciento."
+  - nota: "La torta completa"
+    tex: '50\% + 25\% + 15\% + 10\% = 100\%'
+    voz: "Las cuatro porciones juntas siempre dan cien por ciento."
+    visual:
+      tipo: torta
+      categorias: ['Fútbol 20', 'Básquetbol 10', 'Vóley 6', 'Otros 4']
+
+resultado:
+  tex: '50\% \quad 25\% \quad 15\% \quad 10\%'
+  voz: "Fútbol manda con la mitad, pero necesita a los demás para llenar la torta."
+  emoji: "🔢"
+
+verificacion:
+  texto: "50 + 25 + 15 + 10 = 100: las porciones llenan la torta completa."
+  voz: "Suma las cuatro porciones y te da cien: la torta está completa."
+
+reto:
+  texto: "En otro curso de 25, diez eligen fútbol. ¿Qué porcentaje es?"
+  voz: "Ahora tú: en un curso de veinticinco, diez eligen fútbol. ¿Qué porcentaje es? Piénsalo."
+  emoji: "✍️"

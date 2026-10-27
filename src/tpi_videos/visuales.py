@@ -26,6 +26,8 @@ SEGUNDOS_VISUAL = {
     "venn": 3.0,
     "recta": 2.5,
     "probabilidad": 3.0,
+    "torta": 3.0,
+    "barras": 2.5,
 }
 
 # Lo que se puede anotar en un polígono regular.
@@ -615,3 +617,73 @@ def analizar_probabilidad(favorables: int, totales: int) -> Probabilidad:
     if not 0 <= f <= t:
         raise ValueError(f"los casos favorables van entre 0 y los totales ({t}), y leí {f} favorables")
     return Probabilidad(f, t, f / t)
+
+
+@dataclass
+class Categoria:
+    """Un pedazo de los datos: su nombre, su valor y la fracción que ocupa del total."""
+
+    nombre: str
+    valor: float
+    fraccion: float
+
+
+@dataclass
+class Torta:
+    """Las porciones de la torta, listas para convertirse en ángulos."""
+
+    categorias: list[Categoria]
+    total: float
+
+
+@dataclass
+class Barras:
+    """Las barras, con el total y el valor más alto para escalar la altura."""
+
+    categorias: list[Categoria]
+    total: float
+    maximo: float
+
+
+def _leer_categorias(categorias: list[str]) -> list[tuple[str, float]]:
+    """De una lista como ['Fútbol 12', ...] saca (nombre, valor); el número va al final."""
+    lista = list(categorias or [])
+    if len(lista) < 2 or len(lista) > 6:
+        raise ValueError(
+            f"una torta o unas barras van entre dos y seis categorías para que se lean en el celular, y leí {len(lista)}"
+        )
+    pares: list[tuple[str, float]] = []
+    for entrada in lista:
+        texto = str(entrada).strip()
+        coincidencia = re.match(r"^(.*?)\s+(-?\d+(?:[.,]\d+)?)$", texto)
+        if not coincidencia:
+            raise ValueError(
+                f"la categoría «{texto}» no termina en un número; escribe por ejemplo «Fútbol 12»"
+            )
+        nombre = coincidencia.group(1).strip()
+        valor = float(coincidencia.group(2).replace(",", "."))
+        pares.append((nombre, valor))
+    return pares
+
+
+def analizar_torta(categorias: list[str]) -> Torta:
+    pares = _leer_categorias(categorias)
+    for nombre, valor in pares:
+        if valor <= 0:
+            raise ValueError(
+                f"el valor de «{nombre}» debe ser positivo (una porción de torta no puede ser {valor})"
+            )
+    total = sum(v for _, v in pares)
+    datos = [Categoria(nombre, valor, valor / total) for nombre, valor in pares]
+    return Torta(datos, total)
+
+
+def analizar_barras(categorias: list[str]) -> Barras:
+    pares = _leer_categorias(categorias)
+    for nombre, valor in pares:
+        if valor <= 0:
+            raise ValueError(f"el valor de «{nombre}» debe ser positivo (una barra no puede medir {valor})")
+    total = sum(v for _, v in pares)
+    maximo = max(v for _, v in pares)
+    datos = [Categoria(nombre, valor, valor / total) for nombre, valor in pares]
+    return Barras(datos, total, maximo)
