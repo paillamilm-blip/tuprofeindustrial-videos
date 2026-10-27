@@ -47,6 +47,7 @@ hoja:
   lineas: '#F0C7C2'
   cuadricula: false
 subtitulos:
+  color_borde: '#EFE7E4'  # el borde no embarra el papel claro
   fuente: Montserrat Black
   tamano: 82
   color: '#7A1E1E'

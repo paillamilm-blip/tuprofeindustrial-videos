@@ -34,10 +34,11 @@ FAMILIAS: dict[str, dict[int, str]] = {
     "Cinzel": {400: "Cinzel-Regular.ttf"},
 }
 
-# Opciones que ofrece el panel para cada uso
-PARA_TITULOS = ("Comic Neue", "Montserrat", "Caveat", "Patrick Hand", "Shadows Into Light Two")
-PARA_TEXTO = ("Comic Neue", "Montserrat", "Patrick Hand", "Caveat", "Shadows Into Light Two")
-# Nombre como lo busca FFmpeg/libass: familia + estilo en el nombre ("Montserrat Black")
+# Opciones que ofrece el panel para cada uso: todo lo que el motor trae embebido.
+PARA_TITULOS = tuple(FAMILIAS)
+PARA_TEXTO = tuple(FAMILIAS)
+# Nombre como lo busca FFmpeg/libass: familia + estilo en el nombre ("Montserrat Black").
+# Aquí NO se lista FAMILIAS: son cadenas distintas, y los pesos van en el nombre.
 PARA_SUBTITULOS = ("Bangers", "Luckiest Guy", "Montserrat Black", "Comic Neue")
 
 

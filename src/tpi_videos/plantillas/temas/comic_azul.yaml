@@ -41,6 +41,7 @@ fondo:
   - '#F6F8FC'
   - '#D6E2F4'
 subtitulos:
+  color_borde: '#F6F8FC'  # el borde no embarra el papel claro
   fuente: Luckiest Guy
   tamano: 92
   color: '#1D4ED8'

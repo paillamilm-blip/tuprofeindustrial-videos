@@ -41,6 +41,7 @@ fondo:
   - '#D6BA8C'
   - '#BA9C6E'
 subtitulos:
+  color_borde: '#D6BA8C'  # el borde no embarra el papel claro
   fuente: Montserrat Black
   tamano: 82
   color: '#2A1B10'

@@ -226,7 +226,8 @@ def escribir_ass(
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, "
         "Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
         "Alignment, MarginL, MarginR, MarginV, Encoding",
-        f"Style: CapCut,{estilo.fuente},{estilo.tamano},{blanco},{blanco},&H00000000,&H78000000,0,0,0,0,"
+        f"Style: CapCut,{estilo.fuente},{estilo.tamano},{blanco},{blanco},{_color_ass(estilo.color_borde)},"
+        f"&H78000000,0,0,0,0,"
         f"100,100,1,0,1,{estilo.borde},{estilo.sombra},5,80,80,0,1",
         "",
         "[Events]",

@@ -80,6 +80,7 @@ class EstiloSubtitulos(_Base):
     tamano: int = Field(default=84, ge=30, le=160)
     color: str = "#FFFFFF"
     color_activo: str = "#FFC72C"
+    color_borde: str = "#000000"  # el contorno; en los temas de papel claro va el color del fondo
     borde: float = Field(default=7, ge=0, le=20)
     sombra: float = Field(default=3, ge=0, le=20)
     posicion_y: float = Field(default=0.72, ge=0.3, le=0.9)  # fracción del alto (0 = arriba)
@@ -88,7 +89,9 @@ class EstiloSubtitulos(_Base):
     max_caracteres: int = Field(default=16, ge=6, le=40)
     resaltar: bool = True  # pintar la palabra que suena (False = todo del mismo color)
 
-    _hex = field_validator("color", "color_activo")(classmethod(lambda cls, v: _validar_hex(v)))
+    _hex = field_validator("color", "color_activo", "color_borde")(
+        classmethod(lambda cls, v: _validar_hex(v))
+    )
 
 
 class Marca(_Base):

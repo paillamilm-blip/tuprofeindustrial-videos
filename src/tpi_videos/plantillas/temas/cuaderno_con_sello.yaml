@@ -31,6 +31,7 @@ hoja:
   lineas: '#E3E0D2'
   cuadricula: true
 subtitulos:
+  color_borde: '#EDEAE0'  # el borde no embarra el papel claro
   fuente: Montserrat Black
   tamano: 82
   color: '#1C3D74'
