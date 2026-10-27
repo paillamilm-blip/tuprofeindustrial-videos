@@ -71,8 +71,8 @@ class Voz(_Base):
 
 
 class Cierre(_Base):
-    texto: str = "Sígueme para más ejercicios resueltos"
-    voz: str = "Sígueme para más ejercicios resueltos. ¡Nos vemos en el próximo!"
+    texto: str = "Ejercicio resuelto paso a paso"
+    voz: str = "Ejercicio resuelto paso a paso. Nos vemos en el próximo."
 
 
 class EstiloSubtitulos(_Base):

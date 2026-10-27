@@ -32,8 +32,8 @@ voz:
   velocidad: "+5%"
 
 cierre:
-  texto: "Sígueme para más ejercicios resueltos"
-  voz: "Sígueme para más ejercicios resueltos. ¡Nos vemos en el próximo!"
+  texto: "Ejercicio resuelto paso a paso"
+  voz: "Ejercicio resuelto paso a paso. Nos vemos en el próximo."
 
 subtitulos:         # estilo CapCut
   fuente: "Montserrat Black"

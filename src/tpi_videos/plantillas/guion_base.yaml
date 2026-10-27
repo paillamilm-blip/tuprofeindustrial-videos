@@ -68,9 +68,9 @@ verificacion:
 # Opcional (recomendado): un ejercicio parecido para que el público practique y comente.
 reto:
   texto: "¿Y si la altura fuera 45 metros?"
-  voz: "Ahora tú: ¿y si la altura fuera cuarenta y cinco metros? Déjalo en los comentarios."
+  voz: "Ahora tú: ¿y si la altura fuera cuarenta y cinco metros?"
 
 # Opcional: si no lo escribes, se usa el cierre de marca.yaml
 # cierre:
-#   texto: "Sígueme para más ejercicios resueltos"
-#   voz: "Sígueme para más ejercicios resueltos."
+#   texto: "Ejercicio resuelto paso a paso"
+#   voz: "Ejercicio resuelto paso a paso."

@@ -58,10 +58,11 @@ MOLDES: dict[str, Molde] = {
     "reto": Molde(
         clave="reto",
         nombre="Reto",
-        estructura="Ejercicio resuelto → un desafío parecido para comentar",
+        estructura="Ejercicio resuelto → un desafío parecido para responder",
         regla="reto",
-        pista="El guion termina con el bloque «reto:»: un ejercicio parecido para responder en comentarios.",
-        ejemplo="«Resuelve este y déjame tu respuesta en los comentarios».",
+        pista="El guion termina con el bloque «reto:»: un ejercicio parecido, dicho como pregunta abierta. "
+        "En la voz nunca se pide comentar ni seguir.",
+        ejemplo="«Ahora tú: si la altura fuera el doble, ¿tardaría el doble?»",
     ),
     "nadie_te_enseno": Molde(
         clave="nadie_te_enseno",
