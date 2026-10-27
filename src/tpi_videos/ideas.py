@@ -95,7 +95,9 @@ class Idea(BaseModel):
         description="Uno de los 5 ángulos; las 3 ideas usan ángulos DISTINTOS"
     )
     titulo: str = Field(description="Nombre corto del video, máximo 45 caracteres")
-    gancho: str = Field(default="", description="La pregunta grande del inicio, máximo 10 palabras, con los números")
+    gancho: str = Field(
+        default="", description="La pregunta grande del inicio, máximo 10 palabras, con los números"
+    )
     ganchos: list[GanchoIdea] = Field(
         default_factory=list, description="De 3 a 5 variantes del gancho, con estilos distintos"
     )
@@ -123,7 +125,7 @@ class Idea(BaseModel):
         return normalizar_molde(str(valor)) if valor else ""
 
     @model_validator(mode="after")
-    def _gancho_y_ganchos(self) -> "Idea":
+    def _gancho_y_ganchos(self) -> Idea:
         if not self.ganchos and self.gancho.strip():
             self.ganchos = [GanchoIdea(texto=self.gancho.strip(), estilo="curiosidad")]
         if not self.gancho.strip() and self.ganchos:

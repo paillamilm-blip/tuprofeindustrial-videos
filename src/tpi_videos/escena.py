@@ -427,9 +427,7 @@ class VideoEjercicio(VoiceoverScene):
         restante = max(self._restante(tr) - 0.5, 1.0)
         # El dibujo termina antes que la voz: lo que queda es el rato que se mira ya completo.
         if dibujo.trazo:
-            self.play(
-                LaggedStart(*[Create(m) for m in dibujo.trazo], lag_ratio=0.1), run_time=restante * 0.5
-            )
+            self.play(LaggedStart(*[Create(m) for m in dibujo.trazo], lag_ratio=0.1), run_time=restante * 0.5)
         if dibujo.aparece:
             self.play(
                 LaggedStart(*[FadeIn(m, shift=UP * 0.1) for m in dibujo.aparece], lag_ratio=0.12),

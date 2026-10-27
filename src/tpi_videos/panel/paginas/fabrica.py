@@ -199,12 +199,12 @@ class PaginaFabrica:
                     with ui.column().classes("gap-1 flex-1"):
                         titulo = ui.label(f"Video {n + 1}").classes("font-bold")
                         estado = ui.label("En espera").classes("tpi-ayuda text-sm")
-                        barra = ui.linear_progress(value=0, show_value=False).props(
-                            "size=6px rounded"
-                        ).classes("w-full")
-                    self.filas.append(
-                        {"icono": icono, "titulo": titulo, "estado": estado, "barra": barra}
-                    )
+                        barra = (
+                            ui.linear_progress(value=0, show_value=False)
+                            .props("size=6px rounded")
+                            .classes("w-full")
+                        )
+                    self.filas.append({"icono": icono, "titulo": titulo, "estado": estado, "barra": barra})
 
     def _marcar_fila(self, numero: int, datos: dict) -> None:
         fila = self.filas[numero - 1]
@@ -229,9 +229,7 @@ class PaginaFabrica:
         self.detalle.text = _sin_prefijo(t.detalle or "") or t.texto_etapa
         if not t.videos:
             return
-        total = max((int(d.get("total") or 0) for d in t.videos.values()), default=0) or len(
-            t.videos
-        )
+        total = max((int(d.get("total") or 0) for d in t.videos.values()), default=0) or len(t.videos)
         self._asegurar_filas(total)
         for numero, datos in t.videos.items():
             if not 1 <= numero <= len(self.filas):
@@ -288,21 +286,21 @@ class PaginaFabrica:
             with ui.row().classes("w-full items-center justify-between gap-2 flex-wrap"):
                 with ui.column().classes("gap-0"):
                     ui.label(str(lote.get("tema") or "Un video")).classes("font-bold")
-                    ui.label(
-                        f"{_fecha(lote.get('creado'))} · {_nombre_estado(estado)}"
-                    ).classes("tpi-ayuda text-sm")
+                    ui.label(f"{_fecha(lote.get('creado'))} · {_nombre_estado(estado)}").classes(
+                        "tpi-ayuda text-sm"
+                    )
                 with ui.row().classes("gap-2"):
                     if not activo and estado != "listo":
                         ui.button(
                             "Reanudar",
                             icon="play_arrow",
-                            on_click=lambda l=lote: self._reanudar_lote(l["id"]),
+                            on_click=lambda lt=lote: self._reanudar_lote(lt["id"]),
                         ).props("outline dense")
                     if not activo:
                         ui.button(
                             "Descartar",
                             icon="delete_outline",
-                            on_click=lambda l=lote: self._confirmar_descarte(l),
+                            on_click=lambda lt=lote: self._confirmar_descarte(lt),
                         ).props("flat dense")
             for video in lote.get("videos", []):
                 self._fila_cola(video)
@@ -329,9 +327,9 @@ class PaginaFabrica:
                 if estado == "fallo" and video.get("error"):
                     ui.label(str(video["error"])).classes("text-xs").style(f"color:{ROJO}")
                 if estado != "listo":
-                    ui.linear_progress(
-                        value=float(video.get("avance") or 0.0), show_value=False
-                    ).props("size=4px rounded").classes("w-full")
+                    ui.linear_progress(value=float(video.get("avance") or 0.0), show_value=False).props(
+                        "size=4px rounded"
+                    ).classes("w-full")
             if estado == "fallo" and idea:
                 ui.button(
                     "Intentar solo este",
@@ -341,9 +339,9 @@ class PaginaFabrica:
             if estado == "listo" and (video.get("hitos") or {}).get("video"):
                 ruta = Path(str(video["hitos"]["video"].get("video") or ""))
                 if ruta.exists():
-                    ui.button(
-                        "Ver video", icon="movie", on_click=lambda r=ruta: abrir_en_mac(r)
-                    ).props("flat dense")
+                    ui.button("Ver video", icon="movie", on_click=lambda r=ruta: abrir_en_mac(r)).props(
+                        "flat dense"
+                    )
 
     def _reanudar_lote(self, lote_id: str) -> None:
         self._correr(["lote", "--reanudar", "--cola-id", lote_id], "Reanudar cola")
@@ -353,9 +351,9 @@ class PaginaFabrica:
             ui.label(f"¿Sacar de la cola «{lote.get('tema') or 'este lote'}»?").classes("font-bold")
             ui.label("Los videos que ya salieron no se borran.").classes("tpi-ayuda")
             with ui.row().classes("gap-2"):
-                ui.button(
-                    "Sí, sacarlo", on_click=lambda: self._descartar(lote["id"], dialogo)
-                ).props("color=negative")
+                ui.button("Sí, sacarlo", on_click=lambda: self._descartar(lote["id"], dialogo)).props(
+                    "color=negative"
+                )
                 ui.button("Mejor no", on_click=dialogo.close).props("flat")
         dialogo.open()
 
@@ -515,9 +513,7 @@ class PaginaFabrica:
             self.zona_resultado.set_visibility(False)
             self.zona_inicio.set_visibility(True)
             self._dibujar_cola()
-            ui.notify(
-                "Quedó pendiente de conexión. Se reanuda solo cuando vuelva la IA.", type="info"
-            )
+            ui.notify("Quedó pendiente de conexión. Se reanuda solo cuando vuelva la IA.", type="info")
             return
         self.zona_resultado.clear()
         try:

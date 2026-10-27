@@ -53,9 +53,7 @@ class CliColaTest(unittest.TestCase):
     def test_lote_no_arranca_con_el_candado_tomado(self) -> None:
         candado = Path(self.tmp.name) / "salida" / ".cola" / "lote.lock"
         candado.parent.mkdir(parents=True, exist_ok=True)
-        candado.write_text(
-            json.dumps({"pid": os.getpid(), "inicio": time.time()}), encoding="utf-8"
-        )
+        candado.write_text(json.dumps({"pid": os.getpid(), "inicio": time.time()}), encoding="utf-8")
         resultado = self._correr("lote", "Porcentajes")
         self.assertEqual(resultado.returncode, 1)
         self.assertIn("Ya hay un lote en curso", resultado.stdout)

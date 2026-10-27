@@ -1,4 +1,3 @@
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -74,9 +73,7 @@ class ProducirReanudarTest(unittest.TestCase):
         ):
             crear_video.return_value = _video_falso(self.raiz)
             crear_kit.return_value = _kit_falso(self.raiz)
-            resultado = producir(
-                "x", reanudar={"guion": _hito_guion()}, hito=lambda n, d: nombres.append(n)
-            )
+            resultado = producir("x", reanudar={"guion": _hito_guion()}, hito=lambda n, d: nombres.append(n))
 
         redactar.assert_not_called()
         crear_video.assert_called_once()

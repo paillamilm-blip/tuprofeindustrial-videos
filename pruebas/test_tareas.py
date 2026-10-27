@@ -41,9 +41,7 @@ class TareasTest(unittest.TestCase):
 
     def test_evento_sin_video_mantiene_el_comportamiento(self) -> None:
         tarea = Tarea(nombre="Lote", args=[])
-        Tareas._aplicar(
-            tarea, {"etapa": "redactando", "avance": 0.0, "detalle": "Gemini está pensando"}
-        )
+        Tareas._aplicar(tarea, {"etapa": "redactando", "avance": 0.0, "detalle": "Gemini está pensando"})
 
         self.assertEqual(tarea.etapa, "redactando")
         self.assertEqual(tarea.detalle, "Gemini está pensando")

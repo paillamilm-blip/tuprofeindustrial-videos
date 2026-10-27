@@ -165,9 +165,7 @@ class Tareas:
                 if evento.get("total"):
                     datos["total"] = int(evento["total"])
                 if evento.get("video_avance") is not None:
-                    datos["avance"] = max(
-                        float(datos.get("avance") or 0.0), float(evento["video_avance"])
-                    )
+                    datos["avance"] = max(float(datos.get("avance") or 0.0), float(evento["video_avance"]))
                 for campo in ("fase", "estado", "detalle"):
                     if evento.get(campo) is not None:
                         datos[campo] = evento[campo]

@@ -233,7 +233,7 @@ class PaginaCrear:
                             ui.button(
                                 "Probar ganchos",
                                 icon="videocam",
-                                on_click=lambda i=idea: self._probar_ganchos(i, elegido_label),
+                                on_click=lambda i=idea, e=elegido_label: self._probar_ganchos(i, e),
                             ).props("outline")
                         ui.button(
                             "Hacer este video",
@@ -346,9 +346,7 @@ class PaginaCrear:
         def usar(clip: dict) -> None:
             idea["gancho"] = clip["texto"]
             idea["gancho_elegido"] = clip
-            idea["ganchos"] = [clip] + [
-                g for g in idea.get("ganchos", []) if g.get("texto") != clip["texto"]
-            ]
+            idea["ganchos"] = [clip] + [g for g in idea.get("ganchos", []) if g.get("texto") != clip["texto"]]
             etiqueta.text = f"«{clip['texto']}»"
             ui.notify("Ese gancho viaja al video cuando toques «Hacer este video».", type="positive")
 
@@ -356,15 +354,13 @@ class PaginaCrear:
             for clip in clips:
                 archivo = Path(str(clip.get("archivo", "")))
                 with ui.column().classes("items-center gap-2 w-44"):
-                    ui.video(url_medio(archivo)).classes(
-                        "w-full aspect-[9/16] rounded-lg bg-black"
-                    ).props('preload="metadata"')
+                    ui.video(url_medio(archivo)).classes("w-full aspect-[9/16] rounded-lg bg-black").props(
+                        'preload="metadata"'
+                    )
                     ui.label(f"{clip.get('numero')}. «{clip.get('texto', '')}»").classes(
                         "text-sm font-bold text-center"
                     )
-                    ui.label(f"{clip.get('estilo', '')} · {clip.get('segundos', 0)} s").classes(
-                        "tpi-ayuda"
-                    )
+                    ui.label(f"{clip.get('estilo', '')} · {clip.get('segundos', 0)} s").classes("tpi-ayuda")
                     ui.button("Usar este", icon="check", on_click=lambda c=clip: usar(c)).props(
                         "outline dense"
                     )

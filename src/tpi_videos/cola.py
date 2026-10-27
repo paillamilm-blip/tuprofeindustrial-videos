@@ -145,9 +145,7 @@ def nuevo_lote(tema: str, ajustes: dict[str, Any], ideas: Any = None) -> str:
         "videos": [],
     }
     if ideas is not None:
-        lote["videos"] = [
-            _ficha_video(lote_id, n, idea) for n, idea in enumerate(ideas, start=1)
-        ]
+        lote["videos"] = [_ficha_video(lote_id, n, idea) for n, idea in enumerate(ideas, start=1)]
     datos["lotes"].append(lote)
     guardar(datos)
     return lote_id
@@ -225,9 +223,7 @@ def podar() -> int:
             continue
         if terminados < 20:
             conservar.append(lote)
-            terminados += sum(
-                1 for video in lote.get("videos", []) if video.get("estado") == "listo"
-            )
+            terminados += sum(1 for video in lote.get("videos", []) if video.get("estado") == "listo")
     quitados = len(datos["lotes"]) - len(conservar)
     if quitados:
         datos["lotes"] = list(reversed(conservar))
@@ -283,11 +279,7 @@ def _candado() -> dict[str, Any] | None:
 
 def _candado_vivo(datos: dict[str, Any] | None) -> bool:
     """Un candado está vivo si su proceso sigue corriendo y renovó la marca en las últimas 12 h."""
-    return (
-        datos is not None
-        and _pid_vivo(datos["pid"])
-        and time.time() - datos["inicio"] < 12 * 3600
-    )
+    return datos is not None and _pid_vivo(datos["pid"]) and time.time() - datos["inicio"] < 12 * 3600
 
 
 def _escribir_candado_exclusivo(ruta: Path) -> None:
@@ -343,9 +335,7 @@ def renovar_candado() -> None:
     if datos is None or datos["pid"] != os.getpid():
         return
     try:
-        _ruta_candado().write_text(
-            json.dumps({"pid": os.getpid(), "inicio": time.time()}), encoding="utf-8"
-        )
+        _ruta_candado().write_text(json.dumps({"pid": os.getpid(), "inicio": time.time()}), encoding="utf-8")
     except OSError:
         pass
 
@@ -424,9 +414,7 @@ def normalizar_interrumpidos() -> int:
     return cambiados
 
 
-def elegir_lote(
-    solo_pendientes: bool = False, cola_id: str | None = None
-) -> dict[str, Any] | None:
+def elegir_lote(solo_pendientes: bool = False, cola_id: str | None = None) -> dict[str, Any] | None:
     """El lote que hay que retomar: el más antiguo no terminado, o el que se pide por id."""
     lotes = [lote for lote in cargar()["lotes"] if lote.get("estado") != "descartado"]
     if cola_id:

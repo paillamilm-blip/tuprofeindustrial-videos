@@ -14,7 +14,7 @@ from typing import Any
 
 from .entorno import raiz_proyecto
 from .errores import ErrorMotor
-from .guion import Gancho, Guion, a_yaml, cabecera_de, cargar_guion, sin_tildes
+from .guion import Guion, a_yaml, cabecera_de, cargar_guion, sin_tildes
 from .ideas import GanchoIdea, Idea
 
 Progreso = Callable[[str, float, str], None]

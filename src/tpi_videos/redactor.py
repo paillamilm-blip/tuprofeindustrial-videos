@@ -16,9 +16,10 @@ import json
 import logging
 import re
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -872,9 +873,11 @@ def pedir_json(
         if all(ia.es_cuota_agotada(e) for e in errores):
             raise ErrorMotor(
                 f"Se acabó el cupo gratuito de los {len(cadena)} modelos de respaldo.",
-                ayuda=f"El cupo se reinicia de madrugada (medianoche hora del Pacífico): mira cuánto "
-                f"te queda con ./tpi cuota. Si apura, escribe el guion a mano y créalo igual: "
-                "./tpi crear guiones/<archivo>.yaml",
+                ayuda=(
+                    "El cupo se reinicia de madrugada (medianoche hora del Pacífico): mira cuánto "
+                    "te queda con ./tpi cuota. Si apura, escribe el guion a mano y créalo igual: "
+                    "./tpi crear guiones/<archivo>.yaml"
+                ),
                 transitorio=True,
             ) from errores[-1]
         raise ia.explicar_error(errores[0], cadena[-1]) from errores[0]

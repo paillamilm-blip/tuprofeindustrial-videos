@@ -16,10 +16,7 @@ def idea(titulo, molde, textos, estilos=None, **extra):
         porque="Porque frena el scroll.",
         segundos=45,
         molde=molde,
-        ganchos=[
-            GanchoIdea(texto=t, estilo=e, emoji="")
-            for t, e in zip(textos, estilos, strict=False)
-        ],
+        ganchos=[GanchoIdea(texto=t, estilo=e, emoji="") for t, e in zip(textos, estilos, strict=False)],
         **extra,
     )
 

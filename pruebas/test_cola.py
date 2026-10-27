@@ -114,7 +114,7 @@ class ColaTest(BaseCola):
 
     def test_version_futura_no_se_sobrescribe(self) -> None:
         datos = {"version": 99, "lotes": []}
-        with self.assertRaises(Exception):
+        with self.assertRaises(ErrorMotor):
             cola.guardar(datos)
 
 
@@ -199,9 +199,7 @@ class ColaLifecycleTest(BaseCola):
         ruta.parent.mkdir(parents=True)
         proceso = subprocess.Popen([sys.executable, "-c", ""])
         proceso.wait()
-        ruta.write_text(
-            json.dumps({"pid": proceso.pid, "inicio": time.time()}), encoding="utf-8"
-        )
+        ruta.write_text(json.dumps({"pid": proceso.pid, "inicio": time.time()}), encoding="utf-8")
 
         self.assertFalse(cola.candado_tomado())
         self.assertTrue(cola.tomar_candado())

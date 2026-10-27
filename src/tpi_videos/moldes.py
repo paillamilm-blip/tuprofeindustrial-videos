@@ -53,7 +53,7 @@ MOLDES: dict[str, Molde] = {
             "Cuenta la situación en segunda persona («Estás en el taller y…»), con un problema "
             "concreto, y resuélvelo con los datos que tienes. El gancho también va en segunda persona."
         ),
-        ejemplo='«POV: tienes que calcular la caída antes de que suene el timbre».',
+        ejemplo="«POV: tienes que calcular la caída antes de que suene el timbre».",
     ),
     "reto": Molde(
         clave="reto",

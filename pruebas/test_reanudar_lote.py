@@ -137,9 +137,7 @@ class ReanudarLoteTest(unittest.TestCase):
         redactar.assert_called_once()
         crear_video.assert_called_once()
         self.assertEqual([item.ok for item in items], [True, True])
-        self.assertEqual(
-            [video["estado"] for video in cola.videos_del_lote(lote_id)], ["listo", "listo"]
-        )
+        self.assertEqual([video["estado"] for video in cola.videos_del_lote(lote_id)], ["listo", "listo"])
 
     def test_cmd_lote_libera_el_candado_si_producir_falla(self) -> None:
         from tpi_videos import cli

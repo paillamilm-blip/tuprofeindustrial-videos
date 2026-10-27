@@ -64,9 +64,7 @@ class LoteColaTest(unittest.TestCase):
         lote_id, ideas = self._lote()
         dormidos: list[float] = []
         with patch("tpi_videos.lote.producir", side_effect=ErrorMotor("sin red", transitorio=True)):
-            items = producir_lote(
-                ideas, cola_id=lote_id, espera=60, reintentos=3, dormir=dormidos.append
-            )
+            items = producir_lote(ideas, cola_id=lote_id, espera=60, reintentos=3, dormir=dormidos.append)
 
         self.assertEqual(len(items), 1)
         self.assertTrue(items[0].pendiente)
@@ -93,9 +91,7 @@ class LoteColaTest(unittest.TestCase):
 
         self.assertEqual([item.ok for item in items], [True, True])
         self.assertEqual(dormidos, [60.0])
-        self.assertEqual(
-            [video["estado"] for video in cola.videos_del_lote(lote_id)], ["listo", "listo"]
-        )
+        self.assertEqual([video["estado"] for video in cola.videos_del_lote(lote_id)], ["listo", "listo"])
         self.assertEqual(cola.cargar()["lotes"][0]["estado"], "listo")
 
     def test_error_no_transitorio_marca_fallo_y_no_espera(self) -> None:
@@ -106,9 +102,7 @@ class LoteColaTest(unittest.TestCase):
 
         self.assertEqual(dormidos, [])
         self.assertTrue(all(not item.ok and not item.pendiente for item in items))
-        self.assertEqual(
-            [video["estado"] for video in cola.videos_del_lote(lote_id)], ["fallo", "fallo"]
-        )
+        self.assertEqual([video["estado"] for video in cola.videos_del_lote(lote_id)], ["fallo", "fallo"])
         self.assertEqual(cola.cargar()["lotes"][0]["estado"], "fallo")
 
     def test_espera_cero_marca_pendiente_sin_dormir(self) -> None:

@@ -278,12 +278,10 @@ def cmd_cuota(args: argparse.Namespace) -> int:
     vivos = [m for m, e in estados if e == "ok"]
     consola.print()
     if vivos:
-        consola.print(f"   Puedes redactar ahora con: [bold]./tpi redactar \"…\" --modelo {vivos[0]}[/]")
+        consola.print(f'   Puedes redactar ahora con: [bold]./tpi redactar "…" --modelo {vivos[0]}[/]')
         consola.print("   (y si ese se agota a mitad de camino, el motor pasa solo al siguiente).")
     else:
-        consola.print(
-            "   Ninguno tiene cupo ahora: se reinicia de madrugada (medianoche hora del Pacífico)."
-        )
+        consola.print("   Ninguno tiene cupo ahora: se reinicia de madrugada (medianoche hora del Pacífico).")
         consola.print("   Mientras tanto puedes escribir el guion a mano y crear el video igual.")
     consola.print(f"   Tu uso, modelo por modelo: {URL_CUOTA}")
     return 0
@@ -373,9 +371,7 @@ def _producir(
         gancho_variante if gancho_variante is not None else _json_de(getattr(args, "gancho_json", None))
     )
     variantes = (
-        gancho_variantes
-        if gancho_variantes is not None
-        else _json_de(getattr(args, "ganchos_json", None))
+        gancho_variantes if gancho_variantes is not None else _json_de(getattr(args, "ganchos_json", None))
     )
 
     def avisar(mensaje: str) -> None:
@@ -576,9 +572,7 @@ def _mostrar_ganchos(manifiesto: dict, ruta_guion: Path | None) -> None:
         consola.print(
             f" [bold cyan]{clip['numero']}[/]  [bold]{clip['texto']}[/]  [dim]({clip['estilo']})[/]"
         )
-        consola.print(
-            f"    [dim]{clip['segundos']} s · {_ruta_amigable(Path(clip['archivo']))}[/]"
-        )
+        consola.print(f"    [dim]{clip['segundos']} s · {_ruta_amigable(Path(clip['archivo']))}[/]")
     if ruta_guion:
         consola.print(
             f"\n   Para dejar uno fijo: [bold]./tpi ganchos {ruta_guion.name} --elegir N[/]"
@@ -622,9 +616,7 @@ def cmd_ganchos(args: argparse.Namespace) -> int:
         )
 
     if not json_activo:
-        consola.print(
-            f"\n[bold]🎣 Probando {len(idea.ganchos)} gancho(s)[/] en 540×960, sin subtítulos.\n"
-        )
+        consola.print(f"\n[bold]🎣 Probando {len(idea.ganchos)} gancho(s)[/] en 540×960, sin subtítulos.\n")
     manifiesto = renderizar_ganchos(
         idea,
         calidad="borrador",
@@ -632,9 +624,7 @@ def cmd_ganchos(args: argparse.Namespace) -> int:
         progreso=_progreso_json if json_activo else None,
     )
     if json_activo:
-        _emitir(
-            etapa="resultado", avance=1.0, titulo=manifiesto["titulo"], clips=manifiesto["clips"]
-        )
+        _emitir(etapa="resultado", avance=1.0, titulo=manifiesto["titulo"], clips=manifiesto["clips"])
     _mostrar_ganchos(manifiesto, ruta_guion)
     return 0
 
@@ -683,9 +673,7 @@ def _mostrar_lote(items: list, tema: str | None) -> None:
     consola.print()
 
 
-def _ajustes_lote(
-    args: argparse.Namespace, modelo: str, proveedor: str | None, voz: str | None
-) -> dict:
+def _ajustes_lote(args: argparse.Namespace, modelo: str, proveedor: str | None, voz: str | None) -> dict:
     """Todo lo que hace falta para repetir el lote exactamente igual al reanudar."""
     return {
         "materia": args.materia,
@@ -744,9 +732,7 @@ def _pedir_ideas(
             )
         except ErrorMotor as e:
             if not e.transitorio:
-                cola.actualizar_lote(
-                    lote_id, estado="fallo", fase="fallo", error=e.mensaje, ayuda=e.ayuda
-                )
+                cola.actualizar_lote(lote_id, estado="fallo", fase="fallo", error=e.mensaje, ayuda=e.ayuda)
                 raise
             if espera <= 0:
                 cola.actualizar_lote(
@@ -803,9 +789,7 @@ def _cmd_reanudar(args: argparse.Namespace, *, json_activo: bool, avisar) -> int
     from .lote import producir_lote
 
     if args.ideas_json:
-        raise ErrorMotor(
-            "Para reanudar no indiques tema ni ideas; usa --cola-id si quieres elegir un lote."
-        )
+        raise ErrorMotor("Para reanudar no indiques tema ni ideas; usa --cola-id si quieres elegir un lote.")
     if not cola.tomar_candado():
         if json_activo:
             _emitir(
@@ -1244,9 +1228,7 @@ def construir_parser() -> argparse.ArgumentParser:
         "--gancho",
         help="gancho de la idea elegida: el guion lo mantiene en vez de escribir otro (lo usa el panel)",
     )
-    s.add_argument(
-        "--molde", choices=list(MOLDES), help="molde narrativo del guion (ver ./tpi ideas)"
-    )
+    s.add_argument("--molde", choices=list(MOLDES), help="molde narrativo del guion (ver ./tpi ideas)")
     s.add_argument("--gancho-json", help=argparse.SUPPRESS)  # la variante elegida, desde el panel
     s.add_argument("--ganchos-json", help=argparse.SUPPRESS)  # todas las variantes, desde el panel
     s.add_argument(

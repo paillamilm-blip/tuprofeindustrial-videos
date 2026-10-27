@@ -263,7 +263,7 @@ def producir_lote(
             avisar=aviso,
             progreso=avance_local,
             paso=paso,
-            esperar=lambda intento, segundos: _esperar_ia(seguir, paso, intento, segundos),
+            esperar=lambda intento, segundos, _s=seguir, _p=paso: _esperar_ia(_s, _p, intento, segundos),
         )
         items.append(item)
         if ficha:
@@ -340,9 +340,7 @@ def _emitidores(
     etiqueta = f"Video {posicion} de {total}"
     ultimo = {"avance": 0.0, "fase": "redactando", "estado": "redactando"}
 
-    def emitir(
-        etapa: str, detalle: str, fase: str, estado: str, video_avance: float | None = None
-    ) -> None:
+    def emitir(etapa: str, detalle: str, fase: str, estado: str, video_avance: float | None = None) -> None:
         if video_avance is not None:
             ultimo["avance"] = max(ultimo["avance"], video_avance)
         ultimo["fase"], ultimo["estado"] = fase, estado

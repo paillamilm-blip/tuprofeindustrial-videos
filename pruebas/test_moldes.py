@@ -24,9 +24,7 @@ class MoldesTest(unittest.TestCase):
         self.assertEqual(normalizar_molde(""), "")
 
     def test_catalogo_y_texto_para_la_ia(self):
-        self.assertEqual(
-            set(MOLDES), {"mito_realidad", "tres_errores", "pov", "reto", "nadie_te_enseno"}
-        )
+        self.assertEqual(set(MOLDES), {"mito_realidad", "tres_errores", "pov", "reto", "nadie_te_enseno"})
         self.assertEqual(MOLDE_POR_DEFECTO, "libre")
         tabla = moldes_para_ia()
         for clave in MOLDES:

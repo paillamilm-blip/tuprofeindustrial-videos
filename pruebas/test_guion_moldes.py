@@ -51,9 +51,7 @@ class GuionMoldesTest(unittest.TestCase):
 
     def test_regla_de_reto_y_verificacion(self):
         self.assertTrue(problemas_de_molde(Guion.model_validate(base(molde="reto"))))
-        con_reto = base(
-            molde="reto", reto={"texto": "Intenta con 6 y 8.", "voz": "Intenta con seis y ocho."}
-        )
+        con_reto = base(molde="reto", reto={"texto": "Intenta con 6 y 8.", "voz": "Intenta con seis y ocho."})
         self.assertEqual(problemas_de_molde(Guion.model_validate(con_reto)), [])
         self.assertTrue(problemas_de_molde(Guion.model_validate(base(molde="nadie_te_enseno"))))
 
