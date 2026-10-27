@@ -68,5 +68,20 @@ class FormulaEnVivoTest(unittest.TestCase):
         self.assertNotIn("formulas.dibujar(d.get(clave)", fuente)
 
 
+class MoldeEnLaHojaTest(unittest.TestCase):
+    """La familia decide un molde: en la hoja tiene que verse su valor y poder cambiarse."""
+
+    def test_el_formulario_arranca_con_el_campo_del_molde(self):
+        from tpi_videos.panel.editor import a_formulario
+
+        self.assertEqual(a_formulario(None).get("molde"), "")
+
+    def test_el_molde_elegido_viaja_de_la_hoja_al_yaml(self):
+        from tpi_videos.panel.editor import a_formulario, desde_formulario
+
+        datos = {**a_formulario(None), "titulo": "32 por 11 sin lápiz", "molde": "mito_realidad"}
+        self.assertEqual(desde_formulario(datos)["molde"], "mito_realidad")
+
+
 if __name__ == "__main__":
     unittest.main()

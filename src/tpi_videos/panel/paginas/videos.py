@@ -113,55 +113,117 @@ def ver_video(archivo: Path) -> None:
     dialogo.open()
 
 
+def dialogo_rehacer(
+    guion: Path, titulo: str, al_terminar: Callable[[], Any] | None = None, por_defecto: str | None = None
+) -> None:
+    """Rehacer el mismo guion con otro estilo. Lo usan «Mis videos» y la pantalla Video de Crear."""
+    temas = {i: t.nombre for i, t, _ in listar_temas()}
+    inicial = por_defecto if por_defecto in temas else next(iter(temas))
+    with ui.dialog() as dialogo, ui.card().classes("p-6 gap-3 w-[420px]"):
+        ui.label("Rehacer con otro estilo").classes("tpi-titulo text-lg")
+        eleccion = ui.select(temas, label="Estilo", value=inicial).props("outlined").classes("w-full")
+        final = ui.switch("Calidad final (si no, borrador rápido)", value=False)
+        barra = ui.linear_progress(value=0, show_value=False).classes("w-full")
+        estado = ui.label("").classes("tpi-ayuda")
+
+        async def ir() -> None:
+            if TAREAS.ocupado():
+                ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+                return
+            args = ["crear", str(guion), "--tema", eleccion.value] + ([] if final.value else ["--borrador"])
+
+            def avance(t: Tarea) -> None:
+                barra.value = t.avance
+                estado.text = t.texto_etapa
+
+            tarea = await TAREAS.ejecutar(f"Rehaciendo «{titulo}»", args, al_cambiar=avance)
+            if tarea.ok:
+                dialogo.close()
+                ui.notify("¡Listo! El video se actualizó.", type="positive")
+                if al_terminar:
+                    al_terminar()
+            elif not tarea.cancelada:
+                estado.text = (tarea.error or {}).get("mensaje", "Falló")
+
+        def cancelar() -> None:
+            TAREAS.cancelar()
+            dialogo.close()
+
+        with ui.row().classes("w-full justify-end gap-2"):
+            ui.button("Cancelar", on_click=cancelar).props("flat")
+            ui.button("Crear", icon="movie", on_click=ir)
+    dialogo.open()
+
+
+def filtrar(videos: list[biblioteca.Video], busqueda: str, modo: str) -> list[biblioteca.Video]:
+    """El muro se recorre: por título, materia o estilo, y por lo que ya se puede publicar."""
+    texto = (busqueda or "").strip().casefold()
+    mostrados = []
+    for video in videos:
+        if modo == "borrador" and not video.borrador:
+            continue
+        if modo == "publicable" and not video.final:
+            continue
+        if texto and texto not in f"{video.titulo} {video.materia} {video.tema}".casefold():
+            continue
+        mostrados.append(video)
+    return mostrados
+
+
+def etiqueta_familia(molde: str | None) -> str:
+    """La familia que carga con este molde; si el guion va libre, lo dice en vez de inventar una."""
+    from ...formatos import cargar_formatos
+    from ...moldes import nombre_molde
+
+    if not molde:
+        return "Molde libre"
+    for familia in cargar_formatos().values():
+        if molde in familia.moldes:
+            return familia.nombre
+    return nombre_molde(molde)
+
+
 class PaginaVideos:
     """Una por pestaña del navegador: así refrescar la lista nunca toca la página de otra pestaña."""
 
     def __init__(self) -> None:
         # Los diálogos viven fuera de la lista: refrescarla no los borra mientras se usan
         self.capa = ui.element("div")
+        self.busqueda = ""
+        self.modo = "todo"
+        self.listo = False
+
+    def controles(self) -> None:
+        """Buscador y filtro quedan fuera de la lista refrescable: escribir no pierde el foco."""
+        with ui.row().classes("w-full items-center gap-3"):
+            caja = ui.input("Buscar por título o materia").props("outlined dense clearable").classes("w-72")
+            caja.on_value_change(lambda e: self._cambiar(busqueda=e.value or ""))
+            selector = (
+                ui.select(
+                    {"todo": "Todo", "borrador": "Borradores", "publicable": "Publicables"},
+                    value="todo",
+                    label="Ver",
+                )
+                .props("outlined dense")
+                .classes("w-44")
+            )
+            selector.on_value_change(lambda e: self._cambiar(modo=e.value or "todo"))
+            self.contador = ui.label("").classes("tpi-ayuda")
+
+    def _cambiar(self, busqueda: str | None = None, modo: str | None = None) -> None:
+        if busqueda is not None:
+            self.busqueda = busqueda
+        if modo:
+            self.modo = modo
+        if self.listo:
+            self.lista.refresh()
 
     def _rehacer(self, video: biblioteca.Video) -> None:
         if video.guion is None:
             ui.notify("No encuentro el guion de este video.", type="warning")
             return
-        temas = {i: t.nombre for i, t, _ in listar_temas()}
-        with self.capa, ui.dialog() as dialogo, ui.card().classes("p-6 gap-3 w-[420px]"):
-            ui.label("Rehacer con otro estilo").classes("tpi-titulo text-lg")
-            eleccion = (
-                ui.select(temas, label="Estilo", value=next(iter(temas))).props("outlined").classes("w-full")
-            )
-            final = ui.switch("Calidad final (si no, borrador rápido)", value=False)
-            barra = ui.linear_progress(value=0, show_value=False).classes("w-full")
-            estado = ui.label("").classes("tpi-ayuda")
-
-            async def ir() -> None:
-                if TAREAS.ocupado():
-                    ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
-                    return
-                args = ["crear", str(video.guion), "--tema", eleccion.value] + (
-                    [] if final.value else ["--borrador"]
-                )
-
-                def avance(t: Tarea) -> None:
-                    barra.value = t.avance
-                    estado.text = t.texto_etapa
-
-                tarea = await TAREAS.ejecutar(f"Rehaciendo «{video.titulo}»", args, al_cambiar=avance)
-                if tarea.ok:
-                    dialogo.close()
-                    ui.notify("¡Listo! El video se actualizó.", type="positive")
-                    self.lista.refresh()
-                elif not tarea.cancelada:
-                    estado.text = (tarea.error or {}).get("mensaje", "Falló")
-
-            def cancelar() -> None:
-                TAREAS.cancelar()
-                dialogo.close()
-
-            with ui.row().classes("w-full justify-end gap-2"):
-                ui.button("Cancelar", on_click=cancelar).props("flat")
-                ui.button("Crear", icon="movie", on_click=ir)
-        dialogo.open()
+        with self.capa:
+            dialogo_rehacer(video.guion, video.titulo, al_terminar=self.lista.refresh)
 
     def _borrar(self, video: biblioteca.Video) -> None:
         def si() -> None:
@@ -181,17 +243,21 @@ class PaginaVideos:
             ver_video(video.principal)
 
     def _tarjeta(self, video: biblioteca.Video) -> ui.image:
-        with ui.card().classes("tpi-hoja w-[250px] p-0 overflow-hidden gap-0"):
+        with ui.card().classes("tpi-hoja w-full p-0 overflow-hidden gap-0"):
             with (
                 ui.element("div")
-                .classes("w-full aspect-[9/16] max-h-[300px] bg-[#2A2A2C] cursor-pointer")
+                .classes("relative w-full aspect-[9/16] max-h-[300px] bg-[#2A2A2C] cursor-pointer")
                 .on("click", lambda: self._ver(video))
             ):
                 imagen = ui.image("").classes("w-full h-full").props("fit=cover")
+                familia = etiqueta_familia(video.molde)
+                ui.label(familia).classes("tpi-etiqueta").tooltip(f"Familia: {familia}")
             with ui.column().classes("p-3 gap-1 w-full"):
                 ui.label(video.titulo).classes("font-bold leading-tight")
                 fecha = dt.datetime.fromtimestamp(video.fecha).strftime("%d-%m %H:%M")
                 ui.label(f"{video.tema} · {video.duracion:.0f} s · {fecha}").classes("tpi-ayuda")
+                if video.materia:
+                    ui.label(video.materia.capitalize()).classes("tpi-ayuda")
                 with ui.row().classes("gap-1"):
                     if video.final:
                         ui.chip("Final", color="positive", text_color="white").props("dense square")
@@ -215,24 +281,38 @@ class PaginaVideos:
 
     @ui.refreshable_method
     def lista(self) -> None:
-        encontrados = biblioteca.videos()
-        if not encontrados:
+        self._todos = biblioteca.videos()
+        if not self._todos:
             with ui.card().classes("tpi-hoja w-full p-10 items-center gap-2"):
                 ui.label("🎬").classes("text-5xl")
                 ui.label("Todavía no hay videos").classes("tpi-titulo text-lg")
                 ui.label("Crea el primero en Fábrica.").classes("tpi-ayuda")
                 ui.button("Ir a Crear", on_click=lambda: ui.navigate.to("/crear"))
+            self.listo = True
             return
-        with ui.row().classes("w-full gap-4"):
-            imagenes = [(video, self._tarjeta(video)) for video in encontrados]
+        mostrados = filtrar(self._todos, self.busqueda, self.modo)
+        self.contador.text = f"{len(mostrados)} de {len(self._todos)} videos"
+        if not mostrados:
+            with ui.card().classes("tpi-hoja w-full p-6 items-center gap-1"):
+                ui.label("Ningún video coincide").classes("tpi-titulo text-lg")
+                ui.label("Prueba con otra palabra, o vuelve a «Todo».").classes("tpi-ayuda")
+            self.listo = True
+            return
+        with (
+            ui.element("div")
+            .classes("grid gap-3 w-full")
+            .style("grid-template-columns: repeat(auto-fill, minmax(190px, 1fr))")
+        ):
+            imagenes = [(video, self._tarjeta(video)) for video in mostrados]
         background_tasks.create(self._miniaturas(imagenes), name="miniaturas")
+        self.listo = True
 
     @staticmethod
     async def _miniaturas(imagenes: list[tuple[biblioteca.Video, ui.image]]) -> None:
         """Las miniaturas se crean de a una, sin hacer esperar a la página."""
         for video, imagen in imagenes:
             ruta = await run.io_bound(biblioteca.miniatura, video)
-            if ruta is not None and not imagen.is_deleted:
+            if not imagen.is_deleted:
                 imagen.set_source(url_medio(ruta))
 
 
@@ -243,4 +323,6 @@ def registrar() -> None:
             titulo_seccion(
                 None, "Mis videos", "Haz clic en un video para verlo. 📦 = portada y textos para publicar."
             )
-            PaginaVideos().lista()
+            pagina_videos = PaginaVideos()
+            pagina_videos.controles()
+            pagina_videos.lista()

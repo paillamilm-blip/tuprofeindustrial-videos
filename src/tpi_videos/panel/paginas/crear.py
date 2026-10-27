@@ -1,4 +1,7 @@
-"""Crear: del enunciado (o un guion) al video, en 3 pasos."""
+"""Crear: el camino de cuatro pantallas — Idea, Formato, La hoja, Video.
+
+Se navega libremente entre ellas: la barra de arriba nunca está bloqueada y ninguna sugerencia sin tocar
+impide llegar al video. Lo único que se pide es la idea escrita."""
 
 from __future__ import annotations
 
@@ -18,10 +21,10 @@ from ...moldes import nombre_molde
 from ...revision import Revision
 from ...temas import listar_temas
 from .. import biblioteca, formatos_ui
-from ..comun import abrir_en_mac, marco, titulo_seccion, url_medio
+from ..comun import PIEL, abrir_en_mac, marco, titulo_seccion, url_medio
 from ..editor import EditorGuion
 from ..tareas import TAREAS, Tarea
-from .videos import abrir_kit
+from .videos import abrir_kit, dialogo_rehacer
 
 TIPOS_SUBIDA = ".jpg,.jpeg,.png,.heic,.heif,.webp,.pdf,.txt"
 
@@ -42,8 +45,20 @@ ANGULOS_ICONO = {
     "reto": "sports_score",
 }
 NOMBRES_MATERIA = {"matematica": "Matemática", "fisica": "Física", "ingenieria": "Ingeniería"}
+# Las cuatro pantallas del camino. La del medio se ve una a la vez; la barra deja saltar a cualquiera.
+PASOS = ("idea", "formato", "hoja", "video")
+_NOMBRES = {"idea": "Idea", "formato": "Formato", "hoja": "La hoja", "video": "Video"}
+
+
+def puede_continuar(estado: dict) -> tuple[bool, str]:
+    """Ninguna sugerencia sin tocar impide avanzar: solo hace falta la idea escrita."""
+    if not (estado.get("idea") or "").strip():
+        return False, "Escribe la idea (o sube una foto) para seguir."
+    return True, ""
+
+
 # La etapa del comando dice en qué paso del video completo vamos
-PASOS = ("El guion", "El video", "El kit")
+ETAPAS = ("El guion", "El video", "El kit")
 ETAPA_PASO = {
     "redactando": 0,
     "guion": 0,
@@ -82,6 +97,131 @@ class PaginaCrear:
         # bloquea el paso siguiente.
         self.eleccion: dict[str, str | None] = {"clave": None, "molde": None, "tema": None, "dibujo": None}
         self.zona_muro: ui.column | None = None
+        self.paso = "idea"
+        self.zona_barra: ui.column | None = None
+        self.zonas: dict[str, ui.column] = {}
+        self.zona_guion: ui.column | None = None
+        self.zona_idea_video: ui.column | None = None
+        self.ultimo_guion: Path | None = None
+
+    # --------------------------------------------------------------------------------------
+    # El camino: una barra arriba y una sola pantalla en el cuerpo
+    # --------------------------------------------------------------------------------------
+
+    def arrancar(self) -> None:
+        self.zona_barra = ui.column().classes("w-full")
+        with ui.column().classes("w-full gap-4"):
+            self.zonas = {p: ui.column().classes("w-full gap-4") for p in PASOS}
+        with self.zonas["idea"]:
+            self.seccion_ejercicio()
+        with self.zonas["hoja"]:
+            self.zona_guion = ui.column().classes("w-full gap-4")
+            with self.zona_guion:
+                self._hoja_vacia()
+            self.controles_video()
+        with self.zonas["video"]:
+            self.zona_idea_video = ui.column().classes("w-full gap-3")
+            self.pantalla_video()
+        self._pintar_barra()
+        self._mostrar_paso()
+
+    def ir(self, paso: str) -> None:
+        """Moverse por el camino es siempre libre: la barra nunca está bloqueada."""
+        self.paso = paso
+        if paso == "formato":
+            self._pintar_formato()
+        self._mostrar_paso()
+
+    def _mostrar_paso(self) -> None:
+        for clave, zona in self.zonas.items():
+            zona.set_visibility(clave == self.paso)
+        self._pintar_barra()
+
+    def _pintar_barra(self) -> None:
+        if self.zona_barra is None:
+            return
+        self.zona_barra.clear()
+        with self.zona_barra, ui.row().classes("w-full items-center gap-1 no-wrap"):
+            for n, clave in enumerate(PASOS):
+                if n:
+                    ui.icon("chevron_right").classes("text-base").style(f"color:{PIEL['gris']}")
+                boton = ui.button(_NOMBRES[clave], on_click=lambda p=clave: self.ir(p)).props(
+                    "flat dense no-caps size=sm"
+                )
+                if clave == self.paso:
+                    boton.classes("font-bold").style(f"color:{PIEL['tinta']}")
+                else:
+                    boton.classes("tpi-ayuda")
+
+    def _idea_texto(self) -> str:
+        """La idea escrita, venga del buscador de ideas o del enunciado suelto."""
+        return (self.tema_idea.value or "").strip() or (self.enunciado.value or "").strip()
+
+    def _estado_camino(self) -> dict:
+        texto = self._idea_texto()
+        return {"idea": texto if texto or self.subida is None else f"foto {self.subida.name}"}
+
+    def _familia_activa(self) -> str:
+        return formatos_ui.elegir(self.eleccion["clave"], formatos_ui.sugerido(self._idea_texto())).activo
+
+    def _seguir_formato(self) -> None:
+        continuable, motivo = puede_continuar(self._estado_camino())
+        if not continuable:
+            ui.notify(motivo, type="warning")
+            return
+        self.ir("formato")
+
+    def _pintar_formato(self) -> None:
+        zona = self.zonas["formato"]
+        zona.clear()
+        idea = self._idea_texto()
+        with zona:
+            titulo_seccion(
+                None,
+                "Formato",
+                "La familia elegida, con su molde, su estilo y su dibujo ya puestos. Toca «cambiar» en "
+                "cualquiera: la familia se queda y nada te bloquea el paso.",
+            )
+            formatos_ui.pantalla_formato(
+                formatos_ui.elegir(self.eleccion["clave"], formatos_ui.sugerido(idea)),
+                idea,
+                self._elegir_tambien_aqui,
+                self._cambiar_pieza,
+            )
+            with ui.row().classes("w-full items-center gap-3"):
+                ui.button("Seguir a la hoja", icon="edit_note", on_click=self._a_la_hoja).props("unelevated")
+                ui.button("Volver a la idea", icon="arrow_back", on_click=lambda: self.ir("idea")).props(
+                    "flat"
+                )
+
+    def _elegir_tambien_aqui(self, clave: str) -> None:
+        self._elegir_familia(clave)
+        self._pintar_formato()
+
+    def _a_la_hoja(self) -> None:
+        """La hoja arranca con el molde y el estilo de la familia; si no tocó nada, los pone la sugerencia."""
+        f = formatos_ui.formato(self._familia_activa())
+        idea = self._idea_texto()
+        base = cargar_guion(PLANTILLAS_DIR / "guion_base.yaml")
+        guion = base.model_copy(
+            update={
+                "titulo": (idea[:60] if idea else base.titulo),
+                "molde": self.eleccion["molde"] or f.moldes[0],
+                "tema": self.eleccion["tema"] or f.tema,
+            }
+        )
+        self.cargar_editor(EditorGuion(guion, None))
+
+    def _hoja_vacia(self) -> None:
+        with ui.card().classes("tpi-hoja w-full p-5 gap-2"):
+            ui.label("La hoja todavía está en blanco.").classes("tpi-titulo text-lg")
+            ui.label(
+                "Escribe la idea y toca un tema, o escribe el enunciado y pulsa «Escribir el guion con IA»: "
+                "el guion se arma acá y puedes cambiar cada frase."
+            ).classes("tpi-ayuda")
+            ui.button("Volver a la idea", icon="arrow_back", on_click=lambda: self.ir("idea")).props(
+                "outline"
+            )
 
     # --------------------------------------------------------------------------------------
     # 1 · El ejercicio
@@ -89,8 +229,8 @@ class PaginaCrear:
 
     def seccion_ejercicio(self) -> None:
         titulo_seccion(
-            "1",
-            "El ejercicio",
+            None,
+            "Idea",
             "Busca ideas con la IA, escribe el enunciado, sube una foto o PDF, o abre un guion que ya tienes.",
         )
         with ui.card().classes("tpi-hoja w-full p-0"):
@@ -143,7 +283,6 @@ class PaginaCrear:
             ui.label("Las 3 ideas aparecen aquí. En la que te guste, toca «Hacer este video».").classes(
                 "tpi-ayuda"
             )
-        self.zona_idea_video = ui.column().classes("w-full gap-3")
         ui.separator().classes("w-full opacity-30")
         ui.label("¿Qué familia de videos es esto?").classes("tpi-titulo text-base")
         ui.label(
@@ -153,6 +292,10 @@ class PaginaCrear:
         self.zona_muro = ui.column().classes("w-full")
         self.tema_idea.on_value_change(lambda _e: self._pintar_muro())
         self._pintar_muro()
+        ui.button("Seguir con esta familia", icon="arrow_forward", on_click=self._seguir_formato).props(
+            "unelevated"
+        ).classes("self-start")
+        self.zona_ganchos = ui.column().classes("w-full gap-3")
 
     # --------------------------------------------------------------------------------------
     # El muro de las cuatro familias
@@ -194,6 +337,8 @@ class PaginaCrear:
         self.eleccion[campo] = selector.value
         dialogo.close()
         self._pintar_muro()
+        if self.paso == "formato":
+            self._pintar_formato()
 
     async def _buscar_ideas(self, tema: str | None = None) -> None:
         texto = (tema or self.tema_idea.value or "").strip()
@@ -260,6 +405,7 @@ class PaginaCrear:
                         ui.icon(ANGULOS_ICONO.get(angulo, "bolt")).classes("text-2xl text-primary")
                         ui.label(ANGULOS.get(angulo, "Idea")).classes("tpi-titulo text-sm")
                         ui.label(f"{emoji} {idea.get('titulo', '')}".strip()).classes("text-lg font-bold")
+                        ui.label("lo escribió la IA").classes("tpi-ayuda")
                     molde = str(idea.get("molde") or "")
                     if molde:
                         ui.chip(nombre_molde(molde), icon="movie_filter").props("dense outline size=sm")
@@ -323,12 +469,13 @@ class PaginaCrear:
             args += ["--segundos", str(idea["segundos"])]
         args += ["--", enunciado]
 
+        self.ir("video")
         self.zona_idea_video.clear()
         with self.zona_idea_video:
             with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
                 ui.label(f"🎬 {idea.get('titulo', 'El video')}").classes("text-lg font-bold")
                 barra = ui.linear_progress(value=0, show_value=False).classes("w-full")
-                pasos = [ui.label(f"・ {p}").classes("tpi-ayuda") for p in PASOS]
+                pasos = [ui.label(f"・ {p}").classes("tpi-ayuda") for p in ETAPAS]
                 estado = ui.label("").classes("tpi-ayuda")
                 boton_cancelar = ui.button("Cancelar", icon="stop", on_click=TAREAS.cancelar).props(
                     "flat color=negative"
@@ -337,10 +484,10 @@ class PaginaCrear:
         def avance(t: Tarea) -> None:
             barra.value = t.avance
             estado.text = t.texto_etapa
-            actual = ETAPA_PASO.get(t.etapa, 0) if not t.terminada else len(PASOS)
+            actual = ETAPA_PASO.get(t.etapa, 0) if not t.terminada else len(ETAPAS)
             for n, etiqueta in enumerate(pasos):
                 marca = "✅" if n < actual else ("⏳" if n == actual else "・")
-                etiqueta.set_text(f"{marca} {PASOS[n]}")
+                etiqueta.set_text(f"{marca} {ETAPAS[n]}")
 
         tarea = await TAREAS.ejecutar("Video completo", args, al_cambiar=avance)
         if not tarea.ok:
@@ -360,8 +507,8 @@ class PaginaCrear:
         if not idea.get("ganchos"):
             ui.notify("Esta idea no trae variantes: busca otras 3.", type="warning")
             return
-        self.zona_idea_video.clear()
-        with self.zona_idea_video:
+        self.zona_ganchos.clear()
+        with self.zona_ganchos:
             with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
                 ui.label(f"🎣 Probando los ganchos de «{idea.get('titulo', '')}»").classes(
                     "text-lg font-bold"
@@ -430,6 +577,7 @@ class PaginaCrear:
             return
         args = ["lote", "--ideas-json", json.dumps(ideas, ensure_ascii=False)]
 
+        self.ir("video")
         self.zona_idea_video.clear()
         with self.zona_idea_video:
             with ui.card().classes("tpi-hoja w-full p-5 gap-2"):
@@ -506,6 +654,7 @@ class PaginaCrear:
     def _mostrar_video_ideas(self, resultado: dict, idea: dict) -> None:
         video = Path(resultado["video"])
         guion = Path(resultado["guion"])
+        self.ultimo_guion = guion
         self.zona_idea_video.clear()
         with self.zona_idea_video:
             with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
@@ -543,7 +692,9 @@ class PaginaCrear:
                         ui.button(
                             "Otro video de este tema", icon="refresh", on_click=lambda: self._buscar_ideas()
                         ).props("flat")
-        self.abrir(guion)  # el guion queda arriba, listo para retocar y recrear el video
+                        ui.button(
+                            "Editar la hoja", icon="edit_note", on_click=lambda: self.abrir(guion)
+                        ).props("outline")
 
     def _panel_ia(self) -> None:
         if ia.obtener_clave() is None:
@@ -636,6 +787,7 @@ class PaginaCrear:
             return
         ruta = Path(tarea.resultado["guion"])
         with self.notas_ia:
+            ui.label("lo escribió la IA").classes("tpi-ayuda")
             ui.label(f"✅ Guion listo: {ruta.name}. Revísalo abajo: la IA puede equivocarse.").classes(
                 "font-bold"
             )
@@ -684,7 +836,7 @@ class PaginaCrear:
         self.cargar_editor(EditorGuion(guion, ruta, cabecera_de(ruta)))
 
     # --------------------------------------------------------------------------------------
-    # 2 · El guion
+    # La hoja: lo que se ve y lo que se escucha
     # --------------------------------------------------------------------------------------
 
     def cargar_editor(self, editor: EditorGuion) -> None:
@@ -693,7 +845,10 @@ class PaginaCrear:
         self.zona_guion.clear()
         with self.zona_guion:
             titulo_seccion(
-                "2", "El guion", "Lo que se ve y lo que se escucha. Los cambios se guardan al crear el video."
+                None,
+                "La hoja",
+                "El gancho, las cuentas y el cierre, todos a la vez. Lo que se ve y lo que se escucha. "
+                "Los cambios se guardan al crear el video.",
             )
             with ui.card().classes("tpi-hoja w-full p-4"), ui.row().classes("w-full items-center gap-3"):
                 ui.input("Nombre del archivo").props("outlined dense suffix=.yaml").classes(
@@ -704,7 +859,12 @@ class PaginaCrear:
                 self.resumen = ui.label("").classes("tpi-ayuda")
             self.avisos = ui.column().classes("w-full gap-1")
             editor.render()
-        self.zona_video.set_visibility(True)
+        # El selector muestra el estilo que trae el guion (el de la familia): si no, crearía con otro
+        # distinto del que él vio en el muro.
+        estilo_del_guion = editor.datos.get("tema")
+        if estilo_del_guion in self.tema.options:
+            self.tema.value = estilo_del_guion
+        self.ir("hoja")
         editor.revisar()
         destino = self.zona_guion.id
         with self.zona_guion:  # cuando el navegador ya mostró el editor, bajar hasta él
@@ -740,35 +900,127 @@ class PaginaCrear:
                 ui.label(f"{icono} {aviso.donde}: {aviso.mensaje}").classes("text-sm")
 
     # --------------------------------------------------------------------------------------
-    # 3 · El video
+    # Video
     # --------------------------------------------------------------------------------------
 
-    def seccion_video(self) -> None:
+    def controles_video(self) -> None:
+        """El pie de la hoja: lo que arranca el render. Ninguno se apaga por no haber tocado una sugerencia."""
+        with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
+            temas = {i: t.nombre for i, t, _ in listar_temas()}
+            por_defecto = cargar_marca().tema
+            with ui.row().classes("w-full items-center gap-3"):
+                self.tema = ui.select(
+                    temas, label="Estilo", value=por_defecto if por_defecto in temas else None
+                )
+                self.tema.props("outlined dense").classes("w-64")
+                ui.button("Crear borrador", icon="bolt", on_click=lambda: self._crear(True)).props("outline")
+                ui.button("Crear el video", icon="movie", on_click=lambda: self._crear(False))
+
+    def pantalla_video(self) -> None:
+        """La pantalla Video: el reproductor con su kit, el clip de 5 s y el «otra vez con este estilo»."""
         with ui.column().classes("w-full gap-4") as self.zona_video:
             titulo_seccion(
-                "3", "El video", "Primero un borrador (rápido) para revisar; luego el video final."
+                None,
+                "Video",
+                "Lo que sale del motor. Si algo no te gusta, vuelve a la hoja y cambia la frase.",
             )
-            with ui.card().classes("tpi-hoja w-full p-5 gap-4"):
-                temas = {i: t.nombre for i, t, _ in listar_temas()}
-                por_defecto = cargar_marca().tema
-                with ui.row().classes("w-full items-center gap-3"):
-                    self.tema = ui.select(
-                        temas, label="Estilo", value=por_defecto if por_defecto in temas else None
+            self.boton_cancelar = ui.button("Cancelar", icon="stop", on_click=TAREAS.cancelar).props(
+                "flat color=negative"
+            )
+            self.boton_cancelar.set_visibility(False)
+            self.barra = ui.linear_progress(value=0, show_value=False).classes("w-full")
+            self.barra.set_visibility(False)
+            self.estado = ui.label("").classes("tpi-ayuda")
+            self.resultado = ui.row().classes("w-full gap-6 items-start no-wrap")
+            with ui.row().classes("w-full items-center gap-3"):
+                ui.button("Solo el gancho (≈5 s)", icon="crop_free", on_click=self._solo_gancho).props(
+                    "outline"
+                )
+                ui.button("Otra vez con este estilo", icon="refresh", on_click=self._otra_vez).props("flat")
+                ui.label(
+                    "El clip de 5 s es solo el gancho, sin subtítulos: sirve para ver si frena el scroll."
+                ).classes("tpi-ayuda")
+
+    def _guion_del_render(self) -> Path | None:
+        """El guion que hay que renderizar: el último que salió, o la hoja guardada ahora."""
+        return self.ultimo_guion or self._guardar()
+
+    async def _solo_gancho(self) -> None:
+        """El laboratorio de ganchos del motor, sobre el guion de la hoja: ./tpi ganchos <guion>."""
+        if TAREAS.ocupado():
+            ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+            return
+        ruta = self._guion_del_render()
+        if ruta is None:
+            ui.notify("Primero guarda la hoja.", type="warning")
+            return
+        self.ir("video")
+        self.barra.set_visibility(True)
+        self.barra.value = 0
+        self.boton_cancelar.set_visibility(True)
+        self.resultado.clear()
+
+        def avance(t: Tarea) -> None:
+            self.barra.value = t.avance
+            self.estado.text = t.texto_etapa
+
+        tarea = await TAREAS.ejecutar("El gancho (5 s)", ["ganchos", str(ruta)], al_cambiar=avance)
+        self.boton_cancelar.set_visibility(False)
+        self.barra.set_visibility(False)
+        if not tarea.ok:
+            self.estado.text = ""
+            if tarea.cancelada:
+                ui.notify("Cancelado: lo que alcanzó a salir queda en salida/ganchos/.", type="info")
+            else:
+                self._error(tarea)
+            return
+        clips = list(tarea.resultado.get("clips") or [])
+        self.estado.text = f"🎣 {len(clips)} clip(s) de gancho en salida/ganchos/"
+        with self.resultado:
+            for clip in clips:
+                with ui.column().classes("items-center gap-2 w-44"):
+                    ui.video(url_medio(Path(str(clip.get("archivo", ""))))).classes(
+                        "w-full aspect-[9/16] rounded-lg bg-black"
+                    ).props('preload="metadata"')
+                    ui.label(f"{clip.get('numero')}. «{clip.get('texto', '')}»").classes(
+                        "text-sm font-bold text-center"
                     )
-                    self.tema.props("outlined dense").classes("w-64")
-                    ui.button("Crear borrador", icon="bolt", on_click=lambda: self._crear(True)).props(
-                        "outline"
-                    )
+                    ui.label(f"{clip.get('estilo', '')} · {clip.get('segundos', 0)} s").classes("tpi-ayuda")
+
+    def _otra_vez(self) -> None:
+        """El mismo guion, otro estilo: el mismo diálogo que usa «Mis videos»."""
+        ruta = self._guion_del_render()
+        if ruta is None:
+            ui.notify("Primero guarda la hoja.", type="warning")
+            return
+        titulo = self.editor.nombre["valor"] if self.editor else ruta.stem
+        dialogo_rehacer(ruta, titulo, por_defecto=self.tema.value, al_terminar=self._repintar)
+
+    def _repintar(self) -> None:
+        """El reproductor muestra el clip recién rehacer, no el anterior."""
+        t = TAREAS.actual
+        if t and t.ok and t.resultado.get("video"):
+            self._reproducir(Path(t.resultado["video"]), t.resultado, borrador=False)
+
+    def _reproducir(self, video: Path, resultado: dict, borrador: bool) -> None:
+        """El clip que salió, con el kit de publicación al lado."""
+        self.resultado.clear()
+        with self.resultado:
+            ui.video(url_medio(video)).classes("h-[70vh] aspect-[9/16] rounded-lg bg-black").props(
+                'preload="metadata"'
+            )
+            with ui.column().classes("gap-2"):
+                ui.label("¿Te gusta?").classes("tpi-titulo text-lg")
+                ui.label(f"creado con IA · ≈ {resultado.get('duracion', 0)} s").classes("tpi-ayuda")
+                ui.button("Abrir en el Mac", icon="open_in_new", on_click=lambda: abrir_en_mac(video)).props(
+                    "outline"
+                )
+                ui.button(
+                    "Mostrar en Finder", icon="folder_open", on_click=lambda: abrir_en_mac(video, True)
+                ).props("outline")
+                ui.button("Kit de publicación", icon="inventory_2", on_click=lambda: abrir_kit(video.parent))
+                if borrador:
                     ui.button("Crear video final", icon="movie", on_click=lambda: self._crear(False))
-                    self.boton_cancelar = ui.button("Cancelar", icon="stop", on_click=TAREAS.cancelar).props(
-                        "flat color=negative"
-                    )
-                    self.boton_cancelar.set_visibility(False)
-                self.barra = ui.linear_progress(value=0, show_value=False).classes("w-full")
-                self.barra.set_visibility(False)
-                self.estado = ui.label("").classes("tpi-ayuda")
-                self.resultado = ui.row().classes("w-full gap-6 items-start no-wrap")
-        self.zona_video.set_visibility(False)
 
     async def _crear(self, borrador: bool) -> None:
         if TAREAS.ocupado():
@@ -776,7 +1028,10 @@ class PaginaCrear:
             return
         ruta = self._guardar()
         if ruta is None:
+            ui.notify("Escribe la idea (o sube una foto) para seguir.", type="warning")
             return
+        self.ultimo_guion = ruta
+        self.ir("video")
         args = (
             ["crear", str(ruta)]
             + (["--borrador"] if borrador else [])
@@ -803,23 +1058,8 @@ class PaginaCrear:
                 self._error(tarea)
             return
         video = Path(tarea.resultado["video"])
-        self.estado.text = f"✅ Listo en {tarea.resultado.get('segundos', 0)} s · {tarea.resultado.get('duracion', 0)} s de video"
-        with self.resultado:
-            ui.video(url_medio(video)).classes("h-[70vh] aspect-[9/16] rounded-lg bg-black").props(
-                'preload="metadata"'
-            )
-            with ui.column().classes("gap-2"):
-                ui.label("¿Te gusta?").classes("tpi-titulo text-lg")
-                ui.label("Si algo no te gusta, cambia el guion arriba y crea de nuevo.").classes("tpi-ayuda")
-                ui.button("Abrir en el Mac", icon="open_in_new", on_click=lambda: abrir_en_mac(video)).props(
-                    "outline"
-                )
-                ui.button(
-                    "Mostrar en Finder", icon="folder_open", on_click=lambda: abrir_en_mac(video, True)
-                ).props("outline")
-                if borrador:
-                    ui.button("Crear video final", icon="movie", on_click=lambda: self._crear(False))
-                ui.button("Kit de publicación", icon="inventory_2", on_click=lambda: abrir_kit(video.parent))
+        self.estado.text = f"✅ Listo en {tarea.resultado.get('segundos', 0)} s · {tarea.resultado.get('duracion', 0)} s de video"  # fmt: skip
+        self._reproducir(video, tarea.resultado, borrador)
 
     def _error(self, tarea: Tarea) -> None:
         error = tarea.error or {}
@@ -839,8 +1079,6 @@ def registrar() -> None:
     def pagina(guion: str | None = None) -> None:
         estado = PaginaCrear()
         with marco("/crear"):
-            estado.seccion_ejercicio()
-            estado.zona_guion = ui.column().classes("w-full gap-4")
-            estado.seccion_video()
+            estado.arrancar()
             if ruta := guion_permitido(guion):
                 estado.abrir(ruta)

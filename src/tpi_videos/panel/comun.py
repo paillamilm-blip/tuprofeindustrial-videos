@@ -73,6 +73,9 @@ body {{
 .tpi-tarjeta {{ background: {PIEL["tarjeta"]}; border: 1px solid {PIEL["borde_muro"]}; border-radius: 12px; }}
 .tpi-tarjetaactiva {{ border-color: {PIEL["texto_muro"]}; box-shadow: 0 0 0 2px {PIEL["texto_muro"]}; }}
 .tpi-tenue {{ color: {PIEL["tenue_muro"]}; }}
+.tpi-etiqueta {{ position: absolute; top: 6px; left: 6px; max-width: 88%; padding: 2px 8px;
+  border-radius: 999px; font-size: .68rem; font-weight: 700; line-height: 1.5; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis; background: {PIEL["marca"]}; color: {PIEL["blanco"]}; }}
 .tpi-columnas {{ display: grid; grid-template-columns: minmax(0, 1fr) {PIEL["costado_px"]}px;
   gap: 16px; align-items: start; }}
 @media (max-width: 900px) {{ .tpi-columnas {{ grid-template-columns: minmax(0, 1fr); }} }}

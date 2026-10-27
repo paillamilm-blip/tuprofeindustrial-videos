@@ -129,7 +129,8 @@ def crear_video(
         raise ErrorMotor(f"Calidad «{calidad}» no existe.", ayuda=f"Opciones: {', '.join(CALIDADES)}")
     guion = cargar_guion(ruta_guion)
     marca = cargar_marca()
-    estilo_video = cargar_tema(tema or guion.tema, marca)
+    tema_usado = (tema or guion.tema or marca.tema or "").strip()
+    estilo_video = cargar_tema(tema_usado, marca)
     verificar_requisitos(subtitulos)
     avisar("preparando", 0.02, estilo_video.nombre)
 
@@ -149,7 +150,15 @@ def crear_video(
     )  # fmt: skip
     final = carpeta / (f"{nombre}.mp4" if calidad == "final" else f"{nombre}_{calidad}.mp4")
     # Para «Mis videos» del panel (rehacer con otro estilo) y para el kit de publicación
-    linea |= {"guion": str(Path(ruta_guion).resolve()), "calidad": calidad, "intermedio": str(video_manim)}
+    linea |= {
+        "guion": str(Path(ruta_guion).resolve()),
+        "calidad": calidad,
+        "intermedio": str(video_manim),
+        # La clave (no el nombre visible) es lo único que permite recargar los colores después
+        "tema_clave": tema_usado,
+        "materia": guion.materia,
+        "molde": guion.molde or "",
+    }
     (carpeta / "linea_de_tiempo.json").write_text(
         json.dumps(linea, ensure_ascii=False, indent=2), encoding="utf-8"
     )

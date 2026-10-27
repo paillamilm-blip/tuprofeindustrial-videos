@@ -81,6 +81,15 @@ def visual_de_portada(clave: str) -> dict[str, Any]:
 # ----------------------------------------------------------------------------------------------
 
 
+def motivo_de(eleccion: Eleccion, idea: str) -> str:
+    """De dónde sale la familia marcada. La dice siempre: él tiene que saber quién la puso."""
+    if eleccion.la_puso_el_autor:
+        return "Elegida por ti."
+    if sugerido(idea) == eleccion.activo:
+        return "Sugerida por lo que escribiste — toca otra tarjeta y manda tu elección."
+    return "La frase todavía no delata ninguna familia: ésta viene por defecto. Toca la que quieras."
+
+
 def muro_y_costado(
     activa: str | None,
     idea: str,
@@ -90,19 +99,38 @@ def muro_y_costado(
     """Cuatro tarjetas al ancho y, al costado, la familia activa con sus piezas y su «cambiar»."""
     eleccion = elegir(activa, sugerido(idea))
     familias = cargar_formatos()
-    if eleccion.la_puso_el_autor:
-        motivo = "Elegida por ti."
-    elif sugerido(idea) == eleccion.activo:
-        motivo = "Sugerida por lo que escribiste — toca otra tarjeta y manda tu elección."
-    else:
-        motivo = "La frase todavía no delata ninguna familia: ésta viene por defecto. Toca la que quieras."
     with ui.row().classes("tpi-columnas w-full items-start"):
         with ui.column().classes("gap-3 w-full"):
             with ui.element("div").classes("grid grid-cols-2 md:grid-cols-4 gap-3 w-full"):
                 for f in familias.values():
                     _tarjeta(f, f.clave == eleccion.activo, al_elegir)
         with ui.column().classes("tpi-costado gap-3 w-full"):
-            _costado(familias[eleccion.activo], motivo, al_cambiar_pieza)
+            _costado(familias[eleccion.activo], motivo_de(eleccion, idea), al_cambiar_pieza)
+
+
+def pantalla_formato(
+    eleccion: Eleccion,
+    idea: str,
+    al_elegir: Callable[[str], Any],
+    al_cambiar_pieza: Callable[[str, str], Any],
+) -> None:
+    """La familia elegida, en grande, con un «cambiar» en cada pieza; las otras tres, en una línea discreta."""
+    familias = cargar_formatos()
+    with ui.row().classes("tpi-columnas w-full items-start"):
+        with ui.column().classes("gap-1 w-full"):
+            ui.label("Las otras tres — toca para cambiarte sin perder lo que escribiste.").classes(
+                "tpi-ayuda"
+            )
+            for otra in familias.values():
+                if otra.clave == eleccion.activo:
+                    continue
+                with ui.row().classes("w-full items-center gap-2 no-wrap"):
+                    ui.button(otra.nombre, on_click=lambda c=otra.clave: al_elegir(c)).props(
+                        "flat dense no-caps size=sm"
+                    )
+                    ui.label(otra.que_es).classes("tpi-ayuda")
+        with ui.column().classes("tpi-costado gap-3 w-full"):
+            _costado(familias[eleccion.activo], motivo_de(eleccion, idea), al_cambiar_pieza, ancho=150)
 
 
 def _tarjeta(f: Formato, activa: bool, al_elegir: Callable[[str], Any]) -> None:
@@ -131,15 +159,22 @@ def _portada(f: Formato) -> None:
             ui.tooltip(str(e))
 
 
-def _costado(f: Formato, motivo: str, al_cambiar_pieza: Callable[[str, str], Any]) -> None:
+def _costado(
+    f: Formato,
+    motivo: str,
+    al_cambiar_pieza: Callable[[str, str], Any],
+    ancho: int = 78,
+) -> None:
+    """La familia con sus tres piezas ya puestas y un «cambiar» en cada una."""
+    alto = round(ancho * 16 / 9)
     with ui.card().classes("tpi-tarjeta w-full p-4 gap-3"):
         with ui.row().classes("items-start gap-3 no-wrap w-full"):
             try:
                 png = miniaturas.dibujar_miniatura(visual_de_portada(f.clave), tema=f.tema)
-                ui.image(url_medio(png)).classes("w-[78px] shrink-0 rounded-md")
+                ui.image(url_medio(png)).classes("shrink-0 rounded-md").style(f"width:{ancho}px")
             except Exception:
-                ui.element("div").classes("w-[78px] h-[139px] shrink-0 rounded-md").style(
-                    f"background:{PIEL['tarjeta']}"
+                ui.element("div").classes("shrink-0 rounded-md").style(
+                    f"width:{ancho}px; height:{alto}px; background:{PIEL['tarjeta']}"
                 )
             with ui.column().classes("gap-1 min-w-0"):
                 ui.label(f.nombre).classes("tpi-titulo text-lg leading-tight").style(

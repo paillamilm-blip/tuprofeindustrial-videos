@@ -61,5 +61,27 @@ class PortadaTest(unittest.TestCase):
             self.assertNotIn("=", nombre, ident)
 
 
+class CaminoTest(unittest.TestCase):
+    def test_se_puede_llegar_al_video_sin_tocar_ninguna_sugerencia(self):
+        from tpi_videos.panel.paginas.crear import puede_continuar
+
+        self.assertEqual(puede_continuar({"idea": "una idea"}), (True, ""))
+
+    def test_sin_idea_no_hay_paso_siguiente_y_lo_dice(self):
+        from tpi_videos.panel.paginas.crear import puede_continuar
+
+        continuable, motivo = puede_continuar({"idea": "   "})
+        self.assertFalse(continuable)
+        self.assertIn("idea", motivo.lower())
+
+    def test_cada_pantalla_del_camino_tiene_su_nombre_en_la_barra(self):
+        """La barra se pinta con los nombres del paso: un paso sin nombre sería una pantalla invisible."""
+        from tpi_videos.panel.paginas import crear
+
+        self.assertEqual(crear.PASOS, ("idea", "formato", "hoja", "video"))
+        self.assertEqual(sorted(crear._NOMBRES), sorted(crear.PASOS))
+        self.assertTrue(all(str(v).strip() for v in crear._NOMBRES.values()))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -18,6 +18,7 @@ from ..emojis import EMOJIS, stickers_dir
 from ..entorno import raiz_proyecto
 from ..errores import ErrorMotor
 from ..guion import MATERIAS, Guion, Visual, a_yaml, explicar_errores
+from ..moldes import MOLDES
 from ..render import slug
 from ..revision import Revision, revisar
 from ..temas import cargar_tema
@@ -27,7 +28,7 @@ from .comun import url_medio
 
 _BLOQUE = {"texto": "", "voz": "", "emoji": ""}
 VACIO: dict[str, Any] = {
-    "titulo": "", "materia": "fisica", "nivel": "", "tema": "", "voz": "", "velocidad": "",
+    "titulo": "", "materia": "fisica", "nivel": "", "tema": "", "molde": "", "voz": "", "velocidad": "",
     "gancho": {"texto": "", "voz": "", "destacar": [], "tex": "", "emoji": ""},
     "enunciado": {"texto": "", "voz": "", "destacar": []},
     "datos": [],
@@ -372,6 +373,12 @@ class EditorGuion:
                     "outlined dense"
                 ).classes("flex-1").bind_value(d, "materia")
                 self._texto(d, "nivel", "Nivel (opcional)", "Ej. 2° medio").classes("flex-1")
+                ui.select({"": "Sin molde", **{c: m.nombre for c, m in MOLDES.items()}}, label="Molde").props(
+                    "outlined dense"
+                ).classes("flex-1").bind_value(d, "molde").tooltip(
+                    "La estructura narrativa que trajo la familia: cuántos pasos y en qué orden. "
+                    "Cámbiala o déjala en «Sin molde» si el guion es libre."
+                )
 
         self._seccion_gancho()
         self._seccion_enunciado()

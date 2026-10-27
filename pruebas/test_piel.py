@@ -152,5 +152,95 @@ class PielTest(unittest.TestCase):
         self.assertEqual(tocados, [], f"todavía nombran una constante suelta: {tocados}")
 
 
+class PortadaTest(unittest.TestCase):
+    """«Mis videos» nunca muestra un cuadro gris: si falta el fotograma, se arma la portada con el gancho."""
+
+    def test_sin_cuadro_del_video_se_arma_una_portada_con_el_gancho(self):
+        from PIL import Image
+
+        from tpi_videos.panel.biblioteca import portada_de_reserva
+
+        destino = Path("/tmp/portada_reserva.png")
+        destino.unlink(missing_ok=True)
+        ruta = portada_de_reserva("¿Pitágoras era a + b = c?", "#0B1220", "#F8FAFC", destino)
+        self.assertTrue(ruta.exists())
+        im = Image.open(ruta)
+        self.assertEqual(im.size[0] * 16, im.size[1] * 9)  # 9:16 de verdad
+        gris = im.convert("L")
+        self.assertGreater(len({p for p in gris.getdata() if p > 40}), 1, "la portada no tiene tinta")
+
+    def test_un_titulo_bajado_no_rompe_la_portada(self):
+        from tpi_videos.panel.biblioteca import portada_de_reserva
+
+        self.assertTrue(portada_de_reserva("", "#FFFFFF", "#000000", Path("/tmp/portada_vacia.png")).exists())
+
+    def test_la_clave_del_estilo_viaja_en_la_linea_de_tiempo(self):
+        """El nombre visible no sirve para cargar los colores: hace falta la clave con la que se creó."""
+        fuente = Path("src/tpi_videos/render.py").read_text(encoding="utf-8")
+        self.assertIn('"tema_clave"', fuente)
+
+    def test_un_video_sin_miniatura_devuelve_la_portada_de_reserva(self):
+        from tpi_videos.panel import biblioteca
+
+        video = biblioteca.Video(
+            carpeta=Path("/tmp/sin_miniatura"),
+            titulo="Un gancho cualquiera",
+            tema="Neón cian",
+            tema_clave=None,
+            materia="",
+            molde="",
+            duracion=0.0,
+            fecha=0.0,
+            final=None,
+            borrador=None,
+            guion=None,
+            kit=None,
+        )
+        self.assertTrue(biblioteca.miniatura(video))
+
+
+class MuroDeVideosTest(unittest.TestCase):
+    """Buscador, filtro y grilla: la pila de 24 tarjetas se vuelve un muro que se recorre de un vistazo."""
+
+    def _video(self, titulo: str, materia: str, borrador: bool) -> object:
+        from tpi_videos.panel.biblioteca import Video
+
+        return Video(
+            carpeta=Path("/tmp"),
+            titulo=titulo,
+            tema="Pizarra nocturna",
+            tema_clave=None,
+            materia=materia,
+            molde="",
+            duracion=12.0,
+            fecha=0.0,
+            final=None if borrador else Path("/tmp/x.mp4"),
+            borrador=Path("/tmp/x_borrador.mp4") if borrador else None,
+            guion=None,
+            kit=None,
+        )
+
+    def test_el_buscador_lee_el_titulo_y_la_materia(self):
+        from tpi_videos.panel.paginas.videos import filtrar
+
+        videos = [self._video("El cubo partido", "geometria", False), self._video("Rampas", "fisica", True)]
+        self.assertEqual([v.titulo for v in filtrar(videos, "cubo", "todo")], ["El cubo partido"])
+        self.assertEqual([v.titulo for v in filtrar(videos, "FISICA", "todo")], ["Rampas"])
+
+    def test_el_filtro_deja_ver_solo_borradores_o_solo_publicables(self):
+        from tpi_videos.panel.paginas.videos import filtrar
+
+        videos = [self._video("Uno", "matematica", False), self._video("Dos", "matematica", True)]
+        self.assertEqual([v.titulo for v in filtrar(videos, "", "borrador")], ["Dos"])
+        self.assertEqual([v.titulo for v in filtrar(videos, "", "publicable")], ["Uno"])
+        self.assertEqual(len(filtrar(videos, "", "todo")), 2)
+
+    def test_la_etiqueta_de_la_familia_sale_del_molde_del_guion(self):
+        from tpi_videos.panel.paginas.videos import etiqueta_familia
+
+        self.assertEqual(etiqueta_familia("mito_realidad"), "Desafíos y trampas cognitivas")
+        self.assertEqual(etiqueta_familia(""), "Molde libre")
+
+
 if __name__ == "__main__":
     unittest.main()
