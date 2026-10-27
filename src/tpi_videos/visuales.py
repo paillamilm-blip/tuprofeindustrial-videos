@@ -12,8 +12,6 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-TIPOS_VISUAL = ("grafico_funcion", "diagrama_fuerzas", "circuito", "poligono_regular")
-
 # Cuánto suma cada dibujo a la duración estimada: se revela mientras se habla, pero el ojo lo sigue mirando.
 SEGUNDOS_VISUAL = {
     "grafico_funcion": 3.0,
@@ -91,6 +89,352 @@ VECTORES: dict[str, str] = {
 
 CUERPOS = ("bloque", "bola")
 ARREGLOS = ("serie", "paralelo")
+
+# --------------------------------------------------------------------------------------
+# El catálogo: qué campos y qué marcas tiene cada dibujo. El panel lo lee para armar el
+# formulario, así que agregar un tipo al modelo sin agregarlo acá rompe una prueba.
+# --------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CampoVisual:
+    clave: str
+    etiqueta: str
+    forma: str = "texto"  # texto | numero | numeros | lista | opcion | booleano
+    ayuda: str = ""
+    opciones: tuple[tuple[str, str], ...] = ()
+
+
+@dataclass(frozen=True)
+class TipoVisual:
+    clave: str
+    nombre: str
+    materia: str  # matematica | fisica | ingenieria
+    icono: str
+    campos: tuple[str, ...]
+    marcas: tuple[str, ...] = ()
+    ejemplo: dict[str, Any] = field(default_factory=dict)
+
+
+_MATERIAS = {"matematica": "Matemática", "fisica": "Física", "ingenieria": "Ingeniería"}
+
+CAMPOS: dict[str, CampoVisual] = {
+    c.clave: c
+    for c in [
+        CampoVisual("funcion", "La función, en texto plano", "texto", "-4.9t^2 + 20   ·   12/U   ·   sin(x)"),
+        CampoVisual("variable", "La variable", "texto", "t"),
+        CampoVisual("eje_x", "Eje horizontal", "texto", "tiempo (s)"),
+        CampoVisual("eje_y", "Eje vertical", "texto", "altura (m)"),
+        CampoVisual("rango", "Rango del eje horizontal", "numeros", "0 a 2,5"),
+        CampoVisual("marcar", "Puntos con su valor escrito", "numeros", "0; 2,45"),
+        CampoVisual("cuerpo", "El cuerpo", "opcion", "", (("bloque", "Bloque (una caja)"), ("bola", "Bola"))),
+        CampoVisual("vectores", "Flechas del cuerpo", "lista"),
+        CampoVisual("angulo", "Ángulo en grados", "numero", "30"),
+        CampoVisual("descomponer", "Partir el peso en P sen θ y P cos θ", "booleano"),
+        CampoVisual("fuente", "La fuente", "texto", "12 V"),
+        CampoVisual("arreglo", "Arreglo", "opcion", "", (("serie", "En serie"), ("paralelo", "En paralelo"))),
+        CampoVisual("resistencias", "Resistencias, de 2 a 4", "lista", "4 Ω, 6 Ω"),
+        CampoVisual("lados", "Lados del polígono (de 3 a 8)", "numero", "6"),
+        CampoVisual("lado", "Medida de un lado o arista", "texto", "12 cm"),
+        CampoVisual("anotar", "Qué anotar en el dibujo", "lista"),
+        CampoVisual("velocidad", "Velocidad de lanzamiento", "texto", "20 m/s"),
+        CampoVisual(
+            "figura",
+            "El sólido",
+            "opcion",
+            "",
+            (("cubo", "Cubo"), ("cilindro", "Cilindro"), ("cono", "Cono"), ("esfera", "Esfera")),
+        ),
+        CampoVisual("radio", "Radio", "texto", "3 cm"),
+        CampoVisual("altura", "Altura", "texto", "5 cm"),
+        CampoVisual("solo_a", "Cuántos sólo en A", "numero", "25"),
+        CampoVisual("solo_b", "Cuántos sólo en B", "numero", "13"),
+        CampoVisual("ambos", "Cuántos en los dos", "numero", "12"),
+        CampoVisual("fuera", "Cuántos en ninguno", "numero", "5"),
+        CampoVisual("extremo_a", "Extremo izquierdo (o el origen del rayo)", "numero", "2"),
+        CampoVisual("extremo_b", "Extremo derecho (vacío = rayo)", "numero", "7"),
+        CampoVisual("incluye_a", "Incluye el extremo izquierdo", "booleano"),
+        CampoVisual("incluye_b", "Incluye el extremo derecho", "booleano"),
+        CampoVisual("derecha", "El rayo apunta a la derecha", "booleano"),
+        CampoVisual("favorables", "Casos favorables", "numero", "3"),
+        CampoVisual("totales", "Casos totales", "numero", "8"),
+        CampoVisual("categorias", "Categorías con su valor", "lista", "Fútbol 12, Básquetbol 8"),
+        CampoVisual("amplitud", "Amplitud", "texto", "0,5 m"),
+        CampoVisual("longitud_onda", "Longitud de onda (λ)", "texto", "2 m"),
+        CampoVisual("periodo", "Periodo en segundos", "numero", "0,4"),
+        CampoVisual("n1", "Índice del medio de origen", "numero", "1,0"),
+        CampoVisual("n2", "Índice del medio al que pasa", "numero", "1,33"),
+        CampoVisual("angulo_incidence", "Ángulo de incidencia (desde la normal)", "numero", "30"),
+        CampoVisual("longitud", "Longitud", "texto", "1 m"),
+        CampoVisual("constante", "Constante del resorte", "texto", "200 N/m"),
+        CampoVisual("extension", "Extensión", "texto", "10 cm"),
+        CampoVisual("masa_a", "Masa A", "texto", "3 kg"),
+        CampoVisual("masa_b", "Masa B", "texto", "2 kg"),
+        CampoVisual("capacidad", "Capacidad del tanque", "texto", "120 L"),
+        CampoVisual("entrada", "Lo que entra por la llave", "texto", "8 L/min"),
+        CampoVisual("salida", "Lo que pierde por la fisura", "texto", "2 L/min"),
+        CampoVisual("carga", "La carga", "texto", "200 N"),
+        CampoVisual("repartida", "La carga va repartida en todo el tramo", "booleano"),
+        CampoVisual("base", "Base", "texto", "6 m"),
+        CampoVisual("adelante", "Ganancia del bloque directo", "texto", "10"),
+        CampoVisual("retro", "Ganancia de la realimentación", "texto", "0.2"),
+        CampoVisual("negativa", "La realimentación es negativa", "booleano"),
+        CampoVisual("dientes_a", "Dientes de la conductora", "texto", "20"),
+        CampoVisual("dientes_b", "Dientes de la conducida", "texto", "60"),
+        CampoVisual("rpm", "Vueltas del eje de entrada", "texto", "1200 rpm"),
+        CampoVisual("sigma_x", "Esfuerzo normal en X", "texto", "80 MPa"),
+        CampoVisual("sigma_y", "Esfuerzo normal en Y", "texto", "20 MPa"),
+        CampoVisual("cortante", "Esfuerzo cortante", "texto", "30 MPa"),
+    ]
+}
+
+VISUALES: dict[str, TipoVisual] = {
+    t.clave: t
+    for t in [
+        TipoVisual(
+            "grafico_funcion",
+            "Gráfico de la función",
+            "matematica",
+            "📈",
+            ("funcion", "variable", "eje_x", "eje_y", "rango", "marcar"),
+            ejemplo={"funcion": "-x^2 + 4x", "eje_x": "x", "eje_y": "y"},
+        ),
+        TipoVisual(
+            "poligono_regular",
+            "Polígono regular",
+            "matematica",
+            "⬡",
+            ("lados", "lado", "anotar"),
+            MARCAS_POLIGONO,
+            ejemplo={"lados": 6, "lado": "12 cm", "anotar": ["apotema", "angulo_interior"]},
+        ),
+        TipoVisual(
+            "circulo_trig",
+            "Círculo trigonométrico",
+            "matematica",
+            "◯",
+            ("angulo", "anotar"),
+            MARCAS_CIRCULO,
+            ejemplo={"angulo": 30, "anotar": ["seno", "coseno"]},
+        ),
+        TipoVisual(
+            "solido",
+            "Sólido (lámina)",
+            "matematica",
+            "🧊",
+            ("figura", "lado", "radio", "altura", "anotar"),
+            MARCAS_SOLIDO,
+            ejemplo={"figura": "cilindro", "radio": "3 cm", "altura": "5 cm", "anotar": ["volumen"]},
+        ),
+        TipoVisual(
+            "venn",
+            "Diagrama de Venn",
+            "matematica",
+            "◌◌",
+            ("solo_a", "solo_b", "ambos", "fuera", "anotar"),
+            MARCAS_VENN,
+            ejemplo={"solo_a": 25, "solo_b": 13, "ambos": 12},
+        ),
+        TipoVisual(
+            "recta",
+            "Recta numérica",
+            "matematica",
+            "📏",
+            ("extremo_a", "extremo_b", "incluye_a", "incluye_b", "derecha"),
+            (),
+            ejemplo={"extremo_a": 2, "extremo_b": 7},
+        ),
+        TipoVisual(
+            "probabilidad",
+            "Urna de probabilidad",
+            "matematica",
+            "🎲",
+            ("favorables", "totales", "anotar"),
+            MARCAS_PROBABILIDAD,
+            ejemplo={"favorables": 3, "totales": 8, "anotar": ["probabilidad"]},
+        ),
+        TipoVisual(
+            "torta",
+            "Torta de porcentajes",
+            "matematica",
+            "🥧",
+            ("categorias",),
+            (),
+            ejemplo={"categorias": ["Fútbol 12", "Básquetbol 8", "Natación 4"]},
+        ),
+        TipoVisual(
+            "barras",
+            "Barras de datos",
+            "matematica",
+            "📊",
+            ("categorias",),
+            (),
+            ejemplo={"categorias": ["2023 40", "2024 55", "2025 70"]},
+        ),
+        TipoVisual(
+            "diagrama_fuerzas",
+            "Diagrama de fuerzas",
+            "fisica",
+            "➡️",
+            ("cuerpo", "vectores", "angulo", "descomponer"),
+            (),
+            ejemplo={"cuerpo": "bloque", "vectores": ["P", "N"], "angulo": 30, "descomponer": True},
+        ),
+        TipoVisual(
+            "proyectil",
+            "Tiro parabólico",
+            "fisica",
+            "🎯",
+            ("velocidad", "angulo", "anotar"),
+            MARCAS_PROYECTIL,
+            ejemplo={"velocidad": "20 m/s", "angulo": 30, "anotar": ["alcance"]},
+        ),
+        TipoVisual(
+            "circuito",
+            "Circuito",
+            "fisica",
+            "🔌",
+            ("fuente", "arreglo", "resistencias"),
+            (),
+            ejemplo={"fuente": "12 V", "arreglo": "serie", "resistencias": ["4 Ω", "6 Ω"]},
+        ),
+        TipoVisual(
+            "onda",
+            "Onda anotada",
+            "fisica",
+            "〰️",
+            ("amplitud", "longitud_onda", "periodo", "anotar"),
+            MARCAS_ONDA,
+            ejemplo={"amplitud": "0,5 m", "longitud_onda": "2 m", "periodo": 0.4, "anotar": ["velocidad"]},
+        ),
+        TipoVisual(
+            "energia",
+            "Barras de energía",
+            "fisica",
+            "🔋",
+            ("categorias",),
+            (),
+            ejemplo={"categorias": ["Cinética 60", "Térmica 40"]},
+        ),
+        TipoVisual(
+            "optica",
+            "Refracción de la luz",
+            "fisica",
+            "🔦",
+            ("n1", "n2", "angulo_incidence"),
+            (),
+            ejemplo={"n1": 1.0, "n2": 1.33, "angulo_incidence": 30},
+        ),
+        TipoVisual(
+            "pendulo",
+            "Péndulo",
+            "fisica",
+            "🕰️",
+            ("longitud", "angulo", "anotar"),
+            MARCAS_PENDULO,
+            ejemplo={"longitud": "1 m", "angulo": 20, "anotar": ["periodo"]},
+        ),
+        TipoVisual(
+            "resorte",
+            "Resorte",
+            "fisica",
+            "🌀",
+            ("constante", "extension", "anotar"),
+            MARCAS_RESORTE,
+            ejemplo={"constante": "200 N/m", "extension": "10 cm", "anotar": ["fuerza"]},
+        ),
+        TipoVisual(
+            "polea",
+            "Polea con dos masas",
+            "fisica",
+            "🪝",
+            ("masa_a", "masa_b", "anotar"),
+            MARCAS_POLEA,
+            ejemplo={"masa_a": "3 kg", "masa_b": "2 kg", "anotar": ["aceleracion", "tension"]},
+        ),
+        TipoVisual(
+            "tanque",
+            "Tanque con llave y fisura",
+            "ingenieria",
+            "🛢️",
+            ("capacidad", "entrada", "salida", "anotar"),
+            MARCAS_TANQUE,
+            ejemplo={
+                "capacidad": "120 L",
+                "entrada": "8 L/min",
+                "salida": "2 L/min",
+                "anotar": ["llenado", "vaciado"],
+            },
+        ),
+        TipoVisual(
+            "viga",
+            "Viga apoyada",
+            "ingenieria",
+            "🏗️",
+            ("longitud", "carga", "repartida", "anotar"),
+            MARCAS_VIGA,
+            ejemplo={"longitud": "4 m", "carga": "200 N", "anotar": ["reacciones"]},
+        ),
+        TipoVisual(
+            "cercha",
+            "Cercha",
+            "ingenieria",
+            "🔺",
+            ("base", "altura", "carga", "anotar"),
+            MARCAS_CERCHA,
+            ejemplo={"base": "6 m", "altura": "2 m", "carga": "500 N", "anotar": ["esfuerzo"]},
+        ),
+        TipoVisual(
+            "bloques",
+            "Lazo de control",
+            "ingenieria",
+            "📦",
+            ("adelante", "retro", "negativa", "anotar"),
+            MARCAS_BLOQUES,
+            ejemplo={"adelante": "10", "retro": "0.2", "anotar": ["lazo_cerrado"]},
+        ),
+        TipoVisual(
+            "engranaje",
+            "Pareja de engranajes",
+            "ingenieria",
+            "⚙️",
+            ("dientes_a", "dientes_b", "rpm", "anotar"),
+            MARCAS_ENGRANAJE,
+            ejemplo={
+                "dientes_a": "20",
+                "dientes_b": "60",
+                "rpm": "1200 rpm",
+                "anotar": ["velocidad", "relacion"],
+            },
+        ),
+        TipoVisual(
+            "mohr",
+            "Círculo de Mohr",
+            "ingenieria",
+            "📐",
+            ("sigma_x", "sigma_y", "cortante", "anotar"),
+            MARCAS_MOHR,
+            ejemplo={
+                "sigma_x": "80 MPa",
+                "sigma_y": "20 MPa",
+                "cortante": "30 MPa",
+                "anotar": ["principales"],
+            },
+        ),
+    ]
+}
+
+
+def opciones_select() -> dict[str, str]:
+    """La lista del selector: 'Matemática · Polígono regular'. ui.select no acepta optgroup, así que
+    la materia va escrita en la etiqueta y el orden agrupa."""
+    salida = {"": "Sin dibujo"}
+    for materia in ("matematica", "fisica", "ingenieria"):
+        for tipo in VISUALES.values():
+            if tipo.materia == materia:
+                salida[tipo.clave] = f"{_MATERIAS[materia]} · {tipo.nombre}"
+    return salida
+
 
 _MUESTREO = 401  # puntos con los que se buscan raíces y vértices
 
