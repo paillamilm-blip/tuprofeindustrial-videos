@@ -228,6 +228,11 @@ Descubiertos al escribir los 17 temas; sin ellos, estos estilos no se pueden ele
 2. **El borde de los subtítulos es negro fijo** (`subtitulos.py:229`, `&H00000000`): con texto oscuro sobre
    crema se embarra. Sale un `subtitulos.color_borde: str` con default `#000000` (nadie cambia el default,
    los temas claros lo ponen en su color de fondo).
+   > **Corregido al medir (27-10-2026, al ejecutar A.3):** la clave quedó operativa —el ASS ahora lleva
+   > `&H00DFE7E9` en vez de `&H00000000` en `rotulador`— pero **hoy no cambia un píxel**: los seis temas de
+   > fondo claro dibujan el subtítulo con `borde: 0`, así que el contorno no se pinta. Dos fotogramas reales
+   > del mismo segundo (`/tmp/antes_borde.png`, `/tmp/despues_borde.png`) salieron byte a byte iguales. Lo que
+   > se ganó es que cuando él suba el borde desde *Estilos* salga del color del papel.
 3. **El panel ofrece 5 de las 8 letras** (`tipografia.py:38-39`): `PARA_TITULOS` y `PARA_TEXTO` pasan a
    listarse desde `FAMILIAS`.
 
