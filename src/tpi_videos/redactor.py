@@ -81,12 +81,16 @@ class PasoIA(BaseModel):
         "barras",
         "onda",
         "energia",
+        "optica",
+        "pendulo",
+        "resorte",
+        "polea",
     ] = Field(
         default="",
         description=(
             'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
-            '"circulo", "solido", "venn", "recta", "probabilidad", "torta", "barras", "onda" o "energia" '
-            "(máximo 1 en el guion)"
+            '"circulo", "solido", "venn", "recta", "probabilidad", "torta", "barras", "onda", "energia", '
+            '"optica", "pendulo", "resorte" o "polea" (máximo 1 en el guion)'
         ),
     )
     funcion: str = Field(
@@ -174,6 +178,24 @@ class PasoIA(BaseModel):
         default=None,
         description='Con dibujo="onda": segundos entre crestas; hace falta para anotar "velocidad"',
     )
+    n1: float | None = Field(
+        default=None, description='Con dibujo="optica": índice del medio que llega, ej. 1.0'
+    )
+    n2: float | None = Field(
+        default=None, description='Con dibujo="optica": índice del medio al que pasa, ej. 1.33'
+    )
+    angulo_incidence: float | None = Field(
+        default=None, description='Con dibujo="optica": grados desde la normal, ej. 30'
+    )
+    longitud: str = Field(
+        default="", description='Con dibujo="pendulo": largo del hilo con su unidad, ej. "1 m"'
+    )
+    constante: str = Field(
+        default="", description='Con dibujo="resorte": constante con unidad, ej. "200 N/m"'
+    )
+    extension: str = Field(default="", description='Con dibujo="resorte": cuánto se estira, ej. "10 cm"')
+    masa_a: str = Field(default="", description='Con dibujo="polea": primera masa con su unidad, ej. "3 kg"')
+    masa_b: str = Field(default="", description='Con dibujo="polea": segunda masa, distinta de la primera')
     anotar: list[str] = Field(
         default_factory=list,
         description=(
@@ -182,7 +204,8 @@ class PasoIA(BaseModel):
             'con "circulo", de "seno", "coseno", "tangente"; '
             'con "solido", de "volumen", "area"; '
             'con "venn", "total"; con "probabilidad", "probabilidad"; con "onda", "velocidad"; '
-            'con "recta", "torta", "barras" o "energia" va vacío'
+            'con "pendulo", "periodo"; con "resorte", "fuerza"; con "polea", "aceleracion" o "tension"; '
+            'con "recta", "torta", "barras", "energia" u "optica" va vacío'
         ),
     )
 
@@ -386,6 +409,10 @@ _DIBUJOS = {
     "barras": "barras",
     "onda": "onda",
     "energia": "energia",
+    "optica": "optica",
+    "pendulo": "pendulo",
+    "resorte": "resorte",
+    "polea": "polea",
 }
 
 
@@ -462,6 +489,34 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["longitud_onda"] = _texto(p.longitud_onda)
         if p.periodo is not None:
             visual["periodo"] = float(p.periodo)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "optica":
+        if p.n1 is not None:
+            visual["n1"] = float(p.n1)
+        if p.n2 is not None:
+            visual["n2"] = float(p.n2)
+        if p.angulo_incidence is not None:
+            visual["angulo_incidence"] = float(p.angulo_incidence)
+    elif tipo == "pendulo":
+        if p.longitud:
+            visual["longitud"] = _texto(p.longitud)
+        if p.angulo:
+            visual["angulo"] = float(p.angulo)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "resorte":
+        if p.constante:
+            visual["constante"] = _texto(p.constante)
+        if p.extension:
+            visual["extension"] = _texto(p.extension)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "polea":
+        if p.masa_a:
+            visual["masa_a"] = _texto(p.masa_a)
+        if p.masa_b:
+            visual["masa_b"] = _texto(p.masa_b)
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     elif tipo == "poligono_regular":

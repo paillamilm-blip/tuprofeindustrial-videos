@@ -40,6 +40,10 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - dibujo = "barras": las barras de datos con las mismas categorias de la torta (de 2 a 6, valor al final). El motor escala las alturas al valor mayor y escribe cada valor sobre su barra.
 - dibujo = "onda": una onda transversal con amplitud y longitud_onda (cada una con su unidad, ej. "0,5 m" y "2 m"). Si das periodo (segundos), el motor calcula la frecuencia y la velocidad; con anotar puedes pedir "velocidad" (necesita el periodo).
 - dibujo = "energia": la energía total repartida en una barra apilada, con categorias (de 2 a 6) como "Cinética 60". El motor calcula solo el total y el porcentaje de cada tramo.
+- dibujo = "optica": la refracción de Snell en una superficie: n1 y n2 son los índices de refracción (números: aire 1.0, agua 1.33, vidrio 1.5) y angulo_incidence va en grados medidos DESDE la normal (0 a 90). El motor calcula solo el ángulo del otro lado; si el paso de un medio denso a uno menos deno lo supera, dibuja la reflexión total. anotar va vacío: los dos ángulos salen siempre.
+- dibujo = "pendulo": un hilo con su peso: longitud con su unidad ("1 m", "80 cm") y angulo = lo que se aparta de la vertical, en grados entre 0 y 90. El motor calcula solo el período con T = 2π√(L/g); con anotar puedes pedir "periodo".
+- dibujo = "resorte": la ley de Hooke anclada a una pared: constante ("200 N/m") y extension con su unidad ("10 cm"). El motor pasa los centímetros a metros y calcula solo la fuerza F = k·x; con anotar puedes pedir "fuerza".
+- dibujo = "polea": la máquina de Atwood con masa_a y masa_b, cada una con su unidad ("3 kg" y "2 kg"). Las dos masas tienen que ser distintas: con masas iguales la polea no se mueve y no hay video. El motor calcula solo la aceleración y la tensión; con anotar eliges como máximo 2 de "aceleracion", "tension".
 - Los campos que no corresponden al dibujo elegido se dejan vacíos ("" o []). No inventes datos: el dibujo tiene que salir de los números del ejercicio.
 
 ### El molde narrativo (pista MOLDE)

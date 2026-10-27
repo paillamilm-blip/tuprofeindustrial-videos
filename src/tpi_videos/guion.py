@@ -20,9 +20,12 @@ from .tex import llaves_balanceadas
 from .visuales import (
     MARCAS_CIRCULO,
     MARCAS_ONDA,
+    MARCAS_PENDULO,
+    MARCAS_POLEA,
     MARCAS_POLIGONO,
     MARCAS_PROBABILIDAD,
     MARCAS_PROYECTIL,
+    MARCAS_RESORTE,
     MARCAS_SOLIDO,
     MARCAS_VENN,
     SEGUNDOS_VISUAL,
@@ -31,10 +34,14 @@ from .visuales import (
     analizar_energia,
     analizar_funcion,
     analizar_onda,
+    analizar_optica,
+    analizar_pendulo,
+    analizar_polea,
     analizar_poligono,
     analizar_probabilidad,
     analizar_proyectil,
     analizar_recta,
+    analizar_resorte,
     analizar_solido,
     analizar_torta,
     analizar_venn,
@@ -151,6 +158,10 @@ class Visual(_Base):
         "barras",
         "onda",
         "energia",
+        "optica",
+        "pendulo",
+        "resorte",
+        "polea",
     ]
 
     # grafico_funcion
@@ -209,6 +220,22 @@ class Visual(_Base):
     amplitud: str | None = None  # con su unidad: '0,5 m'
     longitud_onda: str | None = None  # lambda, con su unidad: '2 m'
     periodo: float | None = None  # segundos entre crestas; si falta, la onda no dice su velocidad
+
+    # optica
+    n1: float | None = None  # índice de refracción del medio del raye que llega
+    n2: float | None = None  # y del medio al que pasa
+    angulo_incidence: float | None = None  # grados medidos desde la normal
+
+    # pendulo (reusa angulo: cuánto se apartó de la vertical)
+    longitud: str | None = None  # del hilo, con su unidad: '1 m'
+
+    # resorte
+    constante: str | None = None  # '200 N/m'
+    extension: str | None = None  # '10 cm' (el motor la pasa a metros él solo)
+
+    # polea
+    masa_a: str | None = None  # '3 kg'
+    masa_b: str | None = None  # '2 kg'
 
     _listas = field_validator(
         "rango", "marcar", "vectores", "resistencias", "anotar", "categorias", mode="before"
@@ -331,6 +358,47 @@ class Visual(_Base):
                     "la barra de energía necesita sus tramos, ej. categorias: ['Cinética 60', 'Térmica 40']"
                 )
             analizar_energia(self.categorias)
+        elif self.tipo == "optica":
+            if self.n1 is None or self.n2 is None or self.angulo_incidence is None:
+                raise ValueError(
+                    "la óptica necesita sus dos índices y el ángulo, "
+                    "ej. n1: 1.0, n2: 1.33 y angulo_incidence: 30"
+                )
+            analizar_optica(self.n1, self.n2, self.angulo_incidence)
+            if self.anotar:
+                raise ValueError("la refracción no lleva marcas: sus dos ángulos van siempre")
+        elif self.tipo == "pendulo":
+            if not (self.longitud or "").strip() or self.angulo is None:
+                raise ValueError(
+                    "el péndulo necesita su longitud y su ángulo, ej. longitud: '1 m' y angulo: 20"
+                )
+            analizar_pendulo(self.longitud, self.angulo)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_PENDULO]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca del péndulo; el motor sabe anotar {', '.join(MARCAS_PENDULO)}"
+                )
+        elif self.tipo == "resorte":
+            if not (self.constante or "").strip() or not (self.extension or "").strip():
+                raise ValueError(
+                    "el resorte necesita su constante y su extensión, ej. constante: '200 N/m' y extension: '10 cm'"
+                )
+            analizar_resorte(self.constante, self.extension)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_RESORTE]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca del resorte; "
+                    f"el motor sabe anotar {', '.join(MARCAS_RESORTE)}"
+                )
+        elif self.tipo == "polea":
+            if not (self.masa_a or "").strip() or not (self.masa_b or "").strip():
+                raise ValueError("la polea necesita sus dos masas, ej. masa_a: '3 kg' y masa_b: '2 kg'")
+            analizar_polea(self.masa_a, self.masa_b)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_POLEA]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de la polea; el motor sabe anotar {', '.join(MARCAS_POLEA)}"
+                )
         elif self.tipo == "poligono_regular":
             if not (self.lado or "").strip():
                 raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
@@ -423,6 +491,30 @@ class Visual(_Base):
         if self.tipo != "energia":
             raise ValueError(f"«{self.tipo}» no es una barra de energía")
         return analizar_energia(self.categorias)
+
+    def optica(self):
+        """La refracción resuelta (ángulo que sale o reflexión total). Sólo en óptica."""
+        if self.tipo != "optica":
+            raise ValueError(f"«{self.tipo}» no es una refracción")
+        return analizar_optica(self.n1 or 1, self.n2 or 1, self.angulo_incidence or 0)
+
+    def pendulo(self):
+        """El péndulo con su período ya calculado."""
+        if self.tipo != "pendulo":
+            raise ValueError(f"«{self.tipo}» no es un péndulo")
+        return analizar_pendulo(self.longitud or "", self.angulo or 0)
+
+    def resorte(self):
+        """La fuerza del resorte con la extensión ya pasada a metros."""
+        if self.tipo != "resorte":
+            raise ValueError(f"«{self.tipo}» no es un resorte")
+        return analizar_resorte(self.constante or "", self.extension or "")
+
+    def polea(self):
+        """La máquina de Atwood con su aceleración y su tensión."""
+        if self.tipo != "polea":
+            raise ValueError(f"«{self.tipo}» no es una polea")
+        return analizar_polea(self.masa_a or "", self.masa_b or "")
 
     def poligono(self):
         """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
@@ -748,6 +840,24 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
         campos.append(("longitud_onda", _simples(v.get("longitud_onda") or "")))
         if v.get("periodo") is not None:
             campos.append(("periodo", _numero(v["periodo"])))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "optica":
+        for clave in ("n1", "n2", "angulo_incidence"):
+            campos.append((clave, _numero(v.get(clave) or 0)))
+    elif tipo == "pendulo":
+        campos.append(("longitud", _simples(v.get("longitud") or "")))
+        campos.append(("angulo", _numero(v.get("angulo") or 0)))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "resorte":
+        campos.append(("constante", _simples(v.get("constante") or "")))
+        campos.append(("extension", _simples(v.get("extension") or "")))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "polea":
+        campos.append(("masa_a", _simples(v.get("masa_a") or "")))
+        campos.append(("masa_b", _simples(v.get("masa_b") or "")))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     else:

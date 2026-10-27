@@ -41,10 +41,14 @@ from .visuales import (
     Energia,
     Funcion,
     Onda,
+    Optica,
+    Pendulo,
+    Polea,
     Poligono,
     Probabilidad,
     Proyectil,
     Recta,
+    Resorte,
     Solido,
     Torta,
     Venn,
@@ -111,6 +115,29 @@ def _parche(m: Mobject, papel: str, holgura: float = 0.14) -> VGroup:
         .move_to(m.get_center())
     )
     return VGroup(fondo, m)
+
+
+def _cartela(
+    col: Any,
+    papel: str,
+    parches: VGroup,
+    rótulos: VGroup,
+    texto: str,
+    donde: np.ndarray,
+    tam: int = 17,
+    ancla: np.ndarray | None = None,
+) -> None:
+    """Una medida escrita sobre su trozo de papel, guardada en las dos pilas del dibujo.
+
+    ``ancla`` pega el borde del rótulo que mira hacia el dibujo (LEFT/RIGHT), para que la cota
+    no quede tapada por la propia letra.
+    """
+    lab = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
+    if ancla is not None:
+        lab.shift(ancla * (lab.width / 2))
+    fondo, lab = _parche(lab, papel, 0.1)
+    parches.add(fondo)
+    rótulos.add(lab)
 
 
 def _graduacion(x0: float, x1: float, maximo: int = 5) -> list[float]:
@@ -569,7 +596,9 @@ def poligono_regular(
 # ------------------------------------------------------------------------------------------
 
 
-def proyectil(figura: Proyectil, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+def proyectil(
+    figura: Proyectil, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
     """La parábola del vuelo apoyada en el suelo, con la flecha del lanzamiento y las marcas del guion.
 
     Se escala con el alcance y la altura que calculó ``visuales.py``: la forma de la curva es la
@@ -594,7 +623,7 @@ def proyectil(figura: Proyectil, marcas: list[str], col: Any, ancho: float, alto
 
     def medida(texto: str, donde: np.ndarray, tam: float = 22) -> None:
         rotulo = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
-        fondo, rotulo = _parche(rotulo, "#FFFFFF", 0.16)
+        fondo, rotulo = _parche(rotulo, papel, 0.16)
         parches.add(fondo)
         rótulos.add(rotulo)
 
@@ -649,7 +678,9 @@ def proyectil(figura: Proyectil, marcas: list[str], col: Any, ancho: float, alto
 # ------------------------------------------------------------------------------------------
 
 
-def circulo_trig(figura: AnguloTrig, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+def circulo_trig(
+    figura: AnguloTrig, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
     """El radio girado hasta el ángulo: el seno es su sombra vertical y el coseno la horizontal.
 
     Los tres segmentos se dibujan sobre el mismo círculo, así «sen 30° = 0,5» deja de ser un
@@ -667,7 +698,7 @@ def circulo_trig(figura: AnguloTrig, marcas: list[str], col: Any, ancho: float, 
 
     def medida(texto: str, donde: np.ndarray, tam: float = 22) -> None:
         rotulo = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
-        fondo, rotulo = _parche(rotulo, "#FFFFFF", 0.16)
+        fondo, rotulo = _parche(rotulo, papel, 0.16)
         parches.add(fondo)
         rótulos.add(rotulo)
 
@@ -713,7 +744,9 @@ def _sufijo_solido(figura: Solido, potencia: int) -> str:
     return f" {figura.unidad}{'³' if potencia == 3 else '²'}" if figura.unidad else ""
 
 
-def solido(figura: Solido, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+def solido(
+    figura: Solido, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
     """El cuerpo como en la lámina del libro: perspectiva chica, medidas acotadas y V y A escritas.
 
     No es un 3D de verdad: es el dibujo que el alumno reconoce del cuaderno, con el radio, la
@@ -734,7 +767,7 @@ def solido(figura: Solido, marcas: list[str], col: Any, ancho: float, alto: floa
 
     def medida(texto: str, donde: np.ndarray, tam: float = 22) -> None:
         rotulo = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
-        fondo, rotulo = _parche(rotulo, "#FFFFFF", 0.16)
+        fondo, rotulo = _parche(rotulo, papel, 0.16)
         parches.add(fondo)
         rótulos.add(rotulo)
 
@@ -828,7 +861,9 @@ def solido(figura: Solido, marcas: list[str], col: Any, ancho: float, alto: floa
 # ------------------------------------------------------------------------------------------
 
 
-def venn(figura: Venn, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+def venn(
+    figura: Venn, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
     """Los dos círculos que se cruzan con su número en cada región: el total lo saca el motor."""
     r = min(alto * 0.33, ancho * 0.15)
     d = r * 0.62
@@ -840,7 +875,7 @@ def venn(figura: Venn, marcas: list[str], col: Any, ancho: float, alto: float) -
 
     def rotulo(texto: str, donde: np.ndarray, color: str, tam: float = 24) -> None:
         m = c.texto(texto, tam, SEMIBOLD, color).move_to(donde)
-        fondo, m = _parche(m, "#FFFFFF", 0.16)
+        fondo, m = _parche(m, papel, 0.16)
         parches.add(fondo)
         rótulos.add(m)
 
@@ -858,7 +893,9 @@ def venn(figura: Venn, marcas: list[str], col: Any, ancho: float, alto: float) -
     return Dibujo(mobs=todo, trazo=rayas, aparece=[*rótulos])
 
 
-def recta(figura: Recta, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+def recta(
+    figura: Recta, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
     """La recta con sus rayitas y números, y el intervalo (o rayo) subrayado en amarillo."""
     x0, x1 = figura.x0, figura.x1
     eje = Line([x0, 0, 0], [x1, 0, 0], buff=0).set_stroke(col.tenue, 4)
@@ -868,7 +905,7 @@ def recta(figura: Recta, marcas: list[str], col: Any, ancho: float, alto: float)
     for t in _graduacion(x0, x1, maximo=7):
         rayas.append(Line([t, -0.08, 0], [t, 0.08, 0], buff=0).set_stroke(col.tenue, 3))
         m = c.texto(_numero_latex(t), 16, SEMIBOLD, col.tenue).move_to([t, -0.34, 0])
-        fondo, m = _parche(m, "#FFFFFF", 0.12)
+        fondo, m = _parche(m, papel, 0.12)
         parches.add(fondo)
         rótulos.add(m)
 
@@ -890,7 +927,9 @@ def recta(figura: Recta, marcas: list[str], col: Any, ancho: float, alto: float)
     return Dibujo(mobs=todo, trazo=rayas, aparece=[*puntos, *rótulos])
 
 
-def probabilidad(figura: Probabilidad, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+def probabilidad(
+    figura: Probabilidad, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
     """La urna dibujada: los casos favorables en rojo, el resto en gris, y el cociente escrito."""
     paso = 0.42
     columnas = min(10, figura.totales)
@@ -910,7 +949,7 @@ def probabilidad(figura: Probabilidad, marcas: list[str], col: Any, ancho: float
             SEMIBOLD,
             col.texto,
         ).move_to([0.0, -((filas - 1) / 2) * paso - 0.5, 0.0])
-        fondo, m = _parche(m, "#FFFFFF", 0.16)
+        fondo, m = _parche(m, papel, 0.16)
         parches.add(fondo)
         rótulos.add(m)
 
@@ -933,7 +972,7 @@ def _porcentaje(fraccion: float) -> str:
     return f"{_numero_latex(fraccion * 100)}%"
 
 
-def torta(datos: Torta, col: Any, ancho: float, alto: float) -> Dibujo:
+def torta(datos: Torta, col: Any, ancho: float, alto: float, papel: str = "#FFFFFF") -> Dibujo:
     """La torta de porcentajes: cada porción con su nombre y su porcentaje al lado."""
     r = min(alto * 0.40, ancho * 0.20)
     colores = _paleta(col)
@@ -951,7 +990,7 @@ def torta(datos: Torta, col: Any, ancho: float, alto: float) -> Dibujo:
         pos = u * (r + 0.12)
         lab = c.texto(f"{cat.nombre} {_porcentaje(cat.fraccion)}", 17, SEMIBOLD, col.texto)
         lab.move_to(pos + (RIGHT if u[0] >= 0 else LEFT) * (lab.width / 2))
-        fondo, lab = _parche(lab, "#FFFFFF", 0.12)
+        fondo, lab = _parche(lab, papel, 0.12)
         parches.add(fondo)
         rótulos.add(lab)
         angulo += barrido
@@ -961,7 +1000,7 @@ def torta(datos: Torta, col: Any, ancho: float, alto: float) -> Dibujo:
     return Dibujo(mobs=todo, trazo=sectores, aparece=[*rótulos])
 
 
-def barras(datos: Barras, col: Any, ancho: float, alto: float) -> Dibujo:
+def barras(datos: Barras, col: Any, ancho: float, alto: float, papel: str = "#FFFFFF") -> Dibujo:
     """Las barras de datos: altura proporcional al mayor, valor arriba y categoría abajo."""
     n = len(datos.categorias)
     colores = _paleta(col)
@@ -983,7 +1022,7 @@ def barras(datos: Barras, col: Any, ancho: float, alto: float) -> Dibujo:
 
         def etiqueta(texto: str, donde: np.ndarray, tam: float) -> None:
             lab = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
-            fondo, lab = _parche(lab, "#FFFFFF", 0.1)
+            fondo, lab = _parche(lab, papel, 0.1)
             parches.add(fondo)
             rótulos.add(lab)
 
@@ -1000,7 +1039,9 @@ def barras(datos: Barras, col: Any, ancho: float, alto: float) -> Dibujo:
 # ------------------------------------------------------------------------------------------
 
 
-def onda(figura: Onda, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+def onda(
+    figura: Onda, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
     """La onda dibujada a escala con sus dos cotas de siempre: la amplitud y lambda."""
     k = min(ancho * 0.85 / (2 * figura.longitud), alto * 0.34 / figura.amplitud)
     lam_px = figura.longitud * k
@@ -1033,7 +1074,7 @@ def onda(figura: Onda, marcas: list[str], col: Any, ancho: float, alto: float) -
         lab = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
         if ancla is not None:  # arrima el borde que mira al dibujo, para no tapar la cota
             lab.shift(ancla * (lab.width / 2))
-        fondo, lab = _parche(lab, "#FFFFFF", 0.1)
+        fondo, lab = _parche(lab, papel, 0.1)
         parches.add(fondo)
         rótulos.add(lab)
 
@@ -1053,7 +1094,7 @@ def onda(figura: Onda, marcas: list[str], col: Any, ancho: float, alto: float) -
     return Dibujo(mobs=todo, trazo=rayas, aparece=[flecha_a, flecha_l, *rótulos])
 
 
-def energia(datos: Energia, col: Any, ancho: float, alto: float) -> Dibujo:
+def energia(datos: Energia, col: Any, ancho: float, alto: float, papel: str = "#FFFFFF") -> Dibujo:
     """La energía total en una sola barra repartida en sus formas: cada tramo, su porcentaje."""
     w, h = ancho * 0.78, alto * 0.30
     colores = _paleta(col)
@@ -1067,7 +1108,7 @@ def energia(datos: Energia, col: Any, ancho: float, alto: float) -> Dibujo:
 
         lab = c.texto(f"{tramo.nombre} {_porcentaje(tramo.fraccion)}", 16, SEMIBOLD, col.texto)
         lab.move_to([x + seg / 2, h / 2 + 0.32, 0])
-        fondo, lab = _parche(lab, "#FFFFFF", 0.1)
+        fondo, lab = _parche(lab, papel, 0.1)
         parches.add(fondo)
         rótulos.add(lab)
         x += seg
@@ -1075,13 +1116,350 @@ def energia(datos: Energia, col: Any, ancho: float, alto: float) -> Dibujo:
     total = c.texto(f"total = {_numero_latex(datos.total)}", 18, SEMIBOLD, col.texto).move_to(
         [0.0, -h / 2 - 0.38, 0.0]
     )
-    fondo, total = _parche(total, "#FFFFFF", 0.1)
+    fondo, total = _parche(total, papel, 0.1)
     parches.add(fondo)
     rótulos.add(total)
 
     todo = VGroup(*tramos, parches, rótulos)
     _encajar(todo, ancho, alto)
     return Dibujo(mobs=todo, trazo=tramos, aparece=[*rótulos])
+
+
+# ------------------------------------------------------------------------------------------
+# 11 · Óptica y máquinas simples
+# ------------------------------------------------------------------------------------------
+
+
+def optica(
+    figura: Optica, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """La refracción de Snell: el raye entra por un lado y al cambiar de medio dobla hacia la normal."""
+    t1 = np.radians(figura.incidencia)
+    L = min(ancho * 0.24, alto * 0.40)
+    r = L * 0.32
+    origen = np.array([0.0, 0.0, 0.0])
+    largo = min(ancho * 0.30, 2.6)
+
+    superficie = Line([-largo, 0, 0], [largo, 0, 0]).set_stroke(col.tenue, 4)
+    normal = DashedLine([0, L + 0.15, 0], [0, -L - 0.15, 0]).set_stroke(col.formulas, 3)
+
+    def raye(a: np.ndarray, b: np.ndarray, tinta: str) -> Arrow:
+        saeta = Arrow(a, b, buff=0, stroke_width=5, max_tip_length_to_length_ratio=0.15)
+        saeta.set_stroke(tinta, 5).set_fill(tinta, 1)
+        return saeta
+
+    incidente = raye(np.array([-L * np.sin(t1), L * np.cos(t1), 0.0]), origen, col.acento)
+    arcos = [Arc(radius=r, start_angle=PI / 2, angle=t1, arc_center=origen).set_stroke(col.acento, 3)]
+
+    if figura.refraccion is None:
+        # Reflexión total: el raye rebota y no pisa el segundo medio.
+        saliente = raye(origen, np.array([L * np.sin(t1), L * np.cos(t1), 0.0]), col.error)
+        arcos.append(Arc(radius=r, start_angle=PI / 2, angle=-t1, arc_center=origen).set_stroke(col.error, 3))
+    else:
+        t2 = np.radians(figura.refraccion)
+        saliente = raye(origen, np.array([L * np.sin(t2), -L * np.cos(t2), 0.0]), col.cuadricula)
+        arcos.append(
+            Arc(radius=r, start_angle=-PI / 2, angle=t2, arc_center=origen).set_stroke(col.cuadricula, 3)
+        )
+
+    parches, rótulos = VGroup(), VGroup()
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"θ₁ = {_numero_latex(figura.incidencia)}°",
+        np.array([(r + 0.45) * np.cos(PI / 2 + t1 / 2), (r + 0.45) * np.sin(PI / 2 + t1 / 2), 0.0]),
+        17,
+        LEFT,
+    )
+    if figura.refraccion is None:
+        _cartela(col, papel, parches, rótulos, "no pasa al otro lado", np.array([0.0, -L - 0.50, 0.0]), 18)
+        angulo_2 = PI / 2 - t1 / 2
+        texto_2 = f"θᵣ = {_numero_latex(figura.incidencia)}°"
+    else:
+        angulo_2 = -PI / 2 + np.radians(figura.refraccion) / 2
+        texto_2 = f"θ₂ = {_numero_latex(figura.refraccion)}°"
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        texto_2,
+        np.array([(r + 0.45) * np.cos(angulo_2), (r + 0.45) * np.sin(angulo_2), 0.0]),
+        17,
+        RIGHT,
+    )
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"n₁ = {_numero_latex(figura.n1)}",
+        np.array([-largo, L * 1.05, 0.0]),
+        17,
+        RIGHT,
+    )
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"n₂ = {_numero_latex(figura.n2)}",
+        np.array([largo, -L * 1.05, 0.0]),
+        17,
+        LEFT,
+    )
+    if figura.critico is not None:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"θ crítico ≈ {_numero_latex(figura.critico)}°",
+            np.array([-largo, -L * 1.05, 0.0]),
+            17,
+            RIGHT,
+        )
+
+    rayas = [superficie, normal, *arcos]
+    todo = VGroup(*rayas, incidente, saliente, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[incidente, saliente, *rótulos])
+
+
+def pendulo(
+    figura: Pendulo, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """El hilo con su peso apartado de la vertical: el largo manda en el tiempo de una vuelta."""
+    s = alto * 0.52
+    uni = f" {figura.unidad}" if figura.unidad else ""
+    t = np.radians(figura.angulo)
+    pivote = np.array([0.0, s / 2, 0.0])
+    peso = pivote + np.array([-s * np.sin(t), -s * np.cos(t), 0.0])
+
+    apoyo = Line(pivote + [-0.4, 0, 0], pivote + [0.4, 0, 0]).set_stroke(col.formulas, 5)
+    vertical = DashedLine(pivote, pivote + [0.0, -s, 0.0]).set_stroke(col.tenue, 3)
+    vuelo = Arc(radius=s, start_angle=-PI / 2 - t, angle=2 * t, arc_center=pivote)
+    vuelo.set_stroke(col.formulas, 2)
+    hilo = Line(pivote, peso).set_stroke(col.formulas, 4)
+    angulo = Arc(radius=s * 0.30, start_angle=-PI / 2, angle=-t, arc_center=pivote)
+    angulo.set_stroke(col.acento, 3)
+    bola = Circle(radius=0.16).move_to(peso)
+    bola.set_fill(col.acento, 0.9).set_stroke(col.acento, 3)
+
+    parches, rótulos = VGroup(), VGroup()
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"{_numero_latex(figura.angulo)}°",
+        pivote
+        + np.array(
+            [(s * 0.30 + 0.38) * np.cos(-PI / 2 - t / 2), (s * 0.30 + 0.38) * np.sin(-PI / 2 - t / 2), 0.0]
+        ),
+    )
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"L = {_numero_latex(figura.longitud)}{uni}",
+        pivote + np.array([0.25, -s * 0.55, 0.0]),
+        17,
+        RIGHT,
+    )
+    if "periodo" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"T ≈ {_numero_latex(figura.periodo)} s",
+            np.array([0.0, -s / 2 - 0.42, 0.0]),
+            18,
+        )
+
+    rayas = [apoyo, vertical, vuelo, hilo, angulo]
+    todo = VGroup(*rayas, bola, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[bola, *rótulos])
+
+
+def resorte(
+    figura: Resorte, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """La ley de Hooke: la pared, el resorte estirado y la fuerza que cuesta dejarlo así."""
+    x_pared = -ancho * 0.32
+    largo = ancho * 0.38
+    lado = min(alto * 0.30, ancho * 0.13)
+    x_fin = x_pared + largo
+
+    pared = Line([x_pared, -alto * 0.28, 0], [x_pared, alto * 0.28, 0]).set_stroke(col.formulas, 5)
+    rayado = VGroup(
+        *[
+            Line([x_pared, y + alto * 0.28, 0], [x_pared - 0.22, y + alto * 0.28 - 0.22, 0])
+            for y in np.arange(-0.20, alto * 0.56, 0.32)
+        ]
+    ).set_stroke(col.tenue, 3)
+
+    n = 7
+    paso = (largo - 0.30) / n
+    pts = [np.array([x_pared, 0.0, 0.0]), np.array([x_pared + 0.15, 0.0, 0.0])]
+    for i in range(n):
+        x0 = x_pared + 0.15 + paso * i
+        pts.append(np.array([x0 + paso / 2, 0.24 if i % 2 == 0 else -0.24, 0.0]))
+        pts.append(np.array([x0 + paso, 0.0, 0.0]))
+    pts.append(np.array([x_fin, 0.0, 0.0]))
+    espira = VMobject().set_points_as_corners(pts)
+    espira.set_stroke(col.acento, 5)
+
+    bloque = Rectangle(width=lado, height=lado).move_to([x_fin + lado / 2, 0.0, 0.0])
+    bloque.set_fill(col.acento, 0.22).set_stroke(col.formulas, 4)
+
+    estira = Arrow(
+        [x_fin + lado, 0.0, 0.0],
+        [x_fin + lado + ancho * 0.12, 0.0, 0.0],
+        buff=0,
+        stroke_width=5,
+        max_tip_length_to_length_ratio=0.30,
+    )
+    estira.set_stroke(col.error, 5).set_fill(col.error, 1)
+
+    x_reposo = x_fin - min(largo * 0.26, 0.65)
+    guias = VGroup(
+        DashedLine([x_reposo, 0.30, 0], [x_reposo, 0.60, 0]),
+        DashedLine([x_fin, 0.30, 0], [x_fin, 0.60, 0]),
+    ).set_stroke(col.tenue, 2)
+    cota = Arrow(
+        [x_reposo, 0.46, 0], [x_fin, 0.46, 0], buff=0, stroke_width=3, max_tip_length_to_length_ratio=0.35
+    )
+    cota.set_stroke(col.cuadricula, 4).set_fill(col.cuadricula, 1)
+
+    parches, rótulos = VGroup(), VGroup()
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"x = {_numero_latex(figura.extension)} m",
+        np.array([(x_reposo + x_fin) / 2, 0.78, 0.0]),
+    )
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"k = {_numero_latex(figura.constante)} N/m",
+        np.array([x_pared + 0.2, alto * 0.34, 0.0]),
+        17,
+        RIGHT,
+    )
+    if "fuerza" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"F = k·x ≈ {_numero_latex(figura.fuerza)} N",
+            np.array([x_fin + lado + ancho * 0.06, -0.80, 0.0]),
+            18,
+        )
+
+    rayas = [pared, rayado, espira, guias, bloque]
+    todo = VGroup(*rayas, cota, estira, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[cota, estira, *rótulos])
+
+
+def polea(
+    figura: Polea, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """La máquina de Atwood: la masa más pesada gana y arrastra al conjunto entero."""
+    r = min(alto * 0.15, ancho * 0.09)
+    centro = np.array([0.0, alto * 0.34, 0.0])
+    pesada_izq = figura.m1 >= figura.m2
+    abajo, arriba = -alto * 0.34, -alto * 0.10
+    uni = f" {figura.unidad}" if figura.unidad else ""
+    mayor = max(figura.m1, figura.m2)
+
+    def bloque(masa: float, x: float, y: float) -> Rectangle:
+        lado = 0.30 + 0.28 * masa / mayor
+        b = Rectangle(width=lado, height=lado).move_to([x, y + lado / 2, 0.0])
+        b.set_fill(col.acento, 0.24).set_stroke(col.formulas, 4)
+        return b
+
+    bloque_a = bloque(figura.m1, -r, abajo if pesada_izq else arriba)
+    bloque_b = bloque(figura.m2, r, arriba if pesada_izq else abajo)
+
+    rueda = Circle(radius=r).move_to(centro)
+    rueda.set_fill(col.acento, 0.10).set_stroke(col.formulas, 4)
+    # La cuerda va por fuera del borde: si coincidiera con la circunferencia, desaparecería detrás.
+    x_izq, x_der = -(r + 0.05), r + 0.05
+    cuerda = Arc(radius=r + 0.05, start_angle=0, angle=PI, arc_center=centro).set_stroke(col.formulas, 5)
+    izq = Line([x_izq, centro[1], 0], [x_izq, bloque_a.get_top()[1], 0]).set_stroke(col.formulas, 5)
+    der = Line([x_der, centro[1], 0], [x_der, bloque_b.get_top()[1], 0]).set_stroke(col.formulas, 5)
+
+    def flecha(b: Rectangle, baja: bool) -> Arrow:
+        punta = DOWN if baja else UP
+        inicio = b.get_center() + 0.35 * -punta
+        saeta = Arrow(
+            inicio, inicio + 0.65 * punta, buff=0, stroke_width=5, max_tip_length_to_length_ratio=0.3
+        )
+        saeta.set_stroke(col.error, 5).set_fill(col.error, 1)
+        return saeta
+
+    mov_a = flecha(bloque_a, pesada_izq)
+    mov_b = flecha(bloque_b, not pesada_izq)
+
+    parches, rótulos = VGroup(), VGroup()
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"m₁ = {_numero_latex(figura.m1)}{uni}",
+        np.array([bloque_a.get_left()[0] - 0.14, bloque_a.get_center()[1], 0.0]),
+        17,
+        LEFT,
+    )
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"m₂ = {_numero_latex(figura.m2)}{uni}",
+        np.array([bloque_b.get_right()[0] + 0.14, bloque_b.get_center()[1], 0.0]),
+        17,
+        RIGHT,
+    )
+    if "tension" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"T ≈ {_numero_latex(figura.tension)} N",
+            np.array([x_izq - 0.12, centro[1] - r - 0.30, 0.0]),
+            18,
+            LEFT,
+        )
+    if "aceleracion" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"a ≈ {_numero_latex(figura.aceleracion)} m/s²",
+            np.array([0.0, abajo - 0.26, 0.0]),
+            18,
+        )
+
+    rayas = [rueda, cuerda, izq, der, bloque_a, bloque_b]
+    todo = VGroup(*rayas, mov_a, mov_b, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[mov_a, mov_b, *rótulos])
 
 
 # ------------------------------------------------------------------------------------------
@@ -1107,24 +1485,32 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
     if visual.tipo == "poligono_regular":
         return poligono_regular(visual.poligono(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "proyectil":
-        return proyectil(visual.proyectil(), visual.anotar, col, ancho, alto)
+        return proyectil(visual.proyectil(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "circulo_trig":
-        return circulo_trig(visual.angulo_trig(), visual.anotar, col, ancho, alto)
+        return circulo_trig(visual.angulo_trig(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "solido":
-        return solido(visual.solido(), visual.anotar, col, ancho, alto)
+        return solido(visual.solido(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "venn":
-        return venn(visual.venn(), visual.anotar, col, ancho, alto)
+        return venn(visual.venn(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "recta":
-        return recta(visual.recta(), visual.anotar, col, ancho, alto)
+        return recta(visual.recta(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "probabilidad":
-        return probabilidad(visual.probabilidad(), visual.anotar, col, ancho, alto)
+        return probabilidad(visual.probabilidad(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "torta":
-        return torta(visual.torta(), col, ancho, alto)
+        return torta(visual.torta(), col, ancho, alto, papel)
     if visual.tipo == "barras":
-        return barras(visual.barras(), col, ancho, alto)
+        return barras(visual.barras(), col, ancho, alto, papel)
     if visual.tipo == "onda":
-        return onda(visual.onda(), visual.anotar, col, ancho, alto)
+        return onda(visual.onda(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "energia":
-        return energia(visual.energia(), col, ancho, alto)
+        return energia(visual.energia(), col, ancho, alto, papel)
+    if visual.tipo == "optica":
+        return optica(visual.optica(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "pendulo":
+        return pendulo(visual.pendulo(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "resorte":
+        return resorte(visual.resorte(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "polea":
+        return polea(visual.polea(), visual.anotar, col, ancho, alto, papel)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
     return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)

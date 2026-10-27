@@ -30,6 +30,10 @@ SEGUNDOS_VISUAL = {
     "barras": 2.5,
     "onda": 3.0,
     "energia": 2.5,
+    "optica": 3.0,
+    "pendulo": 3.0,
+    "resorte": 2.5,
+    "polea": 3.0,
 }
 
 # Lo que se puede anotar en un polígono regular.
@@ -53,6 +57,11 @@ MARCAS_PROBABILIDAD = ("probabilidad",)
 
 # Lo que se puede anotar en una onda (la amplitud y λ van siempre; la velocidad es opcional).
 MARCAS_ONDA = ("velocidad",)
+
+# Lo que se puede anotar en cada máquina: la óptica no lleva marcas (sus dos ángulos van siempre).
+MARCAS_PENDULO = ("periodo",)
+MARCAS_RESORTE = ("fuerza",)
+MARCAS_POLEA = ("aceleracion", "tension")
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -734,3 +743,94 @@ def analizar_energia(categorias: list[str]) -> Energia:
     total = sum(v for _, v in pares)
     tramos = [Categoria(nombre, valor, valor / total) for nombre, valor in pares]
     return Energia(tramos, total)
+
+
+@dataclass
+class Optica:
+    """La refracción de Snell: el ángulo que sale y el crítico por si hay reflexión total."""
+
+    n1: float
+    n2: float
+    incidencia: float  # grados medidos desde la normal
+    refraccion: float | None  # None = reflexión total: el raye no pasa al segundo medio
+    critico: float | None  # sólo existe cuando se viene de un medio más denso
+
+
+def analizar_optica(n1: float, n2: float, incidencia: float) -> Optica:
+    a, b = float(n1), float(n2)
+    if a <= 0 or b <= 0:
+        raise ValueError(f"los índices de refracción deben ser positivos, y leí {a} y {b}")
+    g = float(incidencia)
+    if not 0 <= g < 90:
+        raise ValueError(f"el ángulo de incidencia va de 0 a 90 grados (medido desde la normal), y dice {g}")
+    sen_r = a * math.sin(math.radians(g)) / b
+    critico = math.degrees(math.asin(b / a)) if a > b else None
+    if sen_r > 1:
+        return Optica(a, b, g, None, critico)
+    return Optica(a, b, g, math.degrees(math.asin(sen_r)), critico)
+
+
+@dataclass
+class Pendulo:
+    """Un hilo con un peso al cabo: su período solo depende del largo (y de la gravedad)."""
+
+    longitud: float
+    unidad: str
+    angulo: float  # cuánto se apartó de la vertical, en grados
+    periodo: float
+
+
+def analizar_pendulo(longitud: str, angulo: float, gravedad: float = 9.8) -> Pendulo:
+    L, uni = _medida_solido(longitud, "longitud")
+    a = float(angulo)
+    if not 0 < a < 90:
+        raise ValueError(
+            f"el ángulo del péndulo va entre 0 y 90 grados (lo que se aparta de la vertical), y dice {a}"
+        )
+    # El período se calcula en metros: «80 cm» son 0,8 m, no 80.
+    return Pendulo(L, uni, a, 2 * math.pi * math.sqrt(_a_metros(L, uni) / gravedad))
+
+
+@dataclass
+class Resorte:
+    """La ley de Hooke: cuánto cuesta estirar el resorte lo dice su constante."""
+
+    constante: float  # N/m
+    extension: float  # ya en metros
+    fuerza: float
+
+
+def _a_metros(valor: float, unidad: str) -> float:
+    if unidad.startswith("mm"):
+        return valor / 1000
+    if unidad.startswith("cm"):
+        return valor / 100
+    return valor
+
+
+def analizar_resorte(constante: str, extension: str) -> Resorte:
+    k, _ = _medida_solido(constante, "constante")
+    x, uni_x = _medida_solido(extension, "extensión")
+    x_m = _a_metros(x, uni_x)
+    return Resorte(k, x_m, k * x_m)
+
+
+@dataclass
+class Polea:
+    """La máquina de Atwood: la diferencia de masas manda y el conjunto entero se mueve."""
+
+    m1: float
+    m2: float
+    aceleracion: float
+    tension: float
+    unidad: str = ""  # la de las masas: de «3 kg» sale «kg»
+
+
+def analizar_polea(masa_a: str, masa_b: str, gravedad: float = 9.8) -> Polea:
+    m1, uni = _medida_solido(masa_a, "masa A")
+    m2, uni_b = _medida_solido(masa_b, "masa B")
+    if m1 == m2:
+        raise ValueError("con masas iguales la polea no se mueve: el video necesita otra pregunta")
+    a = abs(m1 - m2) * gravedad / (m1 + m2)
+    tension = 2 * m1 * m2 * gravedad / (m1 + m2)
+    return Polea(m1, m2, a, tension, uni or uni_b)
