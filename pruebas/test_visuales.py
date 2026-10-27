@@ -82,9 +82,9 @@ class TablaTest(unittest.TestCase):
 
 
 class Tipo3dTest(unittest.TestCase):
-    def test_solido_3d_todavia_no_esta_en_el_modelo(self):
-        # El hito D lo agrega y aquí se da vuelta esta prueba.
-        self.assertNotIn("solido_3d", VISUALES)
+    def test_solido_3d_ya_esta_en_la_tabla_y_en_el_modelo(self):
+        self.assertIn("solido_3d", VISUALES)
+        self.assertIn("solido_3d", tipos_del_modelo())
 
 
 if __name__ == "__main__":

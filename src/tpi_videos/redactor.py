@@ -75,6 +75,7 @@ class PasoIA(BaseModel):
         "proyectil",
         "circulo",
         "solido",
+        "solido3d",
         "venn",
         "recta",
         "probabilidad",
@@ -97,8 +98,8 @@ class PasoIA(BaseModel):
         description=(
             'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
             '"circulo", "solido", "venn", "recta", "probabilidad", "torta", "barras", "onda", "energia", '
-            '"optica", "pendulo", "resorte", "polea", "tanque", "viga", "cercha", "bloques", '
-            '"engranaje" o "mohr" (máximo 1 en el guion)'
+            '"energia", "optica", "pendulo", "resorte", "polea", "tanque", "viga", "cercha", "bloques", '
+            '"engranaje", "mohr" o "solido3d" (máximo 1 en el guion)'
         ),
     )
     funcion: str = Field(
@@ -137,10 +138,21 @@ class PasoIA(BaseModel):
     )
     figura: str = Field(
         default="",
-        description='Con dibujo="solido": cuál cuerpo, entre "cubo", "cilindro", "cono" y "esfera"',
+        description='Con dibujo="solido" o "solido3d": cuál cuerpo, entre "cubo", "cilindro", "cono" y "esfera"',
     )
-    radio: str = Field(default="", description='Con dibujo="solido": el radio con su unidad, ej. "3 cm"')
-    altura: str = Field(default="", description='Con dibujo="solido": la altura con su unidad, ej. "5 cm"')
+    radio: str = Field(
+        default="", description='Con dibujo="solido" o "solido3d": el radio con su unidad, ej. "3 cm"'
+    )
+    altura: str = Field(
+        default="", description='Con dibujo="solido" o "solido3d": la altura con su unidad, ej. "5 cm"'
+    )
+    vista: Literal["", "frente", "piso", "ala", "axonometrica"] = Field(
+        default="", description='Con dibujo="solido3d": "axonometrica" (relieve), "frente", "ala" o "piso"'
+    )
+    corte: Literal["", "sin_corte", "mitad"] = Field(
+        default="",
+        description='Con dibujo="solido3d": "mitad" parte el cuerpo; solo vale con figura="cubo"',
+    )
     solo_a: int | None = Field(
         default=None, description='Con dibujo="venn": cuántos viven sólo en el conjunto A'
     )
@@ -246,7 +258,7 @@ class PasoIA(BaseModel):
             'Hasta 2 marcas: con "poligono", de "apotema", "radio", "angulo_central", "angulo_interior"; '
             'con "proyectil", de "alcance", "altura_maxima", "componentes"; '
             'con "circulo", de "seno", "coseno", "tangente"; '
-            'con "solido", de "volumen", "area"; '
+            'con "solido" o "solido3d", de "volumen", "area"; '
             'con "venn", "total"; con "probabilidad", "probabilidad"; con "onda", "velocidad"; '
             'con "pendulo", "periodo"; con "resorte", "fuerza"; con "polea", "aceleracion" o "tension"; '
             'con "tanque", "llenado" o "vaciado"; con "viga", "reacciones" o "momento"; '
@@ -448,6 +460,7 @@ _DIBUJOS = {
     "proyectil": "proyectil",
     "circulo": "circulo_trig",
     "solido": "solido",
+    "solido3d": "solido_3d",
     "venn": "venn",
     "recta": "recta",
     "probabilidad": "probabilidad",
@@ -501,13 +514,18 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["angulo"] = float(p.angulo)
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
-    elif tipo == "solido":
+    elif tipo in ("solido", "solido_3d"):
         if p.figura:
             visual["figura"] = _texto(p.figura)
         for clave in ("lado", "radio", "altura"):
             valor = _texto(getattr(p, clave))
             if valor:
                 visual[clave] = valor
+        if tipo == "solido_3d":
+            if p.vista:
+                visual["vista"] = p.vista
+            if p.corte:
+                visual["corte"] = p.corte
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     elif tipo == "venn":

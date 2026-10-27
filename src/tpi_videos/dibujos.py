@@ -36,6 +36,7 @@ from manim import (
 )
 
 from . import componentes as c
+from .errores import ErrorMotor
 from .visuales import (
     AnguloTrig,
     Barras,
@@ -2189,5 +2190,7 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         return engranaje(visual.engranaje(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "mohr":
         return mohr(visual.mohr(), visual.anotar, col, ancho, alto, papel)
-    fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
-    return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)
+    if visual.tipo == "circuito":
+        fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
+        return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)
+    raise ErrorMotor(f"el motor todavía no sabe dibujar «{visual.tipo}»")

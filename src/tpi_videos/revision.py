@@ -117,7 +117,7 @@ def _avisos_de_visuales(guion: Guion) -> list[Aviso]:
                     )
                 )
             continue
-        if v.tipo == "solido":
+        if v.tipo in ("solido", "solido_3d"):
             if len(v.anotar) > 2:
                 avisos.append(
                     Aviso(

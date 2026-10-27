@@ -163,6 +163,7 @@ class Visual(_Base):
         "proyectil",
         "circulo_trig",
         "solido",
+        "solido_3d",
         "venn",
         "recta",
         "probabilidad",
@@ -213,6 +214,10 @@ class Visual(_Base):
     figura: Literal["", "cubo", "cilindro", "cono", "esfera"] = ""
     radio: str | None = None  # con su unidad: '3 cm'
     altura: str | None = None  # con su unidad: '5 cm'
+
+    # solido_3d (además de figura / lado / radio / altura / anotar)
+    vista: Literal["frente", "piso", "ala", "axonometrica"] = "axonometrica"
+    corte: Literal["sin_corte", "mitad"] = "sin_corte"  # mitad solo en cubo: ver el validador
 
     # venn
     solo_a: int | None = None  # cuántos viven sólo en A
@@ -334,12 +339,17 @@ class Visual(_Base):
                     f"a {figura.grados:g}° la tangente no existe (el radio queda paralelo a ella): "
                     "anota seno o coseno"
                 )
-        elif self.tipo == "solido":
+        elif self.tipo in ("solido", "solido_3d"):
             if not self.figura:
                 raise ValueError(
                     "un sólido necesita decir cuál es, ej. figura: 'cilindro' (cubo, cilindro, cono o esfera)"
                 )
             analizar_solido(self.figura, self.lado, self.radio, self.altura)
+            if self.tipo == "solido_3d" and self.corte == "mitad" and self.figura != "cubo":
+                raise ValueError(
+                    f"el corte a la mitad solo se dibuja bien en el cubo; en el {self.figura} la cara "
+                    "de corte no se ordena con la superficie: usa corte: 'sin_corte'"
+                )
             desconocidas = [m for m in self.anotar if m not in MARCAS_SOLIDO]
             if desconocidas:
                 raise ValueError(
@@ -573,7 +583,7 @@ class Visual(_Base):
 
     def solido(self):
         """El cuerpo ya resuelto (volumen y área). Sólo en los sólidos."""
-        if self.tipo != "solido":
+        if self.tipo not in ("solido", "solido_3d"):
             raise ValueError(f"«{self.tipo}» no es un sólido")
         return analizar_solido(self.figura or "", self.lado, self.radio, self.altura)
 
@@ -967,11 +977,15 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
         campos.append(("angulo", _numero(v.get("angulo") or 0)))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
-    elif tipo == "solido":
+    elif tipo in ("solido", "solido_3d"):
         campos.append(("figura", v.get("figura") or ""))
         for clave in ("lado", "radio", "altura"):
             if v.get(clave):
                 campos.append((clave, _simples(v[clave])))
+        if tipo == "solido_3d":
+            campos.append(("vista", v.get("vista") or "axonometrica"))
+            if v.get("corte") not in (None, "", "sin_corte"):
+                campos.append(("corte", v["corte"]))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     elif tipo == "venn":
