@@ -28,6 +28,8 @@ SEGUNDOS_VISUAL = {
     "probabilidad": 3.0,
     "torta": 3.0,
     "barras": 2.5,
+    "onda": 3.0,
+    "energia": 2.5,
 }
 
 # Lo que se puede anotar en un polígono regular.
@@ -48,6 +50,9 @@ SOLIDOS = ("cubo", "cilindro", "cono", "esfera")
 # Lo que se puede anotar en un diagrama de Venn y en una urna de probabilidad.
 MARCAS_VENN = ("total",)
 MARCAS_PROBABILIDAD = ("probabilidad",)
+
+# Lo que se puede anotar en una onda (la amplitud y λ van siempre; la velocidad es opcional).
+MARCAS_ONDA = ("velocidad",)
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -687,3 +692,45 @@ def analizar_barras(categorias: list[str]) -> Barras:
     maximo = max(v for _, v in pares)
     datos = [Categoria(nombre, valor, valor / total) for nombre, valor in pares]
     return Barras(datos, total, maximo)
+
+
+@dataclass
+class Onda:
+    """Una onda transversal: amplitud y longitud de onda, y lo que se pueda deducir del período."""
+
+    amplitud: float
+    longitud: float  # lambda, la distancia entre dos crestas
+    unidad: str  # la de las medidas: de «2 m» sale «m»
+    periodo: float | None  # segundos entre dos crestas
+    frecuencia: float | None  # 1 / periodo
+    velocidad: float | None  # lambda / periodo
+
+
+def analizar_onda(amplitud: str, longitud_onda: str, periodo: float | None = None) -> Onda:
+    """Con período dice frecuencia y velocidad (v = λ/T); sin él, solo dibuja la forma."""
+    a, uni_a = _medida_solido(amplitud, "amplitud")
+    lam, uni_l = _medida_solido(longitud_onda, "longitud de onda")
+    if periodo is None:
+        return Onda(a, lam, uni_a or uni_l, None, None, None)
+    T = float(periodo)
+    if T <= 0:
+        raise ValueError(f"el período debe ser positivo (es un tiempo), y leí {T}")
+    return Onda(a, lam, uni_a or uni_l, T, 1.0 / T, lam / T)
+
+
+@dataclass
+class Energia:
+    """La energía total repartida en sus formas: cada tramo con su fracción del todo."""
+
+    tramos: list[Categoria]
+    total: float
+
+
+def analizar_energia(categorias: list[str]) -> Energia:
+    pares = _leer_categorias(categorias)
+    for nombre, valor in pares:
+        if valor <= 0:
+            raise ValueError(f"la energía en «{nombre}» debe ser positiva (un tramo no puede ser {valor})")
+    total = sum(v for _, v in pares)
+    tramos = [Categoria(nombre, valor, valor / total) for nombre, valor in pares]
+    return Energia(tramos, total)

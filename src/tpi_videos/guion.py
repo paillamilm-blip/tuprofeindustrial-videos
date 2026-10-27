@@ -19,6 +19,7 @@ from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 from .tex import llaves_balanceadas
 from .visuales import (
     MARCAS_CIRCULO,
+    MARCAS_ONDA,
     MARCAS_POLIGONO,
     MARCAS_PROBABILIDAD,
     MARCAS_PROYECTIL,
@@ -27,7 +28,9 @@ from .visuales import (
     SEGUNDOS_VISUAL,
     analizar_angulo,
     analizar_barras,
+    analizar_energia,
     analizar_funcion,
+    analizar_onda,
     analizar_poligono,
     analizar_probabilidad,
     analizar_proyectil,
@@ -146,6 +149,8 @@ class Visual(_Base):
         "probabilidad",
         "torta",
         "barras",
+        "onda",
+        "energia",
     ]
 
     # grafico_funcion
@@ -199,6 +204,11 @@ class Visual(_Base):
 
     # torta / barras: categorías con su valor al final, ej. ['Fútbol 12', 'Básquetbol 8']
     categorias: list[str] = []
+
+    # onda
+    amplitud: str | None = None  # con su unidad: '0,5 m'
+    longitud_onda: str | None = None  # lambda, con su unidad: '2 m'
+    periodo: float | None = None  # segundos entre crestas; si falta, la onda no dice su velocidad
 
     _listas = field_validator(
         "rango", "marcar", "vectores", "resistencias", "anotar", "categorias", mode="before"
@@ -302,6 +312,25 @@ class Visual(_Base):
             analizar(
                 self.categorias
             )  # rechaza menos de 2, más de 6, valores no positivos y textos sin número
+        elif self.tipo == "onda":
+            if not (self.amplitud or "").strip() or not (self.longitud_onda or "").strip():
+                raise ValueError(
+                    "la onda necesita su amplitud y su longitud, ej. amplitud: '0,5 m' y longitud_onda: '2 m'"
+                )
+            analizar_onda(self.amplitud, self.longitud_onda, self.periodo)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_ONDA]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de la onda; el motor sabe anotar {', '.join(MARCAS_ONDA)}"
+                )
+            if "velocidad" in self.anotar and self.periodo is None:
+                raise ValueError("para anotar la velocidad la onda necesita su periodo, ej. periodo: 0.4")
+        elif self.tipo == "energia":
+            if not self.categorias:
+                raise ValueError(
+                    "la barra de energía necesita sus tramos, ej. categorias: ['Cinética 60', 'Térmica 40']"
+                )
+            analizar_energia(self.categorias)
         elif self.tipo == "poligono_regular":
             if not (self.lado or "").strip():
                 raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
@@ -382,6 +411,18 @@ class Visual(_Base):
         if self.tipo != "barras":
             raise ValueError(f"«{self.tipo}» no son barras")
         return analizar_barras(self.categorias)
+
+    def onda(self):
+        """La onda con su frecuencia y velocidad si el guion dio el período."""
+        if self.tipo != "onda":
+            raise ValueError(f"«{self.tipo}» no es una onda")
+        return analizar_onda(self.amplitud or "", self.longitud_onda or "", self.periodo)
+
+    def energia(self):
+        """La energía total repartida en sus tramos. Sólo en la barra de energía."""
+        if self.tipo != "energia":
+            raise ValueError(f"«{self.tipo}» no es una barra de energía")
+        return analizar_energia(self.categorias)
 
     def poligono(self):
         """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
@@ -700,8 +741,15 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
         campos.append(("lado", _simples(v.get("lado") or "")))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
-    elif tipo in ("torta", "barras"):
+    elif tipo in ("torta", "barras", "energia"):
         campos.append(("categorias", "[" + ", ".join(_simples(c) for c in v.get("categorias") or []) + "]"))
+    elif tipo == "onda":
+        campos.append(("amplitud", _simples(v.get("amplitud") or "")))
+        campos.append(("longitud_onda", _simples(v.get("longitud_onda") or "")))
+        if v.get("periodo") is not None:
+            campos.append(("periodo", _numero(v["periodo"])))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     else:
         if v.get("arreglo") not in (None, "serie"):
             campos.append(("arreglo", v["arreglo"]))

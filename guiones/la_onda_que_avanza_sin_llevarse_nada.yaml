@@ -1,0 +1,52 @@
+# Guion escrito a mano el 27-10-2026 para estrenar la onda anotada.
+# REVISA la matemática antes de publicar.
+
+titulo: "La onda que avanza sin llevarse nada"
+materia: fisica
+nivel: "2° medio"
+molde: nadie_te_enseno
+tema: cuaderno_del_profe
+
+gancho:
+  texto: "La ola avanza, pero el corcho no se va"
+  voz: "Una onda avanza llevando energía, pero no se lleva la materia."
+  emoji: "💧"
+
+enunciado:
+  texto: "Una onda tiene 0,5 m de amplitud, 2 m de longitud y un período de 0,4 s."
+  voz: "Una onda mide medio metro de amplitud y dos metros de longitud."
+  destacar: ["2 m"]
+
+datos:
+  - tex: 'A = 0{,}5\ \text{m}'
+    voz: "La amplitud: medio metro de arriba abajo."
+  - tex: '\lambda = 2\ \text{m} \quad T = 0{,}4\ \text{s}'
+    voz: "Entre cresta y cresta, dos metros. Un ciclo cada cero coma cuatro segundos."
+
+pasos:
+  - nota: "La frecuencia es lo inverso al período"
+    tex: 'f = \frac{1}{T} = 2{,}5\ \text{Hz}'
+    voz: "Uno partido por cero coma cuatro: dos punto cinco ciclos por segundo."
+  - nota: "La velocidad de la onda"
+    tex: 'v = \frac{\lambda}{T} = 5\ \text{m/s}'
+    voz: "Dos metros divididos por cero coma cuatro segundos: la onda corre a cinco metros por segundo."
+    visual:
+      tipo: onda
+      amplitud: '0,5 m'
+      longitud_onda: '2 m'
+      periodo: 0.4
+      anotar: ['velocidad']
+
+resultado:
+  tex: 'v = \lambda \cdot f = 5\ \text{m/s}'
+  voz: "Multiplica longitud por frecuencia y sale la misma velocidad: cinco metros por segundo."
+  emoji: "💡"
+
+verificacion:
+  texto: "2 · 2,5 = 5: los dos caminos llegan a la misma velocidad."
+  voz: "Dos por dos punto cinco: cinco. Los dos caminos llegan al mismo número."
+
+reto:
+  texto: "Si duplicas la frecuencia sin cambiar la longitud, ¿a cuánto avanza la onda?"
+  voz: "Ahora tú: si duplicas la frecuencia sin cambiar la longitud, ¿a cuánto avanza la onda?"
+  emoji: "✍️"

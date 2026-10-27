@@ -38,7 +38,9 @@ from . import componentes as c
 from .visuales import (
     AnguloTrig,
     Barras,
+    Energia,
     Funcion,
+    Onda,
     Poligono,
     Probabilidad,
     Proyectil,
@@ -994,6 +996,95 @@ def barras(datos: Barras, col: Any, ancho: float, alto: float) -> Dibujo:
 
 
 # ------------------------------------------------------------------------------------------
+# 10 · Física: onda transversal y barra de energía
+# ------------------------------------------------------------------------------------------
+
+
+def onda(figura: Onda, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+    """La onda dibujada a escala con sus dos cotas de siempre: la amplitud y lambda."""
+    k = min(ancho * 0.85 / (2 * figura.longitud), alto * 0.34 / figura.amplitud)
+    lam_px = figura.longitud * k
+    a_px = figura.amplitud * k
+    uni = f" {figura.unidad}" if figura.unidad else ""
+
+    pts = [np.array([x, a_px * np.sin(2 * PI * x / lam_px), 0.0]) for x in np.linspace(-lam_px, lam_px, 121)]
+    curva = VMobject().set_points_smoothly(pts)
+    curva.set_stroke(col.acento, 5)
+    eje = DashedLine([-lam_px - 0.3, 0, 0], [lam_px + 0.3, 0, 0]).set_stroke(col.tenue, 3)
+
+    cresta = lam_px / 4  # la primera cresta, midiendo desde el centro
+    flecha_a = Arrow(
+        [cresta, 0, 0], [cresta, a_px, 0], buff=0, stroke_width=4, max_tip_length_to_length_ratio=0.25
+    )
+    flecha_a.set_stroke(col.error)
+    flecha_l = Arrow(
+        [cresta, a_px + 0.3, 0],
+        [cresta + lam_px, a_px + 0.3, 0],
+        buff=0,
+        stroke_width=4,
+        max_tip_length_to_length_ratio=0.12,
+    )
+    flecha_l.set_stroke(col.cuadricula)
+
+    rayas: list = [eje, curva]
+    parches, rótulos = VGroup(), VGroup()
+
+    def etiqueta(texto: str, donde: np.ndarray, tam: float, ancla: np.ndarray | None = None) -> None:
+        lab = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
+        if ancla is not None:  # arrima el borde que mira al dibujo, para no tapar la cota
+            lab.shift(ancla * (lab.width / 2))
+        fondo, lab = _parche(lab, "#FFFFFF", 0.1)
+        parches.add(fondo)
+        rótulos.add(lab)
+
+    etiqueta(f"A = {_numero_latex(figura.amplitud)}{uni}", np.array([cresta - 0.15, a_px / 2, 0.0]), 17, LEFT)
+    etiqueta(
+        f"λ = {_numero_latex(figura.longitud)}{uni}", np.array([cresta + lam_px / 2, a_px + 0.55, 0.0]), 17
+    )
+    if "velocidad" in marcas and figura.velocidad is not None:
+        etiqueta(
+            f"v = λ/T ≈ {_numero_latex(figura.velocidad)}{uni}/s",
+            np.array([0.0, -a_px - 0.55, 0.0]),
+            18,
+        )
+
+    todo = VGroup(*rayas, flecha_a, flecha_l, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[flecha_a, flecha_l, *rótulos])
+
+
+def energia(datos: Energia, col: Any, ancho: float, alto: float) -> Dibujo:
+    """La energía total en una sola barra repartida en sus formas: cada tramo, su porcentaje."""
+    w, h = ancho * 0.78, alto * 0.30
+    colores = _paleta(col)
+    tramos, parches, rótulos = [], VGroup(), VGroup()
+    x = -w / 2
+    for i, tramo in enumerate(datos.tramos):
+        seg = tramo.fraccion * w
+        barra = Rectangle(width=seg, height=h).move_to([x + seg / 2, 0, 0])
+        barra.set_fill(colores[i % len(colores)], 0.82).set_stroke(col.tenue, 3)
+        tramos.append(barra)
+
+        lab = c.texto(f"{tramo.nombre} {_porcentaje(tramo.fraccion)}", 16, SEMIBOLD, col.texto)
+        lab.move_to([x + seg / 2, h / 2 + 0.32, 0])
+        fondo, lab = _parche(lab, "#FFFFFF", 0.1)
+        parches.add(fondo)
+        rótulos.add(lab)
+        x += seg
+
+    total = c.texto(f"total = {_numero_latex(datos.total)}", 18, SEMIBOLD, col.texto).move_to(
+        [0.0, -h / 2 - 0.38, 0.0]
+    )
+    fondo, total = _parche(total, "#FFFFFF", 0.1)
+    parches.add(fondo)
+    rótulos.add(total)
+
+    todo = VGroup(*tramos, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=tramos, aparece=[*rótulos])
+
+
+# ------------------------------------------------------------------------------------------
 # Elección del dibujo según el guion
 # ------------------------------------------------------------------------------------------
 
@@ -1031,5 +1122,9 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         return torta(visual.torta(), col, ancho, alto)
     if visual.tipo == "barras":
         return barras(visual.barras(), col, ancho, alto)
+    if visual.tipo == "onda":
+        return onda(visual.onda(), visual.anotar, col, ancho, alto)
+    if visual.tipo == "energia":
+        return energia(visual.energia(), col, ancho, alto)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
     return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)

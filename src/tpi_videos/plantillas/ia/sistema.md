@@ -38,6 +38,8 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - dibujo = "probabilidad": la urna de Laplace con favorables y totales (números, entre 1 y 20 los totales). El motor calcula solo el cociente; con anotar puedes pedir "probabilidad".
 - dibujo = "torta": la torta de porcentajes con categorias (de 2 a 6), cada una con el valor al final, ej. "Fútbol 20". El motor calcula solo el total y cada porcentaje, y los escribe al lado de su porción.
 - dibujo = "barras": las barras de datos con las mismas categorias de la torta (de 2 a 6, valor al final). El motor escala las alturas al valor mayor y escribe cada valor sobre su barra.
+- dibujo = "onda": una onda transversal con amplitud y longitud_onda (cada una con su unidad, ej. "0,5 m" y "2 m"). Si das periodo (segundos), el motor calcula la frecuencia y la velocidad; con anotar puedes pedir "velocidad" (necesita el periodo).
+- dibujo = "energia": la energía total repartida en una barra apilada, con categorias (de 2 a 6) como "Cinética 60". El motor calcula solo el total y el porcentaje de cada tramo.
 - Los campos que no corresponden al dibujo elegido se dejan vacíos ("" o []). No inventes datos: el dibujo tiene que salir de los números del ejercicio.
 
 ### El molde narrativo (pista MOLDE)

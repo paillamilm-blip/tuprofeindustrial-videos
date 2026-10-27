@@ -79,11 +79,14 @@ class PasoIA(BaseModel):
         "probabilidad",
         "torta",
         "barras",
+        "onda",
+        "energia",
     ] = Field(
         default="",
         description=(
             'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
-            '"circulo", "solido", "venn", "recta", "probabilidad", "torta" o "barras" (máximo 1 en el guion)'
+            '"circulo", "solido", "venn", "recta", "probabilidad", "torta", "barras", "onda" o "energia" '
+            "(máximo 1 en el guion)"
         ),
     )
     funcion: str = Field(
@@ -159,9 +162,17 @@ class PasoIA(BaseModel):
     categorias: list[str] = Field(
         default_factory=list,
         description=(
-            'Con dibujo="torta" o "barras": de 2 a 6 categorías con el valor al final, '
-            'ej. ["Fútbol 12", "Básquetbol 8", "Vóley 5", "Otros 5"]'
+            'Con dibujo="torta", "barras" o "energia": de 2 a 6 categorías con el valor al final, '
+            'ej. ["Fútbol 12", "Básquetbol 8", "Vóley 5", "Otros 5"] o ["Cinética 60", "Térmica 40"]'
         ),
+    )
+    amplitud: str = Field(default="", description='Con dibujo="onda": la amplitud con su unidad, ej. "0,5 m"')
+    longitud_onda: str = Field(
+        default="", description='Con dibujo="onda": la distancia entre crestas con su unidad, ej. "2 m"'
+    )
+    periodo: float | None = Field(
+        default=None,
+        description='Con dibujo="onda": segundos entre crestas; hace falta para anotar "velocidad"',
     )
     anotar: list[str] = Field(
         default_factory=list,
@@ -170,7 +181,8 @@ class PasoIA(BaseModel):
             'con "proyectil", de "alcance", "altura_maxima", "componentes"; '
             'con "circulo", de "seno", "coseno", "tangente"; '
             'con "solido", de "volumen", "area"; '
-            'con "venn", "total"; con "probabilidad", "probabilidad"; con "recta" va vacío'
+            'con "venn", "total"; con "probabilidad", "probabilidad"; con "onda", "velocidad"; '
+            'con "recta", "torta", "barras" o "energia" va vacío'
         ),
     )
 
@@ -372,6 +384,8 @@ _DIBUJOS = {
     "probabilidad": "probabilidad",
     "torta": "torta",
     "barras": "barras",
+    "onda": "onda",
+    "energia": "energia",
 }
 
 
@@ -439,8 +453,17 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["totales"] = int(p.totales)
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
-    elif tipo in ("torta", "barras"):
+    elif tipo in ("torta", "barras", "energia"):
         visual["categorias"] = [c.strip() for c in p.categorias if c.strip()]
+    elif tipo == "onda":
+        if p.amplitud:
+            visual["amplitud"] = _texto(p.amplitud)
+        if p.longitud_onda:
+            visual["longitud_onda"] = _texto(p.longitud_onda)
+        if p.periodo is not None:
+            visual["periodo"] = float(p.periodo)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     elif tipo == "poligono_regular":
         if p.lados:
             visual["lados"] = int(p.lados)
