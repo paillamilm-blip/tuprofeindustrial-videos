@@ -1,0 +1,57 @@
+nombre: Plano nocturno
+descripcion: El plano de ingeniería en grafito nocturno, con títulos de imprenta en
+  vez de manuscrita.
+marco: pizarra
+colores:
+  fondo: '#10141A'
+  panel: '#181E27'
+  borde: '#2A3341'
+  titulos: '#FFFFFF'
+  texto: '#E2E8F0'
+  formulas: '#F1F5F9'
+  tenue: '#94A3B8'
+  acento: '#38BDF8'
+  exito: '#4ADE80'
+  cuadricula: '#94A3B8'
+  error: '#FB7185'
+materias:
+  matematica: '#38BDF8'
+  fisica: '#FBBF24'
+  ingenieria: '#4ADE80'
+tipografia:
+  titulos:
+    familia: Montserrat
+    grosor: HEAVY
+    mayusculas: true
+    escala: 1.0
+  texto:
+    familia: Montserrat
+    grosor: MEDIUM
+    mayusculas: false
+    escala: 0.95
+nota:
+  rol: texto
+  escala: 0.95
+  color: materia
+formulas_negrita: true
+fondo:
+  tipo: imagen
+  imagen: plano_noche
+  degradado:
+  - '#10141A'
+  - '#07090D'
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 76
+  color: '#E2E8F0'
+  color_activo: '#38BDF8'
+  borde: 4
+  sombra: 2
+  posicion_y: 0.7
+  mayusculas: true
+  max_palabras: 4
+  max_caracteres: 22
+  resaltar: true
+animacion:
+  titulos: aparecer
+emojis: false

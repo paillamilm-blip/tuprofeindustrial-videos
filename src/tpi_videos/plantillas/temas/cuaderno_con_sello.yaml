@@ -1,0 +1,46 @@
+nombre: Cuaderno con sello
+descripcion: "Tu hoja de siempre, afilada: tinta azul, rojo de error, notas en letra de título y subtítulos de imprenta."
+marco: hoja
+colores:
+  fondo: '#EDEAE0'
+  panel: '#FFFFFF'
+  borde: '#DCDCD7'
+  titulos: '#1C3D74'
+  texto: '#23324A'
+  formulas: '#1C3D74'
+  tenue: '#8C93A0'
+  acento: '#B4690E'
+  exito: '#2E7D32'
+  cuadricula: '#E3E0D2'
+  error: '#D32F2F'
+materias:
+  matematica: '#1C3D74'
+  fisica: '#0F6E5C'
+  ingenieria: '#7A4E12'
+tipografia:
+  titulos: {familia: Comic Neue, grosor: BOLD, mayusculas: false, escala: 1.05}
+  texto: {familia: Comic Neue, grosor: NORMAL, mayusculas: false, escala: 1.0}
+nota: {rol: titulos, escala: 0.95, color: titulos}
+formulas_negrita: true
+fondo: {tipo: color, imagen: difuminado, degradado: ['#EDEAE0']}
+hoja:
+  encabezado: CLASE DE HOY
+  etiqueta: ''
+  fecha: PAES 2027
+  color: '#FBF7EC'
+  lineas: '#E3E0D2'
+  cuadricula: true
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 82
+  color: '#1C3D74'
+  color_activo: '#D32F2F'
+  borde: 0
+  sombra: 0
+  posicion_y: 0.75
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 18
+  resaltar: true
+animacion: {titulos: plumon}
+emojis: true

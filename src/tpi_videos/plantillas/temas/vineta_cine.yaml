@@ -1,0 +1,39 @@
+nombre: Pizarra de cine
+descripcion: "Serio y luminoso: viñeta oscura, tipografía Cinzel, sin emojis y subtítulos planos."
+marco: pizarra
+colores:
+  fondo: '#0B0F14'
+  panel: '#161D26'
+  borde: '#2A3441'
+  titulos: '#FDE8C8'
+  texto: '#F1F5F9'
+  formulas: '#F8FAFC'
+  tenue: '#94A3B8'
+  acento: '#FB923C'
+  exito: '#FDE68A'
+  cuadricula: '#243240'
+  error: '#F87171'
+materias:
+  matematica: '#FDE8C8'
+  fisica: '#FB923C'
+  ingenieria: '#FDE68A'
+tipografia:
+  titulos: {familia: Cinzel, grosor: NORMAL, mayusculas: true, escala: 1.05}
+  texto: {familia: Montserrat, grosor: MEDIUM, mayusculas: false, escala: 1.0}
+nota: {rol: texto, escala: 1.0, color: titulos}
+formulas_negrita: true
+fondo: {tipo: imagen, imagen: vineta_cine, degradado: ['#0E131A', '#05070A']}
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 78
+  color: '#F5EFE0'
+  color_activo: '#F5EFE0'
+  borde: 3
+  sombra: 8
+  posicion_y: 0.68
+  mayusculas: true
+  max_palabras: 5
+  max_caracteres: 28
+  resaltar: false
+animacion: {titulos: aparecer}
+emojis: false

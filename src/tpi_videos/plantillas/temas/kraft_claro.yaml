@@ -1,0 +1,57 @@
+nombre: Kraft claro
+descripcion: 'Sobre manila de taller con tinta oscura: la calidez del kraft, pero
+  legible de día.'
+marco: pizarra
+colores:
+  fondo: '#D6BA8C'
+  panel: '#E4CFAA'
+  borde: '#8A6A3C'
+  titulos: '#2A1B10'
+  texto: '#33251A'
+  formulas: '#241608'
+  tenue: '#7A6244'
+  acento: '#B45309'
+  exito: '#15803D'
+  cuadricula: '#B99A6C'
+  error: '#B91C1C'
+materias:
+  matematica: '#B45309'
+  fisica: '#15803D'
+  ingenieria: '#1D4ED8'
+tipografia:
+  titulos:
+    familia: Caveat
+    grosor: BOLD
+    mayusculas: false
+    escala: 1.35
+  texto:
+    familia: Comic Neue
+    grosor: BOLD
+    mayusculas: false
+    escala: 1.0
+nota:
+  rol: titulos
+  escala: 1.0
+  color: acento
+formulas_negrita: false
+fondo:
+  tipo: imagen
+  imagen: kraft_claro
+  degradado:
+  - '#D6BA8C'
+  - '#BA9C6E'
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 82
+  color: '#2A1B10'
+  color_activo: '#B45309'
+  borde: 0
+  sombra: 0
+  posicion_y: 0.72
+  mayusculas: false
+  max_palabras: 4
+  max_caracteres: 24
+  resaltar: true
+animacion:
+  titulos: plumon
+emojis: true

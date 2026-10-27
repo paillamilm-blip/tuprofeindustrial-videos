@@ -1,0 +1,57 @@
+nombre: Neón uva
+descripcion: 'Reja violeta con título lila y subtítulos Bangers: el más nocturno de
+  los tres neón.'
+marco: pizarra
+colores:
+  fondo: '#05070D'
+  panel: '#241041'
+  borde: '#3D1C63'
+  titulos: '#C084FC'
+  texto: '#EAF3FF'
+  formulas: '#EAF3FF'
+  tenue: '#8FA3C8'
+  acento: '#F0ABFC'
+  exito: '#A3E635'
+  cuadricula: '#38BDF8'
+  error: '#FB7185'
+materias:
+  matematica: '#C084FC'
+  fisica: '#F0ABFC'
+  ingenieria: '#A3E635'
+tipografia:
+  titulos:
+    familia: Bangers
+    grosor: NORMAL
+    mayusculas: true
+    escala: 1.2
+  texto:
+    familia: Montserrat
+    grosor: SEMIBOLD
+    mayusculas: false
+    escala: 1.0
+nota:
+  rol: texto
+  escala: 1.0
+  color: acento
+formulas_negrita: true
+fondo:
+  tipo: imagen
+  imagen: neon_uva
+  degradado:
+  - '#0E081A'
+  - '#28103E'
+subtitulos:
+  fuente: Bangers
+  tamano: 94
+  color: '#FFFFFF'
+  color_activo: '#F0ABFC'
+  borde: 8
+  sombra: 6
+  posicion_y: 0.74
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 18
+  resaltar: true
+animacion:
+  titulos: plumon
+emojis: true

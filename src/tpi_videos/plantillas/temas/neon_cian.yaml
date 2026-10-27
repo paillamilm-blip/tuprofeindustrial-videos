@@ -1,0 +1,57 @@
+nombre: Neón cian
+descripcion: 'La misma reja, con el título en cian y el acento turquesa: menos estridente,
+  más laboratorio.'
+marco: pizarra
+colores:
+  fondo: '#05070D'
+  panel: '#0D2436'
+  borde: '#1E4B63'
+  titulos: '#22D3EE'
+  texto: '#EAF3FF'
+  formulas: '#EAF3FF'
+  tenue: '#8FA3C8'
+  acento: '#2DD4BF'
+  exito: '#FFC72C'
+  cuadricula: '#38BDF8'
+  error: '#FB7185'
+materias:
+  matematica: '#22D3EE'
+  fisica: '#2DD4BF'
+  ingenieria: '#FFC72C'
+tipografia:
+  titulos:
+    familia: Bangers
+    grosor: NORMAL
+    mayusculas: true
+    escala: 1.15
+  texto:
+    familia: Montserrat
+    grosor: SEMIBOLD
+    mayusculas: false
+    escala: 1.0
+nota:
+  rol: texto
+  escala: 1.0
+  color: acento
+formulas_negrita: true
+fondo:
+  tipo: imagen
+  imagen: neon_cian
+  degradado:
+  - '#060C12'
+  - '#082A2C'
+subtitulos:
+  fuente: Luckiest Guy
+  tamano: 88
+  color: '#FFFFFF'
+  color_activo: '#22D3EE'
+  borde: 8
+  sombra: 6
+  posicion_y: 0.74
+  mayusculas: true
+  max_palabras: 4
+  max_caracteres: 18
+  resaltar: true
+animacion:
+  titulos: plumon
+emojis: true

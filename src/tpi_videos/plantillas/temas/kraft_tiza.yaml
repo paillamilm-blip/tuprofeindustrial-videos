@@ -1,0 +1,39 @@
+nombre: Kraft y tiza
+descripcion: "Taller nocturno: papel kraft oscuro con fibra, títulos manuscritos en tiza cálida."
+marco: pizarra
+colores:
+  fondo: '#241A12'
+  panel: '#3A2718'
+  borde: '#5C4227'
+  titulos: '#FFE1B8'
+  texto: '#F6E6CF'
+  formulas: '#F6E6CF'
+  tenue: '#B9987A'
+  acento: '#F2A93B'
+  exito: '#A3E635'
+  cuadricula: '#6B5138'
+  error: '#FF7B6B'
+materias:
+  matematica: '#F2A93B'
+  fisica: '#A3E635'
+  ingenieria: '#FFE1B8'
+tipografia:
+  titulos: {familia: Caveat, grosor: BOLD, mayusculas: false, escala: 1.3}
+  texto: {familia: Comic Neue, grosor: BOLD, mayusculas: false, escala: 1.0}
+nota: {rol: texto, escala: 1.05, color: titulos}
+formulas_negrita: false
+fondo: {tipo: imagen, imagen: papel_kraft, degradado: ['#3A2718', '#1D130B']}
+subtitulos:
+  fuente: Comic Neue
+  tamano: 88
+  color: '#FFE1B8'
+  color_activo: '#F2A93B'
+  borde: 6
+  sombra: 4
+  posicion_y: 0.72
+  mayusculas: false
+  max_palabras: 4
+  max_caracteres: 24
+  resaltar: true
+animacion: {titulos: plumon}
+emojis: true

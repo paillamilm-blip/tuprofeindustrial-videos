@@ -1,0 +1,63 @@
+nombre: Cuaderno tinta roja
+descripcion: 'Hoja de renglones rosados con la nota en verde de profe: el cuaderno
+  de corrección.'
+marco: hoja
+colores:
+  fondo: '#EFE7E4'
+  panel: '#FFFCFA'
+  borde: '#E4D6D2'
+  titulos: '#7A1E1E'
+  texto: '#3A2A2A'
+  formulas: '#7A1E1E'
+  tenue: '#A08C8C'
+  acento: '#2E7D32'
+  exito: '#2E7D32'
+  cuadricula: '#F0C7C2'
+  error: '#D32F2F'
+materias:
+  matematica: '#7A1E1E'
+  fisica: '#1D4ED8'
+  ingenieria: '#B45309'
+tipografia:
+  titulos:
+    familia: Patrick Hand
+    grosor: NORMAL
+    mayusculas: false
+    escala: 1.1
+  texto:
+    familia: Comic Neue
+    grosor: NORMAL
+    mayusculas: false
+    escala: 1.0
+nota:
+  rol: titulos
+  escala: 0.95
+  color: acento
+formulas_negrita: true
+fondo:
+  tipo: color
+  imagen: difuminado
+  degradado:
+  - '#EDEAE0'
+hoja:
+  encabezado: CUADERNO
+  etiqueta: ''
+  fecha: Corregido
+  color: '#FFFCFA'
+  lineas: '#F0C7C2'
+  cuadricula: false
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 82
+  color: '#7A1E1E'
+  color_activo: '#D32F2F'
+  borde: 0
+  sombra: 0
+  posicion_y: 0.75
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 18
+  resaltar: true
+animacion:
+  titulos: plumon
+emojis: true

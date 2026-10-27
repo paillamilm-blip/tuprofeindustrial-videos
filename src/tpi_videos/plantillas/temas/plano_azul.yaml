@@ -1,0 +1,39 @@
+nombre: Plano azul
+descripcion: "Lámina de ingeniería: retícula azul de doble paso, margen y cajetín, letra manuscrita técnica."
+marco: pizarra
+colores:
+  fondo: '#0A2C56'
+  panel: '#0E3A6B'
+  borde: '#8FC7F5'
+  titulos: '#FFFFFF'
+  texto: '#DCEBFA'
+  formulas: '#EAF6FF'
+  tenue: '#7FA8CC'
+  acento: '#FDE68A'
+  exito: '#7DD3A8'
+  cuadricula: '#E1F2FF'
+  error: '#FF8FA3'
+materias:
+  matematica: '#8FC7F5'
+  fisica: '#FDE68A'
+  ingenieria: '#7DD3A8'
+tipografia:
+  titulos: {familia: Patrick Hand, grosor: NORMAL, mayusculas: false, escala: 1.1}
+  texto: {familia: Montserrat, grosor: MEDIUM, mayusculas: false, escala: 0.95}
+nota: {rol: texto, escala: 0.95, color: materia}
+formulas_negrita: true
+fondo: {tipo: imagen, imagen: plano_azul, degradado: ['#0A2C56', '#06203E']}
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 74
+  color: '#EAF6FF'
+  color_activo: '#FDE68A'
+  borde: 4
+  sombra: 2
+  posicion_y: 0.7
+  mayusculas: true
+  max_palabras: 4
+  max_caracteres: 22
+  resaltar: true
+animacion: {titulos: aparecer}
+emojis: false

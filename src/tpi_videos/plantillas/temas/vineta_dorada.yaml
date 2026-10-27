@@ -1,0 +1,56 @@
+nombre: Viñeta dorada
+descripcion: La misma sobriedad de cine, con el grado en ámbar caliente y acento dorado.
+marco: pizarra
+colores:
+  fondo: '#1A140C'
+  panel: '#241C11'
+  borde: '#3A2E1C'
+  titulos: '#FDE8C8'
+  texto: '#F1F5F9'
+  formulas: '#F8FAFC'
+  tenue: '#94A3B8'
+  acento: '#FDE68A'
+  exito: '#FCD34D'
+  cuadricula: '#4A3A22'
+  error: '#FCA5A5'
+materias:
+  matematica: '#FDE68A'
+  fisica: '#FB923C'
+  ingenieria: '#FCD34D'
+tipografia:
+  titulos:
+    familia: Cinzel
+    grosor: NORMAL
+    mayusculas: true
+    escala: 1.05
+  texto:
+    familia: Montserrat
+    grosor: MEDIUM
+    mayusculas: false
+    escala: 1.0
+nota:
+  rol: texto
+  escala: 1.0
+  color: titulos
+formulas_negrita: true
+fondo:
+  tipo: imagen
+  imagen: vineta_dorada
+  degradado:
+  - '#1A140C'
+  - '#090705'
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 74
+  color: '#F5EFE0'
+  color_activo: '#F5EFE0'
+  borde: 3
+  sombra: 8
+  posicion_y: 0.68
+  mayusculas: true
+  max_palabras: 5
+  max_caracteres: 28
+  resaltar: false
+animacion:
+  titulos: aparecer
+emojis: false

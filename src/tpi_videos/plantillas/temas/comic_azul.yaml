@@ -1,0 +1,57 @@
+nombre: Cómic azul
+descripcion: 'Tinta azul sobre papel de diario, subtítulos de imprenta sin borde:
+  el cómic tranquilo.'
+marco: pizarra
+colores:
+  fondo: '#F6F8FC'
+  panel: '#FFFFFF'
+  borde: '#111827'
+  titulos: '#1D4ED8'
+  texto: '#111827'
+  formulas: '#111827'
+  tenue: '#7A6F5E'
+  acento: '#F59E0B'
+  exito: '#15803D'
+  cuadricula: '#141414'
+  error: '#B91C1C'
+materias:
+  matematica: '#1D4ED8'
+  fisica: '#B91C1C'
+  ingenieria: '#F59E0B'
+tipografia:
+  titulos:
+    familia: Bangers
+    grosor: NORMAL
+    mayusculas: true
+    escala: 1.2
+  texto:
+    familia: Montserrat
+    grosor: HEAVY
+    mayusculas: false
+    escala: 0.95
+nota:
+  rol: titulos
+  escala: 0.85
+  color: acento
+formulas_negrita: true
+fondo:
+  tipo: imagen
+  imagen: comic_azul
+  degradado:
+  - '#F6F8FC'
+  - '#D6E2F4'
+subtitulos:
+  fuente: Luckiest Guy
+  tamano: 92
+  color: '#1D4ED8'
+  color_activo: '#F59E0B'
+  borde: 0
+  sombra: 3
+  posicion_y: 0.79
+  mayusculas: true
+  max_palabras: 2
+  max_caracteres: 16
+  resaltar: true
+animacion:
+  titulos: aparecer
+emojis: true

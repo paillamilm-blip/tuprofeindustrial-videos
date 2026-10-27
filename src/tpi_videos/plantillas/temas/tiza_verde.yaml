@@ -1,0 +1,39 @@
+nombre: Tiza verde
+descripcion: "La pizarra de siempre, pero gastada: manchas de borrador y letra manuscrita redonda."
+marco: pizarra
+colores:
+  fondo: '#12302A'
+  panel: '#1B3D34'
+  borde: '#2C5A4C'
+  titulos: '#EAF6EC'
+  texto: '#DCE9DE'
+  formulas: '#F2F7F0'
+  tenue: '#9CB8AC'
+  acento: '#A7F3D0'
+  exito: '#BEF264'
+  cuadricula: '#2F6154'
+  error: '#FCA5A5'
+materias:
+  matematica: '#A7F3D0'
+  fisica: '#FDE68A'
+  ingenieria: '#93C5FD'
+tipografia:
+  titulos: {familia: Shadows Into Light Two, grosor: NORMAL, mayusculas: false, escala: 1.15}
+  texto: {familia: Comic Neue, grosor: NORMAL, mayusculas: false, escala: 1.0}
+nota: {rol: texto, escala: 1.0, color: materia}
+formulas_negrita: false
+fondo: {tipo: imagen, imagen: tiza_verde, degradado: ['#12302A', '#091A16']}
+subtitulos:
+  fuente: Comic Neue
+  tamano: 84
+  color: '#F4F9F2'
+  color_activo: '#FFE86B'
+  borde: 7
+  sombra: 3
+  posicion_y: 0.73
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 20
+  resaltar: true
+animacion: {titulos: plumon}
+emojis: true

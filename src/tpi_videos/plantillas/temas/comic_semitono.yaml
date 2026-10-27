@@ -1,0 +1,39 @@
+nombre: Cómic semitono
+descripcion: "Viñeta de cómic: papel crema punteado, títulos Bangers rojos y subtítulos amarillos sobre negro."
+marco: pizarra
+colores:
+  fondo: '#FFF5D9'
+  panel: '#FFFFFF'
+  borde: '#141414'
+  titulos: '#E02B20'
+  texto: '#141414'
+  formulas: '#141414'
+  tenue: '#7A6F5E'
+  acento: '#FFB300'
+  exito: '#16A34A'
+  cuadricula: '#141414'
+  error: '#E02B20'
+materias:
+  matematica: '#1D4ED8'
+  fisica: '#E02B20'
+  ingenieria: '#FFB300'
+tipografia:
+  titulos: {familia: Bangers, grosor: NORMAL, mayusculas: true, escala: 1.2}
+  texto: {familia: Montserrat, grosor: HEAVY, mayusculas: false, escala: 0.95}
+nota: {rol: titulos, escala: 0.85, color: acento}
+formulas_negrita: true
+fondo: {tipo: imagen, imagen: comic_semitono, degradado: ['#FFF5D9', '#FFE7B4']}
+subtitulos:
+  fuente: Bangers
+  tamano: 92
+  color: '#FFFFFF'
+  color_activo: '#FFEE58'
+  borde: 9
+  sombra: 5
+  posicion_y: 0.79
+  mayusculas: true
+  max_palabras: 2
+  max_caracteres: 16
+  resaltar: true
+animacion: {titulos: aparecer}
+emojis: true

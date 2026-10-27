@@ -1,0 +1,57 @@
+nombre: Tiza azul
+descripcion: 'Pizarra azul de liceo con letra redonda y tiza cálida: la verde, pero
+  más luminosa.'
+marco: pizarra
+colores:
+  fondo: '#102038'
+  panel: '#16294A'
+  borde: '#24406B'
+  titulos: '#EAF2FF'
+  texto: '#DCE7F7'
+  formulas: '#F2F7FF'
+  tenue: '#9DB4D0'
+  acento: '#93C5FD'
+  exito: '#FDE68A'
+  cuadricula: '#2C4A78'
+  error: '#FCA5A5'
+materias:
+  matematica: '#93C5FD'
+  fisica: '#FDE68A'
+  ingenieria: '#A7F3D0'
+tipografia:
+  titulos:
+    familia: Comic Neue
+    grosor: BOLD
+    mayusculas: false
+    escala: 1.1
+  texto:
+    familia: Comic Neue
+    grosor: NORMAL
+    mayusculas: false
+    escala: 1.0
+nota:
+  rol: texto
+  escala: 1.0
+  color: materia
+formulas_negrita: false
+fondo:
+  tipo: imagen
+  imagen: tiza_azul
+  degradado:
+  - '#102038'
+  - '#07101F'
+subtitulos:
+  fuente: Comic Neue
+  tamano: 84
+  color: '#F2F7FF'
+  color_activo: '#FDE68A'
+  borde: 7
+  sombra: 3
+  posicion_y: 0.73
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 20
+  resaltar: true
+animacion:
+  titulos: plumon
+emojis: true

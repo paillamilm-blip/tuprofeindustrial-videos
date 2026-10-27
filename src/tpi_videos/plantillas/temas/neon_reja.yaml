@@ -1,0 +1,39 @@
+nombre: Neón sobre reja
+descripcion: "Reja synthwave con halo magenta, títulos Bangers y subtítulos Luckiest Guy que saltan."
+marco: pizarra
+colores:
+  fondo: '#05070D'
+  panel: '#171038'
+  borde: '#2B2050'
+  titulos: '#FF3D8B'
+  texto: '#EAF3FF'
+  formulas: '#EAF3FF'
+  tenue: '#8FA3C8'
+  acento: '#FFC72C'
+  exito: '#22D3EE'
+  cuadricula: '#38BDF8'
+  error: '#FF5C7A'
+materias:
+  matematica: '#38BDF8'
+  fisica: '#FF3D8B'
+  ingenieria: '#FFC72C'
+tipografia:
+  titulos: {familia: Bangers, grosor: NORMAL, mayusculas: true, escala: 1.15}
+  texto: {familia: Montserrat, grosor: SEMIBOLD, mayusculas: false, escala: 1.0}
+nota: {rol: texto, escala: 1.0, color: acento}
+formulas_negrita: true
+fondo: {tipo: imagen, imagen: neon_reja, degradado: ['#05070D', '#131A45']}
+subtitulos:
+  fuente: Luckiest Guy
+  tamano: 96
+  color: '#FFFFFF'
+  color_activo: '#FFC72C'
+  borde: 8
+  sombra: 6
+  posicion_y: 0.74
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 18
+  resaltar: true
+animacion: {titulos: plumon}
+emojis: true

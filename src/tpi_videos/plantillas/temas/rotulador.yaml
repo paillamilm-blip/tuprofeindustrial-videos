@@ -1,0 +1,46 @@
+nombre: Rotulador
+descripcion: "Papel claro y letras de imprenta negras con resaltador amarillo; subtítulos sin borde, como imprenta."
+marco: hoja
+colores:
+  fondo: '#E9E7DF'
+  panel: '#FFFFFF'
+  borde: '#141414'
+  titulos: '#141414'
+  texto: '#1A1A1A'
+  formulas: '#141414'
+  tenue: '#6E6A60'
+  acento: '#FFD400'
+  exito: '#0F8A3C'
+  cuadricula: '#EAE8E0'
+  error: '#E02B20'
+materias:
+  matematica: '#141414'
+  fisica: '#0F5FA8'
+  ingenieria: '#7A4E12'
+tipografia:
+  titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true, escala: 1.1}
+  texto: {familia: Montserrat, grosor: SEMIBOLD, mayusculas: false, escala: 0.95}
+nota: {rol: titulos, escala: 0.9, color: titulos}
+formulas_negrita: true
+fondo: {tipo: color, imagen: difuminado, degradado: ['#E9E7DF']}
+hoja:
+  encabezado: TRAMPA CLASS
+  etiqueta: ''
+  fecha: 3 pasos
+  color: '#F7F6F1'
+  lineas: '#EAE8E0'
+  cuadricula: false
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 80
+  color: '#141414'
+  color_activo: '#E02B20'
+  borde: 0
+  sombra: 0
+  posicion_y: 0.8
+  mayusculas: true
+  max_palabras: 5
+  max_caracteres: 30
+  resaltar: true
+animacion: {titulos: aparecer}
+emojis: false
