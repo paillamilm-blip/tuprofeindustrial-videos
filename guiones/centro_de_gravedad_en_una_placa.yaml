@@ -1,0 +1,63 @@
+# Guion redactado con IA (gemini-3.5-flash-lite) el 26-10-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se asume densidad superficial uniforme.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "Centro de gravedad en una placa"
+materia: fisica
+nivel: "3° medio"
+molde: pov
+
+gancho:
+  texto: "¿Dónde se equilibra exactamente esta placa triangular?"
+  voz: "Estás en el taller. ¿Dónde se equilibra exactamente esta placa?"
+  emoji: "🎯"
+
+gancho_variantes:
+  - texto: "Encuentra el centro de gravedad de este triángulo"
+    emoji: "✍️"
+  - texto: "El punto exacto donde la placa no se cae"
+    emoji: "💡"
+
+enunciado:
+  texto: "Halla el centro de gravedad de una placa triangular con vértices A(0, 0), B(6, 0) y C(3, 9)."
+  voz: "Estás armando una pieza y necesitas hallar su centro de gravedad."
+  destacar: ["A(0, 0)", "B(6, 0)", "C(3, 9)"]
+
+datos:
+  - tex: 'A(0, 0)\ \text{cm}'
+    voz: "El vértice a en cero coma cero."
+  - tex: 'B(6, 0)\ \text{cm}'
+    voz: "El vértice b en seis coma cero."
+  - tex: 'C(3, 9)\ \text{cm}'
+    voz: "El vértice c en tres coma nueve."
+
+pasos:
+  - nota: "Coordenada equis"
+    tex: 'x_c = \frac{0 + 6 + 3}{3}'
+    voz: "Sumamos las posiciones equis y dividimos por tres."
+    emoji: "📐"
+  - nota: "Coordenada i griega"
+    tex: 'y_c = \frac{0 + 0 + 9}{3}'
+    voz: "Hacemos lo mismo con las posiciones verticales."
+  - nota: "Resultado final"
+    tex: 'C_g = (3, 3)\ \text{cm}'
+    voz: "Obtenemos las coordenadas finales del punto de equilibrio."
+    emoji: "🏆"
+
+resultado:
+  tex: '(3, 3)\ \text{cm}'
+  voz: "El centro está en tres coma tres centímetros."
+  emoji: "🏆"
+
+verificacion:
+  texto: "El centro de masa es el promedio de los vértices."
+  voz: "Recuerda que siempre es el promedio aritmético."
+
+reto:
+  texto: "¿Y si C(3, 12)?"
+  voz: "Pruébate tú. ¿Cuál sería si el vértice ce fuera doce?"
+  emoji: "✍️"
