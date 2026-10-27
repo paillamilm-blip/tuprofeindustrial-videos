@@ -1,0 +1,54 @@
+# Guion escrito a mano el 27-10-2026 para estrenar el tanque con llave y válvula.
+# REVISA la matemática antes de publicar.
+
+titulo: "El tanque que se llena mientras pierde agua"
+materia: matematica
+nivel: "1° medio"
+molde: nadie_te_enseno
+tema: cuaderno_del_profe
+
+gancho:
+  texto: "La llave llena y la válvula vacía: ¿cuándo termina?"
+  voz: "Una llave llena el tanque y otra lo vacía al mismo tiempo. ¿Cuándo termina?"
+  emoji: "💧"
+
+enunciado:
+  texto: "Un tanque de 120 L recibe 8 L/min y pierde 2 L/min por su válvula abierta."
+  voz: "El tanque guarda ciento veinte litros. Entran ocho por minuto y se escapan dos."
+  destacar: ["120 L", "8 L/min", "2 L/min"]
+
+datos:
+  - tex: 'V = 120\ \text{L} \quad Q_{\text{entra}} = 8\ \text{L/min} \quad Q_{\text{pierde}} = 2\ \text{L/min}'
+    voz: "Ciento veinte litros, ocho que entran y dos que se van."
+
+pasos:
+  - nota: "Lo que de verdad entra"
+    tex: 'Q = 8 - 2 = 6\ \text{L/min}'
+    voz: "De los ocho que entran, dos se escapan: quedan seis litros por minuto."
+    emoji: "💡"
+  - nota: "El tiempo es lo que cabe por lo que entra"
+    tex: 't = \frac{V}{Q} = \frac{120}{6} = 20\ \text{min}'
+    voz: "Ciento veinte divididos en seis: veinte minutos tarda en llenarse."
+    visual:
+      tipo: tanque
+      capacidad: '120 L'
+      entrada: '8 L/min'
+      salida: '2 L/min'
+      anotar: ['llenado']
+  - nota: "El error clásico"
+    tex: 't \ne \frac{120}{8} = 15\ \text{min}'
+    voz: "Dividir solo entre los ocho da quince minutos, y es la trampa del ejercicio."
+
+resultado:
+  tex: 't = 20\ \text{min}'
+  voz: "Con la válvula abierta, el tanque tarda veinte minutos en llenarse."
+  emoji: "⏱️"
+
+verificacion:
+  texto: "En 20 min entran 160 L y se escapan 40: quedan 120 L."
+  voz: "En veinte minutos entran ciento sesenta y se van cuarenta: quedan ciento veinte."
+
+reto:
+  texto: "Con la válvula de 3 L/min, ¿cuánto tarda ahora?"
+  voz: "Ahora tú: si la válvula deja escapar tres litros por minuto, ¿cuánto tarda?"
+  emoji: "✍️"

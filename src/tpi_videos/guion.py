@@ -18,6 +18,7 @@ from .errores import ErrorMotor
 from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 from .tex import llaves_balanceadas
 from .visuales import (
+    MARCAS_CERCHA,
     MARCAS_CIRCULO,
     MARCAS_ONDA,
     MARCAS_PENDULO,
@@ -27,10 +28,13 @@ from .visuales import (
     MARCAS_PROYECTIL,
     MARCAS_RESORTE,
     MARCAS_SOLIDO,
+    MARCAS_TANQUE,
     MARCAS_VENN,
+    MARCAS_VIGA,
     SEGUNDOS_VISUAL,
     analizar_angulo,
     analizar_barras,
+    analizar_cercha,
     analizar_energia,
     analizar_funcion,
     analizar_onda,
@@ -43,8 +47,10 @@ from .visuales import (
     analizar_recta,
     analizar_resorte,
     analizar_solido,
+    analizar_tanque,
     analizar_torta,
     analizar_venn,
+    analizar_viga,
     normalizar_vectores,
 )
 
@@ -162,6 +168,9 @@ class Visual(_Base):
         "pendulo",
         "resorte",
         "polea",
+        "tanque",
+        "viga",
+        "cercha",
     ]
 
     # grafico_funcion
@@ -236,6 +245,16 @@ class Visual(_Base):
     # polea
     masa_a: str | None = None  # '3 kg'
     masa_b: str | None = None  # '2 kg'
+
+    # tanque (anota 'llenado' o 'vaciado')
+    capacidad: str | None = None  # '120 L'
+    entrada: str | None = None  # '8 L/min'
+    salida: str | None = None  # '2 L/min'; si falta, el tanque no pierde
+
+    # viga (reusa longitud: la luz entre apoyos) y cercha (reusa base y altura)
+    carga: str | None = None  # '200 N' al centro, o '50 N/m' repartida
+    repartida: bool = False
+    base: str | None = None  # '6 m'
 
     _listas = field_validator(
         "rango", "marcar", "vectores", "resistencias", "anotar", "categorias", mode="before"
@@ -399,6 +418,46 @@ class Visual(_Base):
                 raise ValueError(
                     f"«{desconocidas[0]}» no es una marca de la polea; el motor sabe anotar {', '.join(MARCAS_POLEA)}"
                 )
+        elif self.tipo == "tanque":
+            if not (self.capacidad or "").strip() or not (self.entrada or "").strip():
+                raise ValueError(
+                    "el tanque necesita su capacidad y la llave que lo llena, "
+                    "ej. capacidad: '120 L' y entrada: '8 L/min'"
+                )
+            analizar_tanque(self.capacidad, self.entrada, self.salida)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_TANQUE]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca del tanque; el motor sabe anotar {', '.join(MARCAS_TANQUE)}"
+                )
+            if "vaciado" in self.anotar and not (self.salida or "").strip():
+                raise ValueError("para anotar el vaciado el tanque necesita su fisura, ej. salida: '2 L/min'")
+        elif self.tipo == "viga":
+            if not (self.longitud or "").strip() or not (self.carga or "").strip():
+                raise ValueError("la viga necesita su luz y su carga, ej. longitud: '4 m' y carga: '200 N'")
+            analizar_viga(self.longitud, self.carga, self.repartida)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_VIGA]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de la viga; el motor sabe anotar {', '.join(MARCAS_VIGA)}"
+                )
+        elif self.tipo == "cercha":
+            if (
+                not (self.base or "").strip()
+                or not (self.altura or "").strip()
+                or not (self.carga or "").strip()
+            ):
+                raise ValueError(
+                    "la cercha necesita su base, su altura y la carga, "
+                    "ej. base: '6 m', altura: '4 m' y carga: '300 N'"
+                )
+            analizar_cercha(self.base, self.altura, self.carga)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_CERCHA]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de la cercha; "
+                    f"el motor sabe anotar {', '.join(MARCAS_CERCHA)}"
+                )
         elif self.tipo == "poligono_regular":
             if not (self.lado or "").strip():
                 raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
@@ -515,6 +574,24 @@ class Visual(_Base):
         if self.tipo != "polea":
             raise ValueError(f"«{self.tipo}» no es una polea")
         return analizar_polea(self.masa_a or "", self.masa_b or "")
+
+    def tanque(self):
+        """El tanque con su llenado (y su vaciado, si pierde)."""
+        if self.tipo != "tanque":
+            raise ValueError(f"«{self.tipo}» no es un tanque")
+        return analizar_tanque(self.capacidad or "", self.entrada or "", self.salida)
+
+    def viga(self):
+        """La viga apoyada con sus reacciones y su momento máximo."""
+        if self.tipo != "viga":
+            raise ValueError(f"«{self.tipo}» no es una viga")
+        return analizar_viga(self.longitud or "", self.carga or "", self.repartida)
+
+    def cercha(self):
+        """La cercha triangular con su inclinación y el esfuerzo del paño."""
+        if self.tipo != "cercha":
+            raise ValueError(f"«{self.tipo}» no es una cercha")
+        return analizar_cercha(self.base or "", self.altura or "", self.carga or "")
 
     def poligono(self):
         """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
@@ -858,6 +935,26 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
     elif tipo == "polea":
         campos.append(("masa_a", _simples(v.get("masa_a") or "")))
         campos.append(("masa_b", _simples(v.get("masa_b") or "")))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "tanque":
+        campos.append(("capacidad", _simples(v.get("capacidad") or "")))
+        campos.append(("entrada", _simples(v.get("entrada") or "")))
+        if v.get("salida"):
+            campos.append(("salida", _simples(v["salida"])))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "viga":
+        campos.append(("longitud", _simples(v.get("longitud") or "")))
+        campos.append(("carga", _simples(v.get("carga") or "")))
+        if v.get("repartida"):
+            campos.append(("repartida", "true"))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "cercha":
+        campos.append(("base", _simples(v.get("base") or "")))
+        campos.append(("altura", _simples(v.get("altura") or "")))
+        campos.append(("carga", _simples(v.get("carga") or "")))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     else:

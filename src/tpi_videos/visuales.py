@@ -34,6 +34,9 @@ SEGUNDOS_VISUAL = {
     "pendulo": 3.0,
     "resorte": 2.5,
     "polea": 3.0,
+    "tanque": 3.0,
+    "viga": 3.0,
+    "cercha": 3.0,
 }
 
 # Lo que se puede anotar en un polígono regular.
@@ -62,6 +65,11 @@ MARCAS_ONDA = ("velocidad",)
 MARCAS_PENDULO = ("periodo",)
 MARCAS_RESORTE = ("fuerza",)
 MARCAS_POLEA = ("aceleracion", "tension")
+
+# Lo que se puede anotar en un tanque con llave y fisura, una viga apoyada y una cercha.
+MARCAS_TANQUE = ("llenado", "vaciado")
+MARCAS_VIGA = ("reacciones", "momento")
+MARCAS_CERCHA = ("esfuerzo", "angulo")
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -501,8 +509,11 @@ class Solido:
     lado: float | None = None
 
 
-def _medida_solido(texto: str | None, nombre: str) -> tuple[float, str]:
-    """Saca el número y la unidad de «3 cm»; si no hay número, lo dice en español."""
+def _medida_solido(texto: str | None, nombre: str, hasta_barra: bool = False) -> tuple[float, str]:
+    """Saca el número y la unidad de «3 cm»; si no hay número, lo dice en español.
+
+    Con `hasta_barra` se conserva lo que va después de la «/», que hace falta en un caudal.
+    """
     crudo = str(texto or "")
     m = re.search(r"-?\d+(?:[.,]\d+)?", crudo)
     if not m:
@@ -512,7 +523,8 @@ def _medida_solido(texto: str | None, nombre: str) -> tuple[float, str]:
     valor = float(m.group().replace(",", "."))
     if valor <= 0:
         raise ValueError(f"la medida de {nombre} debe ser positiva, y leí «{crudo}»")
-    return valor, crudo[m.end() :].strip().split("/")[0]
+    resto = crudo[m.end() :].strip()
+    return valor, resto if hasta_barra else resto.split("/")[0]
 
 
 def analizar_solido(
@@ -834,3 +846,109 @@ def analizar_polea(masa_a: str, masa_b: str, gravedad: float = 9.8) -> Polea:
     a = abs(m1 - m2) * gravedad / (m1 + m2)
     tension = 2 * m1 * m2 * gravedad / (m1 + m2)
     return Polea(m1, m2, a, tension, uni or uni_b)
+
+
+# ---------------------------------------------------------------- tanque, viga y cercha
+
+
+@dataclass
+class Tanque:
+    """El clásico de «entra y se escapa»: con la fisura el tanque tarda más y nunca se vacía solo."""
+
+    capacidad: float
+    unidad: str  # la del volumen: de «120 L» sale «L»
+    entrada: float
+    salida: float | None
+    neto: float
+    llenado: float  # capacidad / neto
+    vaciado: float | None  # capacidad / salida; None si no hay fisura
+    unidad_tiempo: str  # de «8 L/min» sale «min»
+
+
+def _caudal(texto: str | None, nombre: str) -> tuple[float, str, str]:
+    """Un caudal va siempre en «algo por tiempo»: 8 L/min, 1,5 m³/h."""
+    valor, unidad = _medida_solido(texto, nombre, hasta_barra=True)
+    if "/" not in unidad:
+        raise ValueError(f"el caudal de {nombre} va por unidad de tiempo, ej. «8 L/min», y leí «{texto}»")
+    volumen, tiempo = unidad.split("/", 1)
+    return valor, volumen.strip(), tiempo.strip()
+
+
+def analizar_tanque(capacidad: str, entrada: str, salida: str | None = None) -> Tanque:
+    """Resuelve el tanque que se llena con una fisura abierta."""
+    litros, uni = _medida_solido(capacidad, "capacidad")
+    q_in, _, tiempo = _caudal(entrada, "entrada")
+    q_out = None
+    if (salida or "").strip():
+        q_out, _, tiempo_out = _caudal(salida, "salida")
+        if tiempo_out != tiempo:
+            raise ValueError(
+                f"la entrada mide en «por {tiempo}» y la salida en «por {tiempo_out}»: usan la misma unidad"
+            )
+    neto = q_in - (q_out or 0.0)
+    if neto <= 0:
+        raise ValueError(
+            f"entra {q_in:g} y sale {(q_out or 0):g}: el tanque nunca se llena, el video necesita otra pregunta"
+        )
+    return Tanque(
+        litros,
+        uni,
+        q_in,
+        q_out,
+        neto,
+        litros / neto,
+        litros / q_out if q_out else None,
+        tiempo,
+    )
+
+
+@dataclass
+class Viga:
+    """Viga apoyada de luz L: con carga al centro o repartida, los apoyos y el momento máximo."""
+
+    longitud: float
+    unidad: str  # la del vano: de «4 m» sale «m»
+    carga: float  # P en N, o w en N/m si viene repartida
+    unidad_carga: str
+    reaccion: float  # cada apoyo aguanta la mitad
+    momento: float  # PL/4 o wL²/8, en el centro
+    repartida: bool = False
+
+
+def analizar_viga(longitud: str, carga: str, repartida: bool = False) -> Viga:
+    """Aplica las fórmulas de la viga simplemente apoyada que salen en cualquier ramo."""
+    L, uni = _medida_solido(longitud, "luz de la viga")
+    valor, uni_carga = _medida_solido(carga, "carga de la viga", hasta_barra=True)
+    if repartida:
+        # w va en N/m: si el guion escribió «50 N» sin la barra, la pantalla mentiría.
+        if "/" not in uni_carga:
+            raise ValueError(f"una carga repartida se mide por metro, ej. «50 N/m», y leí «{carga}»")
+        total = valor * L  # la carga repartida pesa sobre toda la luz
+        momento = valor * L * L / 8.0
+    else:
+        total = valor
+        momento = valor * L / 4.0
+    return Viga(L, uni, valor, uni_carga, total / 2.0, momento, repartida)
+
+
+@dataclass
+class Cercha:
+    """Cercha triangular simétrica: la carga al vértice se reparte en los dos paños inclinados."""
+
+    base: float
+    altura: float
+    unidad: str
+    carga: float
+    unidad_carga: str
+    angulo: float  # inclinación del paño sobre la horizontal, en grados
+    esfuerzo: float  # P / (2 sen θ)
+    reaccion: float  # P / 2
+
+
+def analizar_cercha(base: str, altura: str, carga: str) -> Cercha:
+    """El paño más tendido aguanta más: por eso una cercha baja da un esfuerzo mayor."""
+    b, uni = _medida_solido(base, "base de la cercha")
+    h, _ = _medida_solido(altura, "altura de la cercha")
+    p, uni_carga = _medida_solido(carga, "carga de la cercha")
+    angulo = math.degrees(math.atan2(h, b / 2.0))
+    return Cercha(b, h, uni, p, uni_carga, angulo, p / (2.0 * math.sin(math.radians(angulo))), p / 2.0)

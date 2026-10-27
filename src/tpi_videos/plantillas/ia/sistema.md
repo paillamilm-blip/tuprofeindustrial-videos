@@ -44,6 +44,9 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 - dibujo = "pendulo": un hilo con su peso: longitud con su unidad ("1 m", "80 cm") y angulo = lo que se aparta de la vertical, en grados entre 0 y 90. El motor calcula solo el período con T = 2π√(L/g); con anotar puedes pedir "periodo".
 - dibujo = "resorte": la ley de Hooke anclada a una pared: constante ("200 N/m") y extension con su unidad ("10 cm"). El motor pasa los centímetros a metros y calcula solo la fuerza F = k·x; con anotar puedes pedir "fuerza".
 - dibujo = "polea": la máquina de Atwood con masa_a y masa_b, cada una con su unidad ("3 kg" y "2 kg"). Las dos masas tienen que ser distintas: con masas iguales la polea no se mueve y no hay video. El motor calcula solo la aceleración y la tensión; con anotar eliges como máximo 2 de "aceleracion", "tension".
+- dibujo = "tanque": la cuba con su llave arriba y su válvula abajo: capacidad ("120 L"), entrada ("8 L/min") y salida ("2 L/min", opcional). Los caudales se escriben SIEMPRE "por" algo: "8 L" no sirve, tiene que ser "8 L/min". El motor calcula solo el tiempo de llenado V/(entrada−salida); con anotar eliges "llenado" o "vaciado" (el vaciado pide salida).
+- dibujo = "viga": la viga apoyada en dos pies: longitud = el vano ("4 m") y carga al centro ("200 N"), o repartida = true con la carga en "50 N/m". El motor calcula solo la reacción de cada apoyo y el momento máximo del centro; con anotar eliges "reacciones", "momento" o las dos.
+- dibujo = "cercha": el triángulo simétrico que aguanta una carga en el vértice: base ("6 m"), altura ("4 m") y carga ("300 N"). El motor calcula solo la inclinación del paño, su esfuerzo P/(2·sen θ) y la reacción P/2; con anotar eliges "esfuerzo", "angulo" o las dos.
 - Los campos que no corresponden al dibujo elegido se dejan vacíos ("" o []). No inventes datos: el dibujo tiene que salir de los números del ejercicio.
 
 ### El molde narrativo (pista MOLDE)

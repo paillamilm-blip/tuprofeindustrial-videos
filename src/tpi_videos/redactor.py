@@ -85,12 +85,15 @@ class PasoIA(BaseModel):
         "pendulo",
         "resorte",
         "polea",
+        "tanque",
+        "viga",
+        "cercha",
     ] = Field(
         default="",
         description=(
             'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
             '"circulo", "solido", "venn", "recta", "probabilidad", "torta", "barras", "onda", "energia", '
-            '"optica", "pendulo", "resorte" o "polea" (máximo 1 en el guion)'
+            '"optica", "pendulo", "resorte", "polea", "tanque", "viga" o "cercha" (máximo 1 en el guion)'
         ),
     )
     funcion: str = Field(
@@ -196,6 +199,19 @@ class PasoIA(BaseModel):
     extension: str = Field(default="", description='Con dibujo="resorte": cuánto se estira, ej. "10 cm"')
     masa_a: str = Field(default="", description='Con dibujo="polea": primera masa con su unidad, ej. "3 kg"')
     masa_b: str = Field(default="", description='Con dibujo="polea": segunda masa, distinta de la primera')
+    capacidad: str = Field(default="", description='Con dibujo="tanque": cuánto entra, ej. "120 L"')
+    entrada: str = Field(
+        default="", description='Con dibujo="tanque": llave que llena, con "por", ej. "8 L/min"'
+    )
+    salida: str = Field(default="", description='Con dibujo="tanque": fisura que pierde, ej. "2 L/min"')
+    carga: str = Field(
+        default="",
+        description='Con dibujo="viga" o "cercha": la carga con su unidad, ej. "200 N" o "50 N/m"',
+    )
+    repartida: bool = Field(
+        default=False, description='Con dibujo="viga": true si la carga va repartida en "N/m"'
+    )
+    base: str = Field(default="", description='Con dibujo="cercha": la luz entre apoyos, ej. "6 m"')
     anotar: list[str] = Field(
         default_factory=list,
         description=(
@@ -205,6 +221,8 @@ class PasoIA(BaseModel):
             'con "solido", de "volumen", "area"; '
             'con "venn", "total"; con "probabilidad", "probabilidad"; con "onda", "velocidad"; '
             'con "pendulo", "periodo"; con "resorte", "fuerza"; con "polea", "aceleracion" o "tension"; '
+            'con "tanque", "llenado" o "vaciado"; con "viga", "reacciones" o "momento"; '
+            'con "cercha", "esfuerzo" o "angulo"; '
             'con "recta", "torta", "barras", "energia" u "optica" va vacío'
         ),
     )
@@ -413,6 +431,9 @@ _DIBUJOS = {
     "pendulo": "pendulo",
     "resorte": "resorte",
     "polea": "polea",
+    "tanque": "tanque",
+    "viga": "viga",
+    "cercha": "cercha",
 }
 
 
@@ -517,6 +538,31 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["masa_a"] = _texto(p.masa_a)
         if p.masa_b:
             visual["masa_b"] = _texto(p.masa_b)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "tanque":
+        for clave, valor in (
+            ("capacidad", p.capacidad),
+            ("entrada", p.entrada),
+            ("salida", p.salida),
+        ):
+            if valor:
+                visual[clave] = _texto(valor)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "viga":
+        if p.longitud:
+            visual["longitud"] = _texto(p.longitud)
+        if p.carga:
+            visual["carga"] = _texto(p.carga)
+        if p.repartida:
+            visual["repartida"] = True
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "cercha":
+        for clave, valor in (("base", p.base), ("altura", p.altura), ("carga", p.carga)):
+            if valor:
+                visual[clave] = _texto(valor)
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     elif tipo == "poligono_regular":

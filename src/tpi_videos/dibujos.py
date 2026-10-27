@@ -38,6 +38,7 @@ from . import componentes as c
 from .visuales import (
     AnguloTrig,
     Barras,
+    Cercha,
     Energia,
     Funcion,
     Onda,
@@ -50,8 +51,10 @@ from .visuales import (
     Recta,
     Resorte,
     Solido,
+    Tanque,
     Torta,
     Venn,
+    Viga,
     analizar_circuito,
 )
 
@@ -1463,6 +1466,366 @@ def polea(
 
 
 # ------------------------------------------------------------------------------------------
+# 12) Ingeniería: el tanque que pierde, la viga apoyada y la cercha triangular
+# ------------------------------------------------------------------------------------------
+
+
+def tanque(
+    figura: Tanque, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """El tanque con su llave arriba y su válvula abajo: entra, se escapa y aun así se llena."""
+    w, h = ancho * 0.30, alto * 0.52
+    x_cuba = ancho * 0.03
+    arriba, bajo = alto * 0.20, alto * 0.20 - h
+    x_izq, x_der = x_cuba - w / 2, x_cuba + w / 2
+    cuba = Rectangle(width=w, height=h).move_to([x_cuba, (arriba + bajo) / 2, 0.0])
+    cuba.set_stroke(col.formulas, 5).set_fill(papel, 0)
+
+    # El agua llega hasta su nivel y se corta en recto: sin la superficie parece un cartel, no un tanque.
+    nivel = bajo + h * 0.45
+    agua = (
+        Rectangle(width=w - 0.08, height=nivel - bajo - 0.04)
+        .move_to([x_cuba, (nivel + bajo) / 2, 0.0])
+        .set_fill(col.cuadricula, 0.45)
+        .set_stroke(width=0)
+    )
+    superficie = Line([x_izq + 0.04, nivel, 0], [x_der - 0.04, nivel, 0]).set_stroke(col.cuadricula, 5)
+
+    x_llave = x_cuba - w * 0.22
+    llave = Arrow(
+        [x_llave, arriba + alto * 0.20, 0],
+        [x_llave, arriba + alto * 0.02, 0],
+        buff=0,
+        stroke_width=5,
+        max_tip_length_to_length_ratio=0.22,
+    )
+    llave.set_stroke(col.cuadricula, 5).set_fill(col.cuadricula, 1)
+
+    # La salida es un tubo con su válvula: dos triángulos que se tocan de frente, el símbolo de siempre.
+    y_tubo = bajo + h * 0.22
+    tubo = Line([x_der, y_tubo, 0], [x_der + ancho * 0.17, y_tubo, 0]).set_stroke(col.formulas, 5)
+    vx = x_der + ancho * 0.085
+    valvula = VGroup(
+        Polygon([vx, y_tubo, 0], [vx - 0.17, y_tubo + 0.17, 0], [vx - 0.17, y_tubo - 0.17, 0]),
+        Polygon([vx, y_tubo, 0], [vx + 0.17, y_tubo + 0.17, 0], [vx + 0.17, y_tubo - 0.17, 0]),
+    )
+    valvula.set_stroke(col.formulas, 4).set_fill(papel, 1)
+    fuga = Arrow(
+        [x_der + ancho * 0.18, y_tubo, 0],
+        [x_der + ancho * 0.26, y_tubo, 0],
+        buff=0,
+        stroke_width=5,
+        max_tip_length_to_length_ratio=0.40,
+    )
+    fuga.set_stroke(col.error, 5).set_fill(col.error, 1)
+
+    uni_v, uni_t = figura.unidad or "L", figura.unidad_tiempo or "min"
+    ambos = "llenado" in marcas and "vaciado" in marcas and figura.vaciado is not None
+    parches, rótulos = VGroup(), VGroup()
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"{_numero_latex(figura.capacidad)} {uni_v}",
+        np.array([x_cuba, arriba - h * 0.16, 0.0]),
+        20,
+    )
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"entran {_numero_latex(figura.entrada)} {uni_v}/{uni_t}",
+        np.array([x_llave - 0.10, arriba + alto * 0.26, 0.0]),
+        16,
+        LEFT,
+    )
+    if figura.salida:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"se escapan {_numero_latex(figura.salida)} {uni_v}/{uni_t}",
+            np.array([x_der + ancho * 0.155, y_tubo + 0.40, 0.0]),
+            16,
+        )
+    if "llenado" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"se llena en ≈ {_numero_latex(figura.llenado)} {uni_t}",
+            np.array([x_cuba - (ancho * 0.20 if ambos else 0.0), -alto * 0.42, 0.0]),
+            17,
+        )
+    if "vaciado" in marcas and figura.vaciado is not None:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"se vacía en ≈ {_numero_latex(figura.vaciado)} {uni_t}",
+            np.array([x_cuba + (ancho * 0.20 if ambos else 0.0), -alto * 0.42, 0.0]),
+            17,
+        )
+
+    rayas = [cuba, agua, superficie, llave, tubo, valvula]
+    todo = VGroup(*rayas, fuga, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=[cuba, tubo, valvula], aparece=[agua, superficie, llave, fuga, *rótulos])
+
+
+def viga(
+    figura: Viga, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """La viga apoyada: los dos pies se reparten la carga y el vano se dobla en el centro."""
+    vano = ancho * 0.60
+    y_viga = alto * 0.17
+    peralte = alto * 0.10
+    canto = y_viga + peralte / 2
+    x_izq, x_der = -vano / 2, vano / 2
+    lomo = Rectangle(width=vano, height=peralte).move_to([0.0, y_viga, 0.0])
+    lomo.set_stroke(col.formulas, 5).set_fill(col.formulas, 0.16)
+    piso = y_viga - peralte / 2 - 0.34
+
+    def pie(x: float, rodillos: bool) -> VGroup:
+        pata = Polygon([x, y_viga - peralte / 2, 0], [x - 0.24, piso, 0], [x + 0.24, piso, 0])
+        pata.set_stroke(col.formulas, 4).set_fill(col.acento, 0.18)
+        grupo = VGroup(pata)
+        if rodillos:
+            ruedas = [Circle(radius=0.06).move_to([x + dx, piso - 0.11, 0.0]) for dx in (-0.13, 0.0, 0.13)]
+            VGroup(*ruedas).set_stroke(col.formulas, 3).set_fill(papel, 1)
+            grupo.add(*ruedas)
+            grupo.add(
+                Line([x - 0.32, piso - 0.20, 0], [x + 0.32, piso - 0.20, 0]).set_stroke(col.formulas, 5)
+            )
+        else:
+            grupo.add(Line([x - 0.32, piso, 0], [x + 0.32, piso, 0]).set_stroke(col.formulas, 5))
+        return grupo
+
+    apoyo_izq, apoyo_der = pie(x_izq, False), pie(x_der, True)
+
+    if figura.repartida:
+        techo = Line([x_izq, canto + 0.42, 0], [x_der, canto + 0.42, 0]).set_stroke(col.error, 4)
+        cargas = VGroup()
+        for i in range(7):
+            x = x_izq + vano * (i + 0.5) / 7
+            saeta = Arrow(
+                [x, canto + 0.40, 0],
+                [x, canto + 0.03, 0],
+                buff=0,
+                stroke_width=4,
+                max_tip_length_to_length_ratio=0.35,
+            )
+            saeta.set_stroke(col.error, 4).set_fill(col.error, 1)
+            cargas.add(saeta)
+        peso: list[Mobject] = [techo, cargas]
+    else:
+        saeta = Arrow(
+            [0.0, canto + 0.72, 0],
+            [0.0, canto + 0.03, 0],
+            buff=0,
+            stroke_width=6,
+            max_tip_length_to_length_ratio=0.18,
+        )
+        saeta.set_stroke(col.error, 6).set_fill(col.error, 1)
+        peso = [saeta]
+
+    empuja = VGroup()
+    if "reacciones" in marcas:
+        for x in (x_izq, x_der):
+            flecha = Arrow(
+                [x, piso - 0.74, 0],
+                [x, piso - 0.26, 0],
+                buff=0,
+                stroke_width=5,
+                max_tip_length_to_length_ratio=0.35,
+            )
+            flecha.set_stroke(col.exito, 5).set_fill(col.exito, 1)
+            empuja.add(flecha)
+
+    y_cota = -alto * 0.38
+    cota = VGroup(
+        DashedLine([x_izq, piso - 0.98, 0], [x_izq, y_cota - 0.08, 0]),
+        DashedLine([x_der, piso - 0.98, 0], [x_der, y_cota - 0.08, 0]),
+        Line([x_izq, y_cota, 0], [x_der, y_cota, 0]),
+    ).set_stroke(col.tenue, 3)
+
+    uni_fuerza = figura.unidad_carga.split("/")[0].strip()
+    parches, rótulos = VGroup(), VGroup()
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"{_numero_latex(figura.carga)} {figura.unidad_carga}",
+        np.array([0.0 if figura.repartida else 0.14, canto + (0.58 if figura.repartida else 0.66), 0.0]),
+        17,
+        None if figura.repartida else RIGHT,
+    )
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"{_numero_latex(figura.longitud)} {figura.unidad}",
+        np.array([0.0, y_cota, 0.0]),
+        16,
+    )
+    if "reacciones" in marcas:
+        for x, nombre in ((x_izq, "R₁"), (x_der, "R₂")):
+            _cartela(
+                col,
+                papel,
+                parches,
+                rótulos,
+                f"{nombre} ≈ {_numero_latex(figura.reaccion)} {uni_fuerza}",
+                np.array([x, piso - 1.00, 0.0]),
+                15,
+            )
+    if "momento" in marcas:
+        centro = Dot([0.0, y_viga - peralte / 2, 0.0], radius=0.06).set_fill(col.cuadricula, 1)
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"M ≈ {_numero_latex(figura.momento)} {uni_fuerza}·{figura.unidad}",
+            np.array([0.0, y_viga - peralte / 2 - 0.32, 0.0]),
+            16,
+        )
+    else:
+        centro = VGroup()
+
+    rayas = [lomo, apoyo_izq, apoyo_der, *peso, cota]
+    todo = VGroup(*rayas, centro, empuja, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(
+        mobs=todo,
+        trazo=[lomo, apoyo_izq, apoyo_der, cota],
+        aparece=[*peso, *empuja, centro, *rótulos],
+    )
+
+
+def cercha(
+    figura: Cercha, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """La cercha triangular: la carga del vértice baja inclinada por los dos paños hasta los apoyos."""
+    altura = min(alto * 0.48, ancho * 0.46 * figura.altura / max(figura.base, 1e-6))
+    base = min(altura * figura.base / max(figura.altura, 1e-6), ancho * 0.46)
+    altura = base * figura.altura / max(figura.base, 1e-6)
+    y_suelo = -alto * 0.14
+    izq = np.array([-base / 2, y_suelo, 0.0])
+    der = np.array([base / 2, y_suelo, 0.0])
+    cima = np.array([0.0, y_suelo + altura, 0.0])
+
+    paños = VGroup(Line(izq, cima), Line(der, cima), Line(izq, der)).set_stroke(col.formulas, 7)
+    nudos = VGroup(
+        *[Dot(p, radius=0.07).set_fill(col.acento, 1).set_stroke(col.formulas, 2) for p in (izq, der, cima)]
+    )
+
+    def pie(p: np.ndarray) -> VGroup:
+        pata = Polygon([p[0], p[1] - 0.05, 0], [p[0] - 0.22, p[1] - 0.36, 0], [p[0] + 0.22, p[1] - 0.36, 0])
+        pata.set_stroke(col.formulas, 4).set_fill(col.acento, 0.18)
+        piso = Line([p[0] - 0.30, p[1] - 0.36, 0], [p[0] + 0.30, p[1] - 0.36, 0]).set_stroke(col.formulas, 5)
+        return VGroup(pata, piso)
+
+    apoyos = VGroup(pie(izq), pie(der))
+
+    peso = Arrow(
+        [cima[0], cima[1] + alto * 0.24, 0],
+        [cima[0], cima[1] + 0.08, 0],
+        buff=0,
+        stroke_width=6,
+        max_tip_length_to_length_ratio=0.22,
+    )
+    peso.set_stroke(col.error, 6).set_fill(col.error, 1)
+
+    empuja = VGroup()
+    for p in (izq, der):
+        flecha = Arrow(
+            [p[0], p[1] - 0.90, 0],
+            [p[0], p[1] - 0.46, 0],
+            buff=0,
+            stroke_width=5,
+            max_tip_length_to_length_ratio=0.35,
+        )
+        flecha.set_stroke(col.exito, 5).set_fill(col.exito, 1)
+        empuja.add(flecha)
+
+    radio = min(0.50, base * 0.24)
+    giro = Arc(
+        radius=radio,
+        start_angle=0,
+        angle=np.radians(figura.angulo),
+        arc_center=izq,
+    ).set_stroke(col.cuadricula, 4)
+
+    uni = figura.unidad_carga
+    parches, rótulos = VGroup(), VGroup()
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"{_numero_latex(figura.carga)} {uni}",
+        np.array([cima[0] + 0.12, cima[1] + alto * 0.24, 0.0]),
+        17,
+        LEFT,
+    )
+    _cartela(
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"{_numero_latex(figura.base)} {figura.unidad}",
+        np.array([0.0, y_suelo - 0.24, 0.0]),
+        16,
+    )
+    for p, nombre in ((izq, "R₁"), (der, "R₂")):
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"{nombre} = {_numero_latex(figura.reaccion)} {uni}",
+            np.array([p[0], p[1] - 1.12, 0.0]),
+            15,
+        )
+    if "angulo" in marcas:
+        bis = np.radians(figura.angulo / 2)
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"θ ≈ {_numero_latex(figura.angulo)}°",
+            izq + radio * 1.9 * np.array([np.cos(bis), np.sin(bis), 0.0]),
+            15,
+        )
+    if "esfuerzo" in marcas:
+        medio = (izq + cima) / 2
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"F ≈ {_numero_latex(figura.esfuerzo)} {uni}",
+            np.array([medio[0] - 0.14, medio[1] + 0.14, 0.0]),
+            16,
+            LEFT,
+        )
+
+    rayas = [paños, apoyos, nudos, giro, *empuja]
+    todo = VGroup(*rayas, peso, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=[paños, apoyos], aparece=[nudos, giro, peso, *rótulos])
+
+
+# ------------------------------------------------------------------------------------------
 # Elección del dibujo según el guion
 # ------------------------------------------------------------------------------------------
 
@@ -1512,5 +1875,11 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         return resorte(visual.resorte(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "polea":
         return polea(visual.polea(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "tanque":
+        return tanque(visual.tanque(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "viga":
+        return viga(visual.viga(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "cercha":
+        return cercha(visual.cercha(), visual.anotar, col, ancho, alto, papel)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
     return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)
