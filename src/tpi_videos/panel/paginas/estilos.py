@@ -256,6 +256,7 @@ class EditorTema:
                         ui.switch("Fórmulas en negrita").bind_value(t, "formulas_negrita")
                 self._fondo()
                 self._hoja()
+                self._nota()
                 self._subtitulos()
                 with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
                     ui.label("Movimiento").classes("tpi-titulo")
@@ -333,6 +334,27 @@ class EditorTema:
                 _color(hoja, "color", "Color de la hoja")
                 ui.switch("Cuadrícula").bind_value(hoja, "cuadricula")
             ui.label("Deja un texto vacío para que no aparezca.").classes("tpi-ayuda")
+
+    def _nota(self) -> None:
+        nota = self.t["nota"]
+        with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
+            ui.label("Nota al margen").classes("tpi-titulo")
+            with ui.row().classes("gap-3 items-center"):
+                ui.select(
+                    {
+                        "materia": "Color de la materia",
+                        "titulos": "Color de los títulos",
+                        "acento": "Color de acento",
+                    },
+                    label="Color",
+                ).props("outlined dense").classes("w-56").bind_value(nota, "color")
+                ui.select(
+                    {"texto": "Letra de las explicaciones", "titulos": "Letra de los títulos"}, label="Letra"
+                ).props("outlined dense").classes("w-64").bind_value(nota, "rol")
+                ui.number("Tamaño", min=0.5, max=2.5, step=0.1).props("outlined dense").classes(
+                    "w-32"
+                ).bind_value(nota, "escala")
+            ui.label("El texto pequeño que acompaña cada fórmula («Despejamos t»).").classes("tpi-ayuda")
 
     def _subtitulos(self) -> None:
         s = self.t["subtitulos"]

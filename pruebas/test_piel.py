@@ -242,5 +242,16 @@ class MuroDeVideosTest(unittest.TestCase):
         self.assertEqual(etiqueta_familia(""), "Molde libre")
 
 
+class NotaTest(unittest.TestCase):
+    def test_el_editor_de_estilos_deja_elegir_la_nota(self):
+        import inspect
+
+        from tpi_videos.panel.paginas import estilos
+
+        fuente = inspect.getsource(estilos)
+        self.assertIn("nota", fuente)
+        self.assertIn('"materia"', fuente)  # las tres opciones reales de Nota.color
+
+
 if __name__ == "__main__":
     unittest.main()
