@@ -24,6 +24,7 @@ from manim import (
     Circle,
     DashedLine,
     Dot,
+    Ellipse,
     Line,
     Mobject,
     Polygon,
@@ -33,7 +34,7 @@ from manim import (
 )
 
 from . import componentes as c
-from .visuales import AnguloTrig, Funcion, Poligono, Proyectil, analizar_circuito
+from .visuales import AnguloTrig, Funcion, Poligono, Proyectil, Solido, analizar_circuito
 
 ALTO_DIBUJO = 3.3  # franja del pie de la pizarra que ocupa un dibujo
 
@@ -688,6 +689,126 @@ def circulo_trig(figura: AnguloTrig, marcas: list[str], col: Any, ancho: float, 
 
 
 # ------------------------------------------------------------------------------------------
+# 7 · Sólidos (lámina de libro)
+# ------------------------------------------------------------------------------------------
+
+
+def _sufijo_solido(figura: Solido, potencia: int) -> str:
+    """El hueco del número: ' cm³' para el volumen, ' cm²' para el área, nada sin unidad."""
+    return f" {figura.unidad}{'³' if potencia == 3 else '²'}" if figura.unidad else ""
+
+
+def solido(figura: Solido, marcas: list[str], col: Any, ancho: float, alto: float) -> Dibujo:
+    """El cuerpo como en la lámina del libro: perspectiva chica, medidas acotadas y V y A escritas.
+
+    No es un 3D de verdad: es el dibujo que el alumno reconoce del cuaderno, con el radio, la
+    altura o la arista acotados y el volumen y el área que calculó ``visuales.py``.
+    """
+    r, h, a = figura.radio or 0.0, figura.altura or 0.0, figura.lado or 0.0
+    if figura.figura == "cubo":
+        alto_cuerpo, ancho_cuerpo = a, a
+    else:
+        alto_cuerpo = 2 * r if figura.figura == "esfera" else h
+        ancho_cuerpo = 2 * r
+    escala = min(alto * 0.62 / alto_cuerpo, ancho * 0.34 / ancho_cuerpo)
+    R, H, A = r * escala, h * escala, a * escala
+    E = R * 0.32  # la mitad del alto de las elipses: la "profundidad" que ve el ojo
+
+    rayas: list = []
+    parches, rótulos = VGroup(), VGroup()
+
+    def medida(texto: str, donde: np.ndarray, tam: float = 22) -> None:
+        rotulo = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
+        fondo, rotulo = _parche(rotulo, "#FFFFFF", 0.16)
+        parches.add(fondo)
+        rótulos.add(rotulo)
+
+    def acotada(p: np.ndarray, q: np.ndarray, texto: str, donde: np.ndarray) -> None:
+        rayas.append(DashedLine(p, q, buff=0).set_stroke(col.tenue, 3))
+        medida(texto, donde, 20)
+
+    if figura.figura == "cilindro":
+        tapa = Ellipse(width=2 * R, height=2 * E).move_to(UP * H / 2).set_stroke(col.formulas, 4)
+        base = Ellipse(width=2 * R, height=2 * E).move_to(DOWN * H / 2).set_stroke(col.tenue, 4)
+        rayas.extend([tapa, base])
+        for x in (-R, R):
+            rayas.append(Line([x, -H / 2, 0], [x, H / 2, 0], buff=0).set_stroke(col.formulas, 4))
+        acotada(
+            [0, H / 2, 0],
+            [R, H / 2, 0],
+            f"r = {_numero_latex(r)} {figura.unidad}".strip(),
+            np.array([R / 2, H / 2 + 0.3, 0.0]),
+        )
+        acotada(
+            [-R - 0.3, -H / 2, 0],
+            [-R - 0.3, H / 2, 0],
+            f"h = {_numero_latex(h)} {figura.unidad}".strip(),
+            np.array([-R - 0.8, 0.0, 0.0]),
+        )
+    elif figura.figura == "cono":
+        base = Ellipse(width=2 * R, height=2 * E).move_to(DOWN * H / 2).set_stroke(col.tenue, 4)
+        rayas.append(base)
+        for x in (-R, R):
+            rayas.append(Line([0, H / 2, 0], [x, -H / 2, 0], buff=0).set_stroke(col.formulas, 4))
+        acotada(
+            [0, H / 2, 0],
+            [0, -H / 2, 0],
+            f"h = {_numero_latex(h)} {figura.unidad}".strip(),
+            np.array([0.4, 0.0, 0.0]),
+        )
+        acotada(
+            [0, -H / 2, 0],
+            [R, -H / 2, 0],
+            f"r = {_numero_latex(r)} {figura.unidad}".strip(),
+            np.array([R / 2, -H / 2 - 0.32, 0.0]),
+        )
+    elif figura.figura == "esfera":
+        rayas.append(Circle(radius=R).set_stroke(col.formulas, 4))
+        rayas.append(Ellipse(width=2 * R, height=2 * E).set_stroke(col.tenue, 3))
+        acotada(
+            [0, 0, 0],
+            [R, 0, 0],
+            f"r = {_numero_latex(r)} {figura.unidad}".strip(),
+            np.array([R / 2, 0.3, 0.0]),
+        )
+    else:
+        d = A * 0.38  # el desplazamiento oblicuo de la cara de atrás
+        frente = [
+            np.array([x - d / 2, y - d / 2, 0.0])
+            for x, y in ((-A / 2, -A / 2), (A / 2, -A / 2), (A / 2, A / 2), (-A / 2, A / 2))
+        ]
+        atras = [p + np.array([d, d, 0.0]) for p in frente]
+        rayas.append(Polygon(*frente, color=col.formulas, stroke_width=4))
+        rayas.append(Polygon(*atras, color=col.tenue, stroke_width=3))
+        for p, q in zip(frente, atras, strict=True):
+            rayas.append(Line(p, q, buff=0).set_stroke(col.tenue, 3))
+        medida(
+            f"a = {_numero_latex(a)} {figura.unidad}".strip(),
+            (frente[0] + frente[1]) / 2 + DOWN * 0.3,
+            20,
+        )
+
+    cuerpo = VGroup(*rayas, parches)
+    columna = cuerpo.width / 2 + 1.1
+    if "volumen" in marcas:
+        medida(
+            f"V ≈ {_numero_latex(figura.volumen)}{_sufijo_solido(figura, 3)}",
+            np.array([columna, 0.32, 0.0]),
+            24,
+        )
+    if "area" in marcas:
+        medida(
+            f"A ≈ {_numero_latex(figura.area)}{_sufijo_solido(figura, 2)}",
+            np.array([columna, -0.32, 0.0]),
+            24,
+        )
+
+    todo = VGroup(*rayas, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[*rótulos])
+
+
+# ------------------------------------------------------------------------------------------
 # Elección del dibujo según el guion
 # ------------------------------------------------------------------------------------------
 
@@ -713,5 +834,7 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         return proyectil(visual.proyectil(), visual.anotar, col, ancho, alto)
     if visual.tipo == "circulo_trig":
         return circulo_trig(visual.angulo_trig(), visual.anotar, col, ancho, alto)
+    if visual.tipo == "solido":
+        return solido(visual.solido(), visual.anotar, col, ancho, alto)
     fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
     return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)

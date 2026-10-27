@@ -21,11 +21,13 @@ from .visuales import (
     MARCAS_CIRCULO,
     MARCAS_POLIGONO,
     MARCAS_PROYECTIL,
+    MARCAS_SOLIDO,
     SEGUNDOS_VISUAL,
     analizar_angulo,
     analizar_funcion,
     analizar_poligono,
     analizar_proyectil,
+    analizar_solido,
     normalizar_vectores,
 )
 
@@ -125,7 +127,13 @@ class Visual(_Base):
     """
 
     tipo: Literal[
-        "grafico_funcion", "diagrama_fuerzas", "circuito", "poligono_regular", "proyectil", "circulo_trig"
+        "grafico_funcion",
+        "diagrama_fuerzas",
+        "circuito",
+        "poligono_regular",
+        "proyectil",
+        "circulo_trig",
+        "solido",
     ]
 
     # grafico_funcion
@@ -152,8 +160,13 @@ class Visual(_Base):
 
     # poligono_regular
     lados: int | None = None  # de 3 a 8
-    lado: str | None = None  # la medida de un lado, con su unidad: '12 cm'
+    lado: str | None = None  # la medida de un lado, con su unidad: '12 cm' (también la arista del cubo)
     anotar: list[str] = []  # ej. ['apotema', 'angulo_interior']
+
+    # solido
+    figura: Literal["", "cubo", "cilindro", "cono", "esfera"] = ""
+    radio: str | None = None  # con su unidad: '3 cm'
+    altura: str | None = None  # con su unidad: '5 cm'
 
     _listas = field_validator("rango", "marcar", "vectores", "resistencias", "anotar", mode="before")(
         classmethod(lambda cls, v: None if v is None else _como_lista(v))
@@ -209,6 +222,18 @@ class Visual(_Base):
                     f"a {figura.grados:g}° la tangente no existe (el radio queda paralelo a ella): "
                     "anota seno o coseno"
                 )
+        elif self.tipo == "solido":
+            if not self.figura:
+                raise ValueError(
+                    "un sólido necesita decir cuál es, ej. figura: 'cilindro' (cubo, cilindro, cono o esfera)"
+                )
+            analizar_solido(self.figura, self.lado, self.radio, self.altura)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_SOLIDO]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de un sólido; "
+                    f"el motor sabe anotar {', '.join(MARCAS_SOLIDO)}"
+                )
         elif self.tipo == "poligono_regular":
             if not (self.lado or "").strip():
                 raise ValueError("un polígono necesita la medida del lado, ej. lado: '12 cm'")
@@ -251,6 +276,12 @@ class Visual(_Base):
         if self.tipo != "circulo_trig":
             raise ValueError(f"«{self.tipo}» no es un círculo trigonométrico")
         return analizar_angulo(self.angulo or 0)
+
+    def solido(self):
+        """El cuerpo ya resuelto (volumen y área). Sólo en los sólidos."""
+        if self.tipo != "solido":
+            raise ValueError(f"«{self.tipo}» no es un sólido")
+        return analizar_solido(self.figura or "", self.lado, self.radio, self.altura)
 
     def poligono(self):
         """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
@@ -536,6 +567,13 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     elif tipo == "circulo_trig":
         campos.append(("angulo", _numero(v.get("angulo") or 0)))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "solido":
+        campos.append(("figura", v.get("figura") or ""))
+        for clave in ("lado", "radio", "altura"):
+            if v.get(clave):
+                campos.append((clave, _simples(v[clave])))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     elif tipo == "poligono_regular":

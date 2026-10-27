@@ -1,0 +1,55 @@
+# Guion escrito a mano el 26-10-2026 para estrenar los sólidos (cilindro con volumen y área).
+# REVISA la matemática antes de publicar.
+
+titulo: "¿Cuánta agua cabe en la lata?"
+materia: matematica
+nivel: "1° medio"
+molde: nadie_te_enseno
+tema: cuaderno_del_profe
+
+gancho:
+  texto: "La lata no dice cuánta agua guarda"
+  voz: "La lata no dice cuánta agua guarda adentro: el secreto está en su cilindro."
+  emoji: "🤯"
+
+enunciado:
+  texto: "Calcula cuánta agua cabe en una lata cilíndrica de radio 3 cm y altura 5 cm."
+  voz: "Mira esta lata cilíndrica de radio tres centímetros y altura cinco centímetros."
+  destacar: ["3 cm", "5 cm"]
+
+datos:
+  - tex: 'r = 3\ \text{cm}'
+    voz: "La base tiene un radio de tres centímetros."
+  - tex: 'h = 5\ \text{cm}'
+    voz: "Y la lata mide cinco centímetros de alto."
+
+pasos:
+  - nota: "La base es un círculo"
+    tex: 'A_{base} = \pi r^2 \approx 28{,}27\ \text{cm}^2'
+    voz: "La base es un círculo: pi por tres al cuadrado da veintiocho coma veintisiete centímetros cuadrados."
+  - nota: "El volumen apila la base cinco veces"
+    tex: 'V = \pi r^2 h \approx 141{,}37\ \text{cm}^3'
+    voz: "El volumen apila esa base cinco veces. Caben ciento cuarenta y un coma treinta y siete centímetros cúbicos."
+    visual:
+      tipo: solido
+      figura: cilindro
+      radio: '3 cm'
+      altura: '5 cm'
+      anotar: ['volumen', 'area']
+  - nota: "El área envuelve la lata"
+    tex: 'A = 2\pi r (r + h) \approx 150{,}8\ \text{cm}^2'
+    voz: "Y el metal que la envuelve por fuera mide ciento cincuenta coma ocho centímetros cuadrados."
+
+resultado:
+  tex: 'V \approx 141{,}37\ \text{cm}^3 \approx 141\ \text{ml}'
+  voz: "Ciento cuarenta y un centímetros cúbicos: casi ciento cuarenta y un mililitros de agua."
+  emoji: "📐"
+
+verificacion:
+  texto: "141,37 cm³ es menor que la caja que envuelve la lata (6×6×5 = 180 cm³): cabe."
+  voz: "Es menor que los ciento ochenta de la caja que la envuelve: el agua cabe."
+
+reto:
+  texto: "¿Cuánta agua cabe en un cono con la misma base y la misma altura?"
+  voz: "Ahora tú: misma base y misma altura, pero en forma de cono. ¿Cuánta agua cabe? Piénsalo antes del próximo video."
+  emoji: "✍️"

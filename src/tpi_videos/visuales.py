@@ -22,6 +22,7 @@ SEGUNDOS_VISUAL = {
     "poligono_regular": 3.0,
     "proyectil": 3.0,
     "circulo_trig": 3.0,
+    "solido": 3.0,
 }
 
 # Lo que se puede anotar en un polígono regular.
@@ -32,6 +33,12 @@ MARCAS_PROYECTIL = ("alcance", "altura_maxima", "componentes")
 
 # Lo que se puede anotar en el círculo trigonométrico.
 MARCAS_CIRCULO = ("seno", "coseno", "tangente")
+
+# Lo que se puede anotar en un sólido.
+MARCAS_SOLIDO = ("volumen", "area")
+
+# Los cuerpos que el motor sabe dibujar como lámina de libro.
+SOLIDOS = ("cubo", "cilindro", "cono", "esfera")
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -455,4 +462,79 @@ def analizar_angulo(grados: float) -> AnguloTrig:
         coseno=coseno,
         tangente=tangente,
         cuadrante=int(g // 90) % 4 + 1,
+    )
+
+
+@dataclass
+class Solido:
+    """Un cuerpo de los de siempre, con su volumen y su área ya resueltos."""
+
+    figura: str  # cubo, cilindro, cono o esfera
+    unidad: str  # la de las medidas: de «3 cm» sale «cm»
+    volumen: float
+    area: float  # el área total de su superficie
+    radio: float | None = None
+    altura: float | None = None
+    lado: float | None = None
+
+
+def _medida_solido(texto: str | None, nombre: str) -> tuple[float, str]:
+    """Saca el número y la unidad de «3 cm»; si no hay número, lo dice en español."""
+    crudo = str(texto or "")
+    m = re.search(r"-?\d+(?:[.,]\d+)?", crudo)
+    if not m:
+        raise ValueError(
+            f"la medida de {nombre} necesita un número con su unidad, ej. «3 cm», y leí «{crudo}»"
+        )
+    valor = float(m.group().replace(",", "."))
+    if valor <= 0:
+        raise ValueError(f"la medida de {nombre} debe ser positiva, y leí «{crudo}»")
+    return valor, crudo[m.end() :].strip().split("/")[0]
+
+
+def analizar_solido(
+    figura: str, lado: str | None = None, radio: str | None = None, altura: str | None = None
+) -> Solido:
+    """Resuelve el cuerpo con las fórmulas del cuaderno (el cono usa su generatriz)."""
+    if figura not in SOLIDOS:
+        raise ValueError(f"el motor sabe dibujar {', '.join(SOLIDOS)}, y le pedí «{figura}»")
+    medidas: dict[str, float] = {}
+    unidad = ""
+    for nombre, crudo in (("lado", lado), ("radio", radio), ("altura", altura)):
+        if crudo not in (None, ""):
+            valor, uni = _medida_solido(crudo, nombre)
+            medidas[nombre] = valor
+            unidad = uni or unidad
+
+    def exigir(*nombres: str) -> None:
+        for nombre in nombres:
+            if nombre not in medidas:
+                raise ValueError(
+                    f"el {figura} necesita la medida de {nombre} con su unidad, ej. {nombre}: '3 cm'"
+                )
+
+    if figura == "cubo":
+        exigir("lado")
+        a = medidas["lado"]
+        volumen, area = a**3, 6 * a * a
+    elif figura == "esfera":
+        exigir("radio")
+        r = medidas["radio"]
+        volumen, area = 4 * math.pi * r**3 / 3, 4 * math.pi * r * r
+    elif figura == "cilindro":
+        exigir("radio", "altura")
+        r, h = medidas["radio"], medidas["altura"]
+        volumen, area = math.pi * r * r * h, 2 * math.pi * r * (r + h)
+    else:
+        exigir("radio", "altura")
+        r, h = medidas["radio"], medidas["altura"]
+        volumen, area = math.pi * r * r * h / 3, math.pi * r * (r + math.hypot(r, h))
+    return Solido(
+        figura=figura,
+        unidad=unidad,
+        volumen=volumen,
+        area=area,
+        radio=medidas.get("radio"),
+        altura=medidas.get("altura"),
+        lado=medidas.get("lado"),
     )

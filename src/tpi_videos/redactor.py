@@ -65,12 +65,14 @@ class PasoIA(BaseModel):
     )
     # Un paso puede pedirse con dibujo. Son campos planos para que el modelo los cumpla fácil;
     # a_guion() arma el bloque "visual:" anidado que lee el motor.
-    dibujo: Literal["", "grafico", "fuerzas", "circuito", "poligono", "proyectil", "circulo"] = Field(
-        default="",
-        description=(
-            'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil" '
-            'o "circulo" (máximo 1 en el guion)'
-        ),
+    dibujo: Literal["", "grafico", "fuerzas", "circuito", "poligono", "proyectil", "circulo", "solido"] = (
+        Field(
+            default="",
+            description=(
+                'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
+                '"circulo" o "solido" (máximo 1 en el guion)'
+            ),
+        )
     )
     funcion: str = Field(
         default="", description='Con dibujo="grafico": la fórmula en texto plano, ej. "-4.9t^2 + 20"'
@@ -97,17 +99,32 @@ class PasoIA(BaseModel):
     )
     lados: int = Field(default=0, description='Con dibujo="poligono": cuántos lados tiene, de 3 a 8')
     lado: str = Field(
-        default="", description='Con dibujo="poligono": cuánto mide un lado, con su unidad, ej. "12 cm"'
+        default="",
+        description=(
+            'Con dibujo="poligono": cuánto mide un lado, con su unidad, ej. "12 cm"; '
+            'con dibujo="solido" y figura="cubo": la arista, ej. "4 cm"'
+        ),
     )
     velocidad: str = Field(
         default="", description='Con dibujo="proyectil": la velocidad de lanzamiento, ej. "20 m/s"'
+    )
+    figura: str = Field(
+        default="",
+        description='Con dibujo="solido": cuál cuerpo, entre "cubo", "cilindro", "cono" y "esfera"',
+    )
+    radio: str = Field(
+        default="", description='Con dibujo="solido": el radio con su unidad, ej. "3 cm"'
+    )
+    altura: str = Field(
+        default="", description='Con dibujo="solido": la altura con su unidad, ej. "5 cm"'
     )
     anotar: list[str] = Field(
         default_factory=list,
         description=(
             'Hasta 2 marcas: con "poligono", de "apotema", "radio", "angulo_central", "angulo_interior"; '
             'con "proyectil", de "alcance", "altura_maxima", "componentes"; '
-            'con "circulo", de "seno", "coseno", "tangente"'
+            'con "circulo", de "seno", "coseno", "tangente"; '
+            'con "solido", de "volumen", "area"'
         ),
     )
 
@@ -303,6 +320,7 @@ _DIBUJOS = {
     "poligono": "poligono_regular",
     "proyectil": "proyectil",
     "circulo": "circulo_trig",
+    "solido": "solido",
 }
 
 
@@ -337,6 +355,15 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
     elif tipo == "circulo_trig":
         if p.angulo:
             visual["angulo"] = float(p.angulo)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "solido":
+        if p.figura:
+            visual["figura"] = _texto(p.figura)
+        for clave in ("lado", "radio", "altura"):
+            valor = _texto(getattr(p, clave))
+            if valor:
+                visual[clave] = valor
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     elif tipo == "poligono_regular":
