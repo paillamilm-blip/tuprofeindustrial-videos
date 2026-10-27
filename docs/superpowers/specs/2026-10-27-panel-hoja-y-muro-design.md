@@ -125,7 +125,9 @@ variantes) con sus 13 texturas en `mis_ajustes/fondos/`:
 **Decisión que hay que tomar con él (esta fase no la impone):** si le gustan, se promueven a
 `src/tpi_videos/plantillas/temas/` y sus PNG a `src/tpi_videos/assets/fondos/`, para que viajen con el motor
 y las otras copias del repo (Kiro, Claude Code) los vean. Hoy viven en `mis_ajustes/`, que Git ignora: son
-solo de esta máquina. Peso: ~6 MB de PNG.
+solo de esta máquina. Peso medido después de la promoción: 14 MB de PNG (no 6 MB; las seis texturas con
+ruido pesan entre 1,4 y 2,7 MB cada una). Se probó bajarlas a 720×1280 con paleta de 256 colores: ahorra
+6 MB pero borra el grano de la pizarra y aplana las viñetas, así que quedan a 1080×1920.
 
 ## 7 · Tres arreglos del motor que salen gratis
 
