@@ -79,7 +79,7 @@ Los dos **B023 son bugs reales**, no ruido: en `crear.py`, `elegido_label` es la
 lambda se resuelve al hacer clic, así que con 3 ideas en pantalla el botón «Probar ganchos» de la primera
 reescribe el gancho de la última. Atar el valor con un argumento por defecto lo arregla y no cambia nada más.
 
-- [ ] **Paso 1 — Aplicar los diez arreglos**
+- [x] **Paso 1 — Aplicar los diez arreglos**
 
 ```python
 # ganchos.py:17 — quitar Gancho del import (nadie lo trae desde .ganchos; cli.py y las pruebas
@@ -109,7 +109,7 @@ ayuda="El cupo se reinicia de madrugada (medianoche hora del Pacífico): mira cu
 "./tpi crear guiones/<archivo>.yaml",
 ```
 
-- [ ] **Paso 2 — Verde, y la suite sin daños**
+- [x] **Paso 2 — Verde, y la suite sin daños**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -120,12 +120,12 @@ uvx ruff@0.12 check src pruebas && uvx ruff@0.12 format src pruebas && \
 Esperado: ruff sin salida (exit 0) y `OK` con 292 pruebas. Si alguna prueba de `test_ganchos.py` o
 `test_lote.py` se cae, la corrección tocó semántica: **revisar el dif antes de seguir**, no ajustar la prueba.
 
-- [ ] **Paso 3 — Comprobar el bug del panel en la pantalla**
+- [x] **Paso 3 — Comprobar el bug del panel en la pantalla**
 
 `./tpi panel` → pantalla Crear con 3 ideas y clic en «Probar ganchos» de la **primera**: la etiqueta que cambia
 es la de esa tarjeta. (Antes del arreglo cambiaba la de la última.)
 
-- [ ] **Paso 4 — Commit**
+- [x] **Paso 4 — Commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -146,7 +146,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 **Carácter:** esta tarea **no** toca `dibujos.py`, `guion.py` ni `visuales.py`. Nada de la fase 12 puede
 pisar el trabajo de la fase 11 mientras quede sin cerrar.
 
-- [ ] **Paso 1 — Estado de partida, medido, no recordado**
+- [x] **Paso 1 — Estado de partida, medido, no recordado**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && git status --short && \
@@ -156,7 +156,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && git status --short &&
 Esperado: los dos guiones como `??` y `Ran 292 tests ... OK`. Si los tests no están en verde **separa el plan
 aquí**: el resto asume una base verde.
 
-- [ ] **Paso 2 — Revisar los dos guiones con el motor, sin IA**
+- [x] **Paso 2 — Revisar los dos guiones con el motor, sin IA**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && ./tpi revisar guiones/centro_de_gravedad_en_una_placa.yaml && \
@@ -165,7 +165,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && ./tpi revisar guiones
 
 Esperado: `Sin observaciones` en ambos, o la lista de errores en español del revisor.
 
-- [ ] **Paso 3 — Decidir (con el usuario, en una sola pregunta, sin bloquear nada)**
+- [x] **Paso 3 — Decidir (con el usuario, en una sola pregunta, sin bloquear nada)**
 
 El duplicado se resuelve así: si `el_tanque_que_pierde.yaml` no aporta un enunciado distinto, **se archiva**
 fuera del árbol de trabajo, no se borra:
@@ -177,7 +177,7 @@ mv guiones/el_tanque_que_pierde.yaml fuera_de_uso/ && ls guiones/ | head
 
 `centro_de_gravedad_en_una_placa.yaml` **se versiona** (es contenido nuevo del canal, no basura).
 
-- [ ] **Paso 4 — Commit**
+- [x] **Paso 4 — Commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && git add guiones/centro_de_gravedad_en_una_placa.yaml && \
@@ -207,7 +207,7 @@ formatos.formato_de_guion(guion: Guion) -> Formato | None
 formatos.Formato  # dataclass congelada: clave, nombre, que_es, moldes, tema, dibujos, color, cta, gancho_corto
 ```
 
-- [ ] **Paso 1 — Escribir la prueba que falla**
+- [x] **Paso 1 — Escribir la prueba que falla**
 
 `pruebas/test_formatos.py`:
 
@@ -303,7 +303,7 @@ def mock_path(texto: str):
     return ruta
 ```
 
-- [ ] **Paso 2 — Correr y ver que falla**
+- [x] **Paso 2 — Correr y ver que falla**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -312,7 +312,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 
 Esperado: `ModuleNotFoundError: No module named 'tpi_videos.formatos'`.
 
-- [ ] **Paso 3 — Escribir `plantillas/formatos.yaml`**
+- [x] **Paso 3 — Escribir `plantillas/formatos.yaml`**
 
 Las cuatro familias son **textuales de él** (27-10-2026). El `cta` **nunca** se narra en el video: va al pie
 del post (así lo fija su regla de CTA-de-engaño). `solido_3d` aparece en la familia 1 solo a partir de la
@@ -375,7 +375,7 @@ hacks:
   gancho_corto: false
 ```
 
-- [ ] **Paso 4 — Escribir `src/tpi_videos/formatos.py`**
+- [x] **Paso 4 — Escribir `src/tpi_videos/formatos.py`**
 
 ```python
 """Las familias de contenido del canal: molde + estilo + dibujo en una sola elección.
@@ -517,7 +517,7 @@ def tabla_para_ia() -> str:
 Nota de diseño: `_PISTAS` es la **única** parte de este plan que hay que ajustar con datos propios. Si al
 usuario una idea suya le sale mal puntuada, se agrega esa palabra a `_PISTAS`, no se cambia el puntador.
 
-- [ ] **Paso 5 — Correr la prueba**
+- [x] **Paso 5 — Correr la prueba**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -527,7 +527,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 Esperado: `OK` (7 pruebas). Si `test_cada_idea_de_ejemplo_marca_su_familia` falla, **no** baje el umbral:
 mire qué cuenta el puntador con una REPL y corrija `_PISTAS`.
 
-- [ ] **Paso 6 — Prueba real de coherencia con el resto del motor**
+- [x] **Paso 6 — Prueba real de coherencia con el resto del motor**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -548,7 +548,7 @@ Esperado: `familias coherentes con temas y Visual` (con `pydantic` 2.x el `Liter
 `model_fields['tipo'].annotation`, no en `metadata`: esto se verificó al ejecutar). (Los temas `neon_reja`,
 `kraft_tiza`, `plano_azul` y `rotulador` existen desde la promoción de `677f195`.)
 
-- [ ] **Paso 7 — Suite completa, lint y commit**
+- [x] **Paso 7 — Suite completa, lint y commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -565,7 +565,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 
 **Archivos:** modificar `src/tpi_videos/componentes.py:579` · probar `pruebas/test_piel.py`
 
-- [ ] **Paso 1 — Prueba que falla**
+- [x] **Paso 1 — Prueba que falla**
 
 `pruebas/test_piel.py`:
 
@@ -605,7 +605,7 @@ class HojaTest(unittest.TestCase):
         self.assertNotEqual(str(self._texto(tema).color).upper(), "#FFFFFF")
 ```
 
-- [ ] **Paso 2 — Verificar que falla y por qué**
+- [x] **Paso 2 — Verificar que falla y por qué**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -633,7 +633,7 @@ y en la rama de `h.etiqueta`, `color=_legible_sobre(tema.colores.fondo, h.color,
 `hoja_de_desarrollo` (fondo oscuro) recupera el blanco del papel y `rotulador` (fondo `#E9E7DF`) pasa al
 `tenue`, que era el problema que motivó el arreglo.
 
-- [ ] **Paso 4 — Prueba verde + un cuadro mirado**
+- [x] **Paso 4 — Prueba verde + un cuadro mirado**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -645,7 +645,7 @@ o generar uno con `./tpi crear guiones/ejemplos/moldes_virales.yaml --borrador -
 --sincronizar estimado --sin-subtitulos --salida /tmp/tallerA2`) y **confirmar con los ojos** que «Notas» se
 lee sobre el papel claro.
 
-- [ ] **Paso 5 — Commit**
+- [x] **Paso 5 — Commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -663,7 +663,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 
 **Por qué:** con `kraft_claro`/`cuaderno_*` el texto es oscuro sobre crema y el borde negro lo embarra.
 
-- [ ] **Paso 1 — Prueba que falla** (agregar a `pruebas/test_piel.py`)
+- [x] **Paso 1 — Prueba que falla** (agregar a `pruebas/test_piel.py`)
 
 ```python
 class BordeSubtituloTest(unittest.TestCase):
@@ -693,7 +693,7 @@ class BordeSubtituloTest(unittest.TestCase):
         self.assertEqual([c.strip() for c in linea.split(",")][6], "&H00000000")
 ```
 
-- [ ] **Paso 2 — Verificar que falla**
+- [x] **Paso 2 — Verificar que falla**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -702,7 +702,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 
 Esperado: `ValidationError` / `TypeError` en `color_borde` (el campo aún no existe).
 
-- [ ] **Paso 3 — Campo nuevo con default que no cambia nada**
+- [x] **Paso 3 — Campo nuevo con default que no cambia nada**
 
 En `config.py`, clase `EstiloSubtitulos`, justo debajo de `color_activo`:
 
@@ -716,7 +716,7 @@ y en el validador de hex, agregarlo:
     _hex = field_validator("color", "color_activo", "color_borde")(classmethod(lambda cls, v: _validar_hex(v)))
 ```
 
-- [ ] **Paso 4 — Usarlo en el ASS**
+- [x] **Paso 4 — Usarlo en el ASS**
 
 En `subtitulos.py:229`, la línea `Style: CapCut` ya tiene un `&H00000000` literal; reemplazar **solo** ese
 literal por la llamada existente (no inventar un formato nuevo):
@@ -726,7 +726,7 @@ literal por la llamada existente (no inventar un formato nuevo):
         f"&H78000000,0,0,0,0,"
 ```
 
-- [ ] **Paso 5 — Los temas claros ponen su papel como borde**
+- [x] **Paso 5 — Los temas claros ponen su papel como borde**
 
 Son los temas con `marco: hoja` o fondo claro. Aplicar por lista leída, no por suposición:
 
@@ -737,7 +737,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && grep -l 'fondo: "#F' 
 En cada archivo que salga, dentro del bloque `subtitulos:` agregar `color_borde: "<el mismo color de
 colores.fondo>"`. Si un tema no tiene bloque `subtitulos:`, crearlo con solo esa clave.
 
-- [ ] **Paso 6 — Suite, revisar, mirar, commit**
+- [x] **Paso 6 — Suite, revisar, mirar, commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -755,7 +755,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 
 **Archivos:** `src/tpi_videos/tipografia.py:38-39`.
 
-- [ ] **Paso 1 — Prueba** (agregar a `pruebas/test_piel.py`)
+- [x] **Paso 1 — Prueba** (agregar a `pruebas/test_piel.py`)
 
 ```python
 class LetrasTest(unittest.TestCase):
@@ -768,9 +768,9 @@ class LetrasTest(unittest.TestCase):
             self.assertIn(extra, PARA_TITULOS)
 ```
 
-- [ ] **Paso 2 — Verificar que falla**: `AssertionError: Items in the first set are not in the second` para
+- [x] **Paso 2 — Verificar que falla**: `AssertionError: Items in the first set are not in the second` para
   Bangers/Luckiest Guy/Cinzel.
-- [ ] **Paso 3 — Cambio**: en `tipografia.py`, reemplazar las dos tuplas literales por
+- [x] **Paso 3 — Cambio**: en `tipografia.py`, reemplazar las dos tuplas literales por
 
 ```python
 # Opciones que ofrece el panel para cada uso: todo lo que el motor trae embebido.
@@ -781,7 +781,7 @@ PARA_TEXTO = tuple(FAMILIAS)
 `PARA_SUBTITULOS` **no** se toca: son nombres como los busca libass (familia + estilo en una sola cadena), y
 `Bangers`/`Luckiest Guy` ya están ahí.
 
-- [ ] **Paso 4 — Comprobar que ningún tema viejo pide una letra inexistente**
+- [x] **Paso 4 — Comprobar que ningún tema viejo pide una letra inexistente**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -799,7 +799,7 @@ for ident, _, _ in listar_temas():
 Esperado: 19 líneas, todas con familias que están en `FAMILIAS`. Si alguna sale con error, **no** la cambie a
 una parecida: repórtela (sería un tema roto en la promoción).
 
-- [ ] **Paso 5 — Verde, lint, commit**
+- [x] **Paso 5 — Verde, lint, commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -836,7 +836,7 @@ visuales.TipoVisual  # clave, nombre, materia, icono, campos, marcas, ejemplo
 visuales.CampoVisual  # clave, etiqueta, forma, ayuda, opciones
 ```
 
-- [ ] **Paso 1 — Prueba que falla**
+- [x] **Paso 1 — Prueba que falla**
 
 `pruebas/test_visuales.py`:
 
@@ -919,7 +919,7 @@ class Tipo3dReservadoTest(unittest.TestCase):
         self.assertNotIn("solido_3d", VISUALES)
 ```
 
-- [ ] **Paso 2 — Verificar que falla**
+- [x] **Paso 2 — Verificar que falla**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -928,7 +928,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 
 Esperado: `ImportError: cannot import name 'VISUALES'`.
 
-- [ ] **Paso 3 — Escribir la tabla en `visuales.py`**
+- [x] **Paso 3 — Escribir la tabla en `visuales.py`**
 
 Borrar la línea 15 (`TIPOS_VISUAL = (...)`) y agregar debajo de `ARREGLOS = ("serie", "paralelo")`:
 
@@ -1127,7 +1127,7 @@ def opciones_select() -> dict[str, str]:
 
 `visuales.py` ya importa `Any`, `dataclass` y `field` (líneas 12-13): **no** agregar import.
 
-- [ ] **Paso 4 — Verde**
+- [x] **Paso 4 — Verde**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -1138,7 +1138,7 @@ Esperado: `OK` (8 pruebas). Si `test_el_ejemplo_de_cada_tipo_valida_con_Visual` 
 pidiendo un campo que el validador exige distinto (ej. `tanque` con `vaciado` necesita `salida`): **arreglar
 el ejemplo**, no el validador.
 
-- [ ] **Paso 5 — Suite, lint, commit**
+- [x] **Paso 5 — Suite, lint, commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -1159,7 +1159,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 **Contrato:** el editor deja de saber qué dibujos existen. `_TIPOS_VISUAL`, `_VISUAL_CAMPOS` y las tres ramas
 `elif` de `_visual()` se van; queda un generador sobre `VISUALES`/`CAMPOS`.
 
-- [ ] **Paso 1 — Prueba que falla**
+- [x] **Paso 1 — Prueba que falla**
 
 `pruebas/test_editor_visual.py` (solo lógica del formulario, sin widget):
 
@@ -1205,7 +1205,7 @@ class IdaYVueltaTest(unittest.TestCase):
         self.assertEqual(set(tipos_visual_del_editor()), {"", *VISUALES})
 ```
 
-- [ ] **Paso 2 — Verificar que falla**
+- [x] **Paso 2 — Verificar que falla**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -1215,7 +1215,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 Esperado: `ImportError: cannot import name 'tipos_visual_del_editor'` y los fallos de ida y vuelta (hoy
 `_VISUAL_CAMPOS` solo conoce 3 tipos, así que los demás se guardan vacíos).
 
-- [ ] **Paso 3 — Reemplazar las constantes del formulario**
+- [x] **Paso 3 — Reemplazar las constantes del formulario**
 
 En `editor.py`, borrar `_VISUAL_VACIO`, `_TIPOS_VISUAL`, `_VISUAL_CAMPOS` y `_VISUAL_NUMERICOS` (líneas
 39-56) y dejar esto en su lugar (el formulario ya no tiene datos propios: los tres salen del catálogo):
@@ -1237,7 +1237,7 @@ def _campos_de(tipo: str) -> tuple[str, ...]:
 
 def _visual_vacio() -> dict[str, Any]:
     """El formulario en blanco: el valor inicial es el default del modelo, no una cadena a mano."""
-    modelo = Visual.model_validate({"tipo": "torta", "categorias": ["A 1"]})
+    modelo = Visual.model_validate({"tipo": "torta", "categorias": ["A 1", "B 2"]})
     salida: dict[str, Any] = {"tipo": ""}
     for clave, campo in CAMPOS.items():
         si_no_tocado = getattr(modelo, clave)
@@ -1259,7 +1259,12 @@ Por qué el default sale del modelo y no de una tabla: `cuerpo` es `"bloque"`, `
 `incluye_a` `True` y `negativa` `True` en `guion.py`; copiarlos a mano al panel es exactamente el error que
 esta tarea está borrando.
 
-- [ ] **Paso 4 — `_visual_al_formulario` / `_visual_al_guardar` genéricos**
+> **Corregido al medir (27-10-2026, al ejecutar B.2):** el fixture de una sola categoría
+> (`["A 1"]`) lanzaba `ValidationError` al importar el módulo — la torta pide de 2 a 6. Son
+> `["A 1", "B 2"]`. Fue el primer error real que produjo esta prueba: rompió el arranque del panel,
+> no una aserción.
+
+- [x] **Paso 4 — `_visual_al_formulario` / `_visual_al_guardar` genéricos**
 
 Reemplazar las dos funciones (líneas 68-95) por:
 
@@ -1316,7 +1321,7 @@ Dos cambios de comportamiento reales, que la prueba del paso 1 obliga:
 - `descomponer`, `repartida`, `negativa`, `incluye_a`, `incluye_b` y `derecha` **antes no se podían poner
   nunca desde el panel** (no estaban en `_VISUAL_CAMPOS`); ahora viajan, que es justo lo que él pidió.
 
-- [ ] **Paso 5 — `_visual()` genera los campos**
+- [x] **Paso 5 — `_visual()` genera los campos**
 
 Reemplazar el cuerpo del `expansion` (desde `ui.select(_TIPOS_VISUAL...)` hasta el `elif tipo == "circuito"`
 incluido, líneas 228-281) por un solo lazo sin ramas por tipo. **Una columna por campo**: es más legible en
@@ -1372,7 +1377,7 @@ Verificar `_chips` (`editor.py:196-211`): su firma es `(d, clave, etiqueta, opci
 Enter, `new_value_mode="add-unique"`). `anotar` y `vectores` reciben su diccionario de opciones, así que el
 usuario elige de una lista en vez de adivinar la clave: eso es la regla «todo se muestra con su valor».
 
-- [ ] **Paso 6 — Verde y prueba de arranque real del panel**
+- [x] **Paso 6 — Verde y prueba de arranque real del panel**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -1391,7 +1396,7 @@ print('formulario arma los 24 tipos')
 
 Esperado: `OK` y `formulario arma los 24 tipos`.
 
-- [ ] **Paso 7 — Mirar la pantalla de verdad**
+- [x] **Paso 7 — Mirar la pantalla de verdad**
 
 Arrancar el panel y revisar el acordeón «Dibujo» en 4 tipos al azar (uno de cada materia):
 
@@ -1403,7 +1408,7 @@ Con el navegador (o `browser-use`) abrir `http://127.0.0.1:8080/crear`, elegir �
 y confirmar que aparecen σx, σy, cortante y «Qué anotar». **Captura de pantalla en la conversación antes de
 seguir**: él tiene que ver que su palanca existe.
 
-- [ ] **Paso 8 — Suite, lint, commit**
+- [x] **Paso 8 — Suite, lint, commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \

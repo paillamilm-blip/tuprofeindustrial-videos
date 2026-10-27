@@ -15,11 +15,11 @@ from pydantic import ValidationError
 from ..config import cargar_marca
 from ..emojis import EMOJIS, stickers_dir
 from ..entorno import raiz_proyecto
-from ..guion import MATERIAS, Guion, a_yaml, explicar_errores
+from ..guion import MATERIAS, Guion, Visual, a_yaml, explicar_errores
 from ..render import slug
 from ..revision import Revision, revisar
 from ..temas import cargar_tema
-from ..visuales import VECTORES
+from ..visuales import CAMPOS, VECTORES, VISUALES, opciones_select
 from . import formulas
 from .comun import url_medio
 
@@ -35,25 +35,39 @@ VACIO: dict[str, Any] = {
 }  # fmt: skip
 
 # El dibujo de un paso. En el formulario los números van como texto ("0 a 2,5") porque un campo
-# numérico de NiceGUI no puede quedar vacío sin convertirse en 0.
-_VISUAL_VACIO: dict[str, Any] = {
-    "tipo": "", "funcion": "", "variable": "", "eje_x": "", "eje_y": "", "rango": "", "marcar": "",
-    "cuerpo": "bloque", "vectores": [], "angulo": "",
-    "fuente": "", "resistencias": [], "arreglo": "serie",
-}  # fmt: skip
-_TIPOS_VISUAL = {
-    "": "Sin dibujo",
-    "grafico_funcion": "📈 Gráfico de la función",
-    "diagrama_fuerzas": "➡️ Diagrama de fuerzas",
-    "circuito": "🔌 Circuito",
-}
-# Según el tipo se muestran (y se guardan) solo estos campos: los demás confundirían.
-_VISUAL_CAMPOS = {
-    "grafico_funcion": ("funcion", "variable", "eje_x", "eje_y", "rango", "marcar"),
-    "diagrama_fuerzas": ("cuerpo", "vectores", "angulo"),
-    "circuito": ("fuente", "resistencias", "arreglo"),
-}
-_VISUAL_NUMERICOS = ("rango", "marcar", "angulo")
+# numérico de NiceGUI no puede quedar vacío sin convertirse en 0. El editor no sabe qué dibujos
+# existen: eso lo decide el catálogo de `visuales.py`.
+
+_FORMA = {clave: campo.forma for clave, campo in CAMPOS.items()}
+
+
+def tipos_visual_del_editor() -> dict[str, str]:
+    """La lista del selector: las 24 entradas del catálogo, agrupadas por materia en la etiqueta."""
+    return opciones_select()
+
+
+def _campos_de(tipo: str) -> tuple[str, ...]:
+    return VISUALES[tipo].campos if tipo in VISUALES else ()
+
+
+def _visual_vacio() -> dict[str, Any]:
+    """El formulario en blanco: el valor inicial es el default del modelo, no una cadena a mano.
+
+    Se arma desde un `Visual` validado porque los defaults viven en `guion.py`; copiarlos acá
+    sería exactamente el error que esta pantalla ya cometió una vez."""
+    modelo = Visual.model_validate({"tipo": "torta", "categorias": ["A 1", "B 2"]})
+    salida: dict[str, Any] = {"tipo": ""}
+    for clave, campo in CAMPOS.items():
+        si_no_tocado = getattr(modelo, clave)
+        if campo.forma == "lista":
+            salida[clave] = []
+        elif campo.forma == "booleano":
+            salida[clave] = bool(si_no_tocado)
+        elif campo.forma in ("numero", "numeros"):
+            salida[clave] = ""
+        else:
+            salida[clave] = "" if si_no_tocado is None else str(si_no_tocado)
+    return salida
 
 
 def _texto_numero(valor: float) -> str:
@@ -66,29 +80,44 @@ def _numeros(texto: str) -> list[float]:
 
 
 def _visual_al_formulario(v: dict[str, Any]) -> dict[str, Any]:
-    salida = {**copy.deepcopy(_VISUAL_VACIO), **v}
-    rango = v.get("rango") or []
-    salida["rango"] = " a ".join(_texto_numero(n) for n in rango) if len(rango) == 2 else ""
-    salida["marcar"] = "; ".join(_texto_numero(n) for n in (v.get("marcar") or []))
-    salida["angulo"] = _texto_numero(v["angulo"]) if v.get("angulo") else ""
+    """El dict del guion al formulario: los números salen con coma chilena, las listas quedan listas."""
+    salida = {**_visual_vacio(), **copy.deepcopy(v)}
+    for clave in _campos_de(str(salida.get("tipo") or "")):
+        forma = _FORMA.get(clave, "texto")
+        valor = salida.get(clave)
+        if forma == "numeros":
+            numeros = list(valor or [])
+            salida[clave] = (
+                " a ".join(_texto_numero(n) for n in numeros)
+                if clave == "rango" and len(numeros) == 2
+                else "; ".join(_texto_numero(n) for n in numeros)
+            )
+        elif forma == "numero":
+            salida[clave] = _texto_numero(valor) if valor not in (None, "") else ""
+        elif forma == "lista":
+            salida[clave] = [str(x) for x in (valor or [])]
     return salida
 
 
 def _visual_al_guardar(v: dict[str, Any]) -> dict[str, Any] | None:
-    """El formulario otra vez en formato guion: sin los campos que no corresponden al tipo."""
+    """El formulario otra vez en formato guion: solo los campos del tipo elegido."""
     tipo = str(v.get("tipo") or "").strip()
-    if not tipo:
+    if tipo not in VISUALES:
         return None
     salida: dict[str, Any] = {"tipo": tipo}
-    for clave in _VISUAL_CAMPOS.get(tipo, ()):
+    for clave in _campos_de(tipo):
+        forma = _FORMA.get(clave, "texto")
         valor = v.get(clave)
-        if clave in _VISUAL_NUMERICOS:
-            numeros = _numeros(str(valor or ""))
-            if numeros:
-                salida[clave] = numeros[0] if clave == "angulo" else numeros
-        elif isinstance(valor, list):
-            limpia = [str(x).strip() for x in valor if str(x).strip()]
-            if limpia:
+        if forma == "numeros":
+            if numeros := _numeros(str(valor or "")):
+                salida[clave] = numeros
+        elif forma == "numero":
+            if numeros := _numeros(str(valor or "")):
+                salida[clave] = numeros[0]
+        elif forma == "booleano":
+            salida[clave] = bool(valor)
+        elif forma == "lista":
+            if limpia := [str(x).strip() for x in (valor or []) if str(x).strip()]:
                 salida[clave] = limpia
         elif str(valor or "").strip():
             salida[clave] = str(valor).strip()
@@ -103,7 +132,7 @@ PASO_VACIO: dict[str, Any] = {
     "transformar": True,
     "emoji": "",
     "error": False,
-    "visual": copy.deepcopy(_VISUAL_VACIO),
+    "visual": _visual_vacio(),
 }
 
 
@@ -218,72 +247,47 @@ class EditorGuion:
     # --------------------------------------------------------------------------------------
 
     def _visual(self, paso: dict) -> None:
-        """Los campos del dibujo elegido; los del resto de los tipos no se muestran."""
-        v = paso.setdefault("visual", copy.deepcopy(_VISUAL_VACIO))
+        """Los campos del dibujo elegido: los decide el catálogo, no una copia en el editor."""
+        v = paso.setdefault("visual", _visual_vacio())
         with (
             ui.expansion("Dibujo en el pie de la hoja (opcional)", icon="draw", value=bool(v.get("tipo")))
             .classes("w-full")
             .props("dense")
         ):
             (
-                ui.select(_TIPOS_VISUAL, label="Qué dibujar")
+                ui.select(tipos_visual_del_editor(), label="Qué dibujar")
                 .props("outlined dense")
                 .classes("w-full")
                 .bind_value(v, "tipo")
                 .on("update:model-value", lambda: self.seccion_pasos.refresh())
             )
             tipo = str(v.get("tipo") or "")
-            if tipo == "grafico_funcion":
-                self._texto(
-                    v,
-                    "funcion",
-                    "La función, en texto plano (sin LaTeX)",
-                    "-4.9t^2 + 20   ·   12/U   ·   sin(x)",
-                )
-                with ui.row().classes("w-full items-start gap-3 no-wrap"):
-                    self._texto(v, "eje_x", "Eje horizontal", "tiempo (s)").classes("flex-1")
-                    self._texto(v, "eje_y", "Eje vertical", "altura (m)").classes("flex-1")
-                with ui.row().classes("w-full items-start gap-3 no-wrap"):
-                    self._texto(v, "rango", "Rango del eje x (opcional)", "0 a 2,5").classes("flex-1")
-                    self._texto(v, "marcar", "Puntos con su valor escrito (opcional)", "0; 2,45").classes(
-                        "flex-1"
-                    )
-                ui.label(
-                    "Las raíces y el vértice se marcan solos. Si no escribes los ejes, salen «x» e «y»."
-                ).classes("tpi-ayuda")
-            elif tipo == "diagrama_fuerzas":
-                self._chips(
-                    v,
-                    "vectores",
-                    "Flechas del cuerpo (elige o escribe)",
-                    {k: f"{k} — {n}" for k, n in VECTORES.items()},
-                )
-                with ui.row().classes("w-full items-start gap-3 no-wrap"):
+            if not tipo:
+                return
+            definicion = VISUALES[tipo]
+            for clave in definicion.campos:
+                campo = CAMPOS[clave]
+                if clave == "vectores":
+                    self._chips(v, clave, campo.etiqueta, {k: f"{k} — {n}" for k, n in VECTORES.items()})
+                elif clave == "anotar":
+                    self._chips(v, clave, campo.etiqueta, {m: m.replace("_", " ") for m in definicion.marcas})
+                elif campo.forma == "opcion":
                     (
-                        ui.select({"bloque": "Bloque (una caja)", "bola": "Bola"}, label="Cuerpo")
+                        ui.select(dict(campo.opciones), label=campo.etiqueta)
                         .props("outlined dense")
-                        .classes("flex-1")
-                        .bind_value(v, "cuerpo")
+                        .classes("w-full")
+                        .bind_value(v, clave)
                     )
-                    self._texto(v, "angulo", "Inclinación del plano en grados (vacío = mesa)", "30").classes(
-                        "flex-1"
-                    )
-            elif tipo == "circuito":
-                with ui.row().classes("w-full items-start gap-3 no-wrap"):
-                    self._texto(v, "fuente", "La fuente", "12 V").classes("flex-1")
-                    (
-                        ui.select({"serie": "En serie", "paralelo": "En paralelo"}, label="Arreglo")
-                        .props("outlined dense")
-                        .classes("flex-1")
-                        .bind_value(v, "arreglo")
-                    )
-                self._chips(v, "resistencias", "Resistencias, de 2 a 4 (escribe y presiona Enter)", None)
-                ui.label("Cada valor con su unidad, como en la guía: 4 Ω, 6 Ω.").classes("tpi-ayuda")
-            if tipo:
-                ui.label(
-                    "Se dibuja en el pie de la hoja mientras se dice la voz de este paso. "
-                    "Con un dibujo en todo el video basta."
-                ).classes("tpi-ayuda")
+                elif campo.forma == "booleano":
+                    ui.switch(campo.etiqueta).props("dense").bind_value(v, clave)
+                elif campo.forma == "lista":
+                    self._chips(v, clave, campo.etiqueta, None)
+                else:
+                    self._texto(v, clave, campo.etiqueta, campo.ayuda)
+            ui.label(
+                f"{definicion.nombre} se dibuja en el pie de la hoja mientras suena la voz de este paso. "
+                "Con un dibujo en todo el video basta."
+            ).classes("tpi-ayuda")
 
     def _formula(self, d: dict, clave: str, etiqueta: str, ayuda: str = "") -> None:
         """Campo LaTeX con su dibujo debajo (se actualiza al salir del campo o con Enter)."""
