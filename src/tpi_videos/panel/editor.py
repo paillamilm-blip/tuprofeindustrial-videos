@@ -3,6 +3,7 @@ con vista previa real. Guarda un YAML normal en ``guiones/`` (el mismo que se ed
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import re
 from collections.abc import Callable
@@ -198,6 +199,24 @@ def opciones_emoji(actual: str | None = None) -> dict[str, str]:
     return opciones
 
 
+class _ultima_version:
+    """Descarta el resultado de una fórmula que quedó vieja mientras LaTeX la dibujaba.
+
+    El retardo lo pone Quasar (`input-debounce=400`); acá solo importa que una compilación lenta no tape
+    a la fórmula que el autor escribió después.
+    """
+
+    def __init__(self) -> None:
+        self._turno = 0
+
+    def nueva(self) -> int:
+        self._turno += 1
+        return self._turno
+
+    def al_dia(self, turno: int) -> bool:
+        return turno == self._turno
+
+
 class EditorGuion:
     def __init__(self, guion: Guion | None, ruta: Path | None, cabecera: list[str] | None = None) -> None:
         self.datos = a_formulario(guion)
@@ -306,11 +325,11 @@ class EditorGuion:
             ui.image(url_medio(png)).classes("w-[150px] rounded-lg border border-[#DCDCD7]")
 
     def _formula(self, d: dict, clave: str, etiqueta: str, ayuda: str = "") -> None:
-        """Campo LaTeX con su dibujo debajo (se actualiza al salir del campo o con Enter)."""
+        """Campo LaTeX con su dibujo debajo: se redibuja mientras se escribe, no al perder el foco."""
         with ui.column().classes("w-full gap-1"):
             campo = (
                 ui.input(etiqueta, placeholder=ayuda)
-                .props("outlined dense")
+                .props("outlined dense input-debounce=400")
                 .classes("w-full font-mono")
                 .bind_value(d, clave)
             )
@@ -319,8 +338,13 @@ class EditorGuion:
                 imagen.set_visibility(False)
                 aviso = ui.label("").classes("text-sm").style("color:#D32F2F")
 
-            async def dibujar() -> None:
-                svg, error = await formulas.dibujar(d.get(clave) or "", self.negrita)
+            versiones = _ultima_version()
+
+            async def dibujar(tex: str) -> None:
+                turno = versiones.nueva()
+                svg, error = await formulas.dibujar(tex, self.negrita)
+                if not versiones.al_dia(turno):
+                    return  # llegó otra escritura mientras se dibujaba: ésa se pinta sola
                 imagen.set_visibility(svg is not None)
                 if svg is not None:
                     ancho, alto = formulas.tamano_en_pantalla(svg)
@@ -329,10 +353,11 @@ class EditorGuion:
                     imagen.update()
                 aviso.text = f"⚠️ {error}" if error else ""
 
-            campo.on("blur", dibujar)
-            campo.on("keydown.enter", dibujar)
+            # El texto viene en el evento: al disparar el `.on("update:model-value")` el `bind_value` aún
+            # no había escrito en `d`, y cada dibujo salía una letra detrás de lo tecleado.
+            campo.on_value_change(lambda e: asyncio.create_task(dibujar(str(e.value or ""))))
             if d.get(clave):
-                ui.timer(0.1, dibujar, once=True)
+                ui.timer(0.1, lambda: asyncio.create_task(dibujar(str(d[clave]))), once=True)
 
     # --------------------------------------------------------------------------------------
     # Secciones
@@ -413,9 +438,10 @@ class EditorGuion:
     def seccion_pasos(self) -> None:
         pasos = self.datos["pasos"]
         with self._tarjeta(
-            "Pasos", "Un paso = un cambio. Cada fórmula se transforma en la siguiente. Al salir de un campo de "
-            "fórmula se dibuja tal como saldrá en el video."
-        ):  # fmt: skip
+            "Pasos",
+            "Un paso = un cambio. Cada fórmula se transforma en la siguiente. Mientras escribes una fórmula "
+            "se dibuja debajo, tal como saldrá en el video.",
+        ):
             for i, paso in enumerate(pasos):
                 clase = "tpi-error" if paso.get("error") else ""
                 with (

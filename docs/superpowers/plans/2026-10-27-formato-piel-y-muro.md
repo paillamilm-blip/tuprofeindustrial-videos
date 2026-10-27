@@ -1712,7 +1712,18 @@ que reimplementar un temporizador por campo y es exactamente la clase de sistema
 sí hace falta en Python es descartar el resultado de una fórmula que quedó vieja mientras se dibujaba (el
 render de LaTeX puede tardar más que lo que el autor tarda en seguir escribiendo).
 
-- [ ] **Paso 1 — Prueba que falla** (agregar a `pruebas/test_editor_visual.py`)
+> **Corregido al medir (Paso 5).** El plan cableaba el redibujo con
+> `campo.on("update:model-value", …)` leyendo el LaTeX de `d.get(clave)`. En el navegador eso **dibujaba una
+> letra detrás**: cuando NiceGUI dispara el `.on(...)`, el `bind_value` todavía no escribió en el diccionario,
+> así que `\frac{a+b}{c}` terminaba mostrando «⚠️ las llaves { } no están balanceadas» — el error de
+> `\frac{a+b}{`, la escritura anterior. Se cambió a `campo.on_value_change(…)`, que corre después de
+> `Binding._propagate` (`binding.py:289-291`) y entrega el texto en `e.value`; el guardador de versión sigue
+> igual porque el render de LaTeX todavía puede quedar atrás de la última tecla.
+>
+> La prueba de fuente ahora fija las dos cosas: que el campo escuche `on_value_change` y que
+> `formulas.dibujar(...)` **no** lea `d.get(clave)`.
+
+- [x] **Paso 1 — Prueba que falla** (agregar a `pruebas/test_editor_visual.py`)
 
 ```python
 class FormulaEnVivoTest(unittest.TestCase):
@@ -1736,7 +1747,7 @@ class FormulaEnVivoTest(unittest.TestCase):
         self.assertNotIn('"blur"', fuente)  # el blur era la única puerta: sin foco, sin dibujo
 ```
 
-- [ ] **Paso 2 — Verificar que falla**
+- [x] **Paso 2 — Verificar que falla**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -1745,7 +1756,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 
 Esperado: `ImportError: cannot import name '_ultima_version'` y el aserto de `input-debounce`.
 
-- [ ] **Paso 3 — Implementar el guardador de versión**
+- [x] **Paso 3 — Implementar el guardador de versión**
 
 En `editor.py`, sobre `_formula`:
 
@@ -1770,7 +1781,7 @@ class _ultima_version:
 
 Import nuevo arriba: `import asyncio` (si aún no está).
 
-- [ ] **Paso 4 — Cablear `_formula`**
+- [x] **Paso 4 — Cablear `_formula`**
 
 Reemplazar el final de `_formula` (desde `async def dibujar()` hasta `if d.get(clave):` incluido, líneas
 302-315) por:
@@ -1800,7 +1811,7 @@ Reemplazar el final de `_formula` (desde `async def dibujar()` hasta `if d.get(c
 Si `campo.props("outlined dense …")` pisa el `props("outlined dense")` de la línea 292, **dejar uno solo**: el
 `props` de la declaración del campo pasa a llevar las tres palabras y se borra el de abajo.
 
-- [ ] **Paso 5 — Verde y probarlo en la pantalla**
+- [x] **Paso 5 — Verde y probarlo en la pantalla**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -1812,7 +1823,7 @@ Con el panel abierto, escribir `\frac{a+b}{c}` **tecleando sin sacar el foco** y
 al texto con ~0,4 s de retraso; después escribir `\frac{a}{b}` rápido y confirmar que no aparece el cuadro de
 la fórmula anterior (eso es «gana el último»). Captura en la conversación.
 
-- [ ] **Paso 6 — Commit**
+- [x] **Paso 6 — Commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \

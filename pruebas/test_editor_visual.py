@@ -44,5 +44,29 @@ class IdaYVueltaTest(unittest.TestCase):
         self.assertEqual(set(tipos_visual_del_editor()), {"", *VISUALES})
 
 
+class FormulaEnVivoTest(unittest.TestCase):
+    def test_gana_la_ultima_peticion(self):
+        from tpi_videos.panel.editor import _ultima_version
+
+        versiones = _ultima_version()
+        vieja, media, nueva = versiones.nueva(), versiones.nueva(), versiones.nueva()
+        self.assertFalse(versiones.al_dia(vieja))
+        self.assertFalse(versiones.al_dia(media))
+        self.assertTrue(versiones.al_dia(nueva))
+
+    def test_el_campo_de_latex_llega_frenado_mientras_se_escribe(self):
+        import inspect
+
+        from tpi_videos.panel.editor import EditorGuion
+
+        fuente = inspect.getsource(EditorGuion._formula)
+        self.assertIn("input-debounce=400", fuente)
+        self.assertIn("on_value_change", fuente)
+        self.assertNotIn('"blur"', fuente)  # el blur era la única puerta: sin sacar el foco, sin dibujo
+        # El LaTeX se lee del evento: cuando llega el evento el `bind_value` todavía no escribió en el
+        # diccionario, y la vista previa quedaba una letra detrás de lo tecleado.
+        self.assertNotIn("formulas.dibujar(d.get(clave)", fuente)
+
+
 if __name__ == "__main__":
     unittest.main()
