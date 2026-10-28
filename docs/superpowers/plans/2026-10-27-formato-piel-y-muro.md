@@ -2644,7 +2644,7 @@ tapa con un rectángulo de color.
 agregarlo a la tabla sin el `Literal` también. El modelo, el catálogo, el formulario del editor (que B.2 arma
 desde `CAMPOS`) y el aviso del revisor son **un solo cambio atómico**.
 
-- [ ] **Paso 1 — Pruebas que fallan**
+- [x] **Paso 1 — Pruebas que fallan**
 
 `pruebas/test_solido_3d_modelo.py`:
 
@@ -2712,7 +2712,7 @@ class ElMotorAvisaTest(unittest.TestCase):
             dibujar_visual(falso, col, 7.6, 3.3)
 ```
 
-- [ ] **Paso 2 — Verificar que fallan**
+- [x] **Paso 2 — Verificar que fallan**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -2722,7 +2722,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 Esperado: `error: ... 'solido_3d' is not valid for 'Visual.tipo'` en las que construyen el visual, y
 `AssertionError: 'solido_3d' not found` en la de la tabla.
 
-- [ ] **Paso 3 — El modelo: `guion.py`**
+- [x] **Paso 3 — El modelo: `guion.py`**
 
 En el `Literal` de `Visual.tipo` (`:158`), una entrada nueva **debajo de `"solido"`** (el orden es el del
 select del editor):
@@ -2779,7 +2779,7 @@ En `_visual_yaml` (`:970`), mismo tratamiento y las dos claves nuevas:
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
 ```
 
-- [ ] **Paso 4 — El catálogo: `visuales.py`**
+- [x] **Paso 4 — El catálogo: `visuales.py`**
 
 `SEGUNDOS_VISUAL` (`:18-43`), debajo de `"solido": 3.0`:
 
@@ -2820,7 +2820,7 @@ En `_visual_yaml` (`:970`), mismo tratamiento y las dos claves nuevas:
                             "vista": "axonometrica", "anotar": ["volumen"]}),
 ```
 
-- [ ] **Paso 5 — El revisor y el motor**
+- [x] **Paso 5 — El revisor y el motor**
 
 `revision.py:120` — el mismo aviso de las 2 marcas sirve para los dos cuerpos:
 
@@ -2843,7 +2843,7 @@ líneas por su rama explícita y un grito:
 ErrorMotor`. **No** se agrega todavía la rama `solido_3d`: esa es la tarea D.2, y entre las dos el tipo grita en
 vez de dibujar un circuito.
 
-- [ ] **Paso 6 — Que la IA lo sepa pedir**
+- [x] **Paso 6 — Que la IA lo sepa pedir**
 
 La IA no recibe un prompt con la lista de dibujos: **aprende de solo el esquema pydantic** de `PasoIA`. Los
 cuatro cambios son el prompt.
@@ -2893,7 +2893,7 @@ ampliadas para que digan `"solido" o "solido3d"`:
 
 y en la descripción de `anotar` (`:248`), `'con "solido" o "solido3d", de "volumen", "area"; '`.
 
-- [ ] **Paso 7 — Voltear la prueba que reservaba el tipo**
+- [x] **Paso 7 — Voltear la prueba que reservaba el tipo**
 
 En `pruebas/test_visuales.py`, la clase `Tipo3dReservadoTest` (`:901`) se escribió para que D.1 la cambiara.
 Reemplazarla por:
@@ -2905,7 +2905,7 @@ class Tipo3dTest(unittest.TestCase):
         self.assertIn("solido_3d", tipos_del_modelo())
 ```
 
-- [ ] **Paso 8 — Verde, suite completa, commit**
+- [x] **Paso 8 — Verde, suite completa, commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -2922,7 +2922,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 Esperado: `OK` en las dos clases y en la suite (292 + 7 nuevas). Si `test_el_ejemplo_de_cada_tipo_valida_con_
 Visual` falla, el `ejemplo` de la fila pide algo que el validador no acepta: arreglar el ejemplo.
 
-- [ ] **Paso 9 — Ver el formulario en el panel (sin render)**
+- [x] **Paso 9 — Ver el formulario en el panel (sin render)**
 
 `./tpi panel` → Crear → «Qué dibujar» → **Ingeniería · Sólido en 3D**. Tienen que aparecer los dos `select`
 nuevos (La vista, El corte) armados desde `CAMPOS` sin tocar `editor.py` — esa es la prueba de que B.2 quedó
@@ -2941,7 +2941,7 @@ funciones de dibujo. Devuelve `Dibujo(mobs=VGroup(imagen, *parches, *rótulos), 
 *rótulos])`. `trazo` vacío a propósito: un PNG no se traza, y `escena.py:429` ya salta el `Create` si no hay
 nada.
 
-- [ ] **Paso 1 — Prueba que falla**
+- [x] **Paso 1 — Prueba que falla**
 
 `pruebas/test_solido_3d.py`:
 
@@ -3042,10 +3042,10 @@ class LasDieciseisCombinacionesTest(unittest.TestCase):
         self.assertGreater(encontrados, 200, "la cara del corte no se ve sombreada en el color de acento")
 ```
 
-- [ ] **Paso 2 — Verificar que falla**: `solido_3d` lanza `ErrorMotor: el motor todavía no sabe dibujar`
+- [x] **Paso 2 — Verificar que falla**: `solido_3d` lanza `ErrorMotor: el motor todavía no sabe dibujar`
   (el grito que puso D.1). Si en vez de eso pasa el test con un circuito, el grito no está: volver a D.1 paso 5.
 
-- [ ] **Paso 3 — Escribir `src/tpi_videos/dibujos_3d.py`**
+- [x] **Paso 3 — Escribir `src/tpi_videos/dibujos_3d.py`**
 
 ```python
 """Un sólido con relieve, renderizado fuera de línea a un PNG que la escena 2D usa como imagen.
@@ -3362,7 +3362,7 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
   `ImageMobject` mide 7,6×3,3 con aire transparente adentro y la miniatura sale diminuta: `marco_para()` de
   B.3 encuadra por la caja del grupo, no por la tinta.
 
-- [ ] **Paso 4 — La rama en `dibujos.py`**
+- [x] **Paso 4 — La rama en `dibujos.py`**
 
 En `dibujar_visual()`, debajo de la rama de `solido` (`:2156`):
 
@@ -3373,7 +3373,7 @@ En `dibujar_visual()`, debajo de la rama de `solido` (`:2156`):
         return dibujar_solido_3d(visual, col, ancho, alto, papel)
 ```
 
-- [ ] **Paso 5 — Verde**
+- [x] **Paso 5 — Verde**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -3384,7 +3384,7 @@ Esperado: `OK` (2 pruebas, ~7 s las 16 combinaciones). **Si una combinación toc
 umbral 0,02**: se mira el PNG (`salida/_3d/*.png`) y se revisa `_encuadrar` (el `::7` de muestreo y el
 `reset_rotation_matrix()` son los dos sospechosos históricos).
 
-- [ ] **Paso 6 — Mirar los 8 cuadros, no solo que pasen**
+- [x] **Paso 6 — Mirar los 8 cuadros, no solo que pasen**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -3425,13 +3425,13 @@ PY
 - ¿Las cuatro vistas dan **distintas**? (Si dos son idénticas, se perdió el `reset_rotation_matrix()`.)
 - ¿`r`, `h` o `a` están escritas y coinciden con el guion? ¿`V` y `A` también?
 
-- [ ] **Paso 7 — La miniatura también (agregar el tipo a la prueba de B.3)**
+- [x] **Paso 7 — La miniatura también (agregar el tipo a la prueba de B.3)**
 
 En `pruebas/test_miniaturas.py:1476`, la tupla de tipos pasa a
 `("engranaje", "poligono_regular", "viga", "torta", "mohr", "solido", "solido_3d")`. Verde con el umbral
 `0.30` **sin tocarlo**: si el 3D llega chico, el culpable es el recorte del paso 3 (punto 4 de la lista).
 
-- [ ] **Paso 8 — Suite, lint, commit**
+- [x] **Paso 8 — Suite, lint, commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -3453,7 +3453,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 **Carácter:** el paso que él espera. Un video con un sólido en 3D que se vea en el cuadro, y la confirmación de
 que nada de esto gastó una llamada.
 
-- [ ] **Paso 1 — El guion, escrito a mano**
+- [x] **Paso 1 — El guion, escrito a mano**
 
 `guiones/el_cubo_partido.yaml` — un guion corto (4 pasos, voz de ≤18 palabras cada una) con **dos** dibujos 3D
 para probar las dos vistas y el corte. Los números de la pantalla salen del texto: `lado: "4 cm"` → la arista
@@ -3514,7 +3514,7 @@ avisa del tipo inexistente en vez de callarse. En cuanto se vea el aviso, cambia
       anotar: [volumen]
 ```
 
-- [ ] **Paso 2 — Revisar sin gastar nada**
+- [x] **Paso 2 — Revisar sin gastar nada**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && ./tpi revisar guiones/el_cubo_partido.yaml
@@ -3524,7 +3524,7 @@ Primero: un aviso sobre `solidos_3d_placeholder` (el error de a propósito). Des
 o con sugerencias, **y ninguna línea que mencione un proveedor de IA** — `revisar` con `--sin-ia` no hace
 llamadas, y este paso no tiene clave configurada a propósito.
 
-- [ ] **Paso 3 — El render rápido y los cuadros**
+- [x] **Paso 3 — El render rápido y los cuadros**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -3545,7 +3545,7 @@ Mirar: el cuerpo con relieve sobre la hoja cuadriculada **sin rectángulo de col
 prueba el alpha), la medida escrita coincidiendo con el guion, la cara del corte en rojo, y que la vista
 `frente` del paso 2 se vea distinta de la `axonometrica` del paso 1.
 
-- [ ] **Paso 4 — La familia 1 pasa a ofrecer el 3D**
+- [x] **Paso 4 — La familia 1 pasa a ofrecer el 3D**
 
 En `plantillas/formatos.yaml`, la familia `trampas`: `dibujos: [poligono_regular, venn, probabilidad, solido]`
 → `dibujos: [poligono_regular, venn, probabilidad, solido_3d]`. El `solido` plano sigue existiendo en el
@@ -3559,7 +3559,7 @@ cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
 Esperado: `OK`. Si alguna prueba de `test_formatos.py` comparaba la lista literal de dibujos de `trampas`,
 actualizar **la prueba** a `solido_3d` (es un cambio de contenido decidido por el autor, no una regresión).
 
-- [ ] **Paso 5 — El panel, con clics**
+- [x] **Paso 5 — El panel, con clics**
 
 `./tpi panel`:
 1. **Crear** → una idea de la familia «Desafíos y trampas» → la tarjeta muestra 🔷 Sólido en 3D entre sus
@@ -3570,7 +3570,7 @@ actualizar **la prueba** a `solido_3d` (es un cambio de contenido decidido por e
 4. Poner `cilindro` + `corte: mitad`: el panel muestra el aviso en español, **sin bloquear** el guardado de lo
    demás.
 
-- [ ] **Paso 6 — Commit**
+- [x] **Paso 6 — Commit**
 
 ```bash
 cd /Users/documentos/Downloads/tuprofeindustrial-videos && \
@@ -3582,7 +3582,7 @@ git -c user.name='paillamilm-blip' -c user.email='paillamil.m@gmail.com' commit 
 (tercer archivo solo si hubo que actualizar la prueba). **Sin push**: los ~16 commits se empujan cuando él lo
 diga.
 
-- [ ] **Paso 7 — Contarle, con sus palabras, lo que se ganó y lo que se recortó**
+- [x] **Paso 7 — Contarle, con sus palabras, lo que se ganó y lo que se recortó**
 
 El informe al usuario tiene que decir las tres cosas, sin esconder la tercera:
 - ya elige el sólido en 3D, con sus cuatro vistas y su corte, y se ve en el video y en la miniatura;
