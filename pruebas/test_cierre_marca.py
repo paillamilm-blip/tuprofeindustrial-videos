@@ -51,3 +51,37 @@ class StickerAusenteTest(unittest.TestCase):
         texto = str(sube.exception)
         self.assertIn("«noexiste»", texto)
         self.assertIn("mis_ajustes/stickers/noexiste.png", texto)
+
+
+@unittest.skipUnless(escena is not None, "manim no está instalado")
+class StickerEnTemasSobriosTest(unittest.TestCase):
+    def test_el_logo_de_la_marca_va_tambien_en_los_sobrios(self):
+        """`plano_azul`, `vineta_cine` y compañía apagan emojis, pero tu logo es identidad."""
+        self.assertTrue(escena.dibuja_el_sticker("logo", de_la_marca=True, tema_emojis=False))
+
+    def test_los_stickers_comicos_siguen_apagados_en_los_sobrios(self):
+        self.assertFalse(escena.dibuja_el_sticker("explota", de_la_marca=False, tema_emojis=False))
+
+    def test_en_un_tema_con_emojis_se_dibuja_igual(self):
+        self.assertTrue(escena.dibuja_el_sticker("explota", de_la_marca=False, tema_emojis=True))
+
+    def test_sin_sticker_no_hay_nada_que_dibujar(self):
+        self.assertFalse(escena.dibuja_el_sticker(None, de_la_marca=True, tema_emojis=True))
+
+
+class StickersDelPanelTest(unittest.TestCase):
+    def test_el_panel_ofrece_los_png_subidos_por_su_nombre(self):
+        """Lo que se sube en Ajustes aparece en la lista del selector del cierre."""
+        from tpi_videos.emojis import stickers_disponibles
+
+        with tempfile.TemporaryDirectory() as carpeta:
+            (Path(carpeta) / "logo.png").write_bytes(b"x")
+            (Path(carpeta) / "mascota.png").write_bytes(b"x")
+            (Path(carpeta) / "notas.txt").write_text("no es un sticker", encoding="utf-8")
+            self.assertEqual(stickers_disponibles(Path(carpeta)), ["logo", "mascota"])
+
+    def test_sin_carpeta_de_stickers_no_hay_lista(self):
+        from tpi_videos.emojis import stickers_disponibles
+
+        with tempfile.TemporaryDirectory() as carpeta:
+            self.assertEqual(stickers_disponibles(Path(carpeta) / "no_existe"), [])

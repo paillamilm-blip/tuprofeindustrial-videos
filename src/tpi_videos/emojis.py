@@ -48,6 +48,12 @@ def stickers_dir() -> Path:
     return raiz_proyecto() / "mis_ajustes" / "stickers"
 
 
+def stickers_disponibles(carpeta: Path | None = None) -> list[str]:
+    """Los stickers propios subidos, por nombre (sin ``.png``), para elegirlos en el panel."""
+    base = carpeta if carpeta is not None else stickers_dir()
+    return sorted(p.stem for p in base.glob("*.png")) if base.exists() else []
+
+
 def _normalizar(valor: str) -> str:
     return valor.strip().replace(_VARIACION, "")
 

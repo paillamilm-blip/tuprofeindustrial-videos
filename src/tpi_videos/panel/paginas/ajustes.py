@@ -6,12 +6,13 @@ Todo se guarda en ``mis_ajustes/marca.yaml`` (la clave, en ``.env``): ``marca.ya
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 
 from nicegui import events, run, ui
 
 from ... import ia
 from ...config import cargar_marca, guardar_ajustes_marca
-from ...emojis import stickers_dir
+from ...emojis import stickers_dir, stickers_disponibles
 from ...entorno import raiz_proyecto
 from ...errores import ErrorMotor
 from ...temas import listar_temas
@@ -97,13 +98,18 @@ def _seccion_clave() -> None:
         ui.label("Nunca pegues tu clave en un chat ni la compartas.").classes("tpi-ayuda")
 
 
+@ui.refreshable
 def _seccion_marca() -> None:
     marca = cargar_marca()
+    stickers = {"": "Engranaje del motor", **{nombre: nombre for nombre in stickers_disponibles()}}
+    if marca.cierre.emoji and marca.cierre.emoji not in stickers:  # un PNG borrado no se esconde
+        stickers[marca.cierre.emoji] = f"{marca.cierre.emoji} (falta el PNG)"
     datos = {
         "nombre": marca.nombre,
         "usuario": marca.usuario,
         "texto": marca.cierre.texto,
         "voz": marca.cierre.voz,
+        "sticker": marca.cierre.emoji,
     }
     with _tarjeta("Tu marca", "Aparece en el cierre de cada video."):
         with ui.row().classes("w-full gap-3"):
@@ -115,11 +121,18 @@ def _seccion_marca() -> None:
         ui.input("Frase de cierre (se escucha)").props("outlined dense").classes("w-full").bind_value(
             datos, "voz"
         )
+        ui.select(stickers, label="Sticker del cierre").props("outlined dense").classes("w-full").bind_value(
+            datos, "sticker"
+        )
+        ui.label("Tu logo va al final de cada video. Súbelo abajo, en Tus stickers.").classes(
+            "tpi-ayuda -mt-2"
+        )
 
         def guardar() -> None:
             try:
                 guardar_ajustes_marca({"nombre": datos["nombre"].strip(), "usuario": datos["usuario"].strip(),
-                                       "cierre": {"texto": datos["texto"].strip(), "voz": datos["voz"].strip()}})  # fmt: skip
+                                       "cierre": {"texto": datos["texto"].strip(), "voz": datos["voz"].strip(),
+                                                  "emoji": datos["sticker"] or ""}})  # fmt: skip
             except ErrorMotor as e:
                 ui.notify(e.mensaje, type="negative", multi_line=True)
                 return
@@ -191,7 +204,7 @@ def _seccion_tema() -> None:
             ui.link("Ver y personalizar estilos", "/estilos")
 
 
-def _seccion_stickers() -> None:
+def _seccion_stickers(al_subir: Callable[[], None] | None = None) -> None:
     @ui.refreshable
     def galeria() -> None:
         carpeta = stickers_dir()
@@ -231,6 +244,8 @@ def _seccion_stickers() -> None:
             nombre.value = ""
             ui.notify(f"Sticker «{base}» guardado. Úsalo con emoji: {base}", type="positive")
             galeria.refresh()
+            if al_subir is not None:
+                al_subir()
 
         ui.upload(label="Subir PNG", auto_upload=True, on_upload=subir).props('accept=".png" flat bordered')
         galeria()
@@ -277,5 +292,5 @@ def registrar() -> None:
                     _seccion_tema()
                 with ui.column().classes("flex-1 gap-6"):
                     _seccion_marca()
-                    _seccion_stickers()
+                    _seccion_stickers(_seccion_marca.refresh)
                     _seccion_diagnostico()
