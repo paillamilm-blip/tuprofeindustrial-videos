@@ -73,6 +73,7 @@ class Voz(_Base):
 class Cierre(_Base):
     texto: str = "Ejercicio resuelto paso a paso"
     voz: str = "Ejercicio resuelto paso a paso. Nos vemos en el próximo."
+    emoji: str = ""  # sticker del cierre (tu logo); vacío = el engranaje dibujado
 
 
 class EstiloSubtitulos(_Base):
@@ -104,6 +105,10 @@ class Marca(_Base):
     voz: Voz = Voz()
     cierre: Cierre = Cierre()
     subtitulos: EstiloSubtitulos = EstiloSubtitulos()
+
+    def sticker_del_cierre(self, del_guion: str | None = None) -> str | None:
+        """El sticker del cierre: el que pide el guion manda; si no pide, va el de la marca."""
+        return del_guion or self.cierre.emoji or None
 
 
 def ajustes_dir() -> Path:

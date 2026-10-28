@@ -64,6 +64,7 @@ from manim_voiceover.helper import remove_bookmarks
 from . import componentes as c
 from . import dibujos as d
 from .config import Marca
+from .errores import ErrorMotor
 from .guion import Bloque, Guion, sin_tildes
 from .voces import RESOLUCION, crear_servicio
 
@@ -656,7 +657,14 @@ class VideoEjercicio(VoiceoverScene):
 
     def _cierre(self) -> None:
         cierre = self.guion.cierre or Bloque(texto=self.marca.cierre.texto, voz=self.marca.cierre.voz)
-        sticker = self._emoji(cierre.emoji, 1.8)  # ej. tu mascota en vez del engranaje
+        # El guion manda (ej. la mascota de un ejercicio); si no pide sticker, va el de la marca (tu logo).
+        elegido = self.marca.sticker_del_cierre(cierre.emoji)
+        sticker = self._emoji(elegido, 1.8)
+        if elegido and self.tema.emojis and sticker is None:
+            raise ErrorMotor(
+                f"El cierre usa el sticker «{elegido}», pero no está en mis_ajustes/stickers/{elegido}.png. "
+                "Súbelo en Ajustes → Tus stickers o cambia el nombre en tu marca."
+            )
         icono = (
             sticker if sticker is not None else c.engranaje(0.85, self.col.acento, self.col.fondo, dientes=12)
         )
