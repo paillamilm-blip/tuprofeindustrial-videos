@@ -1,0 +1,74 @@
+# Guion redactado con IA (Qoder) el 28-10-2026 para @tuprofeindustrial.
+# Revisar la voz y los números antes de publicar. El motor calcula V y A de cada cubo:
+# 4 cm → 64 cm³ y 96 cm²; 8 cm → 512 cm³ y 384 cm². El peso supone 1 g por cm³, dicho en los datos:
+# 64 g el chico y 512 g el grande.
+
+titulo: "Dos veces más grande, ocho veces más pesado"
+materia: matematica
+nivel: "1° medio"
+tema: hoja_de_desarrollo
+
+gancho:
+  texto: "Duplica la arista del cubo: no pesa el doble, pesa ocho veces más"
+  voz: "Duplica la arista del cubo: no pesa el doble, pesa ocho veces más."
+  emoji: "🤯"
+
+enunciado:
+  texto: "Un cubo de 4 cm y otro de 8 cm, del mismo material. Si el chico pesa 64 gramos, ¿cuánto pesa el grande?"
+  voz: "Dos cubos iguales: cuatro y ocho centímetros. El chico pesa sesenta y cuatro gramos, ¿y el grande?"
+  destacar: ["4 cm", "8 cm"]
+
+datos:
+  - tex: 'a_1 = 4\ \text{cm}'
+    voz: "El cubo chico tiene cuatro centímetros de arista."
+  - tex: 'a_2 = 8\ \text{cm}'
+    voz: "El grande tiene el doble: ocho centímetros."
+  - tex: '\rho = 1\ \text{g/cm}^3'
+    voz: "Cada centímetro cúbico pesa un gramo."
+
+pasos:
+  - nota: "El volumen del chico"
+    tex: 'V_1 = 4^3 = 64\ \text{cm}^3'
+    voz: "Cuatro al cubo: sesenta y cuatro centímetros cúbicos."
+    visual:
+      tipo: solido_3d
+      figura: cubo
+      lado: "4 cm"
+      vista: axonometrica
+      anotar: [volumen]
+  - nota: "El del doble de arista"
+    tex: 'V_2 = 8^3 = 512\ \text{cm}^3'
+    voz: "Ocho al cubo: quinientos doce centímetros cúbicos."
+    visual:
+      tipo: solido_3d
+      figura: cubo
+      lado: "8 cm"
+      vista: axonometrica
+      anotar: [volumen]
+  - nota: "Ocho veces, no dos"
+    tex: '\frac{V_2}{V_1} = \frac{512}{64} = 8'
+    voz: "El grande guarda ocho veces el volumen del chico, no el doble."
+    emoji: "💡"
+    visual:
+      tipo: barras
+      categorias: ["4 cm 64", "8 cm 512"]
+  - nota: "El área solo se cuadruplica"
+    tex: '\frac{A_2}{A_1} = \frac{384}{96} = 4'
+    voz: "El área, en cambio, solo se cuadruplica: cuatro, no ocho."
+    visual:
+      tipo: barras
+      categorias: ["Área 4", "Volumen 8"]
+
+resultado:
+  tex: 'm_2 = 8\,m_1 = 512\ \text{g}'
+  voz: "Dos veces más grande es ocho veces más pesado: quinientos doce gramos."
+  emoji: "✅"
+
+verificacion:
+  texto: "8 cm = 2 × 4 cm, así que V₂ = 2³ · 64 = 512 cm³ y A₂ = 2² · 96 = 384 cm². El peso sigue al volumen, no al área."
+  voz: "La arista se duplica, el volumen por ocho y el área solo por cuatro."
+
+reto:
+  texto: "Si el cubo de 4 cm pesa 64 g, ¿cuánto pesa uno de 12 cm de arista?"
+  voz: "Si uno de cuatro pesa sesenta y cuatro gramos, ¿cuánto pesa uno de doce?"
+  emoji: "✍️"
