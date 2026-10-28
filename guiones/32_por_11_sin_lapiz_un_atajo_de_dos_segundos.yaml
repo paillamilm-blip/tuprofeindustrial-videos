@@ -1,0 +1,42 @@
+titulo: "32 por 11 sin lápiz: un atajo de dos segundos"
+materia: fisica
+nivel: "2° medio"
+molde: tres_errores
+tema: "rotulador"
+
+gancho:
+  texto: "¿Pregunta que engancha con un número, como 20 metros?"
+  voz: "Pregunta que engancha, dicha en voz alta."
+  emoji: "🤔"
+
+enunciado:
+  texto: "Escribe aquí el enunciado completo, con sus datos: 20 metros, 9,8 m/s²."
+  voz: "Cuenta el problema con tus palabras, en una o dos frases."
+  destacar: ["20 metros"]
+
+datos:
+  - tex: 'h = 20\ \text{m}'
+    voz: "La altura es de veinte metros."
+  - tex: 't = ?'
+    voz: "Y buscamos el tiempo."
+
+pasos:
+  - nota: "Ecuación que usamos"
+    tex: 'h = \frac{1}{2} g t^2'
+    voz: "Usamos esta ecuación porque…"
+  - nota: "Despejamos"
+    tex: 't = \sqrt{\frac{2h}{g}}'
+    voz: "Despejamos el tiempo."
+    destacar: ['t']
+
+resultado:
+  tex: 't \approx 2,02\ \text{s}'
+  voz: "El resultado es… (di también la unidad)."
+  emoji: "✅"
+
+verificacion:
+  texto: "Una frase que compruebe o interprete el resultado."
+
+reto:
+  texto: "¿Y si la altura fuera 45 metros?"
+  voz: "Ahora tú: ¿y si la altura fuera cuarenta y cinco metros?"

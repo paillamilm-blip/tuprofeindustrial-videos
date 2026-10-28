@@ -1,0 +1,54 @@
+# Guion redactado con IA (gemini-3.5-flash-lite) el 26-10-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "Tanque con fuga: ¿cuánto tarda?"
+materia: matematica
+nivel: "1° medio"
+
+gancho:
+  texto: "¿Cuánto tarda en llenarse un tanque con una fisura?"
+  voz: "¿Cuánto tarda en llenarse un tanque que pierde agua?"
+  emoji: "🤔"
+
+enunciado:
+  texto: "Un tanque de 120 L recibe 8 L/min y pierde 2 L/min. ¿Cuánto tarda?"
+  voz: "Un tanque de ciento veinte litros recibe ocho litros por minuto. Con una fuga de dos, ¿cuánto tarda?"
+  destacar: ["120 L", "8 L/min", "2 L/min"]
+
+datos:
+  - tex: 'V = 120\ \text{L}'
+    voz: "El volumen total es de ciento veinte litros."
+  - tex: 'Q_{\text{in}} = 8\ \text{L/min}'
+    voz: "Entran ocho litros por minuto."
+  - tex: 'Q_{\text{out}} = 2\ \text{L/min}'
+    voz: "Y se escapan dos litros por minuto."
+  - tex: 't = ?'
+    voz: "Buscamos el tiempo total de llenado."
+
+pasos:
+  - nota: "Flujo neto"
+    tex: 'Q = 8 - 2 = 6\ \text{L/min}'
+    voz: "Restamos lo que entra menos lo que se pierde para hallar el flujo real."
+    emoji: "💡"
+  - nota: "Fórmula"
+    tex: 't = \frac{V}{Q}'
+    voz: "El tiempo es el volumen total dividido por el flujo neto."
+  - nota: "Reemplazamos"
+    tex: 't = \frac{120}{6}'
+    voz: "Sustituimos los ciento veinte litros y los seis litros por minuto."
+
+resultado:
+  tex: 't = 20\ \text{min}'
+  voz: "Hacemos la división y obtenemos veinte minutos."
+  emoji: "⏱️"
+
+verificacion:
+  texto: "Sin la fisura tardaría 15 minutos, pero la fuga retrasa el proceso."
+  voz: "Sin la fisura tardaría quince minutos, pero la fuga retrasa el llenado."
+
+reto:
+  texto: "¿Y si la fisura fuera de 3 litros por minuto? Calcula el nuevo tiempo."
+  voz: "Ahora tú. ¿Qué pasa si la fisura fuera de tres litros por minuto? Piénsalo antes del próximo video."
+  emoji: "✍️"
