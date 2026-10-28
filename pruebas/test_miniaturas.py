@@ -83,6 +83,28 @@ class DibujarTest(unittest.TestCase):
             nuevo = ruta_miniatura(v)
         self.assertNotEqual(viejo, nuevo)
 
+    def test_sin_decir_que_solido_el_aviso_nombra_los_cuatro(self):
+        """El panel cuelga este texto detrás de «aún no está completo. »: si empieza en minúscula y
+        habla en clave («figura: 'cilindro'») parece un error de programación, no una ayuda."""
+        from tpi_videos.errores import ErrorMotor
+
+        with self.assertRaises(ErrorMotor) as sube:
+            dibujar_miniatura({"tipo": "solido_3d"})
+        texto = str(sube.exception)
+        self.assertIn("completo. Falta decir qué sólido es", texto)
+        for nombre in ("cubo", "cilindro", "cono", "esfera"):
+            self.assertIn(nombre, texto)
+
+    def test_al_pegar_el_motivo_queda_una_oracion_completa(self):
+        """El panel pega el motivo detrás de «aún no está completo. ». Los mensajes del modelo empiezan
+        en minúscula porque el CLI los lee a mitad de frase; aquí esa minúscula queda entre dos
+        oraciones y parece un error de programación en vez de una instrucción."""
+        from tpi_videos.errores import ErrorMotor
+
+        with self.assertRaises(ErrorMotor) as sube:
+            dibujar_miniatura({"tipo": "solido_3d", "figura": "cubo"})
+        self.assertIn("completo. El cubo necesita la medida de lado", str(sube.exception))
+
     def test_un_tipo_inventado_avisa_en_vez_de_devolver_nada(self):
         with self.assertRaises(Exception) as sube:
             dibujar_miniatura({"tipo": "dibujo_imposible"})

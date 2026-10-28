@@ -53,6 +53,15 @@ def marco_para(ancho: float, alto: float) -> tuple[float, float]:
     return alto_marco / RAZON, alto_marco
 
 
+def _como_oracion(texto: str) -> str:
+    """Los mensajes del modelo hablan en minúscula porque el CLI los lee a mitad de frase; el panel
+    los pega detrás de una oración propia y ahí la minúscula parece un error de programación."""
+    for i, letra in enumerate(texto):
+        if letra.isalpha():
+            return texto[:i] + letra.upper() + texto[i + 1 :]
+    return texto
+
+
 def dibujar_miniatura(visual: dict, tema: str = "hoja_de_desarrollo", forzar: bool = False) -> Path:
     """Un PNG con el dibujo centrado y encuadrado. Lanza ErrorMotor si el tipo o los campos no valen."""
     destino = ruta_miniatura(visual, tema)
@@ -66,7 +75,8 @@ def dibujar_miniatura(visual: dict, tema: str = "hoja_de_desarrollo", forzar: bo
     except Exception as e:
         # `explicar_errores` traduce pydantic: el texto crudo con «input_value» no sirve en pantalla.
         falta = "; ".join(explicar_errores(e)) if isinstance(e, ValidationError) else str(e)
-        raise ErrorMotor(f"El dibujo «{tipo}» aún no está completo. {falta.removeprefix('(raíz): ')}") from e
+        motivo = _como_oracion(falta.removeprefix("(raíz): "))
+        raise ErrorMotor(f"El dibujo «{tipo}» aún no está completo. {motivo}") from e
 
     from manim import ORIGIN, Camera, tempconfig
 

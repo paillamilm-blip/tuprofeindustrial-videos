@@ -286,8 +286,10 @@ class EditorGuion:
             if not tipo:
                 return
             definicion = VISUALES[tipo]
+            campos: list[tuple[ui.element, bool]] = []
             for clave in definicion.campos:
                 campo = CAMPOS[clave]
+                instante = True  # un select o un switch avisan al elegir; un texto, al salir
                 if clave == "vectores":
                     w = self._chips(v, clave, campo.etiqueta, {k: f"{k} — {n}" for k, n in VECTORES.items()})
                 elif clave == "anotar":
@@ -307,13 +309,26 @@ class EditorGuion:
                     w = self._chips(v, clave, campo.etiqueta, None)
                 else:
                     w = self._texto(v, clave, campo.etiqueta, campo.ayuda)
-                # Al salir del campo se rehace la tarjeta: así el dibujo de abajo sigue lo que se escribió.
-                w.on("blur", lambda: self.seccion_pasos.refresh())
+                    instante = False
+                campos.append((w, instante))
             ui.label(
                 f"{definicion.nombre} se dibuja en el pie de la hoja mientras suena la voz de este paso. "
                 "Con un dibujo en todo el video basta."
             ).classes("tpi-ayuda")
-            self._miniatura(v, tipo)
+            zona = ui.column().classes("w-full items-center")
+
+            def refrescar(*_) -> None:
+                # Antes solo se rehacía al cambiar el tipo o al salir de un texto: al elegir «cubo»
+                # en «El sólido» la miniatura seguía diciendo que faltaba decir cuál sólido era.
+                zona.clear()
+                with zona:
+                    self._miniatura(v, tipo)
+
+            for w, instante in campos:
+                if instante:
+                    w.on("update:model-value", refrescar)
+                w.on("blur", refrescar)
+            refrescar()
 
     def _miniatura(self, v: dict, tipo: str) -> None:
         """El dibujo elegido, visto acá mismo: un fotograma, sin voz y sin IA."""

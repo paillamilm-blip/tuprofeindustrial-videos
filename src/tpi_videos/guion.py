@@ -341,9 +341,7 @@ class Visual(_Base):
                 )
         elif self.tipo in ("solido", "solido_3d"):
             if not self.figura:
-                raise ValueError(
-                    "un sólido necesita decir cuál es, ej. figura: 'cilindro' (cubo, cilindro, cono o esfera)"
-                )
+                raise ValueError("Falta decir qué sólido es: cubo, cilindro, cono o esfera.")
             analizar_solido(self.figura, self.lado, self.radio, self.altura)
             if self.tipo == "solido_3d" and self.corte == "mitad" and self.figura != "cubo":
                 raise ValueError(
