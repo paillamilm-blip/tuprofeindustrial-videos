@@ -2156,6 +2156,10 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         return circulo_trig(visual.angulo_trig(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "solido":
         return solido(visual.solido(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "solido_3d":
+        from .dibujos_3d import dibujar_solido_3d  # adentro: manim 3D no debe pesar en los dibujos 2D
+
+        return dibujar_solido_3d(visual, col, ancho, alto, papel)
     if visual.tipo == "venn":
         return venn(visual.venn(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "recta":

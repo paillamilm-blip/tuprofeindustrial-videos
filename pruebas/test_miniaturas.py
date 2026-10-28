@@ -57,7 +57,7 @@ class DibujarTest(unittest.TestCase):
         )
 
     def test_tipos_de_ejemplo_producen_un_png_usable(self):
-        for clave in ("engranaje", "poligono_regular", "viga", "torta", "mohr", "solido"):
+        for clave in ("engranaje", "poligono_regular", "viga", "torta", "mohr", "solido", "solido_3d"):
             ruta = dibujar_miniatura({"tipo": clave, **VISUALES[clave].ejemplo})
             self.assertTrue(ruta.exists(), clave)
             ancho, alto = self._ocupacion(ruta)
