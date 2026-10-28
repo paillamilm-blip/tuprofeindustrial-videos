@@ -345,8 +345,8 @@ class Visual(_Base):
             analizar_solido(self.figura, self.lado, self.radio, self.altura)
             if self.tipo == "solido_3d" and self.corte == "mitad" and self.figura != "cubo":
                 raise ValueError(
-                    f"el corte a la mitad solo se dibuja bien en el cubo; en el {self.figura} la cara "
-                    "de corte no se ordena con la superficie: usa corte: 'sin_corte'"
+                    "el corte a la mitad solo se dibuja bien en el cubo; con otra figura la cara "
+                    "del corte no queda bien. Usa «Sin corte» o cambia la figura a cubo"
                 )
             desconocidas = [m for m in self.anotar if m not in MARCAS_SOLIDO]
             if desconocidas:

@@ -36,7 +36,11 @@ class ModeloTest(unittest.TestCase):
         for figura in ("cilindro", "cono", "esfera"):
             with self.assertRaises(Exception) as sube:
                 _solido(figura=figura, corte="mitad")
-            self.assertIn("cubo", str(sube.exception).lower(), figura)
+            texto = str(sube.exception)
+            self.assertIn("cubo", texto.lower(), figura)
+            # El panel nombra la opción del selector, no la clave del YAML: «usa corte: 'sin_corte'»
+            # en pantalla parece un error de programación.
+            self.assertIn("«Sin corte»", texto, figura)
 
     def test_escribir_y_volver_a_leer_conserva_vista_y_corte(self):
         import yaml
