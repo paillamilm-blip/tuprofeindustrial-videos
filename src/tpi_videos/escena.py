@@ -48,6 +48,7 @@ from manim import (
     Indicate,
     LaggedStart,
     Mobject,
+    MovingCameraScene,
     Rotate,
     RoundedRectangle,
     SurroundingRectangle,
@@ -69,6 +70,66 @@ from .guion import Bloque, Guion, sin_tildes
 from .voces import RESOLUCION, crear_servicio
 
 
+def dibuja_el_sticker(elegido: str | None, de_la_marca: bool, tema_emojis: bool) -> bool:
+    """El logo de la marca va también en los temas sobrios; los stickers cómicos siguen apagados."""
+    return bool(elegido) and (tema_emojis or de_la_marca)
+
+
+# Cuánto acerca la cámara en cada paso y en el resultado (multiplica lo ya acercado).
+ESCALAS: dict[str, dict[str, float]] = {
+    "suave": {"paso": 0.97, "resultado": 0.94, "minima": 0.86},
+    "fuerte": {"paso": 0.93, "resultado": 0.90, "minima": 0.78},
+}
+
+
+HOLGURA_ANCHO = 0.12  # aire entre lo dibujado y el borde del cuadro cuando la cámara se acerca
+
+
+@dataclass(frozen=True)
+class Paisaje:
+    """Hasta dónde llega lo dibujado: si la cámara mira más allá, aparece el escritorio vacío."""
+
+    medio_alto: float
+    centro_y: float
+    ancho_util: float  # lo más ancho que se dibuja: acercarse más lo corta por los lados
+
+
+def paisaje_del_tema(tema: Any) -> Paisaje:
+    if tema.marco == "hoja":
+        return Paisaje(c.HOJA_ALTO / 2, c.HOJA_CENTRO_Y, c.ancho_util_de(tema))
+    return Paisaje(7.9, 0.0, c.ancho_util_de(tema))  # la cuadrícula de la pizarra llega hasta ±8
+
+
+def escala_del_paso(actual: float, modo: str) -> float:
+    ajuste = ESCALAS.get(modo, ESCALAS["suave"])
+    return max(ajuste["minima"], actual * ajuste["paso"])
+
+
+def escala_del_resultado(actual: float, modo: str) -> float:
+    ajuste = ESCALAS.get(modo, ESCALAS["suave"])
+    return max(ajuste["minima"], actual * ajuste["resultado"])
+
+
+def encuadre(
+    objetivo_y: float,
+    escala: float,
+    paisaje: Paisaje,
+    alto_cuadro: float,
+    ancho_cuadro: float,
+    minima: float,
+) -> tuple[float, float]:
+    """Escala efectiva y centro al que puede ir la cámara sin salirse de lo dibujado.
+
+    Nunca se aleja más allá del cuadro completo (escala máxima 1), no recorta lo dibujado por los
+    lados y se detiene en el borde del fondo.
+    """
+    por_ancho = (paisaje.ancho_util + HOLGURA_ANCHO) / ancho_cuadro
+    acercada = min(1.0, max(minima, por_ancho, escala))
+    libre = max(0.0, paisaje.medio_alto - alto_cuadro * acercada / 2)
+    centro = min(paisaje.centro_y + libre, max(paisaje.centro_y - libre, objetivo_y))
+    return acercada, centro
+
+
 @dataclass
 class OpcionesEscena:
     proveedor: str
@@ -88,7 +149,7 @@ class Linea:
     eq: Mobject
 
 
-class VideoEjercicio(VoiceoverScene):
+class VideoEjercicio(VoiceoverScene, MovingCameraScene):
     def __init__(
         self, guion: Guion, marca: Marca, tema: Any, opciones: OpcionesEscena, **kwargs: Any
     ) -> None:
@@ -103,6 +164,15 @@ class VideoEjercicio(VoiceoverScene):
         self.bloques_voz: list[dict[str, Any]] = []
         self._pendientes: list[Animation] = []  # transiciones para el próximo bloque de voz
         self._total_bloques = len(guion.textos_de_voz(marca.cierre.voz))
+        # Cámara: el tema dice hasta dónde puede mirar; el guion, cuánto se acerca.
+        self.modo_camara = guion.camara
+        self.paisaje = paisaje_del_tema(tema)
+        self.alto_cuadro = float(config.frame_height)
+        self.ancho_cuadro = float(config.frame_width)
+        self._camara_escala = 1.0
+        self._camara_centro = 0.0
+        self._cabecera_fija: Mobject | None = None
+        self._cabecera_visible = True
         super().__init__(**kwargs)
 
     # --------------------------------------------------------------------------------------
@@ -174,11 +244,62 @@ class VideoEjercicio(VoiceoverScene):
         return tracker.get_remaining_duration()
 
     # --------------------------------------------------------------------------------------
+    # Cámara
+    # --------------------------------------------------------------------------------------
+
+    def _fijar_cabecera(self) -> None:
+        """La fila de arriba (marca o "Notas/Fecha"): se disuelve cuando la cámara se acerca."""
+        cinta = getattr(self.fondo, "cinta", None)  # en la hoja, "Notas" y "Fecha" viven en el fondo
+        cabeza = cinta if cinta is not None and len(cinta) else self.cabecera
+        if len(cabeza):
+            self._cabecera_fija = cabeza
+
+    def _animaciones_camara(
+        self, objetivo_y: float, escala: float, run_time: float = 0.5, rebote: bool = False
+    ) -> list[Animation]:
+        """Acerca la cámara, sin tocar los subtítulos: se queman después, en el render."""
+        if self.modo_camara == "quieta":
+            return []
+        ajuste = ESCALAS.get(self.modo_camara, ESCALAS["suave"])
+        s, centro = encuadre(
+            objetivo_y,
+            escala,
+            self.paisaje,
+            self.alto_cuadro,
+            self.ancho_cuadro,
+            ajuste["minima"],
+        )
+        if abs(s - self._camara_escala) < 0.004 and abs(centro - self._camara_centro) < 0.05:
+            return []
+        ritmo = rate_functions.ease_out_back if rebote else rate_functions.smooth
+        animaciones: list[Animation] = [
+            self.camera.frame.animate(run_time=run_time, rate_func=ritmo)
+            .set(width=config.frame_width * s)
+            .move_to([0, centro, 0])
+        ]
+        # Al acercarse, el papel tapa la cabecera y quedaría cortada por el borde: se disuelve.
+        visible = s >= 0.95
+        if self._cabecera_fija is not None and visible != self._cabecera_visible:
+            self._cabecera_visible = visible
+            animaciones.append(
+                self._cabecera_fija.animate(run_time=run_time).set_opacity(1.0 if visible else 0.0)
+            )
+        self._camara_escala, self._camara_centro = s, centro
+        return animaciones
+
+    def _acercar_al_paso(self, eq: Mobject) -> list[Animation]:
+        escala = escala_del_paso(self._camara_escala, self.modo_camara)
+        return self._animaciones_camara(eq.get_center()[1] + 0.3, escala, run_time=0.45)
+
+    def _volver_al_plano(self) -> list[Animation]:
+        return self._animaciones_camara(0.0, 1.0, run_time=0.45)
+
+    # --------------------------------------------------------------------------------------
     # Ayudas de estilo
     # --------------------------------------------------------------------------------------
 
-    def _emoji(self, valor: str | None, alto: float) -> Mobject | None:
-        if not valor or not self.tema.emojis:
+    def _emoji(self, valor: str | None, alto: float, forzar: bool = False) -> Mobject | None:
+        if not valor or not (self.tema.emojis or forzar):
             return None
         return c.imagen_emoji(valor, alto)
 
@@ -265,6 +386,7 @@ class VideoEjercicio(VoiceoverScene):
             piezas = [m for m in (emoji, p, formula) if m is not None]
             Group(*piezas).arrange(DOWN, buff=0.5).move_to([0, c.CENTRO_ZONA + 0.6, 0])
         self.cabecera = self._cabecera()
+        self._fijar_cabecera()
         with self.hablar(g.voz_final, "gancho") as tr:
             if self.plumon:
                 self.play(FadeIn(self.cabecera), Write(p), run_time=0.9)
@@ -426,12 +548,19 @@ class VideoEjercicio(VoiceoverScene):
             dibujo.mobs.add(caja)
             self.add(caja)
         restante = max(self._restante(tr) - 0.5, 1.0)
+        camara = self._animaciones_camara(centro_y, self._camara_escala, run_time=0.55)
         # El dibujo termina antes que la voz: lo que queda es el rato que se mira ya completo.
         if dibujo.trazo:
-            self.play(LaggedStart(*[Create(m) for m in dibujo.trazo], lag_ratio=0.1), run_time=restante * 0.5)
+            self.play(
+                LaggedStart(*[Create(m) for m in dibujo.trazo], lag_ratio=0.1),
+                *camara,
+                run_time=restante * 0.5,
+            )
+            camara = []
         if dibujo.aparece:
             self.play(
                 LaggedStart(*[FadeIn(m, shift=UP * 0.1) for m in dibujo.aparece], lag_ratio=0.12),
+                *camara,
                 run_time=restante * 0.32,
             )
         return dibujo
@@ -525,6 +654,7 @@ class VideoEjercicio(VoiceoverScene):
                     aparecer.append(TransformMatchingTex(fuente, eq, key_map=mapa))
                 else:
                     aparecer.append(Write(eq))
+                aparecer += self._acercar_al_paso(eq)  # el golpe de cámara entra con la fórmula
                 self.play(*aparecer, run_time=float(np.clip(tr.duration * 0.45, 0.8, 1.6)))
                 if paso.visual is not None:
                     dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, tr)
@@ -595,7 +725,19 @@ class VideoEjercicio(VoiceoverScene):
             else:
                 aparecer = [Write(eq)] + ([FadeOut(self.ultima)] if self.ultima is not None else [])
             self._con_pendientes(*[FadeOut(m) for m in salen], *aparecer, run_time=0.9)
-            self.play(FadeIn(caja), Create(cabeza[0]), FadeIn(cabeza[1], shift=UP * 0.1), run_time=0.5)
+            golpe = self._animaciones_camara(
+                grupo.get_center()[1],
+                escala_del_resultado(self._camara_escala, self.modo_camara),
+                run_time=0.55,
+                rebote=True,
+            )
+            self.play(
+                FadeIn(caja),
+                Create(cabeza[0]),
+                FadeIn(cabeza[1], shift=UP * 0.1),
+                *golpe,
+                run_time=0.5,
+            )
             self.play(
                 Circumscribe(VGroup(caja, eq), color=self.col.acento, fade_out=True, time_width=0.5),
                 run_time=1.0,
@@ -650,7 +792,9 @@ class VideoEjercicio(VoiceoverScene):
         if emoji is not None:  # sticker en la esquina de la tarjeta
             emoji.move_to(tarjeta.get_corner(UR) + LEFT * 0.3 + DOWN * 0.1).rotate(0.18)
         with self.hablar(reto.voz_final, "reto"):
-            self.play(*self._limpiar_tablero(), run_time=0.35)  # primero despejar, sin superponer
+            self.play(
+                *self._limpiar_tablero(), *self._volver_al_plano(), run_time=0.35
+            )  # despejar sin superponer
             self.play(FadeIn(tarjeta, shift=UP * 0.2), run_time=0.45)
             if emoji is not None:
                 self.play(self._rebote(emoji))
@@ -659,8 +803,10 @@ class VideoEjercicio(VoiceoverScene):
         cierre = self.guion.cierre or Bloque(texto=self.marca.cierre.texto, voz=self.marca.cierre.voz)
         # El guion manda (ej. la mascota de un ejercicio); si no pide sticker, va el de la marca (tu logo).
         elegido = self.marca.sticker_del_cierre(cierre.emoji)
-        sticker = self._emoji(elegido, 1.8)
-        if elegido and self.tema.emojis and sticker is None:
+        # En los temas sobrios se apagan los emojis, pero el logo de la marca es identidad: va igual.
+        de_la_marca = not cierre.emoji
+        sticker = self._emoji(elegido, 1.8, forzar=de_la_marca)
+        if dibuja_el_sticker(elegido, de_la_marca, self.tema.emojis) and sticker is None:
             raise ErrorMotor(
                 f"El cierre usa el sticker «{elegido}», pero no está en mis_ajustes/stickers/{elegido}.png. "
                 "Súbelo en Ajustes → Tus stickers o cambia el nombre en tu marca."
@@ -673,7 +819,7 @@ class VideoEjercicio(VoiceoverScene):
         llamado = c.parrafo(cierre.texto, 30, SEMIBOLD, self.col.texto)
         Group(icono, nombre, usuario, llamado).arrange(DOWN, buff=0.38).move_to([0, c.CENTRO_ZONA + 0.7, 0])
         with self.hablar(cierre.voz_final, "cierre") as tr:
-            self.play(*self._limpiar_tablero(), run_time=0.35)
+            self.play(*self._limpiar_tablero(), *self._volver_al_plano(), run_time=0.35)
             if sticker is not None:
                 self.play(self._rebote(sticker, run_time=0.5))
                 self.play(

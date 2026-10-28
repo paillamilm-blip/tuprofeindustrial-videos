@@ -93,6 +93,11 @@ _ZONAS = {
 }  # fmt: skip
 
 
+def ancho_util_de(tema) -> float:
+    """Lo más ancho que se dibuja en ese marco: una cámara que se acerque más lo recorta."""
+    return _ZONAS[tema.marco]["ANCHO_UTIL"]
+
+
 def usar_estilo(tema) -> None:
     """Aplica la tipografía y las zonas del tema (ver ``temas.Tema``)."""
     global _TITULOS, _TEXTO, ANCHO_UTIL, Y_CABECERA, Y_TITULO, Y_ZONA_SUPERIOR, Y_ZONA_INFERIOR
@@ -493,12 +498,19 @@ def chip(contenido: str, color: str, tam: float = 19) -> VGroup:
 
 
 def tarjeta(contenido: Mobject, ancho: float, relleno: str, borde: str, margen: float = 0.4) -> VGroup:
-    """Panel redondeado con el contenido alineado a la izquierda."""
+    """Panel redondeado con el contenido alineado a la izquierda y su sombra detrás (``tarjeta[0]``).
+
+    La sombra se ve sobre papeles claros; en un panel oscuro queda transparente, pero el hijo existe
+    igual para que todas las tarjetas tengan la misma forma y el contenido siga siendo el último.
+    """
     caja = RoundedRectangle(corner_radius=0.28, width=ancho, height=contenido.height + 2 * margen)
     caja.set_fill(relleno, 0.94).set_stroke(borde, 2.5)
+    sombra = RoundedRectangle(corner_radius=0.3, width=ancho, height=caja.height)
+    sombra.set_fill("#000000", 0.16 if _luminancia(relleno) > 0.45 else 0.0).set_stroke(width=0)
+    sombra.shift(DOWN * 0.1 + RIGHT * 0.05)
     contenido.move_to(caja)
     contenido.align_to(caja.get_left() + RIGHT * margen, LEFT)
-    return VGroup(caja, contenido)
+    return VGroup(VGroup(sombra, caja), contenido)
 
 
 def visto(color: str, escala: float = 0.32) -> VMobject:
@@ -551,14 +563,19 @@ def fondo_tema(tema) -> Mobject:
     return capa if capa is not None else VGroup()
 
 
+def _luminancia(color: str) -> float:
+    """Cuánto pesa un color (0 = negro, 1 = blanco), para decidir claro u oscuro encima."""
+    r, g, b = (int(color[i : i + 2], 16) / 255 for i in (1, 3, 5))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
 def _legible_sobre(fondo: str, claro: str, oscuro: str) -> str:
     """Claro u oscuro según cuánto peso tenga el fondo (luminancia percibida).
 
     La etiqueta de la hoja vive fuera del papel, sobre ``colores.fondo``; medir ahí evita el blanco fijo
     que desaparecía en los temas de papel claro y el gris que desaparecía sobre el fondo oscuro.
     """
-    r, g, b = (int(fondo[i : i + 2], 16) / 255 for i in (1, 3, 5))
-    return oscuro if 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 else claro
+    return oscuro if _luminancia(fondo) > 0.45 else claro
 
 
 def marco_hoja(tema, capa: Mobject | None = None) -> Group:
@@ -585,6 +602,8 @@ def marco_hoja(tema, capa: Mobject | None = None) -> Group:
         if encabezado.width > HOJA_ANCHO - 1.0:
             encabezado.scale_to_fit_width(HOJA_ANCHO - 1.0)
         piezas.append(encabezado.move_to([0, hoja.get_top()[1] - 0.42, 0]))
+    # VGroup (no Group): la escena la disuelve al acercar la cámara, y la opacidad solo baja a los hijos.
+    cinta = VGroup()
     if h.etiqueta.strip():
         etiqueta = Text(
             h.etiqueta.strip(),
@@ -593,7 +612,7 @@ def marco_hoja(tema, capa: Mobject | None = None) -> Group:
             font_size=34,
             color=_legible_sobre(tema.colores.fondo, h.color, tema.colores.tenue),
         )
-        piezas.append(etiqueta.move_to([0, 6.5, 0]).to_edge(LEFT, buff=0.6))
+        cinta.add(etiqueta.move_to([0, 6.5, 0]).to_edge(LEFT, buff=0.6))
     if h.fecha.strip():
         pastilla = RoundedRectangle(corner_radius=0.25, width=2.3, height=0.5)
         pastilla.set_fill("#FFFFFF", 0.93).set_stroke(width=0).move_to([0, 6.5, 0]).to_edge(RIGHT, buff=0.6)
@@ -601,8 +620,12 @@ def marco_hoja(tema, capa: Mobject | None = None) -> Group:
         if fecha.width > 1.9:
             fecha.scale_to_fit_width(1.9)
         fecha.move_to(pastilla).align_to(pastilla, LEFT).shift(RIGHT * 0.22)
-        piezas += [pastilla, fecha]
-    return Group(*piezas)
+        cinta.add(pastilla, fecha)
+    if len(cinta):
+        piezas.append(cinta)
+    fondo = Group(*piezas)
+    fondo.cinta = cinta
+    return fondo
 
 
 def _escapar_markup(texto_: str) -> str:

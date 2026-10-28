@@ -45,7 +45,7 @@ VISTAS: dict[str, tuple[float, float]] = {
     "axonometrica": (60.0, -55.0),
 }
 
-PX = 950  # ancho del PNG; el alto sale de la razón ancho/alto del cuadro de dibujo
+PX = 1300  # ancho del PNG; con el zoom de cámara (0,84) sigue nítido, sin estirarse
 LARGO_MARCO = 3.2  # lado corto del marco 3D, en unidades de Manim
 OBJETIVO = 0.80  # cuánto del lado corto ocupa el cuerpo
 MARGEN_PX = 6  # aire que se deja al recortar, para no comerse el trazo
@@ -177,6 +177,7 @@ def _ruta_cache(figura, vista, corte, r, h, a, col, papel) -> Path:
                 # una cara, el PNG viejo ya no coincide y hay que re-renderizarlo, no servirlo de cache
                 list(VISTAS[vista]),
                 __version__,
+                PX,  # más resolución = otro PNG: el viejo no sirve para el zoom
                 corte,
                 round(r, 3),
                 round(h, 3),

@@ -731,6 +731,7 @@ class Guion(_Base):
     nivel: str | None = None
     molde: str | None = None  # estructura narrativa (ver moldes.py); opcional
     tema: str | None = None  # estilo visual de este video (ver ./tpi temas)
+    camara: Literal["quieta", "suave", "fuerte"] = "suave"  # cuánto se acerca la cámara en los pasos
     voz: str | None = None
     velocidad: str | None = None
     gancho: Gancho

@@ -21,6 +21,7 @@ from manim import (
     UP,
     Arc,
     Arrow,
+    CapStyleType,
     Circle,
     CurvedArrow,
     DashedLine,
@@ -64,6 +65,7 @@ from .visuales import (
 )
 
 ALTO_DIBUJO = 3.3  # franja del pie de la pizarra que ocupa un dibujo
+GROSOR_MINIMO = 3.2  # en un teléfono el trazo de 1-2 px desaparece: se lee como marcador
 
 # Hacia dónde apunta cada flecha que el motor conoce (VER VECTORES en visuales.py).
 # «plano» = siguiendo la superficie; «normal» = perpendicular a ella; con plano inclinado
@@ -106,6 +108,15 @@ def _sufijo_proyectil(figura: Proyectil) -> str:
 def _sufijo(figura: Poligono) -> str:
     """El hueco que sigue al número: ' cm', ' m', o nada si el guion no dijo la unidad."""
     return " " + figura.unidad if figura.unidad else ""
+
+
+def afinar_trazo(mobs: VGroup, minimo: float = GROSOR_MINIMO) -> None:
+    """Sube el trazo fino al grosor mínimo y redondea las puntas; los rellenos sin borde no se tocan."""
+    for m in mobs.get_family():
+        # solo las piezas que dibujan su propio trazo: un grupo o un texto no tienen borde que engrosar
+        if isinstance(m, VMobject) and not m.submobjects and m.get_stroke_width() > 0:
+            m.set_stroke(width=max(m.get_stroke_width(), minimo))
+            m.set_cap_style(CapStyleType.ROUND)
 
 
 def _encajar(todo: VGroup, ancho: float, alto: float) -> VGroup:
@@ -2139,6 +2150,12 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
     ``papel`` es el color sobre el que se dibuja: sirve para 'cortar' un cable con una caja del
     mismo color (resistencias, batería y las medidas del polígono) sin que se note el truco.
     """
+    dibujo = _dibujar_visual(visual, col, ancho, alto, papel)
+    afinar_trazo(dibujo.mobs)
+    return dibujo
+
+
+def _dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str | None = None) -> Dibujo:
     papel = papel or col.fondo
     if visual.tipo == "grafico_funcion":
         return grafico_funcion(

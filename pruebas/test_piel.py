@@ -33,6 +33,14 @@ class HojaTest(unittest.TestCase):
         self.assertNotEqual(str(self._etiqueta(claro).color).upper(), "#FFFFFF")
         self.assertEqual(str(self._etiqueta(claro).color).upper(), tema.colores.tenue.upper())
 
+    def test_la_cinta_se_puede_disolver_con_la_camara(self):
+        """La escena la apaga al acercarse: si fuera un Group, la opacidad no bajaría a los hijos."""
+        tema = cargar_tema("hoja_de_desarrollo", cargar_marca())
+        cinta = marco_hoja(tema).cinta
+        self.assertTrue(len(cinta))
+        cinta.set_opacity(0.0)
+        self.assertEqual({m.get_fill_opacity() for m in cinta.get_family()}, {0.0})
+
 
 class BordeSubtituloTest(unittest.TestCase):
     def _linea_estilo(self, tema) -> str:
