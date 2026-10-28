@@ -294,7 +294,7 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     unidad = cuerpo.unidad or ""
     parches, rótulos = VGroup(), VGroup()
 
-    def etiqueta(texto: str, donde: np.ndarray, tam: int = 20) -> None:
+    def etiqueta(texto: str, donde: np.ndarray, tam: int = 26) -> None:
         rotulo = c.texto(texto, tam, c.SEMIBOLD, col.texto).move_to(donde)
         fondo, rotulo = d._parche(rotulo, papel, 0.16)  # el mismo cartón que usa la lámina 2D
         parches.add(fondo)
@@ -322,7 +322,7 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
         etiqueta(
             f"{'V' if marca == 'volumen' else 'A'} = {d._numero_latex(valor)} {unidad}{sufijo}".strip(),
             np.array([ancho * 0.30, 0.42 - pie * 0.62, 0.0]),
-            22,
+            28,
         )
         pie += 1
 

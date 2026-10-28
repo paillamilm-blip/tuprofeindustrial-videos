@@ -13,6 +13,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from .. import __version__
 from ..config import cargar_marca
 from ..entorno import raiz_proyecto
 from ..errores import ErrorMotor
@@ -31,7 +32,11 @@ def _carpeta() -> Path:
 
 
 def _huella(visual: dict, tema: str) -> str:
-    texto = json.dumps({"visual": visual, "tema": tema}, sort_keys=True, ensure_ascii=False)
+    # La versión va en la huella: un arreglo en el modo de dibujar no cambia el visual y, sin esto,
+    # el panel seguiría mostrando para siempre el PNG que se dibujó con el código viejo.
+    texto = json.dumps(
+        {"visual": visual, "tema": tema, "version": __version__}, sort_keys=True, ensure_ascii=False
+    )
     return hashlib.sha1(texto.encode("utf-8")).hexdigest()[:16]
 
 

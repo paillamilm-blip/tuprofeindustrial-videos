@@ -12,7 +12,7 @@ trampas:
     El espectador se queda para comprobar si tenía razón.
   moldes: [reto, mito_realidad]
   tema: neon_reja
-  dibujos: [poligono_regular, venn, probabilidad, solido]
+  dibujos: [poligono_regular, venn, probabilidad, solido_3d]
   color: "#FF3B5C"
   cta: "¿Lo viste o te engañó? Cuéntame en el pie."
   gancho_corto: true

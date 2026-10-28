@@ -1,0 +1,75 @@
+# Guion escrito a mano para probar el dibujo "solido_3d" (sólido con relieve).
+# El motor calcula solo: V = 64 cm³ y A = 96 cm² del cubo de 4 cm.
+# Ojo: el corte por la mitad es un efecto de dibujo; el motor sigue anotando V y A del cubo entero,
+# así que en los pasos del corte no se pide anotar nada y las cuentas viven en el tex.
+
+titulo: "El cubo partido"
+materia: ingenieria
+nivel: "3° medio"
+
+gancho:
+  texto: "Partir un cubo por la mitad cambia una cuenta, pero no la que crees"
+  voz: "Partes un cubo por la mitad: una cuenta cambia, la otra no."
+  emoji: "🎯"
+
+enunciado:
+  texto: "Un cubo de 4 cm de arista. Volumen, área y qué pasa con cada uno si lo cortas por la mitad."
+  voz: "Un cubo de cuatro centímetros de arista. Lo cortamos justo por la mitad. ¿Qué se lleva el corte?"
+  destacar: ["4 cm"]
+
+datos:
+  - tex: 'a = 4\ \text{cm}'
+    voz: "La arista mide cuatro centímetros."
+
+pasos:
+  - nota: "El volumen: arista al cubo"
+    tex: 'V = a^3 = 4^3 = 64\ \text{cm}^3'
+    voz: "El volumen es la arista al cubo: sesenta y cuatro centímetros cúbicos."
+    visual:
+      tipo: solido_3d
+      figura: cubo
+      lado: "4 cm"
+      vista: axonometrica
+      anotar: [volumen]
+  - nota: "El área: seis caras iguales"
+    tex: 'A = 6a^2 = 6 \cdot 16 = 96\ \text{cm}^2'
+    voz: "El área son seis caras de dieciséis: noventa y seis centímetros cuadrados."
+    visual:
+      tipo: solido_3d
+      figura: cubo
+      lado: "4 cm"
+      vista: frente
+      anotar: [area]
+  - nota: "El corte destapa dos caras nuevas"
+    tex: 'A'' = 6a^2 + 2a^2 = 8 \cdot 16 = 128\ \text{cm}^2'
+    voz: "Al partirlo aparecen dos caras nuevas de dieciséis: el área sube a ciento veintiocho."
+    emoji: "💡"
+    visual:
+      tipo: solido_3d
+      figura: cubo
+      lado: "4 cm"
+      corte: mitad
+      vista: axonometrica
+  - nota: "El volumen, en cambio, se reparte"
+    tex: 'V'' = \frac{a^3}{2} = 32\ \text{cm}^3'
+    voz: "El volumen no crece: se reparte. Cada mitad se queda con treinta y dos centímetros cúbicos."
+    visual:
+      tipo: solido_3d
+      figura: cubo
+      lado: "4 cm"
+      corte: mitad
+      vista: axonometrica
+
+resultado:
+  tex: 'A'' = 128\ \text{cm}^2 \qquad V'' = 32\ \text{cm}^3'
+  voz: "El área sube a ciento veintiocho; el volumen de cada mitad baja a treinta y dos."
+  emoji: "✅"
+
+verificacion:
+  texto: "El corte agrega exactamente dos caras de 16 cm²: 96 + 32 = 128. El volumen de las dos mitades junta sigue siendo 64."
+  voz: "Suma las dos caras nuevas al área vieja: ciento veintiocho. Y las dos mitades juntas siguen siendo sesenta y cuatro."
+
+reto:
+  texto: "Si el cubo midiera 2 cm de arista, ¿cuánto mediría la cara que destapa el corte?"
+  voz: "Con dos centímetros de arista, ¿cuánto mide la cara que destapa el corte?"
+  emoji: "✍️"

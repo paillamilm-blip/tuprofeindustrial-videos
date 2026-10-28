@@ -2,6 +2,7 @@
 
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 try:
     import manim  # noqa: F401
@@ -72,6 +73,15 @@ class DibujarTest(unittest.TestCase):
         primera = dibujar_miniatura(v)
         self.assertEqual(primera, ruta_miniatura(v))
         self.assertEqual(primera.stat().st_mtime, dibujar_miniatura(v).stat().st_mtime)
+
+    def test_cambiar_la_version_del_motor_cambia_la_huella(self):
+        """Un arreglo en el modo de dibujar (un rótulo más grande) no toca el visual. Sin la versión
+        en la huella, el panel seguiría sirviendo el PNG viejo para siempre."""
+        v = {"tipo": "solido_3d", **VISUALES["solido_3d"].ejemplo}
+        viejo = ruta_miniatura(v)
+        with patch("tpi_videos.panel.miniaturas.__version__", "0.0.0-prueba"):
+            nuevo = ruta_miniatura(v)
+        self.assertNotEqual(viejo, nuevo)
 
     def test_un_tipo_inventado_avisa_en_vez_de_devolver_nada(self):
         with self.assertRaises(Exception) as sube:

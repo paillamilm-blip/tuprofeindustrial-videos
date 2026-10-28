@@ -19,7 +19,8 @@ class CatalogoTest(unittest.TestCase):
             for molde in f.moldes:
                 self.assertIn(molde, MOLDES, f"{f.clave} apunta a un molde que no existe")
             for dibujo in f.dibujos:
-                self.assertRegex(dibujo, r"^[a-z_]+$", f"{f.clave} con dibujo mal escrito")
+                # solido_3d es una clave legítima: el nombre del tipo lleva dígito.
+                self.assertRegex(dibujo, r"^[a-z][a-z0-9_]*$", f"{f.clave} con dibujo mal escrito")
             self.assertRegex(f.color, r"^#[0-9A-Fa-f]{6}$")
 
     def test_clave_desconocida_dice_cuales_son(self):
