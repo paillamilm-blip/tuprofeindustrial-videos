@@ -1,0 +1,33 @@
+# Muestra corta para ver el resplandor de los temas neón.
+# No es un guion final: sirve para comparar el halo con y sin.
+
+titulo: "Por qué el cielo es azul"
+materia: fisica
+nivel: "4° medio"
+tema: neon_reja
+camara: fuerte
+
+gancho:
+  texto: "El color del cielo es un error de la luz"
+  voz: "El color del cielo es un error de la luz."
+  tex: '\lambda^{-4}'
+  emoji: "🤯"
+
+enunciado:
+  etiqueta: "LA RESPUESTA"
+  texto: "El azul se dispersa 6 veces más que el rojo"
+  voz: "El azul se dispersa seis veces más que el rojo."
+  destacar: ["6 veces"]
+
+pasos:
+  - nota: "Rayleigh"
+    tex: 'I \propto \frac{1}{\lambda^{4}}'
+    voz: "La intensidad depende de la longitud de onda a la cuatro."
+  - nota: "Azul contra rojo"
+    tex: '\left( \frac{700}{450} \right)^{4} \approx 6'
+    voz: "Compara setecientos contra cuatrocientos cincuenta."
+
+resultado:
+  tex: 'I_{azul} \approx 6\, I_{rojo}'
+  voz: "Por eso el azul llega primero a tus ojos."
+  emoji: "✅"

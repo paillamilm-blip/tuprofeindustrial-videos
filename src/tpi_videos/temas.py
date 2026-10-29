@@ -119,6 +119,8 @@ class Tema(_Base):
     subtitulos: EstiloSubtitulos = EstiloSubtitulos()
     animacion: Animacion = Animacion()
     emojis: bool = True
+    # El halo de los trazos brillantes que pone postproduccion.py al armar el video final
+    resplandor: bool = False
 
 
 def temas_usuario_dir() -> Path:

@@ -58,7 +58,24 @@ def _carpeta_fuentes_relativa(desde: Path) -> str:
     return ".fuentes"
 
 
-def quemar_subtitulos(video: Path, ass: Path, salida: Path, calidad: Calidad) -> Path:
+def _cadena_resplandor(ancho: int, alto: int) -> str:
+    """El halo de los temas neón: recorta lo brillante, lo desenfoca y lo devuelve sumado.
+
+    Se hace en RGB porque ``screen`` sobre los planos de color de YUV tiñe todo el fondo.
+    El desenfoque va a un tercio del tamaño: el halo no se beneficia del detalle fino
+    y así el paso entero cuesta segundos, no minutos.
+    """
+    recorte = "if(gt(clipval,150),clipval,0)"
+    return (
+        "format=gbrp,split=2[base][brillo];"
+        f"[brillo]scale={ancho // 3}:{alto // 3},"
+        f"lutrgb=r='{recorte}':g='{recorte}':b='{recorte}',"
+        f"gblur=sigma=9,scale={ancho}:{alto}[halo];"
+        "[base][halo]blend=all_mode=screen:all_opacity=0.75"
+    )  # fmt: skip
+
+
+def quemar_subtitulos(video: Path, ass: Path, salida: Path, calidad: Calidad, resplandor: bool = False) -> Path:
     ffmpeg = entorno.ffmpeg_con_libass()
     if ffmpeg is None:
         raise ErrorMotor(
@@ -67,11 +84,16 @@ def quemar_subtitulos(video: Path, ass: Path, salida: Path, calidad: Calidad) ->
         )
     carpeta = ass.parent
     fuentes = _carpeta_fuentes_relativa(carpeta)
+    filtro = f"ass={ass.name}:fontsdir={fuentes}"
+    if resplandor:
+        ancho, alto = resolucion(video)
+        # el resplandor va antes: los subtítulos se dibujan encima y quedan nítidos
+        filtro = f"{_cadena_resplandor(ancho, alto)},{filtro}"
     _ejecutar(
         [
             ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
             "-i", str(video.resolve()),
-            "-vf", f"ass={ass.name}:fontsdir={fuentes}",
+            "-vf", filtro,
             *_codificacion(ffmpeg, calidad),
             str(salida.resolve()),
         ],
@@ -81,15 +103,18 @@ def quemar_subtitulos(video: Path, ass: Path, salida: Path, calidad: Calidad) ->
     return salida
 
 
-def recodificar(video: Path, salida: Path, calidad: Calidad) -> Path:
+def recodificar(video: Path, salida: Path, calidad: Calidad, resplandor: bool = False) -> Path:
     """Sin subtítulos: solo normaliza volumen y deja el formato listo para redes."""
     ffmpeg = entorno.ffmpeg_cualquiera()
     if ffmpeg is None:  # sin FFmpeg el video de Manim igual sirve
         shutil.copyfile(video, salida)
         return salida
+    argumentos = ["-hide_banner", "-loglevel", "error", "-y", "-i", str(video.resolve())]
+    if resplandor:
+        ancho, alto = resolucion(video)
+        argumentos += ["-vf", _cadena_resplandor(ancho, alto)]
     _ejecutar(
-        [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(video.resolve()),
-         *_codificacion(ffmpeg, calidad), str(salida.resolve())],
+        [ffmpeg, *argumentos, *_codificacion(ffmpeg, calidad), str(salida.resolve())],
         cwd=salida.parent,
         que="preparar el video final",
     )  # fmt: skip

@@ -177,10 +177,10 @@ def crear_video(
         )
         resultado.srt = escribir_srt(palabras, carpeta / f"{nombre}.srt")
         avisar("video final", 0.9, "uniendo animación, voz y subtítulos")
-        quemar_subtitulos(video_manim, ass, final, CALIDADES[calidad])
+        quemar_subtitulos(video_manim, ass, final, CALIDADES[calidad], estilo_video.resplandor)
     else:
         avisar("video final", 0.9, "uniendo animación y voz")
-        recodificar(video_manim, final, CALIDADES[calidad])
+        recodificar(video_manim, final, CALIDADES[calidad], estilo_video.resplandor)
 
     resultado.duracion = duracion(final)
     resultado.segundos_proceso = time.time() - inicio
@@ -203,7 +203,8 @@ def subtitular_video(
     entorno.preparar()
     if not video.exists():
         raise ErrorMotor(f"No encuentro el video «{video}».")
-    estilo = cargar_tema(tema, cargar_marca()).subtitulos  # antes de escuchar: si el tema no existe, avisa ya
+    tema_usado = cargar_tema(tema, cargar_marca())
+    estilo = tema_usado.subtitulos  # antes de escuchar: si el tema no existe, avisa ya
     if not whisper_sync.disponible():
         raise ErrorMotor(
             "Para subtitular videos externos se necesita Whisper.",
@@ -244,7 +245,7 @@ def subtitular_video(
     )
     escribir_srt(palabras, carpeta / f"{nombre}.srt")
     salida = carpeta / f"{nombre}_subtitulado.mp4"
-    return quemar_subtitulos(video, ass, salida, CALIDADES["final"])
+    return quemar_subtitulos(video, ass, salida, CALIDADES["final"], tema_usado.resplandor)
 
 
 def crear_clip_gancho(
