@@ -1,0 +1,62 @@
+# Guion escrito a mano el 28-10-2026: la identidad de Euler como dato curioso y necesario.
+# REVISA la matemática antes de publicar.
+# Cuentas exactas: cos π = −1 y sen π = 0 (el círculo de 180° las dibuja solo).
+
+titulo: "La fórmula más bella de las matemáticas"
+materia: matematica
+nivel: "4° medio"
+tema: hoja_de_desarrollo
+camara: fuerte
+
+gancho:
+  texto: "e, i y pi se esconden en una cuenta que da cero"
+  voz: "Eleva e a i pi, súmale uno, y te da cero. No es magia."
+  tex: 'e^{i\pi} + 1 = ?'
+  emoji: "🤯"
+
+enunciado:
+  texto: "En 1748, Euler descubrió cómo girar un punto con una potencia imaginaria."
+  voz: "En 1748, Euler descubrió que e elevado a i theta hace girar un punto."
+  destacar: ["1748"]
+
+datos:
+  - tex: 'e \approx 2{,}718'
+    voz: "e vale dos coma siete uno ocho: aparece cuando algo crece."
+  - tex: '\pi \approx 3{,}1416'
+    voz: "pi vale tres coma uno cuatro uno seis: aparece en todo círculo."
+  - tex: 'i^2 = -1'
+    voz: "i al cuadrado vale menos uno: es la raíz de un negativo."
+
+pasos:
+  - nota: "Girar, no multiplicar"
+    tex: 'e^{i\theta} = \cos \theta + i\operatorname{sen} \theta'
+    voz: "Euler descubrió que e elevado a i theta hace girar un punto en el plano."
+    destacar: ['e^{i\theta}']
+  - nota: "Media vuelta: pi"
+    tex: 'e^{i\pi} = \cos \pi + i\operatorname{sen} \pi = -1'
+    voz: "Con media vuelta, theta es pi: el coseno vale menos uno y el seno, cero."
+    visual:
+      tipo: circulo_trig
+      angulo: 180
+      anotar: ['coseno', 'seno']
+  - nota: "Menos uno más uno: cero"
+    tex: 'e^{i\pi} + 1 = 0'
+    voz: "A ese menos uno le sumas uno, y la cuenta cierra en cero."
+  - nota: "Por eso la ingeniería la usa"
+    tex: 'e^{i\omega t}'
+    voz: "Por eso la ingeniería la usa: un voltaje alterno es un punto que gira."
+    transformar: false
+
+resultado:
+  tex: 'e^{i\pi} + 1 = 0'
+  voz: "Cinco números famosos, una sola línea, y el cero al final."
+  emoji: "✅"
+
+verificacion:
+  texto: "Coseno de pi igual a menos uno, seno de pi igual a cero: si sumas uno, la cuenta da cero."
+  voz: "El coseno de pi es menos uno y el seno es cero. Suma uno y la cuenta da cero."
+
+reto:
+  texto: "¿Y si giras un cuarto de vuelta? ¿Qué ecuación aparece?"
+  voz: "Tu turno: gira un cuarto de vuelta y dime qué ecuación aparece."
+  emoji: "✍️"

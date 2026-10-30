@@ -1,0 +1,61 @@
+# Guion escrito el 28-10-2026: GPS sin relatividad.
+# Números comprobados con Python:
+#   órbita GPS ≈ 26.560 km, v ≈ 3,87 km/s  → reloj atrasa ≈ 7,2 µs/día
+#   gravedad menor a esa altura            → reloj adelanta ≈ 45,7 µs/día
+#   neto 45 − 7 = 38 µs/día   →  38 µs · c = 11,4 km/día
+#   Reto: 1 µs · c = 299,8 m ≈ 300 m.
+
+titulo: "Por qué tu GPS te miente sin Einstein"
+materia: fisica
+nivel: "4° medio"
+tema: plano_azul
+camara: fuerte
+
+gancho:
+  texto: "¿Por qué tu GPS te miente once kilómetros al día?"
+  voz: "¿Por qué tu GPS te miente once kilómetros al día?"
+  tex: '11{,}4\ \text{km/día}'
+  emoji: "🤯"
+
+enunciado:
+  etiqueta: "LA RESPUESTA"
+  texto: "Porque su reloj corre distinto: 38 microsegundos al día"
+  voz: "Porque su reloj corre distinto que el tuyo: treinta y ocho microsegundos al día."
+  destacar: ["38 microsegundos"]
+
+pasos:
+  - nota: "Vuela rápido"
+    tex: 'v \approx 3{,}9\ \text{km/s}'
+    voz: "Vuela a casi cuatro kilómetros por segundo: a esa velocidad, su reloj atrasa."
+  - nota: "Atraso por velocidad"
+    tex: '-7\ \mu\text{s/día}'
+    voz: "Siete microsegundos por día. Suena a nada, pero se acumula."
+  - nota: "Y está más lejos"
+    tex: '+45\ \mu\text{s/día}'
+    voz: "Y está más lejos: allá la gravedad es menor y el reloj adelanta."
+  - nota: "La cuenta del día"
+    tex: '45 - 7 = 38\ \mu\text{s}'
+    voz: "Cuarenta y cinco menos siete: el reloj queda adelantado treinta y ocho microsegundos al día."
+    visual:
+      tipo: barras
+      categorias: ["atrasa 7", "adelanta 45", "queda 38"]
+  - nota: "El tiempo es distancia"
+    tex: 'd = c\,t'
+    voz: "El GPS mide tu posición con el tiempo que tarda la señal: el tiempo es distancia."
+  - nota: "Treinta y ocho microsegundos"
+    tex: '\Delta x \approx 11{,}4\ \text{km}'
+    voz: "Multiplica por la velocidad de la luz: once kilómetros de error, cada día."
+
+resultado:
+  tex: '\Delta t = +38\ \mu\text{s/día}'
+  voz: "Por eso el reloj se ajusta antes de lanzarlo: sin eso, once kilómetros al día."
+  emoji: "✅"
+
+verificacion:
+  texto: "38 microsegundos por día por la velocidad de la luz dan 11,4 kilómetros."
+  voz: "Treinta y ocho microsegundos por día, por la velocidad de la luz, dan once kilómetros."
+
+reto:
+  texto: "¿Y si el error fuera de un microsegundo?"
+  voz: "Tu turno: con un microsegundo de error, ¿cuántos metros se pierde?"
+  emoji: "✍️"

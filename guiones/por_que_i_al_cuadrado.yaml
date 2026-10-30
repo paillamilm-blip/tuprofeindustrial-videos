@@ -1,0 +1,67 @@
+# Guion escrito a mano el 28-10-2026, segunda versión: la anterior daba por sabido e^{iθ}.
+# La idea que ordena todo: multiplicar por i es girar un cuarto de vuelta.
+# REVISA la matemática antes de publicar.
+# Cuentas exactas: 90° lleva el 1 a i; 180° lleva el 1 a −1 (el círculo las dibuja solo).
+
+titulo: "Por qué i al cuadrado da menos uno"
+materia: matematica
+nivel: "4° medio"
+tema: hoja_de_desarrollo
+camara: fuerte
+
+gancho:
+  texto: "No es un número raro: es un giro"
+  voz: "i al cuadrado da menos uno. No es un número raro: es un giro."
+  tex: 'i^2 = -1'
+  emoji: "🤔"
+
+enunciado:
+  texto: "En 1748, Euler juntó girar y crecer en una sola cuenta."
+  voz: "En 1748, Euler juntó dos ideas que parecían separadas: girar y crecer."
+  destacar: ["1748"]
+
+datos:
+  - tex: 'e \approx 2{,}718'
+    voz: "e vale dos coma siete uno ocho: es el número del crecimiento."
+  - tex: '\pi \approx 3{,}1416'
+    voz: "pi vale tres coma uno cuatro uno seis: es la media vuelta."
+  - tex: 'i^2 = -1'
+    voz: "Y multiplicar por i es girar un cuarto de vuelta."
+
+pasos:
+  - nota: "Un cuarto de vuelta"
+    tex: '1 \to i'
+    voz: "Desde el uno, gira un cuarto de vuelta: caes justo en i."
+    visual:
+      tipo: circulo_trig
+      angulo: 90
+  - nota: "Dos cuartos: i al cuadrado"
+    tex: 'i^2 = -1'
+    voz: "Gira otra vez y el uno cae en menos uno. Por eso i al cuadrado vale menos uno."
+    visual:
+      tipo: circulo_trig
+      angulo: 180
+  - nota: "Euler: girar con e"
+    tex: 'e^{i\pi} = -1'
+    voz: "Euler juntó girar y crecer: e elevado a i pi cae en menos uno."
+  - nota: "Suma uno: cero"
+    tex: 'e^{i\pi} + 1 = 0'
+    voz: "Súmale uno y la cuenta cierra en cero."
+  - nota: "Un voltaje que gira"
+    tex: 'e^{i\omega t}'
+    voz: "Por eso la ingeniería la usa: un voltaje alterno es un punto que gira."
+    transformar: false
+
+resultado:
+  tex: 'e^{i\pi} + 1 = 0'
+  voz: "Cinco números, una línea, y el cero al final."
+  emoji: "✅"
+
+verificacion:
+  texto: "Un cuarto de vuelta lleva el uno a i; dos cuartos, a menos uno."
+  voz: "Un cuarto de vuelta lleva el uno a i; dos cuartos, a menos uno."
+
+reto:
+  texto: "¿Y tres cuartos de vuelta?"
+  voz: "Tu turno: si dos cuartos dan menos uno, ¿qué dan tres cuartos?"
+  emoji: "✍️"

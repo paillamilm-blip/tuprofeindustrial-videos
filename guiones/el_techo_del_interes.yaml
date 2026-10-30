@@ -1,0 +1,58 @@
+# Guion escrito a mano el 28-10-2026, tercera versión: la identidad de Euler no enganchaba.
+# Ahora el gancho es plata: interés compuesto y el techo de 2,718 veces.
+# REVISA los números antes de publicar (calculados con Python):
+#   100·(1+1/12)^12 = 261,30   100·(1+1/365)^365 = 271,46   100·e = 271,83
+#   Con el 200 %: 100·e² = 738,91 (respuesta del reto).
+
+titulo: "Por qué tu plata no crece más de 2,718 veces"
+materia: matematica
+nivel: "4° medio"
+tema: hoja_de_desarrollo
+camara: fuerte
+
+gancho:
+  texto: "Ni cobrando cada segundo crece más de 2,718 veces"
+  voz: "Tu plata no crece más de dos coma siete veces."
+  tex: '100 \to 271{,}83'
+  emoji: "📈"
+
+enunciado:
+  texto: "Si te pagan antes, el interés también gana interés"
+  voz: "El truco: si te pagan el interés antes, ese interés también empieza a ganar."
+  destacar: ["interés"]
+
+datos:
+  - tex: '\text{año: }200{,}00'
+    voz: "Cobrado una vez al año: doscientos."
+  - tex: '\text{mes: }261{,}30'
+    voz: "Cada mes: doscientos sesenta y uno con treinta."
+  - tex: '\text{día: }271{,}46'
+    voz: "Cada día: doscientos setenta y uno con cuarenta y seis."
+
+pasos:
+  - nota: "Cada segundo"
+    tex: '\text{segundo: }271{,}83'
+    voz: "Cada segundo: doscientos setenta y uno con ochenta y tres."
+  - nota: "Y ahí se estanca"
+    tex: '\left(1+\frac{1}{n}\right)^{n} \to e'
+    voz: "Y por más veces que te paguen, la cuenta ya no sube."
+  - nota: "Ese techo es e"
+    tex: 'e \approx 2{,}718'
+    voz: "Ese techo es el número e, de Euler: dos coma siete uno ocho."
+  - nota: "Dónde aparece"
+    tex: 'N = N_0\,e^{rt}'
+    voz: "Por eso aparece en todo lo que crece: poblaciones, interés, la carga de un condensador."
+
+resultado:
+  tex: 'e \approx 2{,}7182818'
+  voz: "Dos coma siete uno ocho dos ocho uno ocho. Nunca lo alcanzas: siempre te acercas."
+  emoji: "✅"
+
+verificacion:
+  texto: "Cobrando cada segundo, cien al cien por ciento llegan a 271,83. Ni un peso más."
+  voz: "Cien al cien por ciento llegan a doscientos setenta y uno con ochenta y tres."
+
+reto:
+  texto: "¿Y con el doscientos por ciento?"
+  voz: "Tu turno: si el banco pagara el doscientos por ciento, ¿cuál sería el techo?"
+  emoji: "✍️"

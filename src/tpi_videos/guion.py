@@ -133,6 +133,7 @@ class Gancho(_ConTexto):
 
 
 class Enunciado(_ConTexto):
+    etiqueta: str = "PROBLEMA"  # el rótulo de la tarjeta: "PROBLEMA", "LA RESPUESTA"…
     destacar: list[str] = []
 
     _lista = field_validator("destacar", mode="before")(classmethod(lambda cls, v: _como_lista(v)))

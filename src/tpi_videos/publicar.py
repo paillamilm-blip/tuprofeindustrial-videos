@@ -34,6 +34,15 @@ HASHTAGS_BASE = [
     "#chile",
 ]
 
+AVISO_IA = "Creado con IA."
+_CAMPOS_CON_AVISO = ("descripcion_youtube", "texto_tiktok", "texto_instagram")
+
+
+def _con_aviso(texto: str) -> str:
+    if "creado con ia" in texto.lower():
+        return texto
+    return f"{texto.rstrip()}\n\n{AVISO_IA}"
+
 
 class TextosPublicacion(BaseModel):
     titulo_youtube: str = Field(description="Título para YouTube Shorts, máximo 70 caracteres")
@@ -112,7 +121,7 @@ def textos_de_plantilla(guion: Guion) -> TextosPublicacion:
     reto = f"\n\n✍️ Ahora tú: {guion.reto.texto}" if guion.reto else ""
     return TextosPublicacion(
         titulo_youtube=guion.titulo[:70],
-        descripcion_youtube=f"{guion.gancho.texto} {guion.enunciado.texto} Lo resolvemos paso a paso."
+        descripcion_youtube=f"{guion.gancho.texto}\n{guion.enunciado.texto}. Lo resolvemos paso a paso."
         "\n\nSuscríbete para más ejercicios resueltos.",
         texto_tiktok=f"{guion.gancho.texto} Te leo en los comentarios 👇"[:150],
         texto_instagram=f"{guion.gancho.texto}\n\n{guion.enunciado.texto}{reto}\n\n¿Lo resolviste igual? 👇",
@@ -139,6 +148,11 @@ def _limpiar(textos: TextosPublicacion) -> TextosPublicacion:
             etiquetas.append(h)
     if "#tuprofeindustrial" not in (e.lower() for e in etiquetas):
         etiquetas.insert(0, "#tuprofeindustrial")
+    # TikTok e Instagram piden que el contenido generado por IA se declare en el texto,
+    # no solo en la configuración de la cuenta; si ya viene dicho, no se repite.
+    textos = textos.model_copy(
+        update={c: _con_aviso(getattr(textos, c)) for c in _CAMPOS_CON_AVISO}
+    )
     return textos.model_copy(
         update={"hashtags": etiquetas[:12], "titulo_youtube": textos.titulo_youtube[:100]}
     )

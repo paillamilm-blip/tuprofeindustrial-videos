@@ -1,0 +1,66 @@
+titulo: "¿Por qué f(3+1) no es 10?"
+materia: matematica
+nivel: "3° medio"
+molde: tres_errores
+tema: rotulador
+camara: fuerte
+
+gancho:
+  texto: "¿Por qué f(3+1) no es 10?"
+  voz: "¿Por qué efe de tres más uno no es diez?"
+  tex: 'f(3+1) = 16'
+  emoji: "🤯"
+
+enunciado:
+  etiqueta: "LA RESPUESTA"
+  texto: "Porque el uno entra al cuadrado, no sale de él"
+  voz: "Porque el uno entra al cuadrado: cuatro al cuadrado, dieciséis."
+  destacar: ["entra al cuadrado"]
+
+datos:
+  - tex: 'f(x) = x^{2}'
+    voz: "La función es x al cuadrado."
+  - tex: 'f(3) = 9'
+    voz: "Efe de tres vale nueve."
+
+pasos:
+  - nota: "Error 1"
+    tex: 'f(3+1) = f(3)+f(1) = 10'
+    voz: "El primero: repartir la suma. Nueve más uno da diez, y no es."
+    destacar: ["f(3)+f(1)"]
+    error: true
+  - nota: "Error 2"
+    tex: 'f(2 \cdot 3) = 2\,f(3) = 18'
+    voz: "El segundo: sacar el dos afuera. Efe de seis es treinta y seis."
+    destacar: ['2\,f(3)']
+    error: true
+  - nota: "Error 3"
+    tex: 'f(3)^{2} = f(3^{2})'
+    voz: "El tercero: elevar el resultado no es elevar adentro. Nueve contra ochenta y uno."
+    destacar: ["f(3^{2})"]
+    error: true
+  - nota: "Se hace adentro"
+    tex: 'f(3+1) = f(4) = 4^{2} = 16'
+    voz: "Primero sumas adentro: cuatro. Después elevas: dieciséis. En la curva, el dieciséis queda muy arriba del diez."
+    destacar: ["16"]
+    visual:
+      tipo: grafico_funcion
+      funcion: 'x^2'
+      variable: x
+      rango: [0, 5]
+      eje_x: "x"
+      eje_y: "f(x)"
+      marcar: [3, 4]
+
+resultado:
+  tex: 'f(3+1) = 16'
+  voz: "La respuesta es dieciséis, no diez."
+  emoji: "✅"
+
+verificacion:
+  texto: "Prueba con otra: f(2+2) = f(4) = 16, mientras f(2)+f(2) da 8."
+  voz: "Prueba con otra: dos más dos adentro del cuadrado da dieciséis; repartido, da ocho."
+
+reto:
+  texto: "Si f(x) = 2x + 1, ¿cuánto es f(3+2)?"
+  voz: "Con dos x más uno, ¿cuánto es efe de tres más dos?"

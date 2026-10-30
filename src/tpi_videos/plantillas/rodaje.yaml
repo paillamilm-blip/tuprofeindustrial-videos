@@ -1,0 +1,90 @@
+# Cómo se filma cada molde. La escena lee esta receta al armar el video.
+#
+#   pasos         ancla = la fórmula anterior se achica y queda arriba como único recuerdo,
+#                     la nueva entra grande y se ve qué término viaja y qué término cambia.
+#                 pila  = todos los pasos se quedan apilados (como venía haciéndose).
+#   error         sale  = el paso tachado tiembla, se tacha y desaparece: no estorba después.
+#                 queda = el paso tachado se queda en pantalla.
+#   contador      errores = chip «✗ 1 de 3» arriba a la derecha mientras pasan los errores.
+#                 ninguno = sin chip.
+#   primer_plano  destacar = la cámara entra al término del `destacar:` y vuelve.
+#                 nada     = la cámara no se acerca a un término suelto.
+#   gancho        tarjeta = la pregunta en su tamaño de siempre, con la marca arriba (como venía).
+#                 lleno   = la pregunta sola, enorme, ocupando todo el cuadro; la marca llega
+#                           recién con el enunciado. Para los moldes que abren con un dato.
+#   deriva        fija     = en las pausas el cuadro no se mueve.
+#                 en_mano  = en las pausas el cuadro se desliza y respira despacio, como sostenido en
+#                           la mano. Usa la pausa que ya existía: no agrega segundos de contenido,
+#                           solo el redondeo al cuadro siguiente (≈0,03 s por pausa).
+#   partida       seguida  = los pasos forman una sola columna que va subiendo (como venía).
+#                 mitades  = el tablero se parte en dos casilleros fijos: arriba el error con su
+#                           rótulo MITO, abajo la forma correcta con REALIDAD. Ninguno se achica ni
+#                           se sube: cada uno se escribe en su sitio y la cámara baja de uno al otro.
+#                           Por eso la toma se queda encima de un casillero, más cerca que el plano
+#                           general, y la hoja se ve de a una mitad.
+#   tapar_resultado visible = el resultado se escribe y se ve.
+#                 tapada   = sale la caja RESULTADO y una barra del color del papel la tapa; la barra
+#                           sube justo cuando la voz dice el número. Sirve en los moldes que prometen
+#                           el dato: que nadie lo lea antes de tiempo.
+#
+# Copia este archivo a mis_ajustes/rodaje.yaml y cámbialo: el tuyo gana sobre el del motor.
+
+libre:
+  pasos: ancla
+  error: sale
+  contador: ninguno
+  primer_plano: destacar
+  gancho: tarjeta
+  deriva: fija
+  partida: seguida
+  tapar_resultado: visible
+
+mito_realidad:
+  pasos: ancla
+  error: sale
+  contador: ninguno
+  primer_plano: destacar
+  gancho: tarjeta
+  deriva: fija
+  partida: mitades
+  tapar_resultado: tapada
+
+tres_errores:
+  pasos: ancla
+  error: sale
+  contador: errores
+  primer_plano: destacar
+  gancho: tarjeta
+  deriva: fija
+  partida: seguida
+  tapar_resultado: visible
+
+pov:
+  pasos: ancla
+  error: sale
+  contador: ninguno
+  primer_plano: destacar
+  gancho: lleno
+  deriva: en_mano
+  partida: seguida
+  tapar_resultado: visible
+
+reto:
+  pasos: ancla
+  error: sale
+  contador: ninguno
+  primer_plano: destacar
+  gancho: tarjeta
+  deriva: fija
+  partida: seguida
+  tapar_resultado: tapada
+
+nadie_te_enseno:
+  pasos: ancla
+  error: sale
+  contador: ninguno
+  primer_plano: destacar
+  gancho: lleno
+  deriva: fija
+  partida: seguida
+  tapar_resultado: tapada
