@@ -24,7 +24,7 @@ paso_a_paso:
     hoja. Sirve cuando lo que se enseña es un procedimiento.
   moldes: [pov]
   tema: kraft_tiza
-  dibujos: [bloques, engranaje, viga, circuito]
+  dibujos: [bloques, engranaje, viga, circuito, oscilador]
   color: "#FDE047"
   cta: "¿Qué paso te tomaría más tiempo a ti?"
   gancho_corto: false
@@ -36,7 +36,7 @@ datos:
     primero se ve, después se explica.
   moldes: [nadie_te_enseno]
   tema: plano_azul
-  dibujos: [barras, torta, tanque, energia]
+  dibujos: [barras, torta, tanque, energia, pendulo_doble]
   color: "#38BDF8"
   cta: "¿Con qué número te quedas?"
   gancho_corto: false

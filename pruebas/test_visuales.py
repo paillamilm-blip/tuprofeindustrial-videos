@@ -81,6 +81,17 @@ class TablaTest(unittest.TestCase):
                 self.assertIn(dibujo, VISUALES, f"la familia {clave} promete {dibujo}")
 
 
+class ManualDeLaIaTest(unittest.TestCase):
+    def test_cada_dibujo_del_catalogo_esta_en_el_manual_de_la_ia(self):
+        """Si el dibujo no está en sistema.md, la IA nunca lo va a pedir."""
+        from tpi_videos.entorno import PLANTILLAS_DIR
+        from tpi_videos.redactor import _DIBUJOS
+
+        manual = (PLANTILLAS_DIR / "ia" / "sistema.md").read_text(encoding="utf-8")
+        faltan = [clave for clave in _DIBUJOS if f'dibujo = "{clave}"' not in manual]
+        self.assertEqual(faltan, [], "dibujos que la IA no sabe pedir")
+
+
 class Tipo3dTest(unittest.TestCase):
     def test_solido_3d_ya_esta_en_la_tabla_y_en_el_modelo(self):
         self.assertIn("solido_3d", VISUALES)

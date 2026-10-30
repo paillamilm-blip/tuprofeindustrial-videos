@@ -93,13 +93,15 @@ class PasoIA(BaseModel):
         "bloques",
         "engranaje",
         "mohr",
+        "oscilador",
+        "pendulo_doble",
     ] = Field(
         default="",
         description=(
             'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
             '"circulo", "solido", "venn", "recta", "probabilidad", "torta", "barras", "onda", "energia", '
             '"energia", "optica", "pendulo", "resorte", "polea", "tanque", "viga", "cercha", "bloques", '
-            '"engranaje", "mohr" o "solido3d" (máximo 1 en el guion)'
+            '"engranaje", "mohr", "oscilador" o "pendulo_doble" (máximo 1 en el guion)'
         ),
     )
     funcion: str = Field(
@@ -252,6 +254,38 @@ class PasoIA(BaseModel):
     cortante: str = Field(
         default="", description='Con dibujo="mohr": el esfuerzo cortante, ej. "30 MPa" (o "0 MPa")'
     )
+    masa: str = Field(default="", description='Con dibujo="oscilador": la masa con su unidad, ej. "2 kg"')
+    amortiguamiento: str = Field(
+        default="",
+        description='Con dibujo="oscilador": la resistencia del amortiguador, ej. "8 N·s/m" (vacío = sin roce)',
+    )
+    duracion: float | None = Field(
+        default=None,
+        description=(
+            'Con dibujo="oscilador" o "pendulo_doble": segundos a simular (hasta 20); '
+            "vacío = 6 el oscilador y 10 el péndulo"
+        ),
+    )
+    masa_1: str = Field(
+        default="", description='Con dibujo="pendulo_doble": la masa del brazo de arriba, ej. "1 kg"'
+    )
+    masa_2: str = Field(
+        default="", description='Con dibujo="pendulo_doble": la masa del brazo de abajo, ej. "1 kg"'
+    )
+    longitud_1: str = Field(
+        default="", description='Con dibujo="pendulo_doble": el largo del brazo de arriba, ej. "1 m"'
+    )
+    longitud_2: str = Field(
+        default="", description='Con dibujo="pendulo_doble": el largo del brazo de abajo, ej. "1 m"'
+    )
+    angulo_1: float | None = Field(
+        default=None,
+        description='Con dibujo="pendulo_doble": grados desde la vertical donde se suelta el brazo de arriba, ej. 170',
+    )
+    angulo_2: float | None = Field(
+        default=None,
+        description='Con dibujo="pendulo_doble": grados desde la vertical donde se suelta el brazo de abajo, ej. 170',
+    )
     anotar: list[str] = Field(
         default_factory=list,
         description=(
@@ -264,6 +298,8 @@ class PasoIA(BaseModel):
             'con "tanque", "llenado" o "vaciado"; con "viga", "reacciones" o "momento"; '
             'con "cercha", "esfuerzo" o "angulo"; con "bloques", "lazo_cerrado"; '
             'con "engranaje", "velocidad" o "relacion"; con "mohr", "principales" o "cortante"; '
+            'con "oscilador", "regimen", "periodo" o "decaimiento"; '
+            'con "pendulo_doble", "energia" o "angulos"; '
             'con "recta", "torta", "barras", "energia" u "optica" va vacío'
         ),
     )
@@ -478,6 +514,8 @@ _DIBUJOS = {
     "bloques": "bloques",
     "engranaje": "engranaje",
     "mohr": "mohr",
+    "oscilador": "oscilador",
+    "pendulo_doble": "pendulo_doble",
 }
 
 
@@ -639,6 +677,32 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["lados"] = int(p.lados)
         if p.lado:
             visual["lado"] = _texto(p.lado)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "oscilador":
+        for clave, valor in (("masa", p.masa), ("constante", p.constante), ("amplitud", p.amplitud)):
+            if valor:
+                visual[clave] = _texto(valor)
+        if p.amortiguamiento:
+            visual["amortiguamiento"] = _texto(p.amortiguamiento)
+        if p.duracion is not None:
+            visual["duracion"] = float(p.duracion)
+        if p.anotar:
+            visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "pendulo_doble":
+        for clave, valor in (
+            ("masa_1", p.masa_1),
+            ("masa_2", p.masa_2),
+            ("longitud_1", p.longitud_1),
+            ("longitud_2", p.longitud_2),
+        ):
+            if valor:
+                visual[clave] = _texto(valor)
+        for clave in ("angulo_1", "angulo_2"):
+            if getattr(p, clave) is not None:
+                visual[clave] = float(getattr(p, clave))
+        if p.duracion is not None:
+            visual["duracion"] = float(p.duracion)
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     else:

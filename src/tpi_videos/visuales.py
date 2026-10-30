@@ -32,6 +32,8 @@ SEGUNDOS_VISUAL = {
     "optica": 3.0,
     "pendulo": 3.0,
     "resorte": 2.5,
+    "oscilador": 3.0,
+    "pendulo_doble": 3.4,  # la traza enredada se mira más que una lámina derecha
     "polea": 3.0,
     "tanque": 3.0,
     "viga": 3.0,
@@ -77,6 +79,11 @@ MARCAS_CERCHA = ("esfuerzo", "angulo")
 MARCAS_BLOQUES = ("lazo_cerrado",)
 MARCAS_ENGRANAJE = ("velocidad", "relacion")
 MARCAS_MOHR = ("principales", "cortante")
+
+# Lo que se puede anotar en los dos sistemas que salen de una integral (simulacion.py).
+MARCAS_OSCILADOR = ("regimen", "periodo", "decaimiento")
+MARCAS_PENDULO_DOBLE = ("energia", "angulos")
+HASTA_MAXIMA = 20.0  # segundos de simulación: más que eso, el video se queda esperando
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -205,6 +212,15 @@ CAMPOS: dict[str, CampoVisual] = {
         CampoVisual("sigma_x", "Esfuerzo normal en X", "texto", "80 MPa"),
         CampoVisual("sigma_y", "Esfuerzo normal en Y", "texto", "20 MPa"),
         CampoVisual("cortante", "Esfuerzo cortante", "texto", "30 MPa"),
+        CampoVisual("masa", "La masa que oscila", "texto", "2 kg   ·   500 g"),
+        CampoVisual("amortiguamiento", "Cuánto frena el amortiguador (vacío = sin fricción)", "texto", "8 N·s/m"),
+        CampoVisual("duracion", "Cuántos segundos se simulan", "numero", "6   ·   8   ·   12"),
+        CampoVisual("masa_1", "Masa del brazo de arriba", "texto", "1 kg"),
+        CampoVisual("masa_2", "Masa del brazo de abajo", "texto", "1 kg"),
+        CampoVisual("longitud_1", "Largo del brazo de arriba", "texto", "1 m"),
+        CampoVisual("longitud_2", "Largo del brazo de abajo", "texto", "1 m"),
+        CampoVisual("angulo_1", "Grados del brazo de arriba, desde la vertical", "numero", "170"),
+        CampoVisual("angulo_2", "Grados del brazo de abajo, desde la vertical", "numero", "170"),
     ]
 }
 
@@ -377,6 +393,40 @@ VISUALES: dict[str, TipoVisual] = {
             ("constante", "extension", "anotar"),
             MARCAS_RESORTE,
             ejemplo={"constante": "200 N/m", "extension": "10 cm", "anotar": ["fuerza"]},
+        ),
+        TipoVisual(
+            "oscilador",
+            "Oscilador que se apaga",
+            "fisica",
+            "🪀",
+            ("masa", "constante", "amplitud", "amortiguamiento", "duracion", "anotar"),
+            MARCAS_OSCILADOR,
+            ejemplo={
+                "masa": "2 kg",
+                "constante": "200 N/m",
+                "amplitud": "10 cm",
+                "amortiguamiento": "8 N·s/m",
+                "duracion": 6,
+                "anotar": ["regimen", "periodo"],
+            },
+        ),
+        TipoVisual(
+            "pendulo_doble",
+            "Péndulo doble",
+            "fisica",
+            "🤸",
+            ("masa_1", "masa_2", "longitud_1", "longitud_2", "angulo_1", "angulo_2", "duracion", "anotar"),
+            MARCAS_PENDULO_DOBLE,
+            ejemplo={
+                "masa_1": "1 kg",
+                "masa_2": "1 kg",
+                "longitud_1": "1 m",
+                "longitud_2": "1 m",
+                "angulo_1": 170,
+                "angulo_2": 170,
+                "duracion": 8,
+                "anotar": ["energia"],
+            },
         ),
         TipoVisual(
             "polea",
@@ -1457,4 +1507,82 @@ def analizar_mohr(sigma_x: str, sigma_y: str, cortante: str) -> Mohr:
         centro - radio,
         radio,
         math.degrees(math.atan2(2.0 * t, sx - sy)) / 2.0,
+    )
+
+
+# --------------------------------------------------------------------------------------
+# Los dos que no tienen fórmula: se integran con SciPy (simulacion.py)
+# --------------------------------------------------------------------------------------
+
+
+def _a_kilos(valor: float, unidad: str) -> float:
+    """«500 g» son 0,5 kg: la integral se escribe en kilo y en metro, no en lo que salió en la clase."""
+    return valor / 1000.0 if (unidad or "").startswith("g") else valor
+
+
+def _desde_metros(unidad: str) -> float:
+    """Cuántas unidades del guion hay en un metro, para devolver la curva en la medida que se escribió."""
+    u = (unidad or "").strip()
+    if u.startswith("mm"):
+        return 1000.0
+    if u.startswith("cm"):
+        return 100.0
+    return 1.0
+
+
+def _duracion_simulada(valor: float | None, por_defecto: float) -> float:
+    hasta = por_defecto if valor is None else float(valor)
+    if not 0 < hasta <= HASTA_MAXIMA:
+        raise ValueError(
+            f"duracion son segundos de video y va entre 0 y {HASTA_MAXIMA:.0f} (leí {valor})"
+        )
+    return hasta
+
+
+def analizar_oscilador(
+    masa: str,
+    constante: str,
+    amplitud: str,
+    amortiguamiento: str = "",
+    duracion: float | None = None,
+) -> "simulacion.Oscilador":
+    """La curva x(t) de una masa con resorte y amortiguador, integrada con SciPy.
+
+    La posición se devuelve en la unidad que escribió el guion: si dice «10 cm», el eje del dibujo
+    dice 10, no 0,1.
+    """
+    from . import simulacion
+
+    m = _a_kilos(*_medida_solido(masa, "masa"))
+    k = _medida_solido(constante, "constante")[0]
+    a, uni_a = _medida_solido(amplitud, "amplitud")
+    factor = _desde_metros(uni_a)
+    c = 0.0
+    if (amortiguamiento or "").strip():
+        c = _medida_solido(amortiguamiento, "amortiguamiento")[0]
+    o = simulacion.integrar_oscilador(m, k, c, a / factor, _duracion_simulada(duracion, 6.0))
+    o.x = [v * factor for v in o.x]
+    o.amplitud = a
+    o.unidad = (uni_a or "m").strip() or "m"
+    return o
+
+
+def analizar_pendulo_doble(
+    masa_1: str,
+    masa_2: str,
+    longitud_1: str,
+    longitud_2: str,
+    angulo_1: float,
+    angulo_2: float,
+    duracion: float | None = None,
+) -> "simulacion.PenduloDoble":
+    """Dos brazos enganchados, soltados desde el reposo: la traza sale de integrar la ecuación completa."""
+    from . import simulacion
+
+    m1 = _a_kilos(*_medida_solido(masa_1, "masa_1"))
+    m2 = _a_kilos(*_medida_solido(masa_2, "masa_2"))
+    l1 = _a_metros(*_medida_solido(longitud_1, "longitud_1"))
+    l2 = _a_metros(*_medida_solido(longitud_2, "longitud_2"))
+    return simulacion.integrar_pendulo_doble(
+        m1, m2, l1, l2, float(angulo_1 or 0.0), float(angulo_2 or 0.0), _duracion_simulada(duracion, 10.0)
     )
