@@ -1,0 +1,58 @@
+# Guion escrito a mano el 30-10-2026 para estrenar el péndulo doble.
+# REVISA la matemática antes de publicar.
+
+titulo: "El péndulo que nunca repite su camino"
+materia: fisica
+nivel: "4° medio"
+molde: nadie_te_enseno
+tema: hoja_de_desarrollo
+
+gancho:
+  texto: "Un grado de diferencia y se separan para siempre"
+  voz: "Dos péndulos iguales, soltados casi hacia arriba, y a los segundos van por caminos distintos."
+  emoji: "🤯"
+
+enunciado:
+  texto: "Un péndulo doble con 1 kg en cada masa y 1 m por brazo se suelta desde 170° y 170°."
+  voz: "Dos brazos de un metro, un kilo en cada punta, soltados desde ciento setenta grados."
+  destacar: ["1 kg"]
+
+datos:
+  - tex: 'm_1 = m_2 = 1\ \text{kg} \quad L_1 = L_2 = 1\ \text{m}'
+    voz: "Los dos brazos pesan lo mismo y miden lo mismo: un metro."
+  - tex: '\theta_1 = \theta_2 = 170^\circ'
+    voz: "Los dos se sueltan desde ciento setenta grados, casi hacia arriba."
+
+pasos:
+  - nota: "La energía al soltar"
+    tex: 'E = 3\,m g L\,(1-\cos 170^\circ) = 58\ \text{J}'
+    voz: "La masa de abajo cae el doble: tres desniveles iguales, cincuenta y ocho joules."
+  - nota: "La energía no se pierde"
+    tex: 'E = 58\ \text{J}\ \text{en todo el recorrido}'
+    voz: "La energía se conserva en todo el recorrido: mira la traza, solo cambia de forma."
+    visual:
+      tipo: pendulo_doble
+      masa_1: '1 kg'
+      masa_2: '1 kg'
+      longitud_1: '1 m'
+      longitud_2: '1 m'
+      angulo_1: 170
+      angulo_2: 170
+      anotar: ['energia', 'angulos']
+  - nota: "El camino no se repite"
+    tex: '\Delta\theta_0 = 1^\circ \;\Rightarrow\; \text{otra traza}'
+    voz: "Un grado de diferencia al soltar y a los diez segundos va por otro lado."
+
+resultado:
+  tex: 'E = 58\ \text{J}, \quad \theta_2(t)\ \text{no periódico}'
+  voz: "La energía se conserva en cincuenta y ocho joules, pero el camino no se repite."
+  emoji: "🧠"
+
+verificacion:
+  texto: "Casi las mismas condiciones iniciales dan trayectorias distintas: eso es el caos."
+  voz: "Casi las mismas condiciones y trayectorias distintas: eso es el caos."
+
+reto:
+  texto: "Soltado desde 40° y 20°, ¿vuelve alguna vez al mismo punto?"
+  voz: "Ahora tú: desde cuarenta y veinte grados, ¿vuelve al mismo punto?"
+  emoji: "✍️"

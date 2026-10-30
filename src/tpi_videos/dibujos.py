@@ -25,6 +25,7 @@ from manim import (
     Circle,
     CurvedArrow,
     DashedLine,
+    DashedVMobject,
     Dot,
     Ellipse,
     Line,
@@ -38,6 +39,7 @@ from manim import (
 
 from . import componentes as c
 from .errores import ErrorMotor
+from .simulacion import Oscilador, PenduloDoble
 from .visuales import (
     AnguloTrig,
     Barras,
@@ -2140,6 +2142,162 @@ def mohr(
 
 
 # ------------------------------------------------------------------------------------------
+# 16 · Física: oscilador amortiguado y péndulo doble (los que salen de una integral)
+# ------------------------------------------------------------------------------------------
+
+
+def _energia_redonda(julios: float) -> str:
+    """29 J, no 28,9516: en pantalla se escribe lo que un profesor diría en voz alta."""
+    return _numero_latex(round(julios, 0 if abs(julios) >= 10 else 1))
+
+
+def oscilador(
+    figura: Oscilador, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """La curva x(t) que sale de la integral, con el sobre que la apaga y lo que el guion anota."""
+    t_fin = figura.hasta
+    x_tope = max(figura.amplitud, max(abs(v) for v in figura.x)) or 1.0
+    e_x = ancho * 0.82  # el ancho que ocupa el eje del tiempo
+    e_y = alto * 0.58  # y el alto que ocupa la amplitud, de -A a +A
+
+    def px(t: float) -> float:
+        return -e_x / 2.0 + t * (e_x / t_fin)
+
+    def py(x: float) -> float:
+        return x * (e_y / (2.0 * x_tope))
+
+    curva = VMobject().set_points_smoothly([np.array([px(t), py(x), 0.0]) for t, x in zip(figura.t, figura.x)])
+    curva.set_stroke(col.acento, 5)
+
+    eje_t = Arrow([px(0.0), 0.0, 0], [px(t_fin) + 0.32, 0.0, 0], buff=0, stroke_width=4)
+    eje_x = Arrow([px(0.0), -e_y / 2 - 0.12, 0], [px(0.0), e_y / 2 + 0.22, 0], buff=0, stroke_width=4)
+    for eje in (eje_t, eje_x):
+        eje.set_stroke(col.tenue, 4).set_fill(col.tenue, 1)
+
+    sobres: list = []
+    if figura.decaimiento:
+        alfa = 1.0 / figura.decaimiento
+        for signo in (1.0, -1.0):
+            borde = VMobject().set_points_smoothly(
+                [
+                    np.array([px(t), py(signo * figura.amplitud * np.exp(-alfa * t)), 0.0])
+                    for t in figura.t
+                ]
+            )
+            sobre = DashedVMobject(borde, num_dashes=48)
+            sobre.set_stroke(col.tenue, 3)
+            sobres.append(sobre)
+
+    parches, rótulos = VGroup(), VGroup()
+    _cartela(
+        col, papel, parches, rótulos, f"x ({figura.unidad or 'm'})", np.array([px(0.0) - 0.14, e_y / 2 + 0.34, 0.0]), 15, LEFT
+    )
+    _cartela(col, papel, parches, rótulos, "t (s)", np.array([px(t_fin) + 0.32, -0.26, 0.0]), 15, RIGHT)
+
+    # Los datos van en una sola banda bajo la curva, de izquierda a derecha, para que no se pisen.
+    banda = -e_y / 2 - 0.40
+    if "regimen" in marcas:
+        regimen = figura.regimen if figura.zeta == 0 else f"ζ = {_numero_latex(figura.zeta)} ({figura.regimen})"
+        _cartela(col, papel, parches, rótulos, regimen, np.array([px(0.0), banda, 0.0]), 15, RIGHT)
+    if "decaimiento" in marcas and figura.decaimiento is not None:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"τ ≈ {_numero_latex(figura.decaimiento)} s",
+            np.array([px(t_fin) * 0.32, banda, 0.0]),
+            15,
+        )
+    if "periodo" in marcas and figura.periodo is not None:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"T ≈ {_numero_latex(figura.periodo)} s",
+            np.array([px(t_fin), banda, 0.0]),
+            15,
+            LEFT,
+        )
+
+    todo = VGroup(eje_t, eje_x, curva, *sobres, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=[eje_t, eje_x, curva], aparece=[*sobres, *rótulos])
+
+
+def pendulo_doble(
+    figura: PenduloDoble, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """Los dos brazos en la pose más abierta, el camino de la masa de abajo y sus datos al costado."""
+    # El instante con los brazos más abiertos: con la pose del final el dibujo no se lee de un vistazo.
+    # Los ángulos vienen sin envolver (dan muchas vueltas), así que la diferencia se toma en módulo 360.
+    i = max(
+        range(len(figura.t)),
+        key=lambda k: abs((figura.angulo_1[k] - figura.angulo_2[k] + 180.0) % 360.0 - 180.0),
+    )
+    anclaje, masa_1, masa_2 = figura.brazos(i)
+
+    # La escala sale de la caja que de verdad ocupan la traza y los brazos: un péndulo que casi no se
+    # mueve se agranda hasta llenar la franja, en vez de quedar del tamaño de un sello.
+    crudos = [*figura.traza, anclaje, masa_1, masa_2]
+    xs = [p[0] for p in crudos]
+    ys = [p[1] for p in crudos]
+    caja_x = max(max(xs) - min(xs), 0.2)
+    caja_y = max(max(ys) - min(ys), 0.2)
+    escala = min(alto * 0.86 / caja_y, ancho * 0.46 / caja_x)
+    centro_x = (max(xs) + min(xs)) / 2.0
+    centro_y = (max(ys) + min(ys)) / 2.0
+
+    def punto(p: tuple[float, float]) -> np.ndarray:
+        return np.array([(p[0] - centro_x) * escala, (p[1] - centro_y) * escala, 0.0])
+
+    paso = max(1, len(figura.traza) // 240)
+    camino = VMobject().set_points_as_corners([punto(p) for p in figura.traza[::paso]])
+    camino.set_stroke(col.tenue, 3)
+
+    brazo_1 = Line(punto(anclaje), punto(masa_1)).set_stroke(col.formulas, 4)
+    brazo_2 = Line(punto(masa_1), punto(masa_2)).set_stroke(col.formulas, 4)
+    pivote = Dot(punto(anclaje), radius=0.06).set_fill(col.formulas, 1).set_stroke(width=0)
+    bola_1 = Dot(punto(masa_1), radius=0.08).set_fill(col.formulas, 1).set_stroke(width=0)
+    bola_2 = Dot(punto(masa_2), radius=0.10).set_fill(col.acento, 1).set_stroke(width=0)
+
+    piezas = VGroup(camino, brazo_1, brazo_2, pivote, bola_1, bola_2)
+    # La figura se pega al borde izquierdo y los datos arrancan a su derecha: así ningún rótulo cae
+    # encima de la traza, que es lo único que el chico tiene que mirar.
+    piezas.shift(np.array([-ancho / 2.0 + piezas.width / 2.0 + 0.10, 0.0, 0.0]))
+    x_datos = -ancho / 2.0 + piezas.width + 0.50
+
+    parches, rótulos = VGroup(), VGroup()
+    if "energia" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"E ≈ {_energia_redonda(figura.energia_inicial)} J",
+            np.array([x_datos, alto * 0.18, 0.0]),
+            17,
+            RIGHT,
+        )
+    if "angulos" in marcas:
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"desde {_numero_latex(figura.angulo_1[0])}° y {_numero_latex(figura.angulo_2[0])}°",
+            np.array([x_datos, -alto * 0.16, 0.0]),
+            16,
+            RIGHT,
+        )
+
+    todo = VGroup(piezas, parches, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=[camino], aparece=[brazo_1, brazo_2, pivote, bola_1, bola_2, *rótulos])
+
+
+# ------------------------------------------------------------------------------------------
 # Elección del dibujo según el guion
 # ------------------------------------------------------------------------------------------
 
@@ -2209,6 +2367,10 @@ def _dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str
         return bloques(visual.bloques(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "engranaje":
         return engranaje(visual.engranaje(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "oscilador":
+        return oscilador(visual.oscilador(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "pendulo_doble":
+        return pendulo_doble(visual.pendulo_doble(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "mohr":
         return mohr(visual.mohr(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "circuito":

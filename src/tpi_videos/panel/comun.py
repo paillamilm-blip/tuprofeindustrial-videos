@@ -33,12 +33,19 @@ PIEL = {
     "exito": "#2E7D32",
     "gris": "#6B6B6B",  # el gris que sí se lee sobre blanco (4,5:1)
     "blanco": "#FFFFFF",
+    "caja": "#FAFAF8",  # la superficie clara dentro de la hoja: un bloque de texto, una fila
+    "banda_aviso": "#FFF4E5",  # el fondo del aviso que hay que resolver (falta la clave)
+    "banda_error": "#FDECEC",  # el fondo de la tarjeta «falta completar»
+    "error_fuerte": "#B71C1C",  # el rojo de un título sobre banda_error (el error de siempre baja de 4,5:1)
+    "aviso_fuerte": "#8A5A00",  # el ámbar de un texto de ayuda sobre blanco o crema
+    "aviso_muro": "#F0B664",  # el ámbar que se lee sobre la tarjeta oscura (el de siempre baja de 4,5:1)
     "costado_px": "392",  # el ancho del panel de detalle aprobado en el mockup
 }
 
 PAGINAS = (
-    ("/", "Fábrica", "bolt"),
-    ("/crear", "Crear", "movie_creation"),
+    ("/", "Un video", "movie_creation"),
+    ("/fabrica", "Lote de 3", "bolt"),
+    ("/crear", "Paso a paso", "edit_note"),
     ("/videos", "Mis videos", "video_library"),
     ("/estilos", "Estilos", "palette"),
     ("/ajustes", "Ajustes", "tune"),
@@ -144,7 +151,7 @@ def marco(ruta_activa: str) -> Iterator[None]:
             with ui.column().classes("gap-0"):
                 ui.label("TU PROFE INDUSTRIAL").classes("tpi-marca text-lg leading-tight")
                 ui.label("Motor de video · panel de control").classes("text-xs opacity-80")
-        with ui.row().classes("tpi-nav items-center gap-1"):
+        with ui.row().classes("tpi-nav items-center gap-1 flex-wrap justify-end"):
             for ruta, nombre, icono in PAGINAS:
                 clase = "activa" if ruta == ruta_activa else ""
                 with ui.link(target=ruta).classes(f"{clase} flex items-center gap-1"):

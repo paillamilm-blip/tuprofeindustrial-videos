@@ -19,6 +19,7 @@ dependencies = [
     "python-dotenv>=1.0",  # lee la clave de Gemini desde .env
     "pyyaml>=6.0",
     "rich>=13",
+    "scipy>=1.13",  # integra el oscilador amortiguado y el péndulo doble (simulacion.py): no tienen fórmula cerrada
     "sympy>=1.12,<2",  # lee la «funcion:» de un gráfico y calcula raíces y vértice (visuales.py)
 ]
 

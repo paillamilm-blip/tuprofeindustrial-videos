@@ -98,6 +98,7 @@ def diagnosticar(probar_red: bool = False) -> list[Chequeo]:
         ("Manim", "manim"),
         ("manim-voiceover", "manim-voiceover"),
         ("edge-tts", "edge-tts"),
+        ("SciPy (las simulaciones)", "scipy"),
         ("SymPy (los dibujos)", "sympy"),
     ):
         version = _version(paquete)

@@ -12,7 +12,7 @@ from nicegui import background_tasks, run, ui
 
 from ...temas import listar_temas
 from .. import biblioteca
-from ..comun import abrir_en_mac, confirmar, marco, titulo_seccion, url_medio
+from ..comun import PIEL, abrir_en_mac, confirmar, marco, titulo_seccion, url_medio
 from ..tareas import TAREAS, Tarea
 
 
@@ -26,7 +26,9 @@ def _bloque_texto(titulo: str, texto: str) -> None:
         with ui.row().classes("w-full items-center justify-between"):
             ui.label(titulo).classes("font-bold text-sm")
             ui.button("Copiar", icon="content_copy", on_click=lambda: _copiar(texto)).props("flat dense")
-        ui.label(texto).classes("w-full whitespace-pre-wrap text-sm bg-[#FAFAF8] rounded p-3 border")
+        ui.label(texto).classes(
+            f"w-full whitespace-pre-wrap text-sm bg-[{PIEL['caja']}] rounded p-3 border"
+        )
 
 
 def _mostrar_kit(cuerpo: ui.column, datos: dict[str, Any]) -> None:
@@ -246,7 +248,7 @@ class PaginaVideos:
         with ui.card().classes("tpi-hoja w-full p-0 overflow-hidden gap-0"):
             with (
                 ui.element("div")
-                .classes("relative w-full aspect-[9/16] max-h-[300px] bg-[#2A2A2C] cursor-pointer")
+                .classes(f"relative w-full aspect-[9/16] max-h-[300px] bg-[{PIEL['muro']}] cursor-pointer")
                 .on("click", lambda: self._ver(video))
             ):
                 imagen = ui.image("").classes("w-full h-full").props("fit=cover")
@@ -286,8 +288,8 @@ class PaginaVideos:
             with ui.card().classes("tpi-hoja w-full p-10 items-center gap-2"):
                 ui.label("🎬").classes("text-5xl")
                 ui.label("Todavía no hay videos").classes("tpi-titulo text-lg")
-                ui.label("Crea el primero en Fábrica.").classes("tpi-ayuda")
-                ui.button("Ir a Crear", on_click=lambda: ui.navigate.to("/crear"))
+                ui.label("Crea el primero en «Un video».").classes("tpi-ayuda")
+                ui.button("Ir a crear", on_click=lambda: ui.navigate.to("/"))
             self.listo = True
             return
         mostrados = filtrar(self._todos, self.busqueda, self.modo)

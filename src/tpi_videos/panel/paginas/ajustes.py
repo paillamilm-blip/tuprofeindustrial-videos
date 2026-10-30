@@ -19,7 +19,7 @@ from ...errores import ErrorMotor
 from ...moldes import MOLDES
 from ...rodaje import NOMBRE_MANDO, QUE_HACE, RECETA_LIBRE, campos_de_receta, guardar_receta
 from ...temas import listar_temas
-from ..comun import confirmar, marco, titulo_seccion, url_medio
+from ..comun import PIEL, confirmar, marco, titulo_seccion, url_medio
 from ..tareas import consultar
 
 VOCES = {
@@ -71,7 +71,7 @@ def _seccion_clave() -> None:
         def refrescar() -> None:
             hay = ia.obtener_clave() is not None
             estado.text = "✅ Clave configurada" if hay else "⚠️ Sin clave: la IA no funcionará"
-            estado.style(f"color:{'#2E7D32' if hay else '#B26A00'}")
+            estado.style(f"color:{PIEL['exito'] if hay else PIEL['aviso']}")
 
         refrescar()
         with ui.row().classes("w-full items-center gap-3"):
@@ -339,7 +339,9 @@ def _seccion_diagnostico() -> None:
                         "text-sm"
                     )
                     if c.get("ayuda") and c["estado"] != "ok":
-                        ui.label(f"   👉 {c['ayuda']}").classes("text-sm").style("color:#8A5A00")
+                        ui.label(f"   👉 {c['ayuda']}").classes("text-sm").style(
+                            f"color:{PIEL['aviso_fuerte']}"
+                        )
 
         ui.button("Revisar ahora", icon="health_and_safety", on_click=revisar).props("outline")
 

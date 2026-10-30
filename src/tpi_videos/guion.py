@@ -24,7 +24,9 @@ from .visuales import (
     MARCAS_ENGRANAJE,
     MARCAS_MOHR,
     MARCAS_ONDA,
+    MARCAS_OSCILADOR,
     MARCAS_PENDULO,
+    MARCAS_PENDULO_DOBLE,
     MARCAS_POLEA,
     MARCAS_POLIGONO,
     MARCAS_PROBABILIDAD,
@@ -45,7 +47,9 @@ from .visuales import (
     analizar_mohr,
     analizar_onda,
     analizar_optica,
+    analizar_oscilador,
     analizar_pendulo,
+    analizar_pendulo_doble,
     analizar_polea,
     analizar_poligono,
     analizar_probabilidad,
@@ -175,6 +179,8 @@ class Visual(_Base):
         "optica",
         "pendulo",
         "resorte",
+        "oscilador",
+        "pendulo_doble",
         "polea",
         "tanque",
         "viga",
@@ -285,6 +291,17 @@ class Visual(_Base):
     sigma_x: str | None = None  # '80 MPa'
     sigma_y: str | None = None  # '20 MPa'
     cortante: str | None = None  # '30 MPa'
+
+    # oscilador amortiguado y péndulo doble: los dos que se integran con SciPy (simulacion.py)
+    masa: str | None = None  # '2 kg' o '500 g'
+    amortiguamiento: str | None = None  # '8 N·s/m'; vacío = sin fricción
+    duracion: float | None = None  # segundos simulados (hasta 20); vacío = 6 el resorte, 10 el doble
+    masa_1: str | None = None  # la del brazo de arriba: '1 kg'
+    masa_2: str | None = None  # la del brazo de abajo: '1 kg'
+    longitud_1: str | None = None  # '1 m'
+    longitud_2: str | None = None  # '1 m'
+    angulo_1: float | None = None  # grados desde la vertical, positivo a la derecha
+    angulo_2: float | None = None
 
     _listas = field_validator(
         "rango", "marcar", "vectores", "resistencias", "anotar", "categorias", mode="before"
@@ -549,6 +566,69 @@ class Visual(_Base):
                     f"«{desconocidas[0]}» no es una marca de un polígono; "
                     f"el motor sabe anotar {', '.join(MARCAS_POLIGONO)}"
                 )
+        elif self.tipo == "oscilador":
+            for etiqueta, valor, ejemplo in (
+                ("masa", self.masa, "masa: '2 kg'"),
+                ("constante", self.constante, "constante: '200 N/m'"),
+                ("amplitud", self.amplitud, "amplitud: '10 cm'"),
+            ):
+                if not (valor or "").strip():
+                    raise ValueError(f"un oscilador necesita {etiqueta}, ej. {ejemplo}")
+            figura = analizar_oscilador(
+                self.masa or "",
+                self.constante or "",
+                self.amplitud or "",
+                self.amortiguamiento or "",
+                self.duracion,
+            )
+            desconocidas = [m for m in self.anotar if m not in MARCAS_OSCILADOR]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca del oscilador; "
+                    f"el motor sabe anotar {', '.join(MARCAS_OSCILADOR)}"
+                )
+            if "periodo" in self.anotar and figura.periodo is None:
+                raise ValueError(
+                    f"con ese amortiguador el resorte queda {figura.regimen} y ya no oscila: "
+                    "no hay periodo que anotar. Baja el amortiguamiento para que quede subamortiguado"
+                )
+            if "decaimiento" in self.anotar and figura.decaimiento is None:
+                raise ValueError(
+                    "para anotar en cuánto se apaga la amplitud el oscilador necesita su "
+                    "amortiguamiento, ej. amortiguamiento: '8 N·s/m'"
+                )
+        elif self.tipo == "pendulo_doble":
+            for etiqueta, valor in (
+                ("masa_1", self.masa_1),
+                ("masa_2", self.masa_2),
+                ("longitud_1", self.longitud_1),
+                ("longitud_2", self.longitud_2),
+            ):
+                if not (valor or "").strip():
+                    raise ValueError(
+                        f"un péndulo doble necesita {etiqueta}, ej. masa_1: '1 kg', masa_2: '1 kg', "
+                        "longitud_1: '1 m' y longitud_2: '1 m'"
+                    )
+            if self.angulo_1 is None or self.angulo_2 is None:
+                raise ValueError(
+                    "un péndulo doble necesita desde dónde se suelta, en grados desde la vertical: "
+                    "angulo_1 y angulo_2, ej. 170 y 170"
+                )
+            analizar_pendulo_doble(
+                self.masa_1 or "",
+                self.masa_2 or "",
+                self.longitud_1 or "",
+                self.longitud_2 or "",
+                self.angulo_1,
+                self.angulo_2,
+                self.duracion,
+            )
+            desconocidas = [m for m in self.anotar if m not in MARCAS_PENDULO_DOBLE]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca del péndulo doble; "
+                    f"el motor sabe anotar {', '.join(MARCAS_PENDULO_DOBLE)}"
+                )
         elif not (self.fuente or "").strip():
             raise ValueError("un circuito necesita la fuente, ej. fuente: '12 V'")
         elif not 2 <= len(self.resistencias) <= 4:
@@ -689,6 +769,32 @@ class Visual(_Base):
         if self.tipo != "mohr":
             raise ValueError(f"«{self.tipo}» no es un círculo de Mohr")
         return analizar_mohr(self.sigma_x or "", self.sigma_y or "", self.cortante or "")
+
+    def oscilador(self):
+        """La curva del resorte con su amortiguador, ya integrada con SciPy."""
+        if self.tipo != "oscilador":
+            raise ValueError(f"«{self.tipo}» no es un oscilador amortiguado")
+        return analizar_oscilador(
+            self.masa or "",
+            self.constante or "",
+            self.amplitud or "",
+            self.amortiguamiento or "",
+            self.duracion,
+        )
+
+    def pendulo_doble(self):
+        """Los brazos y la traza del péndulo doble, ya integrados con SciPy."""
+        if self.tipo != "pendulo_doble":
+            raise ValueError(f"«{self.tipo}» no es un péndulo doble")
+        return analizar_pendulo_doble(
+            self.masa_1 or "",
+            self.masa_2 or "",
+            self.longitud_1 or "",
+            self.longitud_2 or "",
+            self.angulo_1 or 0.0,
+            self.angulo_2 or 0.0,
+            self.duracion,
+        )
 
     def poligono(self):
         """El polígono regular ya resuelto (apotema, radio y ángulos). Sólo en los polígonos."""
@@ -1075,6 +1181,25 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
     elif tipo == "mohr":
         for clave in ("sigma_x", "sigma_y", "cortante"):
             campos.append((clave, _simples(v.get(clave) or "")))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "oscilador":
+        for clave in ("masa", "constante", "amplitud"):
+            campos.append((clave, _simples(v.get(clave) or "")))
+        if v.get("amortiguamiento"):
+            campos.append(("amortiguamiento", _simples(v["amortiguamiento"])))
+        if v.get("duracion") is not None:
+            campos.append(("duracion", _numero(v["duracion"])))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "pendulo_doble":
+        for clave in ("masa_1", "masa_2", "longitud_1", "longitud_2"):
+            campos.append((clave, _simples(v.get(clave) or "")))
+        for clave in ("angulo_1", "angulo_2"):
+            if v.get(clave) is not None:
+                campos.append((clave, _numero(v[clave])))
+        if v.get("duracion") is not None:
+            campos.append(("duracion", _numero(v["duracion"])))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     else:

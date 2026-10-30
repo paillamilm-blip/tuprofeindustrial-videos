@@ -1,0 +1,57 @@
+# Guion escrito a mano el 30-10-2026 para estrenar el oscilador amortiguado.
+# REVISA la matemática antes de publicar.
+
+titulo: "El resorte que se apaga solo"
+materia: fisica
+nivel: "3° medio"
+molde: nadie_te_enseno
+tema: hoja_de_desarrollo
+
+gancho:
+  texto: "Cada 0,5 s pierde el 63% de su amplitud"
+  voz: "Este resorte se apaga solo: cada medio segundo pierde casi dos tercios de su vaivén."
+  emoji: "🧲"
+
+enunciado:
+  texto: "Una masa de 2 kg cuelga de un resorte de 200 N/m y se suelta desde 10 cm. Un amortiguador la frena con 8 N·s/m."
+  voz: "Dos kilos en un resorte de doscientos newton por metro, frenados con ocho newton segundo por metro."
+  destacar: ["2 kg"]
+
+datos:
+  - tex: 'm = 2\ \text{kg} \quad k = 200\ \text{N/m}'
+    voz: "La masa y la rigidez: dos kilos y doscientos newton por metro."
+  - tex: 'c = 8\ \text{N·s/m} \quad A_0 = 10\ \text{cm}'
+    voz: "El freno del amortiguador y el punto de partida: diez centímetros."
+
+pasos:
+  - nota: "Qué tan frenado va"
+    tex: '\zeta = \frac{c}{2\sqrt{k\,m}} = \frac{8}{2\sqrt{400}} = 0{,}2'
+    voz: "Ocho dividido por dos raíz de cuatrocientos: zeta igual a cero coma dos."
+  - nota: "El período con el freno"
+    tex: 'T = \frac{2\pi}{\omega_0\sqrt{1-\zeta^2}} \approx 0{,}64\ \text{s}'
+    voz: "Con el freno el período sube a cero coma sesenta y cuatro: mira cómo se apaga la curva."
+    visual:
+      tipo: oscilador
+      masa: '2 kg'
+      constante: '200 N/m'
+      amplitud: '10 cm'
+      amortiguamiento: '8 N·s/m'
+      duracion: 2.5
+      anotar: ['regimen', 'periodo', 'decaimiento']
+  - nota: "Cuánto tarda en apagarse"
+    tex: '\tau = \frac{2m}{c} = \frac{4}{8} = 0{,}5\ \text{s}'
+    voz: "Cada medio segundo la amplitud se queda en el treinta y siete por ciento."
+
+resultado:
+  tex: 'T \approx 0{,}64\ \text{s}, \quad \tau = 0{,}5\ \text{s}'
+  voz: "Oscila cada cero coma sesenta y cuatro segundos y se apaga en medio segundo."
+  emoji: "💡"
+
+verificacion:
+  texto: "ζ = 0,2 < 1: por eso el resorte todavía oscila."
+  voz: "Zeta menor que uno: por eso el resorte todavía oscila."
+
+reto:
+  texto: "Con 40 N·s/m el amortiguador llega justo al límite. ¿Sigue oscilando?"
+  voz: "Ahora tú: si el amortiguador sube a cuarenta, ¿el resorte sigue oscilando?"
+  emoji: "✍️"
