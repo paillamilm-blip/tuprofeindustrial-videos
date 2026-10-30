@@ -50,7 +50,7 @@ from manim import (
     LaggedStart,
     Mobject,
     MovingCameraScene,
-    Rectangle,
+    Polygon,
     Rotate,
     RoundedRectangle,
     SurroundingRectangle,
@@ -144,6 +144,7 @@ AIRE_CASILLERO = 0.5
 # Los subtítulos se queman después, centrados en el 72 % del alto (y ≈ -1,76). Lo que se escribe
 # en pantalla tiene que quedar por encima de esa banda o el subtítulo le pasa por encima.
 Y_SOBRE_SUBTITULOS = -1.22
+BANDA_SUBTITULO = 0.34  # el tramo del cuadro, midiendo desde abajo, que se lleva el subtítulo quemado
 
 
 @dataclass(frozen=True)
@@ -291,9 +292,17 @@ def encuadre_de_casillero(
     El límite lo pone el ancho del casillero, no el de la hoja entera: por eso la cámara puede entrar
     de verdad y, al entrar, le queda papel de sobra arriba y abajo para inclinarse de una mitad a la
     otra sin descubrir el escritorio.
+
+    Lo dibujado adentro no puede bajar a la banda del subtítulo, así que la toma se inclina hacia
+    abajo hasta dejarle el filo del bulto justo encima; y como el papel tiene un fondo, si con la
+    cámara al ras no alcanza la toma se cierra un poco más (el ``techo``).
     """
     base = max(ancho, alto * ancho_cuadro / alto_cuadro) + AIRE_CASILLERO
     e = min(1.0, max(MINIMA_PRIMER_PLANO, (base + HOLGURA_ANCHO) / ancho_cuadro))
+    fondo = objetivo_y - alto / 2
+    borde_papel = paisaje.centro_y - paisaje.medio_alto
+    e = min(e, max(MINIMA_PRIMER_PLANO, (fondo - borde_papel) / (BANDA_SUBTITULO * alto_cuadro)))
+    objetivo_y = min(objetivo_y, fondo + (0.5 - BANDA_SUBTITULO) * alto_cuadro * e)
     return e, _centro_x(0.0, e, ancho_cuadro, paisaje), _centro_y(objetivo_y, e, alto_cuadro, paisaje)
 
 
@@ -326,6 +335,26 @@ def momento_del_destape(duracion_voz: float) -> float:
     """
     destape = max(CAIDA_CAJA + AIRE_TAPA, duracion_voz * 0.55)
     return min(destape, max(CAIDA_CAJA, duracion_voz - COLA_DE_VOZ))
+
+
+PROPORCION_TONO_TAPA = 0.14  # apenas un punto de acento: lo justo para que la tapa se vea pegada
+PROPORCION_PLIEGUE = 0.2  # el pliegue y el borde son la misma nota, más sombra
+ALTO_PLEGUE = 0.42  # el lado del triángulo de la esquina doblada
+
+
+def tono_de_tapa(papel: str, mezcla: str, proporcion: float) -> str:
+    """El color de la tapa del resultado: el fondo tirado un punto hacia ``mezcla``.
+
+    Soltar el color exacto del fondo dejaba en la hoja un hueco blanco que borraba la rejilla; un
+    tono apenas apartado, con borde fino y esquina doblada, se lee nota pegada encima del papel.
+    Mezclando hacia el negro sale el pliegue y el filo de esa misma nota.
+    """
+
+    def canales(hex_color: str) -> list[int]:
+        return [int(hex_color[i : i + 2], 16) for i in (1, 3, 5)]
+
+    mezclado = [round(a + (b - a) * proporcion) for a, b in zip(canales(papel), canales(mezcla))]
+    return "#{:02X}{:02X}{:02X}".format(*mezclado)
 
 
 @dataclass
@@ -1201,6 +1230,24 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         if dibujo_vivo is not None:
             self._pendientes.append(FadeOut(dibujo_vivo.mobs))
 
+    def _nota_tapa(self, ancho: float, alto: float, papel: str, centro: np.ndarray) -> VGroup:
+        """La tapa como nota adherida: un punto más de color que el fondo, borde fino y esquina doblada.
+
+        Del color exacto del fondo no sirve: en la hoja era un hueco blanco que borraba la rejilla y
+        en la pizarra una tabla sin filo. El pliegue se dibujó encima, no recortado: la nota sigue
+        tapando el número hasta que la voz llega a él.
+        """
+        cuerpo = tono_de_tapa(papel, self.col.acento, PROPORCION_TONO_TAPA)
+        filo = tono_de_tapa(cuerpo, "#000000", PROPORCION_PLIEGUE)
+        nota = RoundedRectangle(corner_radius=0.12, width=ancho, height=alto)
+        nota.set_fill(cuerpo, 1.0).set_stroke(filo, 2)
+        plegue = Polygon(
+            [ancho / 2 - ALTO_PLEGUE, -alto / 2 + 0.07, 0],
+            [ancho / 2 - 0.07, -alto / 2 + ALTO_PLEGUE, 0],
+            [ancho / 2 - ALTO_PLEGUE, -alto / 2 + ALTO_PLEGUE, 0],
+        ).set_fill(filo, 1.0).set_stroke(filo, 0)
+        return VGroup(nota, plegue).move_to(centro).set_z_index(2)
+
     def _resultado(self) -> None:
         r = self.guion.resultado
         eq = c.ecuacion(r.tex, c.TAM_RESULTADO, self.col.formulas, ancho_max=c.ANCHO_UTIL - 1.0).set_z_index(
@@ -1218,16 +1265,12 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         emoji = self._emoji(r.emoji, 1.0)
         if emoji is not None:  # como sticker pegado en la esquina del recuadro
             self._pegar_en_esquina(emoji, caja, giro=-0.2)
-        # La tapa (``tapar_resultado: tapada``): una banda del color de lo que hay detrás baja sobre la
-        # caja y se levanta cuando la voz llega al número. En la hoja es papel sobre papel (se ve la
-        # letra desaparecer); en la pizarra es una tarjeta del color del panel.
+        # La tapa (``tapar_resultado: tapada``): una nota pegada baja sobre la caja y se levanta cuando
+        # la voz llega al número. En la hoja es papel sobre papel (se ve la letra desaparecer); en la
+        # pizarra es una tarjeta del color del panel.
         papel = self.tema.hoja.color if self.tema.marco == "hoja" else self.col.panel
         barra = (
-            Rectangle(width=caja.width + 0.34, height=caja.height + 0.34)
-            .set_fill(papel, 1.0)
-            .set_stroke(width=0)
-            .set_z_index(2)
-            .move_to(caja.get_center() + UP * 1.15)
+            self._nota_tapa(caja.width + 0.34, caja.height + 0.34, papel, caja.get_center() + UP * 1.15)
             if self.receta.tapar_resultado == "tapada"
             else None
         )

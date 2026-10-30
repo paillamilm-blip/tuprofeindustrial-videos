@@ -6,7 +6,16 @@ Todo es geometría pura, medida con el cuadro vertical del motor y el paisaje de
 
 import unittest
 
-from tpi_videos.escena import ANCHO_CASILLERO, Paisaje, casilleros_de_mitades, encuadre_de_casillero
+from tpi_videos.dibujos import ALTO_DIBUJO
+from tpi_videos.escena import (
+    AIRE_CASILLERO,
+    ANCHO_CASILLERO,
+    BANDA_SUBTITULO,
+    HOLGURA_ANCHO,
+    Paisaje,
+    casilleros_de_mitades,
+    encuadre_de_casillero,
+)
 
 ALTO_CUADRO, ANCHO_CUADRO = 14.222, 8.0
 HOJA = Paisaje(5.8, 0.1, 7.0, 3.95)  # el papel: 11,6 de alto centrado en 0,1
@@ -79,6 +88,38 @@ class TomaDeMitadTest(unittest.TestCase):
         )
         angosta = _toma(casilleros_de_mitades(TOPE, FONDO)["arriba"][1])
         self.assertLess(angosta[0], ancha[0])
+
+
+class DibujoEnCasilleroTest(unittest.TestCase):
+    """El casillero que lleva el dibujo encima: la toma lo encuadra, pero no lo mete al subtítulo."""
+
+    ANCHO = ANCHO_CASILLERO - 0.3  # lo que la escena le deja al visual cuando el tablero está partido
+    CENTRO = -1.76  # el hexágono del video de la apotema: franja reservada hasta el fondo de la hoja
+
+    def en_pantalla(self, y: float, centro: float, escala: float) -> float:
+        """Dónde cae esa altura de la pizarra en el cuadro: 0 arriba, 1 abajo."""
+        return 0.5 + (centro - y) / (ALTO_CUADRO * escala)
+
+    def toma(self):
+        return encuadre_de_casillero(self.ANCHO, ALTO_DIBUJO, self.CENTRO, HOJA, ALTO_CUADRO, ANCHO_CUADRO)
+
+    def test_el_borde_del_dibujo_no_le_baja_al_subtitulo(self):
+        """A 24,0 s el filo de abajo de la tarjeta cruzaba la palabra amarilla: la toma se mete más."""
+        escala, _, centro = self.toma()
+        fondo = self.CENTRO - ALTO_DIBUJO / 2
+        self.assertLessEqual(self.en_pantalla(fondo, centro, escala), 1.0 - BANDA_SUBTITULO + 1e-6)
+
+    def test_y_aun_asi_el_dibujo_se_ve_entero(self):
+        """Cerrar la toma no vale nada si corta el hexágono por arriba."""
+        escala, _, centro = self.toma()
+        tope = self.CENTRO + ALTO_DIBUJO / 2
+        self.assertGreaterEqual(self.en_pantalla(tope, centro, escala), 0.05)
+
+    def test_una_linea_fina_no_se_mueve_por_esta_regla(self):
+        """El casillero de una sola fórmula ya estaba lejos de la banda: no hay por qué achicarlo."""
+        escala, _, centro = encuadre_de_casillero(ANCHO_CASILLERO, 1.4, -1.5, HOJA, ALTO_CUADRO, ANCHO_CUADRO)
+        self.assertAlmostEqual(escala, (ANCHO_CASILLERO + AIRE_CASILLERO + HOLGURA_ANCHO) / ANCHO_CUADRO, places=6)
+        self.assertAlmostEqual(centro, -1.5, places=6)
 
 
 if __name__ == "__main__":
