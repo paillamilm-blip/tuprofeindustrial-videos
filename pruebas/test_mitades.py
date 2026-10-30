@@ -15,6 +15,8 @@ from tpi_videos.escena import (
     Paisaje,
     casilleros_de_mitades,
     encuadre_de_casillero,
+    escala_base,
+    franja_del_dibujo,
 )
 
 ALTO_CUADRO, ANCHO_CUADRO = 14.222, 8.0
@@ -44,7 +46,7 @@ class CasillerosTest(unittest.TestCase):
 
     def test_con_dibujo_el_casillero_de_abajo_se_corre_por_encima_de_la_franja(self):
         """La franja del dibujo se reserva desde el primer paso: si no, el casillero saltaría al entrar."""
-        fondo = FONDO + 3.3 + 0.28  # ALTO_DIBUJO + el aire que le da la escena
+        fondo = FONDO + ALTO_DIBUJO + 0.28  # el aire que le da la escena
         _, y_linea, alto_max = casilleros_de_mitades(TOPE, fondo)["abajo"]
         self.assertGreaterEqual(y_linea - alto_max / 2, fondo - 1e-6)
 
@@ -94,25 +96,30 @@ class DibujoEnCasilleroTest(unittest.TestCase):
     """El casillero que lleva el dibujo encima: la toma lo encuadra, pero no lo mete al subtítulo."""
 
     ANCHO = ANCHO_CASILLERO - 0.3  # lo que la escena le deja al visual cuando el tablero está partido
-    CENTRO = -1.76  # el hexágono del video de la apotema: franja reservada hasta el fondo de la hoja
 
     def en_pantalla(self, y: float, centro: float, escala: float) -> float:
         """Dónde cae esa altura de la pizarra en el cuadro: 0 arriba, 1 abajo."""
         return 0.5 + (centro - y) / (ALTO_CUADRO * escala)
 
+    def dibujo(self):
+        """Centro y alto del hexágono del video de la apotema, en la franja que le deja la escena."""
+        _, centro, alto = franja_del_dibujo(HOJA, ALTO_CUADRO, escala_base("suave"), FONDO, TOPE)
+        return centro, alto
+
     def toma(self):
-        return encuadre_de_casillero(self.ANCHO, ALTO_DIBUJO, self.CENTRO, HOJA, ALTO_CUADRO, ANCHO_CUADRO)
+        centro, alto = self.dibujo()
+        return encuadre_de_casillero(self.ANCHO, alto, centro, HOJA, ALTO_CUADRO, ANCHO_CUADRO), alto
 
     def test_el_borde_del_dibujo_no_le_baja_al_subtitulo(self):
         """A 24,0 s el filo de abajo de la tarjeta cruzaba la palabra amarilla: la toma se mete más."""
-        escala, _, centro = self.toma()
-        fondo = self.CENTRO - ALTO_DIBUJO / 2
+        (escala, _, centro), alto = self.toma()
+        fondo = centro - alto / 2
         self.assertLessEqual(self.en_pantalla(fondo, centro, escala), 1.0 - BANDA_SUBTITULO + 1e-6)
 
     def test_y_aun_asi_el_dibujo_se_ve_entero(self):
         """Cerrar la toma no vale nada si corta el hexágono por arriba."""
-        escala, _, centro = self.toma()
-        tope = self.CENTRO + ALTO_DIBUJO / 2
+        (escala, _, centro), alto = self.toma()
+        tope = centro + alto / 2
         self.assertGreaterEqual(self.en_pantalla(tope, centro, escala), 0.05)
 
     def test_una_linea_fina_no_se_mueve_por_esta_regla(self):

@@ -145,6 +145,23 @@ AIRE_CASILLERO = 0.5
 # en pantalla tiene que quedar por encima de esa banda o el subtítulo le pasa por encima.
 Y_SOBRE_SUBTITULOS = -1.22
 BANDA_SUBTITULO = 0.34  # el tramo del cuadro, midiendo desde abajo, que se lleva el subtítulo quemado
+AIRE_DIBUJO = 0.28  # el respiro entre el techo del dibujo y la línea más baja de los pasos
+
+
+def franja_del_dibujo(
+    paisaje: Paisaje, alto_cuadro: float, escala_reposo: float, fondo_papel: float, tope: float
+) -> tuple[float, float, float]:
+    """(piso de los pasos, centro del dibujo, alto del dibujo) en el plano de reposo.
+
+    El dibujo se apoya en el filo de abajo que le deja el subtítulo quemado, no en el borde del
+    papel: en la hoja cuadriculada ese filo queda bastante más arriba, porque el cuadro ya es más
+    alto que la hoja y la cámara no tiene a dónde bajar. Si ahí no entra entero, se achica él; los
+    pasos se detienen en la reserva de siempre, que es lo que mantiene grande la letra.
+    """
+    fondo = fondo_papel + d.ALTO_DIBUJO + AIRE_DIBUJO
+    piso = max(fondo_papel, paisaje.centro_y - (0.5 - BANDA_SUBTITULO) * alto_cuadro * escala_reposo)
+    alto = min(d.ALTO_DIBUJO, min(fondo, tope) - AIRE_DIBUJO - piso)
+    return fondo, piso + alto / 2, alto  # fmt: skip
 
 
 @dataclass(frozen=True)
@@ -953,14 +970,19 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self._chip_vivo = chip
         self.play(*([FadeOut(sale)] if sale is not None else []), FadeIn(chip, shift=DOWN * 0.1))
 
-    def _franja_del_dibujo(self, paso: Any, tope: float) -> tuple[float, float]:
-        """Hasta dónde puede bajar la pizarra de pasos, y dónde va el centro del dibujo."""
+    def _franja_del_dibujo(self, paso: Any, tope: float) -> tuple[float, float, float]:
+        """Hasta dónde baja la pizarra de pasos, y el centro y el alto con los que entra el dibujo."""
         if paso.visual is None:
-            return c.Y_ZONA_INFERIOR, 0.0
-        fondo = c.Y_ZONA_INFERIOR + d.ALTO_DIBUJO + 0.28
-        return fondo, (c.Y_ZONA_INFERIOR + min(fondo, tope)) / 2
+            return c.Y_ZONA_INFERIOR, 0.0, 0.0
+        return franja_del_dibujo(
+            self.paisaje,
+            self.alto_cuadro,
+            escala_base(self.modo_camara),
+            c.Y_ZONA_INFERIOR,
+            tope,
+        )
 
-    def _trazar_dibujo(self, paso: Any, centro_y: float, tr: Any) -> d.Dibujo:
+    def _trazar_dibujo(self, paso: Any, centro_y: float, alto: float, tr: Any) -> d.Dibujo:
         """Dibuja el visual del paso con lo que queda de su voz: primero el trazo, luego lo escrito."""
         hoja = self.tema.marco == "hoja"
         # El color del papel es el de la hoja cuadriculada, o el de la tarjeta en la pizarra oscura.
@@ -968,11 +990,11 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         # Con el tablero partido el dibujo vive dentro de un casillero: si ocupara el ancho de la hoja,
         # la toma de la mitad lo cortaría por los lados.
         ancho = ANCHO_CASILLERO - 0.3 if self.receta.partida == "mitades" else c.ANCHO_UTIL
-        dibujo = d.dibujar_visual(paso.visual, self.col, ancho, d.ALTO_DIBUJO, papel)
+        dibujo = d.dibujar_visual(paso.visual, self.col, ancho, alto, papel)
         dibujo.place(0, centro_y)
         if not hoja:  # en la pizarra el dibujo tiene su propia tarjeta, como los pasos
             caja = (
-                RoundedRectangle(corner_radius=0.28, width=ancho, height=d.ALTO_DIBUJO)
+                RoundedRectangle(corner_radius=0.28, width=ancho, height=alto)
                 .set_fill(papel, 0.94)
                 .set_stroke(self.col.borde, 2.5)
                 .move_to([0, centro_y, 0])
@@ -1019,7 +1041,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         tope = getattr(self, "y_inicio_pasos", c.Y_ZONA_SUPERIOR - 0.2)
         self.tope_pasos = tope
         mitades = receta.partida == "mitades"
-        reserva = d.ALTO_DIBUJO + 0.28 if any(p.visual is not None for p in self.guion.pasos) else 0.0
+        reserva = d.ALTO_DIBUJO + AIRE_DIBUJO if any(p.visual is not None for p in self.guion.pasos) else 0.0
         casilleros = casilleros_de_mitades(tope, c.Y_ZONA_INFERIOR + (reserva if mitades else 0.0))
         vivos: dict[str, Linea | None] = {"arriba": None, "abajo": None}
         rotulos: dict[str, Mobject] = {}
@@ -1033,14 +1055,14 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
 
         for i, paso in enumerate(self.guion.pasos, 1):
             with self.hablar(paso.voz, f"paso {i}") as tr:
-                fondo, centro_dibujo = self._franja_del_dibujo(paso, tope)
+                fondo, centro_dibujo, alto_dibujo = self._franja_del_dibujo(paso, tope)
                 sale_dibujo = [FadeOut(dibujo_vivo.mobs)] if dibujo_vivo else []
                 dibujo_vivo = None
                 if paso.tex is None:  # paso solo hablado
                     self._con_pendientes(*[FadeOut(x) for x in extras_vivos], *sale_dibujo, run_time=0.5)
                     extras_vivos = []
                     if paso.visual is not None:
-                        dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, tr)
+                        dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
                     elif ultima is not None:
                         self.play(Indicate(ultima, color=self.col.acento, scale_factor=1.04), run_time=0.6)
                     continue
@@ -1155,7 +1177,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     aparecer += self._acercar_al_paso(eq)  # el golpe de cámara entra con la fórmula
                 self.play(*aparecer, run_time=float(np.clip(tr.duration * 0.45, 0.8, 1.6)))
                 if paso.visual is not None:
-                    dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, tr)
+                    dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
 
                 linea_nueva = Linea(mobs=list(nueva), eq=eq)
                 if emoji is not None:
