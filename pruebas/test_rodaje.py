@@ -117,6 +117,90 @@ class OverridesTest(unittest.TestCase):
         self.assertIn("error", str(sube.exception))
 
 
+class GuardarRecetaTest(unittest.TestCase):
+    """Lo que hace el botón «Guardar receta» de Ajustes."""
+
+    def setUp(self):
+        self.completa = {campo: sorted(valores)[0] for campo, valores in mod._VALORES.items()}
+
+    def test_guardar_un_molde_escribe_las_ocho_lineas(self):
+        with _recetas_de_autor("") as ruta:
+            mod.guardar_receta("pov", {**self.completa, "tapar_resultado": "tapada"})
+            datos = yaml.safe_load(ruta.read_text(encoding="utf-8"))
+            self.assertEqual(set(datos["pov"]), set(mod._VALORES))
+            self.assertEqual(rodaje_para("pov").tapar_resultado, "tapada")
+
+    def test_guardar_un_molde_deja_igual_a_los_demas(self):
+        previo = "reto:\n  pasos: pila\n  error: queda\n  contador: ninguno\n  primer_plano: nada\n"
+        previo += "  gancho: lleno\n  deriva: en_mano\n  partida: seguida\n  tapar_resultado: visible\n"
+        with _recetas_de_autor(previo) as ruta:
+            mod.guardar_receta("pov", self.completa)
+            datos = yaml.safe_load(ruta.read_text(encoding="utf-8"))
+        self.assertEqual(datos["reto"]["pasos"], "pila")
+        self.assertEqual(set(datos), {"reto", "pov"})
+
+    def test_un_valor_desconocido_no_llega_al_archivo(self):
+        with _recetas_de_autor("") as ruta:
+            with self.assertRaises(ErrorMotor) as sube:
+                mod.guardar_receta("pov", {**self.completa, "pasos": "amontonados"})
+            self.assertEqual(yaml.safe_load(ruta.read_text(encoding="utf-8")) or {}, {})
+        self.assertIn("pasos=ancla|pila", sube.exception.ayuda or "")
+
+    def test_un_receta_a_medias_se_rechaza_diciendo_qué_falta(self):
+        sin_dos = {campo: valor for campo, valor in self.completa.items() if campo != "gancho"}
+        with _recetas_de_autor("") as ruta:
+            with self.assertRaises(ErrorMotor) as sube:
+                mod.guardar_receta("pov", sin_dos)
+            self.assertFalse(yaml.safe_load(ruta.read_text(encoding="utf-8")))
+        self.assertIn("gancho", str(sube.exception))
+
+    def test_un_molde_inventado_dice_cuales_son(self):
+        with _recetas_de_autor(""):
+            with self.assertRaises(ErrorMotor) as sube:
+                mod.guardar_receta("el_que_me_invente", self.completa)
+        self.assertIn("pov", str(sube.exception))
+
+    def test_la_receta_libre_tambien_se_puede_guardar(self):
+        from tpi_videos.guion import Guion
+
+        datos = yaml.safe_load(Path("src/tpi_videos/plantillas/vista_previa.yaml").read_text(encoding="utf-8"))
+        datos.pop("molde", None)
+        sin_molde = Guion.model_validate(datos)
+        with _recetas_de_autor(""):
+            mod.guardar_receta(RECETA_LIBRE, {**self.completa, "partida": "mitades"})
+            self.assertEqual(rodaje_de_guion(sin_molde).partida, "mitades")
+
+    def test_crea_la_carpeta_mis_ajustes_si_no_esta(self):
+        ruta = Path(mkdtemp()) / "mis_ajustes" / "rodaje.yaml"
+        with _ruta_de_autor(ruta):
+            mod.guardar_receta("pov", self.completa)
+        self.assertTrue(ruta.exists())
+
+    def test_guardar_sin_cambiar_nada_deja_la_receta_igual(self):
+        """El panel escribe lo mismo que lee: abrir y guardar no cambia el video."""
+        antes = rodaje_para("pov")
+        with _recetas_de_autor(""):
+            mod.guardar_receta("pov", mod.campos_de_receta("pov"))
+            self.assertEqual(rodaje_para("pov"), antes)
+
+
+class LetrerosTest(unittest.TestCase):
+    """El panel enseña cada mando con palabras, nunca con el código del archivo."""
+
+    def test_cada_mando_tiene_nombre(self):
+        self.assertEqual(set(mod.NOMBRE_MANDO), set(mod._VALORES))
+
+    def test_cada_valor_de_cada_mando_trae_su_frase(self):
+        for mando, valores in mod._VALORES.items():
+            self.assertEqual(set(mod.QUE_HACE[mando]), valores, mando)
+            for valor in valores:
+                self.assertTrue(mod.QUE_HACE[mando][valor].strip(), f"{mando}={valor}")
+
+    def test_un_valor_nuevo_del_motor_no_deja_al_panel_sin_texto(self):
+        """Las frases cubren exactly los valores que valida el cargador."""
+        self.assertEqual({mando for mando in mod.QUE_HACE if mando not in mod._VALORES}, set())
+
+
 def _recetas_de_autor(texto: str):
     from contextlib import contextmanager
 
@@ -124,6 +208,17 @@ def _recetas_de_autor(texto: str):
     def contexto():
         ruta = Path(mkdtemp()) / "rodaje.yaml"
         ruta.write_text(texto, encoding="utf-8")
+        with _ruta_de_autor(ruta):
+            yield ruta
+
+    return contexto()
+
+
+def _ruta_de_autor(ruta: Path):
+    from contextlib import contextmanager
+
+    @contextmanager
+    def contexto():
         original = mod._ruta_usuario
         mod._ruta_usuario = lambda: ruta
         try:

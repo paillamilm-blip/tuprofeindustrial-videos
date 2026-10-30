@@ -1,6 +1,7 @@
-"""Ajustes: clave de Gemini, marca, voz (con muestra), estilo de siempre, stickers y diagnóstico.
+"""Ajustes: clave de Gemini, marca, voz, estilo de siempre, rodaje de cada molde, stickers y diagnóstico.
 
-Todo se guarda en ``mis_ajustes/marca.yaml`` (la clave, en ``.env``): ``marca.yaml`` del repo no se toca.
+Todo se guarda en ``mis_ajustes/`` (``marca.yaml``, ``rodaje.yaml``; la clave en ``.env``): los
+``.yaml`` que viajan con el motor no se tocan, así actualizar nunca borra lo tuyo.
 """
 
 from __future__ import annotations
@@ -15,6 +16,8 @@ from ...config import cargar_marca, guardar_ajustes_marca
 from ...emojis import stickers_dir, stickers_disponibles
 from ...entorno import raiz_proyecto
 from ...errores import ErrorMotor
+from ...moldes import MOLDES
+from ...rodaje import NOMBRE_MANDO, QUE_HACE, RECETA_LIBRE, campos_de_receta, guardar_receta
 from ...temas import listar_temas
 from ..comun import confirmar, marco, titulo_seccion, url_medio
 from ..tareas import consultar
@@ -204,6 +207,69 @@ def _seccion_tema() -> None:
             ui.link("Ver y personalizar estilos", "/estilos")
 
 
+def filas_de_rodaje(valores: dict[str, str]) -> list[tuple]:
+    """Una fila por mando: clave del archivo, nombre, qué hace hoy, sus dos opciones y el activo."""
+    filas = []
+    for mando, nombre in NOMBRE_MANDO.items():
+        activo = valores[mando]
+        filas.append((mando, nombre, QUE_HACE[mando][activo], list(QUE_HACE[mando].items()), activo))
+    return filas
+
+
+def resumen_de_receta(clave: str, valores: dict[str, str]) -> str:
+    frases = "; ".join(frase for _, _, frase, _, _ in filas_de_rodaje(valores))
+    return f"Así se graba «{clave}»: {frases}."
+
+
+def _seccion_rodaje() -> None:
+    opciones = {clave: molde.nombre for clave, molde in MOLDES.items()}
+    opciones[RECETA_LIBRE] = "Sin molde"
+    estado: dict = {"molde": next(iter(opciones)), "valores": {}}
+
+    def cargar(clave: str) -> None:
+        estado["molde"] = clave
+        estado["valores"] = campos_de_receta(clave)
+
+    def poner(mando: str, valor: str) -> None:
+        estado["valores"][mando] = valor
+        mandos.refresh()
+
+    def guardar() -> None:
+        try:
+            guardar_receta(estado["molde"], estado["valores"])
+        except ErrorMotor as e:
+            ui.notify(f"{e.mensaje} {e.ayuda or ''}", type="negative", multi_line=True)
+            return
+        ui.notify("Receta guardada. La usa el próximo video que crees con ese molde.", type="positive")
+
+    @ui.refreshable
+    def mandos() -> None:
+        for mando, nombre, frase, opciones_mando, activo in filas_de_rodaje(estado["valores"]):
+            with ui.row().classes("w-full items-center gap-3 border-t pt-2"):
+                ui.label(nombre).classes("text-sm font-bold w-36 shrink-0")
+                ui.label(frase).classes("tpi-ayuda flex-1")
+                for valor, _ in opciones_mando:
+                    ui.button(valor.replace("_", " "), on_click=lambda v=valor, m=mando: poner(m, v)).props(
+                        "dense no-caps unelevated" if valor == activo else "dense no-caps outline"
+                    )  # fmt: skip
+        ui.label(resumen_de_receta(estado["molde"], estado["valores"])).classes(
+            "tpi-ayuda w-full rounded border border-dashed p-2"
+        )
+
+    cargar(estado["molde"])
+    with _tarjeta(
+        "Cómo se graba cada molde",
+        "Lo que decide el motor al filmar: elige el molde y cambia sus mandos. Nada te bloquea.",
+    ):
+        ui.select(opciones, value=estado["molde"], label="Molde").props("outlined dense").classes(
+            "w-72"
+        ).on_value_change(lambda e: (cargar(e.value), mandos.refresh()) if e.value else None)
+        mandos()
+        with ui.row().classes("w-full items-center gap-3"):
+            ui.button("Guardar receta", icon="save", on_click=guardar).props("outline")
+            ui.label("mis_ajustes/rodaje.yaml · la tuya gana a la del motor").classes("tpi-ayuda")
+
+
 def _seccion_stickers(al_subir: Callable[[], None] | None = None) -> None:
     @ui.refreshable
     def galeria() -> None:
@@ -294,3 +360,4 @@ def registrar() -> None:
                     _seccion_marca()
                     _seccion_stickers(_seccion_marca.refresh)
                     _seccion_diagnostico()
+            _seccion_rodaje()
