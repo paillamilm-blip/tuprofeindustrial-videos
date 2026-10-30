@@ -24,7 +24,7 @@ from ..revision import Revision, revisar
 from ..temas import cargar_tema
 from ..visuales import CAMPOS, VECTORES, VISUALES, opciones_select
 from . import formulas, miniaturas
-from .comun import url_medio
+from .comun import PIEL, url_medio
 
 _BLOQUE = {"texto": "", "voz": "", "emoji": ""}
 VACIO: dict[str, Any] = {
@@ -338,7 +338,7 @@ class EditorGuion:
             ui.label(f"⏳ Todavía no puedo dibujarlo: {e}").classes("tpi-ayuda")
             return
         with ui.row().classes("w-full justify-center"):
-            ui.image(url_medio(png)).classes("w-[150px] rounded-lg border border-[#DCDCD7]")
+            ui.image(url_medio(png)).classes(f"w-[150px] rounded-lg border border-[{PIEL['borde_hoja']}]")
 
     def _formula(self, d: dict, clave: str, etiqueta: str, ayuda: str = "") -> None:
         """Campo LaTeX con su dibujo debajo: se redibuja mientras se escribe, no al perder el foco."""
@@ -352,7 +352,7 @@ class EditorGuion:
             with ui.row().classes("tpi-formula items-center min-h-[8px] px-2"):
                 imagen = ui.element("img").props('alt="Vista previa de la fórmula"')
                 imagen.set_visibility(False)
-                aviso = ui.label("").classes("text-sm").style("color:#D32F2F")
+                aviso = ui.label("").classes("text-sm").style(f"color:{PIEL['error']}")
 
             versiones = _ultima_version()
 
@@ -468,7 +468,7 @@ class EditorGuion:
                 clase = "tpi-error" if paso.get("error") else ""
                 with (
                     ui.card()
-                    .classes(f"w-full p-4 gap-2 bg-[#FAFAF8] {clase}")
+                    .classes(f"w-full p-4 gap-2 bg-[{PIEL['caja']}] {clase}")
                     .props("flat bordered") as tarjeta
                 ):
                     with ui.row().classes("w-full items-center gap-3 no-wrap"):

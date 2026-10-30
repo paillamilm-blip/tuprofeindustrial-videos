@@ -147,6 +147,19 @@ class PielTest(unittest.TestCase):
         sueltos = re.findall(r"background:\s*#[0-9A-Fa-f]{6}", fuente)
         self.assertEqual(sueltos, [], f"colores escritos a mano: {sueltos}")
 
+    def test_ningun_archivo_del_panel_escribe_un_color_a_mano(self):
+        import re
+
+        raiz = Path("src/tpi_videos/panel")
+        sueltos = [
+            f"{p.relative_to(raiz)}: {linea.strip()}"
+            for p in sorted(raiz.rglob("*.py"))
+            if p.name != "comun.py"  # los tokens viven sólo ahí
+            for linea in p.read_text(encoding="utf-8").splitlines()
+            if re.search(r"#[0-9A-Fa-f]{3,6}\b", linea)
+        ]
+        self.assertEqual(sueltos, [], f"colores fuera de PIEL: {sueltos}")
+
     def test_ningun_archivo_del_panel_usa_las_constantes_viejas(self):
         import re
 

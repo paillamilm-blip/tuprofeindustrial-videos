@@ -74,8 +74,9 @@ cierra esa ventana (o presiona `Control + C`).
 
 | Pestaña | Para qué sirve |
 |---|---|
-| **Fábrica** (la que se abre primero) | Un campo y un botón: escribes el tema, aprietas **«Crear los 3 videos»** y listo. La IA reparte sola los tres ángulos y las tres dificultades, ves en qué video vamos, y al terminar la misma pantalla te da **«Abrir la carpeta»**, el video y el kit de cada uno. Si uno no sale, tiene su botón **«Intentar solo este»**. |
-| **Crear** | 4 pestañas, para revisar todo a mano: **Ideas** (la IA propone 3 y tú eliges una), **Escribir con IA** (el enunciado, una foto o un PDF → el guion), **Abrir un guion** y **Empezar en blanco**. El guion se edita en tarjetas: lo que se ve, lo que se escucha, emojis y «error típico», con cada fórmula dibujada tal como saldrá en el video. Luego eliges el estilo y creas el borrador o el video final: verás una barra de avance y el video aparece ahí mismo. |
+| **Un video** (la que se abre primero) | Una sola pantalla: escribes el enunciado o la idea y, al lado, ves cómo va quedando armado el video (familia, molde, estilo, voz, duración, gancho y rodaje). Cada pieza dice **por qué** está así y tiene su **«cambiar»**; nada te tapa el botón. Un clic en **«Crear el video»** y el avance aparece ahí mismo. Abajo se lee el comando exacto que se va a ejecutar. |
+| **Lote de 3** | Un campo y un botón: escribes el tema, aprietas **«Crear los 3 videos»** y listo. La IA reparte sola los tres ángulos y las tres dificultades, ves en qué video vamos, y al terminar la misma pantalla te da **«Abrir la carpeta»**, el video y el kit de cada uno. Si uno no sale, tiene su botón **«Intentar solo este»**. |
+| **Paso a paso** | 4 pestañas, para revisar todo a mano: **Ideas** (la IA propone 3 y tú eliges una), **Escribir con IA** (el enunciado, una foto o un PDF → el guion), **Abrir un guion** y **Empezar en blanco**. El guion se edita en tarjetas: lo que se ve, lo que se escucha, emojis y «error típico», con cada fórmula dibujada tal como saldrá en el video. Luego eliges el estilo y creas el borrador o el video final: verás una barra de avance y el video aparece ahí mismo. |
 | **Mis videos** | Ver tus videos, mostrarlos en Finder, rehacerlos con otro estilo, borrarlos y abrir el 📦 **kit de publicación**. |
 | **Estilos** | Ver una vista previa de cada estilo y elegir el que usas siempre. Para cambiar colores, letras, el fondo (¡también con tu foto!), la hoja o los subtítulos, duplica un estilo y edita la copia. |
 | **Ajustes** | Tu clave de Gemini, tu marca, la voz (con muestra ▶), tus stickers y el diagnóstico. |
@@ -105,7 +106,7 @@ para subir a YouTube.
 ## 4. El día a día: de un enunciado a un video
 
 1. **Consigue el guion.** Cuatro caminos:
-   - **En el panel (recomendado):** pestaña **Crear** → «Escribir con IA» (ver sección 2).
+   - **En el panel (recomendado):** pestaña **Paso a paso** → «Escribir con IA» (ver sección 2).
    - **Con IA, en un comando:** pásale el enunciado escrito, una **foto** o un **PDF** (ver sección 5). La IA
      resuelve el ejercicio y escribe el guion; con `--crear` también hace el borrador.
    - **Con Kiro:** pásale el enunciado en el chat y te entrega el guion en un Pull Request.
@@ -225,7 +226,7 @@ Sirven las mismas opciones de `crear` y `redactar`: `--borrador`, `--estilo piza
 `--voz es-CL-CatalinaNeural`, `--sin-kit`, `--sin-revision`, y `--segundos 45` para exigir la duración
 de la tarjeta (el panel lo pasa solo al presionar «Hacer este video»).
 
-**En el panel es todavía más fácil:** solapa **Crear → Ideas**. Escribes el tema (o tocas uno sugerido, como
+**En el panel es todavía más fácil:** solapa **Paso a paso → Ideas**. Escribes el tema (o tocas uno sugerido, como
 *Ley de Ohm* o *Caída libre*), ves las 3 tarjetas, presionas **«Otras 3 ideas»** si no te convencen y en la que
 eliges presionas **«Hacer este video»**. Ahí mismo ves el avance: el guion, el video y el kit.
 
@@ -251,8 +252,8 @@ El elegido pasa a ser el gancho del guion y los demás quedan como alternativas.
 
 ### Hacer los 3 de una sola vez (el lote)
 
-Si ninguna idea sobra y quieres la semana cubierta de una pasada, usa la portada del panel (**Fábrica**): un
-campo, el botón **«Crear los 3 videos»** y a otra cosa. O, debajo de las tarjetas de Crear → Ideas, el mismo
+Si ninguna idea sobra y quieres la semana cubierta de una pasada, usa la pestaña **Lote de 3** del panel: un
+campo, el botón **«Crear los 3 videos»** y a otra cosa. O, debajo de las tarjetas de Paso a paso → Ideas, el mismo
 botón. En la Terminal:
 
 ```bash
@@ -273,7 +274,7 @@ panel.
 Cada video guarda su avance y sus hitos (guion, video, kit) en una **cola** en `salida/.cola/`, así que si la IA se
 cae, cierras el panel o se corta el render, **no pierdes lo ya hecho**:
 
-- En el **panel (Fábrica)** ves una barra por video con su fase (redactando, animando, subtítulos, kit) y una tarjeta
+- En el **panel (Lote de 3)** ves una barra por video con su fase (redactando, animando, subtítulos, kit) y una tarjeta
   «Cola de videos» con lo pendiente. Al reabrir el panel, lo que quedó a medio hacer se marca «interrumpido» y lo que
   esperaba a la IA **se reanuda solo**.
 - En la **Terminal**, `./tpi lote --reanudar` retoma el lote pendiente con los mismos ajustes guardados, sin volver a

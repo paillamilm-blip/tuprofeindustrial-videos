@@ -27,7 +27,7 @@ from ...temas import (
 from ...tipografia import PARA_SUBTITULOS, PARA_TEXTO, PARA_TITULOS
 from ...vista_previa import en_cache
 from .. import biblioteca
-from ..comun import confirmar, marco, titulo_seccion, url_medio
+from ..comun import PIEL, confirmar, marco, titulo_seccion, url_medio
 from ..tareas import TAREAS, Tarea
 
 COLORES = (
@@ -285,7 +285,8 @@ class EditorTema:
         self.id = identificador
         self.t = cargar_tema(identificador, cargar_marca()).model_dump(mode="json")
         materias = self.t["materias"]
-        self.etiquetas = {"color": materias.get("matematica", "#D32F2F")}  # las 3 materias con un color
+        # el color de las etiquetas es el de la materia del propio estilo, nunca un color del panel
+        self.etiquetas = {"color": materias["matematica"]}
 
     def render(self) -> None:
         t = self.t
@@ -481,7 +482,7 @@ def registrar() -> None:
             try:
                 editor = EditorTema(tema)
             except ErrorMotor as e:  # un tema dañado a mano: se explica en vez de mostrar un error técnico
-                ui.label(e.mensaje).style("color:#D32F2F")
+                ui.label(e.mensaje).style(f"color:{PIEL['error']}")
                 ui.button("Volver a Estilos", on_click=lambda: ui.navigate.to("/estilos"))
                 return
             editor.render()

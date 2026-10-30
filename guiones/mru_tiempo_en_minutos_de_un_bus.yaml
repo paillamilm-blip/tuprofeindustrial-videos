@@ -1,0 +1,59 @@
+# Guion redactado con IA (gemini-3.8-flash) el 30-10-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se asume movimiento rectilíneo uniforme sin detenciones.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "MRU: tiempo en minutos de un bus"
+materia: fisica
+nivel: "1° medio"
+
+gancho:
+  texto: "¿Cuántos minutos tarda en recorrer 18 km?"
+  voz: "Si un bus viaja a setenta y dos por hora, ¿cuánto tarda en dieciocho kilómetros?"
+  emoji: "🚌"
+
+enunciado:
+  texto: "Un bus viaja a 72 km/h constantes. ¿Cuántos minutos tarda en recorrer 18 km?"
+  voz: "Un bus viaja a setenta y dos kilómetros por hora constantes. ¿Cuántos minutos tarda en recorrer dieciocho kilómetros?"
+  destacar: ["72 km/h", "18 km"]
+
+datos:
+  - tex: 'v = 72\ \text{km/h}'
+    voz: "La rapidez es de setenta y dos kilómetros por hora."
+  - tex: 'd = 18\ \text{km}'
+    voz: "La distancia recorrida es de dieciocho kilómetros."
+  - tex: 't = ?\ \text{(min)}'
+    voz: "Y buscamos el tiempo en minutos."
+
+pasos:
+  - nota: "Despejamos el tiempo"
+    tex: 't = \frac{d}{v}'
+    voz: "En movimiento uniforme, el tiempo es igual a la distancia dividida en la rapidez."
+  - nota: "Reemplazamos valores"
+    tex: 't = \frac{18\ \text{km}}{72\ \text{km/h}}'
+    voz: "Reemplazamos los dieciocho kilómetros y los setenta y dos kilómetros por hora."
+  - nota: "Calculamos en horas"
+    tex: 't = 0,25\ \text{h}'
+    voz: "Dieciocho dividido en setenta y dos nos da un cuarto de hora, o sea cero coma veinticinco horas."
+    destacar: ['0,25\ \text{h}']
+    emoji: "💡"
+  - nota: "Convertimos a minutos"
+    tex: 't = 0,25 \cdot 60\ \text{min}'
+    voz: "Como nos piden minutos, multiplicamos por sesenta minutos que tiene una hora."
+
+resultado:
+  tex: 't = 15\ \text{min}'
+  voz: "El bus tarda exactamente quince minutos en completar el trayecto."
+  emoji: "✅"
+
+verificacion:
+  texto: "18 km es la cuarta parte de 72 km, por lo que debe tardar un cuarto de hora (15 minutos)."
+  voz: "Tiene todo el sentido: dieciocho es la cuarta parte de setenta y dos, así que demora un cuarto de hora."
+
+reto:
+  texto: "¿Cuánto tarda el mismo bus en recorrer 36 km? Responde en minutos."
+  voz: "Ahora te toca a ti: ¿cuántos minutos tarda el mismo bus en recorrer treinta y seis kilómetros?"
+  emoji: "✍️"

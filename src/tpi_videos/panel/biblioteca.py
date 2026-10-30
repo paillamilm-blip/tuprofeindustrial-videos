@@ -11,11 +11,14 @@ from typing import Any
 
 import yaml
 
+from ..config import Colores
 from ..entorno import raiz_proyecto
 from ..publicar import guion_del_video
 
-FONDO_POR_DEFECTO = "#080A0D"
-TEXTO_POR_DEFECTO = "#EAF2FF"
+# La portada de reserva se pinta con los colores del video, no con la piel del panel:
+# si un día cambia el estilo original del motor, la miniatura cambia con él.
+FONDO_POR_DEFECTO = Colores().fondo
+TEXTO_POR_DEFECTO = Colores().texto
 
 
 @dataclass

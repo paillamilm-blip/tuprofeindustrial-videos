@@ -130,6 +130,15 @@ def puntuar_idea(texto: str) -> str | None:
     return mejor
 
 
+def palabra_que_delata(texto: str, clave: str) -> str | None:
+    """La palabra de la frase que hizo caer en esa familia: para que el motivo se pueda revisar."""
+    limpio = _limpio(texto or "")
+    for palabra in _PISTAS.get(clave, ()):
+        if palabra in limpio:
+            return palabra
+    return None
+
+
 def formato_de_guion(guion) -> Formato | None:
     """La familia que carga con el molde elegido en el guion, o None si el guion va libre."""
     if not guion.molde:

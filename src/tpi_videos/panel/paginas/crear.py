@@ -255,7 +255,7 @@ class PaginaCrear:
 
     def _panel_ideas(self) -> None:
         if ia.obtener_clave() is None:
-            with ui.row().classes("w-full items-center gap-2 bg-[#FFF4E5] rounded p-3"):
+            with ui.row().classes(f"w-full items-center gap-2 bg-[{PIEL['banda_aviso']}] rounded p-3"):
                 ui.icon("key").classes("text-xl text-orange-8")
                 ui.label("Para buscar ideas falta tu clave de Gemini (gratis).")
                 ui.link("Configurarla en Ajustes", "/ajustes").classes("font-bold")
@@ -633,7 +633,7 @@ class PaginaCrear:
                                     "font-bold"
                                 )
                                 ui.label(str(item.get("error") or "No salió")).classes("text-sm").style(
-                                    "color:#C0392B"
+                                    f"color:{PIEL['error']}"
                                 )
                             ui.space()
                             if item.get("ok"):
@@ -645,7 +645,9 @@ class PaginaCrear:
                                     "Kit", icon="inventory_2", on_click=lambda v=video: abrir_kit(v.parent)
                                 ).props("flat dense")
                         for pendiente in item.get("pendientes") or []:
-                            ui.label(f"⚠️ Por revisar: {pendiente}").classes("text-sm").style("color:#B26A00")
+                            ui.label(f"⚠️ Por revisar: {pendiente}").classes("text-sm").style(
+                                f"color:{PIEL['aviso']}"
+                            )
                 if listos < len(items):
                     ui.label(
                         "Las tarjetas de arriba siguen sirviendo: «Hacer este video» reintenta una por una."
@@ -677,7 +679,9 @@ class PaginaCrear:
                                 f"{resultado.get('duracion', 0)} s"
                             ).classes("tpi-ayuda")
                         for pendiente in resultado.get("pendientes") or []:
-                            ui.label(f"⚠️ Por revisar: {pendiente}").classes("text-sm").style("color:#B26A00")
+                            ui.label(f"⚠️ Por revisar: {pendiente}").classes("text-sm").style(
+                                f"color:{PIEL['aviso']}"
+                            )
                         for supuesto in resultado.get("supuestos") or []:
                             ui.label(f"ℹ️ Supuesto de la IA: {supuesto}").classes("text-sm")
                         ui.label(
@@ -698,7 +702,7 @@ class PaginaCrear:
 
     def _panel_ia(self) -> None:
         if ia.obtener_clave() is None:
-            with ui.row().classes("w-full items-center gap-2 bg-[#FFF4E5] rounded p-3"):
+            with ui.row().classes(f"w-full items-center gap-2 bg-[{PIEL['banda_aviso']}] rounded p-3"):
                 ui.icon("key").classes("text-xl text-orange-8")
                 ui.label("Para escribir con IA falta tu clave de Gemini (gratis).")
                 ui.link("Configurarla en Ajustes", "/ajustes").classes("font-bold")
@@ -794,7 +798,7 @@ class PaginaCrear:
             for s in tarea.resultado.get("supuestos") or []:
                 ui.label(f"ℹ️ Supuesto de la IA: {s}").classes("text-sm")
             for p in tarea.resultado.get("pendientes") or []:
-                ui.label(f"⚠️ Por revisar: {p}").classes("text-sm").style("color:#B26A00")
+                ui.label(f"⚠️ Por revisar: {p}").classes("text-sm").style(f"color:{PIEL['aviso']}")
         self.abrir(ruta)
 
     def _panel_abrir(self) -> None:
@@ -884,8 +888,8 @@ class PaginaCrear:
         self.avisos.clear()
         with self.avisos:
             if errores:
-                with ui.card().classes("w-full p-4 bg-[#FDECEC] gap-1").props("flat"):
-                    ui.label("Falta completar:").classes("font-bold").style("color:#B71C1C")
+                with ui.card().classes(f"w-full p-4 bg-[{PIEL['banda_error']}] gap-1").props("flat"):
+                    ui.label("Falta completar:").classes("font-bold").style(f"color:{PIEL['error_fuerte']}")
                     for linea in errores:
                         ui.label(f"• {linea}").classes("text-sm")
                 self.resumen.text = ""
@@ -894,7 +898,9 @@ class PaginaCrear:
                 return
             self.resumen.text = f"⏱ ~{rev.segundos:.0f} s · {rev.palabras} palabras"
             if not rev.avisos:
-                ui.label("✅ Sin observaciones. ¡Buen guion!").classes("text-sm").style("color:#2E7D32")
+                ui.label("✅ Sin observaciones. ¡Buen guion!").classes("text-sm").style(
+                    f"color:{PIEL['exito']}"
+                )
             for aviso in rev.avisos:
                 icono = "⚠️" if aviso.nivel == "advertencia" else "💡"
                 ui.label(f"{icono} {aviso.donde}: {aviso.mensaje}").classes("text-sm")
@@ -1064,10 +1070,12 @@ class PaginaCrear:
     def _error(self, tarea: Tarea) -> None:
         error = tarea.error or {}
         with ui.dialog() as dialogo, ui.card().classes("p-6 gap-3 w-[640px] max-w-[95vw]"):
-            ui.label("Algo no salió").classes("tpi-titulo text-lg").style("color:#D32F2F")
+            ui.label("Algo no salió").classes("tpi-titulo text-lg").style(f"color:{PIEL['error']}")
             ui.label(error.get("mensaje", "Error")).classes("whitespace-pre-wrap")
             if error.get("ayuda"):
-                ui.label(f"→ {error['ayuda']}").classes("whitespace-pre-wrap text-sm").style("color:#8A5A00")
+                ui.label(f"→ {error['ayuda']}").classes("whitespace-pre-wrap text-sm").style(
+                    f"color:{PIEL['aviso_fuerte']}"
+                )
             with ui.expansion("Detalle técnico (para Kiro)").classes("w-full"):
                 ui.code("\n".join(tarea.registro[-40:]) or "(sin detalle)").classes("w-full text-xs")
             ui.button("Cerrar", on_click=dialogo.close).classes("self-end")

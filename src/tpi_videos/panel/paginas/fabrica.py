@@ -1,8 +1,9 @@
 """Fábrica: un tema, un botón, los 3 videos listos para publicar.
 
-Es la portada del panel y no tiene opciones que elegir: la IA reparte los tres ángulos y las tres
-dificultades, el lote los produce de uno en uno y acá solo se ve en qué video vamos. Lo que sale se
-abre desde la misma pantalla: el video, su kit de publicación, o la carpeta en el Finder.
+No es la portada (esa es «Un video», en ``/``): acá se pide un tema y salen tres videos de una, sin
+opciones que elegir. La IA reparte los tres estilos y las tres dificultades, el lote los produce de uno
+en uno y acá solo se ve en qué video vamos. Lo que sale se abre desde la misma pantalla: el video, su
+kit de publicación, o la carpeta en el Finder.
 
 El trabajo pesado lo hace ``tpi lote`` afuera, en un proceso aparte (``TAREAS``), para que el panel
 siga respondiendo mientras se anima un video.
@@ -132,7 +133,7 @@ class PaginaFabrica:
 
         with ui.card().classes("tpi-hoja w-full p-6 gap-4"):
             if ia.obtener_clave() is None:
-                with ui.row().classes("w-full items-center gap-2 bg-[#FFF4E5] rounded p-3"):
+                with ui.row().classes(f"w-full items-center gap-2 bg-[{PIEL['banda_aviso']}] rounded p-3"):
                     ui.icon("key").classes("text-xl text-orange-8")
                     ui.label("Para crear los videos falta tu clave de Gemini (es gratis).")
                     ui.link("Configurarla en Ajustes", "/ajustes").classes("font-bold")
@@ -534,7 +535,7 @@ class PaginaFabrica:
 
 
 def registrar() -> None:
-    @ui.page("/", title="Fábrica · Tu Profe Industrial")
+    @ui.page("/fabrica", title="Lote de 3 · Tu Profe Industrial")
     def pagina() -> None:
-        with marco("/"):
+        with marco("/fabrica"):
             PaginaFabrica().render()
