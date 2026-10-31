@@ -12,7 +12,7 @@ from nicegui import background_tasks, run, ui
 
 from ...temas import listar_temas
 from .. import biblioteca
-from ..comun import PIEL, abrir_en_mac, confirmar, marco, titulo_seccion, url_medio
+from ..comun import PIEL, abrir_en_mac, confirmar, url_medio
 from ..tareas import TAREAS, Tarea
 
 
@@ -316,15 +316,3 @@ class PaginaVideos:
             ruta = await run.io_bound(biblioteca.miniatura, video)
             if not imagen.is_deleted:
                 imagen.set_source(url_medio(ruta))
-
-
-def registrar() -> None:
-    @ui.page("/videos", title="Mis videos · Tu Profe Industrial")
-    def pagina() -> None:
-        with marco("/videos"):
-            titulo_seccion(
-                None, "Mis videos", "Haz clic en un video para verlo. 📦 = portada y textos para publicar."
-            )
-            pagina_videos = PaginaVideos()
-            pagina_videos.controles()
-            pagina_videos.lista()

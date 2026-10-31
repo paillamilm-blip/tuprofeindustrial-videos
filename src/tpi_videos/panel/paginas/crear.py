@@ -21,7 +21,7 @@ from ...moldes import nombre_molde
 from ...revision import Revision
 from ...temas import listar_temas
 from .. import biblioteca, formatos_ui
-from ..comun import PIEL, abrir_en_mac, marco, titulo_seccion, url_medio
+from ..comun import PIEL, abrir_en_mac, titulo_seccion, url_medio
 from ..editor import EditorGuion
 from ..tareas import TAREAS, Tarea
 from .videos import abrir_kit, dialogo_rehacer
@@ -1080,13 +1080,3 @@ class PaginaCrear:
                 ui.code("\n".join(tarea.registro[-40:]) or "(sin detalle)").classes("w-full text-xs")
             ui.button("Cerrar", on_click=dialogo.close).classes("self-end")
         dialogo.open()
-
-
-def registrar() -> None:
-    @ui.page("/crear", title="Crear · Tu Profe Industrial")
-    def pagina(guion: str | None = None) -> None:
-        estado = PaginaCrear()
-        with marco("/crear"):
-            estado.arrancar()
-            if ruta := guion_permitido(guion):
-                estado.abrir(ruta)

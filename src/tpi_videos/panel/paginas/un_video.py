@@ -20,7 +20,7 @@ from ... import ia
 from ...config import cargar_marca
 from ...errores import ErrorMotor
 from .. import formatos_ui, sugerencia
-from ..comun import PIEL, abrir_en_mac, marco, url_medio
+from ..comun import PIEL, abrir_en_mac, url_medio
 from ..miniaturas import dibujar_miniatura
 from ..tareas import TAREAS, Tarea
 from .ajustes import VOCES
@@ -589,10 +589,3 @@ class PaginaUnVideo:
         if not t.terminada:
             self.mio = True
             self._abloquear(True)
-
-
-def registrar() -> None:
-    @ui.page("/", title="Un video · Tu Profe Industrial")
-    def pagina() -> None:
-        with marco("/"):
-            PaginaUnVideo().render()
