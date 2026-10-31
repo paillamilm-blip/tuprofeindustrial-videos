@@ -49,6 +49,22 @@ class PuntadorTest(unittest.TestCase):
         for idea, esperado in casos.items():
             self.assertEqual(puntuar_idea(idea), esperado, idea)
 
+    def test_los_temas_de_los_chips_marcan_su_familia(self):
+        """Un chip escribe dos palabras: no acumula dos coincidencias, pero nombra el tema."""
+        casos = {
+            "Ley de Ohm": "paso_a_paso",
+            "Caída libre": "paso_a_paso",
+            "Porcentajes": "datos",
+            "Teorema de Pitágoras": "paso_a_paso",
+            "MRU": "paso_a_paso",
+            "Potencia eléctrica": "paso_a_paso",
+        }
+        for idea, esperado in casos.items():
+            self.assertEqual(puntuar_idea(idea), esperado, idea)
+
+    def test_un_enunciado_que_nombra_el_tema_tambien_la_marca(self):
+        self.assertEqual(puntuar_idea("MRU: un bus viaja a 72 km/h, ¿cuánto tarda en 18 km?"), "paso_a_paso")
+
     def test_texto_vacio_o_sin_palabras_no_marca_nada(self):
         for idea in ("", "   ", "hola", "la materia es difícil"):
             self.assertIsNone(puntuar_idea(idea), idea)

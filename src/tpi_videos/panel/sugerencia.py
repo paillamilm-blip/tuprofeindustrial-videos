@@ -70,7 +70,6 @@ class Sugerencia:
     familia: str | None
     piezas: tuple[Pieza, ...]
     args: tuple[str, ...]
-    motivo: str
     kit: bool = True
     rodaje: Receta = RECETA_LIBRE
 
@@ -133,7 +132,6 @@ def armar(
         familia=la_familia.clave if la_familia else None,
         piezas=piezas,
         args=_args(idea, piezas, propuesta, kit),
-        motivo=_motivo(la_familia, toco_familia, idea),
         kit=kit,
         rodaje=rodaje_para(el_molde.codigo or LIBRE),
     )

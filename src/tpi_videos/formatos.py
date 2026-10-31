@@ -86,7 +86,21 @@ def _limpio(texto: str) -> str:
 # empatar con otra por casualidad (por eso el margen de puntuar_idea).
 _PISTAS: dict[str, tuple[str, ...]] = {
     "trampas": ("trampa", "reto", "desafio", "magia", "sutil", "engana", "encuentra", "truco de magia"),
-    "paso_a_paso": ("pov", "calcular", "paso a paso", "cronometro", "tradicional", "procedimiento"),
+    "paso_a_paso": (
+        "pov",
+        "calcular",
+        "paso a paso",
+        "cronometro",
+        "tradicional",
+        "procedimiento",
+        "mru",
+        "movimiento rectilíneo",
+        "cinemática",
+        "ley de ohm",
+        "caída libre",
+        "pitágoras",
+        "potencia eléctrica",
+    ),
     "datos": (
         "dato",
         "datos",
@@ -114,13 +128,35 @@ _PISTAS: dict[str, tuple[str, ...]] = {
 }
 
 
+# Temas que el canal repite: nombrarlos ya decide la familia. El chip del panel escribe justo eso, y
+# una idea de dos palabras nunca acumularía las dos coincidencias que pide el margen de arriba.
+_DECIDEN = frozenset(
+    _limpio(t)
+    for t in (
+        "mru",
+        "movimiento rectilíneo",
+        "ley de ohm",
+        "caída libre",
+        "pitágoras",
+        "potencia eléctrica",
+        "porcentaje",
+    )
+)
+
+
+def _aciertos(limpio: str, pista: str) -> int:
+    """Lo que suma una pista: dos si nombró un tema del canal, uno si es solo una palabra suelta."""
+    normalizada = _limpio(pista)
+    return limpio.count(normalizada) * (2 if normalizada in _DECIDEN else 1)
+
+
 def puntuar_idea(texto: str) -> str | None:
     """La familia con más palabras clave; None si ninguna destaca o si dos empatan."""
     limpio = _limpio(texto or "")
     if not limpio.strip():
         return None
     puntos = {
-        clave: sum(limpio.count(palabra) for palabra in palabras) for clave, palabras in _PISTAS.items()
+        clave: sum(_aciertos(limpio, palabra) for palabra in palabras) for clave, palabras in _PISTAS.items()
     }
     mejor = max(puntos, key=lambda clave: puntos[clave])
     if puntos[mejor] < 2:
@@ -134,7 +170,7 @@ def palabra_que_delata(texto: str, clave: str) -> str | None:
     """La palabra de la frase que hizo caer en esa familia: para que el motivo se pueda revisar."""
     limpio = _limpio(texto or "")
     for palabra in _PISTAS.get(clave, ()):
-        if palabra in limpio:
+        if _limpio(palabra) in limpio:
             return palabra
     return None
 
