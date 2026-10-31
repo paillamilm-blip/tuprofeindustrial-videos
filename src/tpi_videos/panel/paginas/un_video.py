@@ -58,6 +58,8 @@ class PaginaUnVideo:
         self.solo_lectura = False  # mientras graba, la tarjeta ya no se puede cambiar
         self._visto: tuple | None = None  # no repintar (ni dibujar) si la receta no cambió
         self._miniatura: dict[tuple, Path] = {}  # manim no se repite dos veces en la misma pantalla
+        self._variantes: list[dict] = []  # las 3 ideas de la IA, tales como viajaron
+        self.marcas: list[bool] = []  # cuáles quiere producir: la opción B
 
     # ── el armazón ──────────────────────────────────────────────────────────────────────
 
@@ -137,11 +139,26 @@ class PaginaUnVideo:
             self.barra_ideas = ui.linear_progress(show_value=False).props("indeterminate").classes("w-full")
             self.barra_ideas.set_visibility(False)
             self.tarjetas_ideas = ui.column().classes("w-full gap-2")
-            with self.tarjetas_ideas:
-                ui.label(
-                    "Acá aparecen las 3 ideas. «Usar esta idea» la pasa a la caja de arriba y te muestra "
-                    "todo lo que trae decidido."
-                ).classes("tpi-ayuda")
+            self._lugar_comun(self.tarjetas_ideas)
+            with ui.row().classes("w-full items-center gap-3 no-wrap") as self.barra_variantes:
+                self.contador_variantes = ui.label("ninguna seleccionada").classes("tpi-ayuda")
+                self.boton_compilar = ui.button(
+                    "Compilar seleccionados", icon="inventory_2", on_click=self._compilar
+                ).props("outline no-caps")
+            self.boton_compilar.disable()
+            self.barra_variantes.set_visibility(False)
+            ui.label(
+                "«Compilar» manda una sola tarea: produce de a una las variantes marcadas y el avance "
+                "lo ves en «Cola y biblioteca»."
+            ).classes("tpi-ayuda text-xs")
+
+    def _lugar_comun(self, contenedor) -> None:
+        """El aviso que ocupa la pared mientras no hay ideas: el mismo texto, una sola vez escrito."""
+        with contenedor:
+            ui.label(
+                "Acá aparecen las 3 ideas. Marca las que quieras y toca «Compilar seleccionados»: "
+                "salen de una, como el Lote. «Usar esta idea» la pasa a la caja de arriba igual que antes."
+            ).classes("tpi-ayuda")
 
     async def _buscar_ideas(self) -> None:
         texto = (self.idea.value or "").strip()
@@ -153,6 +170,10 @@ class PaginaUnVideo:
             return
         self.boton_ideas.disable()
         self.barra_ideas.set_visibility(True)
+        self.tarjetas_ideas.clear()  # las ideas anteriores ya valieron: la pared nueva las pinta encima
+        self._variantes, self.marcas = [], []
+        self.barra_variantes.set_visibility(False)
+        self._lugar_comun(self.tarjetas_ideas)
         self.estado_ideas.text = "La IA está pensando 3 ideas…"
         tarea = await TAREAS.ejecutar("Buscando ideas", ["ideas", "--", texto])
         self.boton_ideas.enable()
@@ -170,22 +191,64 @@ class PaginaUnVideo:
 
     def _mostrar_ideas(self, ideas: list[dict]) -> None:
         self.tarjetas_ideas.clear()
+        self._variantes = list(ideas)
+        self.marcas = [False] * len(ideas)
         with self.tarjetas_ideas:
-            for idea in ideas:
+            for n, idea in enumerate(ideas):
                 with ui.card().classes("w-full p-4 gap-1 border rounded-lg").style(
                     f"background:{PIEL['caja']}; border-color:{PIEL['borde_hoja']}"
                 ):
                     with ui.row().classes("w-full items-center gap-2 no-wrap"):
+                        ui.checkbox(
+                            value=False,
+                            on_change=lambda _e, i=n: self._al_marcar(i),
+                        ).props("dense")
                         ui.label(str(idea.get("titulo") or "La idea")).classes("font-bold")
                         ui.label("lo escribió la IA").classes("tpi-ayuda text-xs")
                     ui.label(str(idea.get("gancho") or "")).classes("text-sm italic")
-                    with ui.row().classes("items-center gap-2"):
-                        ui.button("Usar esta idea", icon="check", on_click=lambda i=idea: self._usar_idea(i)).props(
-                            "outline dense no-caps size=sm"
-                        )
-                        ui.label(f"≈{idea.get('segundos', 0)} s · {str(idea.get('nivel') or '')}").classes(
-                            "tpi-ayuda text-xs"
-                        )
+                    ui.label(
+                        f"molde: {idea.get('molde') or 'lo decide la IA'} · ≈{idea.get('segundos', 0)} s"
+                        f" · {str(idea.get('nivel') or '')}"
+                    ).classes("tpi-ayuda text-xs")
+                    ui.button("Usar esta idea", icon="check", on_click=lambda i=idea: self._usar_idea(i)).props(
+                        "outline dense no-caps size=sm"
+                    )
+        self.barra_variantes.set_visibility(True)
+        self._contador()
+
+    def _al_marcar(self, n: int) -> None:
+        self.marcas[n] = not self.marcas[n]
+        self._contador()
+
+    def _contador(self) -> None:
+        """Las marcadas mandan: contador, botón prendido sólo con una arriba y el número adentro."""
+        n = sum(self.marcas)
+        self.contador_variantes.text = f"{n} seleccionada{'s' if n != 1 else ''}" if n else "ninguna seleccionada"
+        self.boton_compilar.set_text(f"Compilar seleccionados{' (' + str(n) + ')' if n else ''}")
+        if n:
+            self.boton_compilar.enable()
+        else:
+            self.boton_compilar.disable()
+
+    def _compilar(self) -> None:
+        """La opción B: las variantes marcadas salen de una, con el mismo `tpi lote` de Fábrica."""
+        try:
+            elegidas = sugerencia.variantes_seleccionadas(self._variantes, self.marcas)
+        except ValueError:
+            elegidas = []
+        if not elegidas:
+            ui.notify("Marca al menos una idea para compilar.", type="warning")
+            return
+        if TAREAS.ocupado():
+            ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+            return
+        cantidad = len(elegidas)
+        TAREAS.lanzar(f"Compilar {cantidad} variantes", sugerencia.args_compilacion(elegidas))
+        ui.notify(
+            f"{'Puesta' if cantidad == 1 else 'Puestas'} en cola {cantidad} "
+            f"variante{'s' if cantidad != 1 else ''}: el avance lo ves en «Cola y biblioteca».",
+            type="positive",
+        )
 
     def _usar_idea(self, idea: dict) -> None:
         """La idea entra completa a la caja y a la receta: su molde, su gancho, su largo ya no son un secreto."""

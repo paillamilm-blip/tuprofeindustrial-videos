@@ -289,5 +289,15 @@ def _args(idea: str, piezas: tuple[Pieza, ...], propuesta: dict, kit: bool) -> t
     return tuple(args)
 
 
+def variantes_seleccionadas(ideas: list[dict], marcas: list[bool]) -> list[dict]:
+    """Las ideas marcadas, en su orden de pantalla. Si las marcas no cuadran, es error del panel."""
+    return [idea for idea, marcada in zip(ideas, marcas, strict=True) if marcada]
+
+
+def args_compilacion(ideas: list[dict]) -> list[str]:
+    """El comando que produce varias variantes de una: el mismo `tpi lote --ideas-json` de Fábrica."""
+    return ["lote", "--ideas-json", _json(ideas)]
+
+
 def _json(datos) -> str:
     return json.dumps(datos, ensure_ascii=False)

@@ -95,6 +95,7 @@ def _cola_y_biblioteca() -> None:
             ui.notify("Puesto en marcha: el avance se ve acá arriba.", type="positive")
             tarjeta_tarea.refresh()
 
+        tarjeta_tarea()
         vista_cola = ColaLotes(lanzar)
         vista_cola.dibujar()
         biblioteca = PaginaVideos()  # una sola instancia: los controles y la lista comparten el contador
