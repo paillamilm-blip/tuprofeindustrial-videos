@@ -154,6 +154,8 @@ def palabras_de_bloques(
 # ------------------------------------------------------------------------------------------
 
 _FIN_DE_FRASE = re.compile(r"[.,;:!?…]$")
+# Separador decimal hablado («uno coma diecinueve» = 1,19): un solo dato, no se parte.
+_COMA_DECIMAL = re.compile(r"coma$", re.IGNORECASE)
 
 
 def limpiar(palabra: str, mayusculas: bool = False) -> str:
@@ -172,12 +174,16 @@ def agrupar(
             continue
         if actual:
             largo = sum(len(limpiar(x.texto)) + 1 for x in actual) + len(limpiar(p.texto))
+            # un número hablado («uno coma diecinueve») viaja junto: no cortamos pegado a la coma
+            pega_coma = bool(_COMA_DECIMAL.match(limpiar(p.texto))) or bool(
+                _COMA_DECIMAL.match(limpiar(actual[-1].texto))
+            )
             if (
                 len(actual) >= max_palabras
                 or largo > max_caracteres
                 or p.inicio - actual[-1].fin > pausa
                 or _FIN_DE_FRASE.search(actual[-1].texto)
-            ):
+            ) and not pega_coma:
                 grupos.append(actual)
                 actual = []
         actual.append(p)
