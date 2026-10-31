@@ -42,13 +42,11 @@ PIEL = {
     "costado_px": "392",  # el ancho del panel de detalle aprobado en el mockup
 }
 
+# Tres vistas. Los caminos de producción viven adentro de «Fábrica» (pestañas), no en el menú.
 PAGINAS = (
-    ("/", "Un video", "movie_creation"),
-    ("/fabrica", "Lote de 3", "bolt"),
-    ("/crear", "Paso a paso", "edit_note"),
-    ("/videos", "Mis videos", "video_library"),
-    ("/estilos", "Estilos", "palette"),
-    ("/ajustes", "Ajustes", "tune"),
+    ("/", "Fábrica de contenido", "movie_creation"),
+    ("/cola", "Cola y biblioteca", "video_library"),
+    ("/motor", "Motor visual y ajustes", "palette"),
 )
 
 CSS = f"""

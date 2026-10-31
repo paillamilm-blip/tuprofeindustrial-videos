@@ -1,0 +1,73 @@
+# Guion redactado con IA (gemini-3.6-flash) el 31-10-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se aplica la normativa tributaria chilena con IVA del 19%.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "Calculando el IVA de una boleta"
+materia: matematica
+nivel: "2° medio"
+molde: pov
+
+gancho:
+  texto: "¿Cuánto pagaste realmente sin el 19% de IVA?"
+  voz: "Cuánto pagaste realmente sin el diecinueve por ciento de IVA"
+
+gancho_variantes:
+  - texto: "No restes el 19% para sacar el IVA"
+    voz: "No restes el diecinueve por ciento para sacar el IVA"
+    emoji: "⚠️"
+  - texto: "Calcula el precio neto de una cuenta de 59500"
+    voz: "Calcula el precio neto de una cuenta de cincuenta y nueve mil quinientos"
+    emoji: "🔢"
+    tex: 'P_{neto} = \frac{Total}{1,19}'
+
+enunciado:
+  texto: "Estás en el taller y compras una herramienta en 59500 pesos con IVA del 19%. Determina el valor neto y el monto de IVA."
+  voz: "Estás en el taller y compras una herramienta en cincuenta y nueve mil quinientos pesos con IVA. ¿Cuál es su precio neto?"
+  destacar: ["59500 pesos", "19%"]
+
+datos:
+  - tex: '\text{Total} = 59500\ \text{pesos}'
+    voz: "El precio total es cincuenta y nueve mil quinientos pesos."
+  - tex: '\text{IVA} = 19\%'
+    voz: "El IVA corresponde al diecinueve por ciento."
+
+pasos:
+  - nota: "Error típico"
+    tex: '\text{Neto} = 59500 - 59500 \cdot 0,19'
+    voz: "Restar el diecinueve por ciento al total es un error muy común."
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Planteamos"
+    tex: '\text{Total} = \text{Neto} \cdot 1,19'
+    voz: "El precio total equivale al ciento diecinueve por ciento del neto."
+    destacar: ['1,19']
+    emoji: "💡"
+  - nota: "Despejamos neto"
+    tex: '\text{Neto} = \frac{59500}{1,19} = 50000\ \text{pesos}'
+    voz: "Dividimos por uno coma diecinueve y obtenemos cincuenta mil pesos."
+    destacar: ['50000\ \text{pesos}']
+  - nota: "Calculamos IVA"
+    tex: '\text{IVA} = 59500 - 50000 = 9500\ \text{pesos}'
+    voz: "Restamos el neto al total y nos da nueve mil quinientos de IVA."
+    destacar: ['9500\ \text{pesos}']
+    visual:
+      tipo: torta
+      categorias: ['Neto 50000', 'IVA 9500']
+
+resultado:
+  tex: '\text{Neto} = 50000\ \text{pesos},\quad \text{IVA} = 9500\ \text{pesos}'
+  voz: "El valor neto es cincuenta mil pesos y el IVA son nueve mil quinientos."
+  emoji: "✅"
+
+verificacion:
+  texto: "El 19% de 50000 es 9500, sumando 59500 pesos."
+  voz: "El diecinueve por ciento de cincuenta mil es exactamente nueve mil quinientos."
+
+reto:
+  texto: "¿Cuál es el neto si pagas 119000 pesos con IVA?"
+  voz: "¿Cuál es el neto si pagas ciento diecinueve mil pesos con IVA?"
+  emoji: "✍️"

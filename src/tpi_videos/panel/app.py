@@ -10,7 +10,7 @@ from nicegui import app, ui
 from ..entorno import FUENTES_DIR, PAQUETE, raiz_proyecto
 from ..icono import IMAGEN
 from ..temas import FONDOS_DIR
-from .paginas import ajustes, crear, estilos, fabrica, un_video, videos
+from .paginas import estilos, vistas
 from .tareas import TAREAS
 
 HOST = "127.0.0.1"  # NiceGUI escucha en 0.0.0.0 (toda la red) si no se indica: aquí, solo este Mac
@@ -63,7 +63,8 @@ def iniciar(puerto: int = 8765, abrir: bool = True) -> None:
     app.add_media_files("/medios/fondos_paquete", FONDOS_DIR)  # las texturas incluidas
     app.on_shutdown(TAREAS.cancelar)  # al cerrar el panel no queda un video creándose a escondidas
 
-    for pagina in (un_video, fabrica, crear, videos, estilos, ajustes):
+    # vistas trae las tres pantallas (y los atajos a las rutas antiguas); estilos sólo el editor
+    for pagina in (vistas, estilos):
         pagina.registrar()
 
     app.on_startup(_reanudar_cola)

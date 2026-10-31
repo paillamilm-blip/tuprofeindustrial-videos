@@ -338,7 +338,7 @@ class EditorTema:
                     self.estado = ui.label("").classes("tpi-ayuda")
                     ui.button("Guardar y ver vista previa", icon="visibility", on_click=self.guardar_y_ver)
                     ui.button(
-                        "Volver a Estilos", icon="arrow_back", on_click=lambda: ui.navigate.to("/estilos")
+                        "Volver al motor", icon="arrow_back", on_click=lambda: ui.navigate.to("/motor")
                     ).props("flat")
 
     def _fondo(self) -> None:
@@ -458,23 +458,15 @@ class EditorTema:
 
 
 def registrar() -> None:
-    @ui.page("/estilos", title="Estilos · Tu Profe Industrial")
-    def pagina() -> None:
-        with marco("/estilos"):
-            titulo_seccion(
-                None,
-                "Estilos",
-                "Cómo se ven tus videos. Duplica uno para cambiar colores, letras o el fondo.",
-            )
-            lista_de_temas()
+    """Sólo el editor: la lista de estilos vive dentro de «Motor visual y ajustes» (vistas.py)."""
 
     @ui.page("/estilos/editar", title="Editar estilo · Tu Profe Industrial")
     def editar(tema: str = "") -> None:
-        with marco("/estilos"):
+        with marco("/motor"):
             valido = bool(re.fullmatch(r"[A-Za-z0-9_-]{1,80}", tema))  # nunca una ruta («../…»)
             if not valido or not (temas_usuario_dir() / f"{tema}.yaml").exists():
                 ui.label("Ese estilo no existe o no es tuyo (los incluidos se duplican antes de editarlos).")
-                ui.button("Volver a Estilos", on_click=lambda: ui.navigate.to("/estilos"))
+                ui.button("Volver al motor", on_click=lambda: ui.navigate.to("/motor"))
                 return
             titulo_seccion(
                 None, "Editar estilo", "Cambia lo que quieras y presiona «Guardar y ver vista previa»."
@@ -483,6 +475,6 @@ def registrar() -> None:
                 editor = EditorTema(tema)
             except ErrorMotor as e:  # un tema dañado a mano: se explica en vez de mostrar un error técnico
                 ui.label(e.mensaje).style(f"color:{PIEL['error']}")
-                ui.button("Volver a Estilos", on_click=lambda: ui.navigate.to("/estilos"))
+                ui.button("Volver al motor", on_click=lambda: ui.navigate.to("/motor"))
                 return
             editor.render()

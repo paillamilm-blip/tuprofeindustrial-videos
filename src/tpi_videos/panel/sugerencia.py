@@ -70,7 +70,6 @@ class Sugerencia:
     familia: str | None
     piezas: tuple[Pieza, ...]
     args: tuple[str, ...]
-    motivo: str
     kit: bool = True
     rodaje: Receta = RECETA_LIBRE
 
@@ -133,7 +132,6 @@ def armar(
         familia=la_familia.clave if la_familia else None,
         piezas=piezas,
         args=_args(idea, piezas, propuesta, kit),
-        motivo=_motivo(la_familia, toco_familia, idea),
         kit=kit,
         rodaje=rodaje_para(el_molde.codigo or LIBRE),
     )
@@ -289,6 +287,16 @@ def _args(idea: str, piezas: tuple[Pieza, ...], propuesta: dict, kit: bool) -> t
     if idea:
         args += ["--", idea]
     return tuple(args)
+
+
+def variantes_seleccionadas(ideas: list[dict], marcas: list[bool]) -> list[dict]:
+    """Las ideas marcadas, en su orden de pantalla. Si las marcas no cuadran, es error del panel."""
+    return [idea for idea, marcada in zip(ideas, marcas, strict=True) if marcada]
+
+
+def args_compilacion(ideas: list[dict]) -> list[str]:
+    """El comando que produce varias variantes de una: el mismo `tpi lote --ideas-json` de Fábrica."""
+    return ["lote", "--ideas-json", _json(ideas)]
 
 
 def _json(datos) -> str:

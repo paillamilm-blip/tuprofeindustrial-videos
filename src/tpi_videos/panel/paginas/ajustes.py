@@ -19,7 +19,7 @@ from ...errores import ErrorMotor
 from ...moldes import MOLDES
 from ...rodaje import NOMBRE_MANDO, QUE_HACE, RECETA_LIBRE, campos_de_receta, guardar_receta
 from ...temas import listar_temas
-from ..comun import PIEL, confirmar, marco, titulo_seccion, url_medio
+from ..comun import PIEL, confirmar, url_medio
 from ..tareas import consultar
 
 VOCES = {
@@ -204,7 +204,7 @@ def _seccion_tema() -> None:
                 ui.notify("Estilo guardado.", type="positive")
 
             ui.button("Guardar", icon="save", on_click=guardar).props("outline")
-            ui.link("Ver y personalizar estilos", "/estilos")
+            ui.link("Ver y personalizar estilos", "/motor")
 
 
 def filas_de_rodaje(valores: dict[str, str]) -> list[tuple]:
@@ -346,20 +346,15 @@ def _seccion_diagnostico() -> None:
         ui.button("Revisar ahora", icon="health_and_safety", on_click=revisar).props("outline")
 
 
-def registrar() -> None:
-    @ui.page("/ajustes", title="Ajustes · Tu Profe Industrial")
-    def pagina() -> None:
-        with marco("/ajustes"):
-            titulo_seccion(
-                None, "Ajustes", "Se guardan en mis_ajustes/ (actualizar el motor nunca los borra)."
-            )
-            with ui.row().classes("w-full gap-6 items-start no-wrap"):
-                with ui.column().classes("flex-1 gap-6"):
-                    _seccion_clave()
-                    _seccion_voz()
-                    _seccion_tema()
-                with ui.column().classes("flex-1 gap-6"):
-                    _seccion_marca()
-                    _seccion_stickers(_seccion_marca.refresh)
-                    _seccion_diagnostico()
-            _seccion_rodaje()
+def cuerpo() -> None:
+    """Las secciones de ajustes, sin ruta ni título: las pinta igual «Motor visual y ajustes»."""
+    with ui.row().classes("w-full gap-6 items-start no-wrap"):
+        with ui.column().classes("flex-1 gap-6"):
+            _seccion_clave()
+            _seccion_voz()
+            _seccion_tema()
+        with ui.column().classes("flex-1 gap-6"):
+            _seccion_marca()
+            _seccion_stickers(_seccion_marca.refresh)
+            _seccion_diagnostico()
+    _seccion_rodaje()

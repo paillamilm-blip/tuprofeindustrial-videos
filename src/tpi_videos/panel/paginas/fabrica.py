@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import quote
 
@@ -23,7 +24,7 @@ from ...entorno import raiz_proyecto
 from ...errores import ErrorMotor
 from ...ideas import ANGULOS, DIFICULTADES
 from ...moldes import nombre_molde
-from ..comun import PIEL, abrir_en_mac, marco
+from ..comun import PIEL, abrir_en_mac
 from ..tareas import TAREAS, Tarea
 from .crear import TEMAS_SUGERIDOS
 from .videos import abrir_kit
@@ -87,12 +88,150 @@ def _ruta_salida(ruta: Path | None) -> str:
         return str(ruta)
 
 
+class ColaLotes:
+    """La cola persistente, igual en la Fábrica y en «Cola y biblioteca».
+
+    Sólo sabe pedir trabajo (lanzar): la pantalla de avance es del productor que la acompañe, porque
+    el lote se mira mejor desde donde empezó.
+    """
+
+    def __init__(self, lanzar: Callable[[list[str], str], None]) -> None:
+        self.lanzar = lanzar
+        self.aviso_roto = False  # la cola anterior se apartó por dañada; se avisa hasta que hay lotes
+        self.zona = ui.column().classes("w-full gap-3")
+
+    def reintentar(self, idea: dict) -> None:
+        """La idea que falló, suelta: sin volver a pedirle ideas a Gemini."""
+        self.lanzar(["lote", "--ideas-json", json.dumps([idea], ensure_ascii=False)], "Reintento")
+
+    def dibujar(self) -> None:
+        self.zona.clear()
+        if TAREAS.ocupado():
+            self.zona.set_visibility(False)
+            return
+        datos = cola.cargar()
+        if datos.get("roto"):
+            # La cola anterior estaba dañada y se apartó: se avisa hasta que vuelve a haber lotes.
+            self.aviso_roto = True
+        if datos.get("version") != cola.VERSION:
+            # La escribió una versión más nueva del motor: se muestra, no se sobrescribe.
+            with self.zona:
+                ui.label(
+                    "La cola la escribió una versión más nueva del motor. Actualiza con git pull."
+                ).classes("tpi-ayuda")
+            self.zona.set_visibility(True)
+            return
+        # Con el panel en reposo, lo que quedó a medio hacer pasa a «interrumpido» y se puede reanudar.
+        cola.normalizar_interrumpidos()
+        lotes = cola.lotes_visibles()
+        if self.aviso_roto and lotes:
+            self.aviso_roto = False  # ya hay trabajo nuevo: el aviso cumplió su función
+        if not lotes and not self.aviso_roto:
+            self.zona.set_visibility(False)
+            return
+        self.zona.set_visibility(True)
+        with self.zona:
+            if self.aviso_roto:
+                ui.label(
+                    "La cola anterior estaba dañada y se apartó: esos videos no se pudieron reanudar."
+                ).classes("tpi-ayuda text-sm").set_text_color(PIEL["aviso"])
+            if lotes:
+                ui.label("Cola de videos").classes("tpi-titulo text-lg")
+                for lote in reversed(lotes):
+                    self._tarjeta(lote)
+
+    def _tarjeta(self, lote: dict) -> None:
+        estado = str(lote.get("estado") or "")
+        activo = estado in ("pensando_ideas", "en_curso")
+        with ui.card().classes("tpi-hoja w-full p-4 gap-2"):
+            with ui.row().classes("w-full items-center justify-between gap-2 flex-wrap"):
+                with ui.column().classes("gap-0"):
+                    ui.label(str(lote.get("tema") or "Un video")).classes("font-bold")
+                    ui.label(f"{_fecha(lote.get('creado'))} · {_nombre_estado(estado)}").classes(
+                        "tpi-ayuda text-sm"
+                    )
+                with ui.row().classes("gap-2"):
+                    if not activo and estado != "listo":
+                        ui.button(
+                            "Reanudar",
+                            icon="play_arrow",
+                            on_click=lambda lt=lote: self.lanzar(
+                                ["lote", "--reanudar", "--cola-id", lt["id"]], "Reanudar cola"
+                            ),
+                        ).props("outline dense")
+                    if not activo:
+                        ui.button(
+                            "Descartar",
+                            icon="delete_outline",
+                            on_click=lambda lt=lote: self._confirmar_descarte(lt),
+                        ).props("flat dense")
+            for video in lote.get("videos", []):
+                self._fila(video)
+            if estado == "listo":
+                ui.button(
+                    "Abrir la carpeta",
+                    icon="folder_open",
+                    on_click=lambda: abrir_en_mac(raiz_proyecto() / "salida"),
+                ).props("outline dense")
+
+    def _fila(self, video: dict) -> None:
+        estado = str(video.get("estado") or "en_cola")
+        icono, color, etiqueta = ESTADOS_FILA.get(estado, ESTADOS_FILA["en_cola"])
+        idea = video.get("idea") or {}
+        titulo = str(idea.get("titulo") or f"Video {video.get('posicion', '?')}")
+        with ui.row().classes("w-full items-center gap-2 no-wrap"):
+            ui.icon(icono, size="18px").set_text_color(color)
+            with ui.column().classes("gap-0 flex-1"):
+                ui.label(titulo).classes("text-sm")
+                extra = ""
+                if estado == "pendiente_ia" and video.get("proximo_intento"):
+                    extra = f" · reintento {_hora(video['proximo_intento'])}"
+                ui.label(f"{etiqueta}{extra}").classes("tpi-ayuda text-xs")
+                if estado == "fallo" and video.get("error"):
+                    ui.label(str(video["error"])).classes("text-xs").style(f"color:{PIEL['error']}")
+                if estado != "listo":
+                    ui.linear_progress(value=float(video.get("avance") or 0.0), show_value=False).props(
+                        "size=4px rounded"
+                    ).classes("w-full")
+            if estado == "fallo" and idea:
+                ui.button(
+                    "Intentar solo este",
+                    icon="refresh",
+                    on_click=lambda i=idea: self.reintentar(i),
+                ).props("flat dense")
+            if estado == "listo" and (video.get("hitos") or {}).get("video"):
+                ruta = Path(str(video["hitos"]["video"].get("video") or ""))
+                if ruta.exists():
+                    ui.button("Ver video", icon="movie", on_click=lambda r=ruta: abrir_en_mac(r)).props(
+                        "flat dense"
+                    )
+
+    def _confirmar_descarte(self, lote: dict) -> None:
+        with ui.dialog() as dialogo, ui.card().classes("gap-2"):
+            ui.label(f"¿Sacar de la cola «{lote.get('tema') or 'este lote'}»?").classes("font-bold")
+            ui.label("Los videos que ya salieron no se borran.").classes("tpi-ayuda")
+            with ui.row().classes("gap-2"):
+                ui.button("Sí, sacarlo", on_click=lambda: self._descartar(lote["id"], dialogo)).props(
+                    "color=negative"
+                )
+                ui.button("Mejor no", on_click=dialogo.close).props("flat")
+        dialogo.open()
+
+    def _descartar(self, lote_id: str, dialogo) -> None:
+        try:
+            cola.descartar_lote(lote_id)
+        except ErrorMotor as e:
+            ui.notify(e.mensaje, type="warning")
+        dialogo.close()
+        self.dibujar()
+
+
 class PaginaFabrica:
     def __init__(self) -> None:
         self.filas: list[dict] = []
         self.titulos: list[str] = []
         self.mio = False  # si esta pestaña está siguiendo un trabajo de la Fábrica
-        self._cola_rota = False  # la cola anterior se apartó por dañada; se avisa hasta que hay lotes
+        self.cola_lotes: ColaLotes | None = None
 
     def render(self) -> None:
         """Las tres pantallas, una visible a la vez."""
@@ -159,8 +298,8 @@ class PaginaFabrica:
                 ui.label("Usa la voz y el estilo que elegiste en Ajustes. ¿Prefieres revisar las ideas?")
                 ui.link("Elegirlas una por una", "/crear").classes("font-bold")
 
-        self.zona_cola = ui.column().classes("w-full gap-3")
-        self._dibujar_cola()
+        self.cola_lotes = ColaLotes(self._correr)
+        self.cola_lotes.dibujar()
 
     def _con_tema(self, tema: str) -> None:
         self.tema.value = tema
@@ -240,130 +379,6 @@ class PaginaFabrica:
                 self.filas[numero - 1]["titulo"].text = self.titulos[numero - 1]
             self._marcar_fila(numero, datos)
 
-    # ── la cola persistente ────────────────────────────────────────────────────────────
-
-    def _dibujar_cola(self) -> None:
-        self.zona_cola.clear()
-        if TAREAS.ocupado():
-            self.zona_cola.set_visibility(False)
-            return
-        datos = cola.cargar()
-        if datos.get("roto"):
-            # La cola anterior estaba dañada y se apartó: se avisa hasta que vuelve a haber lotes.
-            self._cola_rota = True
-        if datos.get("version") != cola.VERSION:
-            # La escribió una versión más nueva del motor: se muestra, no se sobrescribe.
-            with self.zona_cola:
-                ui.label(
-                    "La cola la escribió una versión más nueva del motor. Actualiza con git pull."
-                ).classes("tpi-ayuda")
-            self.zona_cola.set_visibility(True)
-            return
-        # Con el panel en reposo, lo que quedó a medio hacer pasa a «interrumpido» y se puede reanudar.
-        cola.normalizar_interrumpidos()
-        lotes = cola.lotes_visibles()
-        if self._cola_rota and lotes:
-            self._cola_rota = False  # ya hay trabajo nuevo: el aviso cumplió su función
-        if not lotes and not self._cola_rota:
-            self.zona_cola.set_visibility(False)
-            return
-        self.zona_cola.set_visibility(True)
-        with self.zona_cola:
-            if self._cola_rota:
-                ui.label(
-                    "La cola anterior estaba dañada y se apartó: esos videos no se pudieron reanudar."
-                ).classes("tpi-ayuda text-sm").set_text_color(PIEL["aviso"])
-            if lotes:
-                ui.label("Cola de videos").classes("tpi-titulo text-lg")
-                for lote in reversed(lotes):
-                    self._tarjeta_lote(lote)
-
-    def _tarjeta_lote(self, lote: dict) -> None:
-        estado = str(lote.get("estado") or "")
-        activo = estado in ("pensando_ideas", "en_curso")
-        with ui.card().classes("tpi-hoja w-full p-4 gap-2"):
-            with ui.row().classes("w-full items-center justify-between gap-2 flex-wrap"):
-                with ui.column().classes("gap-0"):
-                    ui.label(str(lote.get("tema") or "Un video")).classes("font-bold")
-                    ui.label(f"{_fecha(lote.get('creado'))} · {_nombre_estado(estado)}").classes(
-                        "tpi-ayuda text-sm"
-                    )
-                with ui.row().classes("gap-2"):
-                    if not activo and estado != "listo":
-                        ui.button(
-                            "Reanudar",
-                            icon="play_arrow",
-                            on_click=lambda lt=lote: self._reanudar_lote(lt["id"]),
-                        ).props("outline dense")
-                    if not activo:
-                        ui.button(
-                            "Descartar",
-                            icon="delete_outline",
-                            on_click=lambda lt=lote: self._confirmar_descarte(lt),
-                        ).props("flat dense")
-            for video in lote.get("videos", []):
-                self._fila_cola(video)
-            if estado == "listo":
-                ui.button(
-                    "Abrir la carpeta",
-                    icon="folder_open",
-                    on_click=lambda: abrir_en_mac(raiz_proyecto() / "salida"),
-                ).props("outline dense")
-
-    def _fila_cola(self, video: dict) -> None:
-        estado = str(video.get("estado") or "en_cola")
-        icono, color, etiqueta = ESTADOS_FILA.get(estado, ESTADOS_FILA["en_cola"])
-        idea = video.get("idea") or {}
-        titulo = str(idea.get("titulo") or f"Video {video.get('posicion', '?')}")
-        with ui.row().classes("w-full items-center gap-2 no-wrap"):
-            ui.icon(icono, size="18px").set_text_color(color)
-            with ui.column().classes("gap-0 flex-1"):
-                ui.label(titulo).classes("text-sm")
-                extra = ""
-                if estado == "pendiente_ia" and video.get("proximo_intento"):
-                    extra = f" · reintento {_hora(video['proximo_intento'])}"
-                ui.label(f"{etiqueta}{extra}").classes("tpi-ayuda text-xs")
-                if estado == "fallo" and video.get("error"):
-                    ui.label(str(video["error"])).classes("text-xs").style(f"color:{PIEL['error']}")
-                if estado != "listo":
-                    ui.linear_progress(value=float(video.get("avance") or 0.0), show_value=False).props(
-                        "size=4px rounded"
-                    ).classes("w-full")
-            if estado == "fallo" and idea:
-                ui.button(
-                    "Intentar solo este",
-                    icon="refresh",
-                    on_click=lambda i=idea: self._arrancar_uno(i),
-                ).props("flat dense")
-            if estado == "listo" and (video.get("hitos") or {}).get("video"):
-                ruta = Path(str(video["hitos"]["video"].get("video") or ""))
-                if ruta.exists():
-                    ui.button("Ver video", icon="movie", on_click=lambda r=ruta: abrir_en_mac(r)).props(
-                        "flat dense"
-                    )
-
-    def _reanudar_lote(self, lote_id: str) -> None:
-        self._correr(["lote", "--reanudar", "--cola-id", lote_id], "Reanudar cola")
-
-    def _confirmar_descarte(self, lote: dict) -> None:
-        with ui.dialog() as dialogo, ui.card().classes("gap-2"):
-            ui.label(f"¿Sacar de la cola «{lote.get('tema') or 'este lote'}»?").classes("font-bold")
-            ui.label("Los videos que ya salieron no se borran.").classes("tpi-ayuda")
-            with ui.row().classes("gap-2"):
-                ui.button("Sí, sacarlo", on_click=lambda: self._descartar(lote["id"], dialogo)).props(
-                    "color=negative"
-                )
-                ui.button("Mejor no", on_click=dialogo.close).props("flat")
-        dialogo.open()
-
-    def _descartar(self, lote_id: str, dialogo) -> None:
-        try:
-            cola.descartar_lote(lote_id)
-        except ErrorMotor as e:
-            ui.notify(e.mensaje, type="warning")
-        dialogo.close()
-        self._dibujar_cola()
-
     # ── 3 · cuando terminan ─────────────────────────────────────────────────────────────
 
     def _pantalla_resultado(self, items: list[dict]) -> None:
@@ -424,7 +439,7 @@ class PaginaFabrica:
                         ui.button(
                             "Intentar solo este",
                             icon="refresh",
-                            on_click=lambda i=item: self._arrancar_uno(i["idea"]),
+                            on_click=lambda i=item: self.cola_lotes.reintentar(i["idea"]),
                         ).props("outline dense")
                     return
                 video = Path(item["video"])
@@ -465,10 +480,6 @@ class PaginaFabrica:
             return
         self._correr(["lote", "--", texto], f"3 videos de «{texto}»")
 
-    def _arrancar_uno(self, idea: dict) -> None:
-        """La idea que falló, suelta: sin volver a pedirle ideas a Gemini."""
-        self._correr(["lote", "--ideas-json", json.dumps([idea], ensure_ascii=False)], "Reintento")
-
     def _correr(self, args: list[str], nombre: str) -> None:
         """Prende el lote y se va a la pantalla de trabajo; el avance lo trae el temporizador."""
         if TAREAS.ocupado():
@@ -502,7 +513,7 @@ class PaginaFabrica:
         self.boton_cancelar.set_visibility(False)
         self.zona_trabajo.set_visibility(False)
         self.zona_inicio.set_visibility(True)
-        self._dibujar_cola()
+        self.cola_lotes.dibujar()
         if t.cancelada:
             ui.notify("Cancelado. Lo que ya terminó queda en la carpeta salida/.", type="info")
             return
@@ -513,7 +524,7 @@ class PaginaFabrica:
             self.zona_resultado.clear()
             self.zona_resultado.set_visibility(False)
             self.zona_inicio.set_visibility(True)
-            self._dibujar_cola()
+            self.cola_lotes.dibujar()
             ui.notify("Quedó pendiente de conexión. Se reanuda solo cuando vuelva la IA.", type="info")
             return
         self.zona_resultado.clear()
@@ -532,10 +543,3 @@ class PaginaFabrica:
             with self.zona_resultado:
                 self._pantalla_error("El panel no alcanzó a leer el resultado del lote.", ayuda=str(e))
         self.zona_resultado.set_visibility(True)
-
-
-def registrar() -> None:
-    @ui.page("/fabrica", title="Lote de 3 · Tu Profe Industrial")
-    def pagina() -> None:
-        with marco("/fabrica"):
-            PaginaFabrica().render()
