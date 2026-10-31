@@ -465,7 +465,6 @@ class PaginaUnVideo:
                     f"width:132px; aspect-ratio:9/16; background:{PIEL['tarjeta']}"
                 )
             with ui.column().classes("gap-1 min-w-0"):
-                ui.label(str(su.motivo)).classes("text-xs").style(f"color:{PIEL['texto_muro']}")
                 if error:
                     ui.label(error).classes("text-xs").style(f"color:{PIEL['aviso_muro']}")
                 else:

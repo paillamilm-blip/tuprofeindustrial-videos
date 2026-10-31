@@ -42,6 +42,16 @@ class SugerenciaTest(unittest.TestCase):
         self.assertIn("No reconocí", s.pieza("familia").razon)
         self.assertIsNone(s.pieza("molde").codigo)  # lo decide la IA, y eso se dice tal cual
 
+    def test_cada_chip_de_la_pantalla_arranca_con_su_familia(self):
+        """Los temas sugeridos están para no tener que escribir: ninguno puede caer en «No reconocí»."""
+        from tpi_videos.panel.paginas.crear import TEMAS_SUGERIDOS
+
+        self.assertTrue(TEMAS_SUGERIDOS)
+        for tema in TEMAS_SUGERIDOS:
+            s = armar(tema, {}, PREF)
+            self.assertIsNotNone(s.familia, tema)
+            self.assertNotIn("No reconocí", s.pieza("familia").razon, tema)
+
     def test_lo_que_cambia_ella_gana_y_queda_marcado(self):
         s = armar("un dato curioso con porcentajes", {"tema": "pizarra_nocturna"}, PREF)
         molde_familia = s.pieza("molde")
