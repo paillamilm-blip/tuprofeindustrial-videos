@@ -1,0 +1,62 @@
+# Guion redactado con IA (gemini-3.8-flash) el 31-10-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "El mito del 50% de descuento"
+materia: matematica
+nivel: "1° medio"
+molde: mito_realidad
+
+gancho:
+  texto: "Subir 50% y bajar 50% no da lo mismo"
+  voz: "Subir cincuenta por ciento y bajar cincuenta por ciento no da lo mismo"
+  tex: '+50\% -50\% \neq 0'
+  emoji: "❌"
+
+gancho_variantes:
+  - texto: "¿Por qué perdiste plata con este descuento falso?"
+    voz: "Por qué perdiste plata con este descuento falso"
+    emoji: "🚨"
+  - texto: "Si sube 50% y baja 50%, ¿cuánto queda?"
+    voz: "Si sube cincuenta por ciento y baja cincuenta por ciento cuánto queda"
+    emoji: "🤔"
+
+enunciado:
+  texto: "Un polerón cuesta 20000 pesos. Su precio sube un 50% y luego, sobre ese nuevo valor, se aplica un 50% de descuento. ¿Cuál es su precio final?"
+  voz: "Un polerón de veinte mil pesos sube cincuenta por ciento y luego baja cincuenta. ¿Cuánto vale?"
+  destacar: ["20000 pesos", "sube un 50%", "50% de descuento"]
+
+datos:
+  - tex: 'P_0 = 20000\ \text{pesos}'
+    voz: "Parte en veinte mil pesos."
+
+pasos:
+  - nota: "Mito común"
+    tex: '20000 + 50\% - 50\% = 20000\ \text{pesos}'
+    voz: "El error es creer que volverá al mismo precio."
+    destacar: ['20000\ \text{pesos}']
+    emoji: "⚠️"
+    error: true   # error típico: se muestra tachado
+  - nota: "Sube 50%"
+    tex: 'P_1 = 20000 + 10000 = 30000\ \text{pesos}'
+    voz: "La mitad son diez mil. Sube a treinta mil pesos."
+    destacar: ['30000\ \text{pesos}']
+    emoji: "💡"
+  - nota: "Baja 50%"
+    tex: 'P_{\text{final}} = 30000 - 15000'
+    voz: "El descuento es sobre treinta mil, restamos quince mil."
+
+resultado:
+  tex: 'P_{\text{final}} = 15000\ \text{pesos}'
+  voz: "El precio final queda en quince mil pesos."
+  emoji: "✅"
+
+verificacion:
+  texto: "El 50% de 30000 es mayor que el 50% de 20000."
+  voz: "Restas más dinero porque la nueva base es mayor."
+
+reto:
+  texto: "¿Cuánto queda si el precio inicial era 10000 pesos?"
+  voz: "¿Cuánto queda si partía en diez mil pesos?"
+  emoji: "✍️"
