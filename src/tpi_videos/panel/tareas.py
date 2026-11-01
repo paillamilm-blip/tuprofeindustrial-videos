@@ -132,12 +132,26 @@ class Tareas:
                     tarea.registro.append(linea)
                     del tarea.registro[:-300]
 
-        await asyncio.gather(leer_salida(), leer_errores())
-        codigo = await tarea.proceso.wait()
-        if codigo != 0 and tarea.error is None and not tarea.cancelada:
-            final = "\n".join(tarea.registro[-6:])
-            tarea.error = {"mensaje": "El motor terminó con un error.", "ayuda": final or None}
-        return self._cerrar(tarea, al_cambiar)
+        try:
+            await asyncio.gather(leer_salida(), leer_errores())
+            codigo = await tarea.proceso.wait()
+            if codigo != 0 and tarea.error is None and not tarea.cancelada:
+                final = "\n".join(tarea.registro[-6:])
+                tarea.error = {"mensaje": "El motor terminó con un error.", "ayuda": final or None}
+        except asyncio.CancelledError:
+            tarea.cancelada = True
+            raise
+        except Exception as e:  # leer, «_aplicar» o el callback fallaron: el trabajo se cierra igual,
+            if tarea.error is None:  # si no, TAREAS.actual quedaría «en curso» para siempre y todo se tapa
+                tarea.error = {"mensaje": "El trabajo se cortó.", "ayuda": str(e)}
+        finally:
+            if tarea.proceso is not None and tarea.proceso.returncode is None:
+                try:
+                    os.killpg(tarea.proceso.pid, signal.SIGTERM)
+                except (ProcessLookupError, PermissionError):
+                    pass
+            self._cerrar(tarea, al_cambiar)
+        return tarea
 
     @staticmethod
     def _aplicar(tarea: Tarea, evento: dict[str, Any]) -> None:
@@ -176,7 +190,10 @@ class Tareas:
         if tarea.ok:
             tarea.avance, tarea.etapa = 1.0, "listo"
         if al_cambiar:
-            al_cambiar(tarea)
+            try:
+                al_cambiar(tarea)
+            except Exception:  # un callback roto no puede impedir cerrar el trabajo y liberar la fila
+                pass
         return tarea
 
     def cancelar(self) -> None:
@@ -190,28 +207,45 @@ class Tareas:
             pass
 
 
-async def consultar(args: list[str], segundos: float = 180) -> dict[str, Any]:
-    """Un comando rápido que no ocupa la fila de trabajos (ej. el diagnóstico): su resultado final."""
+async def consultar(
+    args: list[str],
+    segundos: float = 180,
+    al_evento: Callable[[dict[str, Any]], Any] | None = None,
+) -> dict[str, Any]:
+    """Un comando rápido que no ocupa la fila de trabajos (ej. el diagnóstico): su resultado final.
+
+    ``al_evento`` recibe cada aviso del motor *mientras sale*, no solo el final: así la pantalla puede
+    pintar el proceso en vivo en vez de dejar la pared quieta durante el viaje a la IA.
+    """
     proceso = await asyncio.create_subprocess_exec(
         sys.executable, "-m", "tpi_videos", args[0], "--progreso-json", *args[1:],
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
         env=dict(os.environ, PYTHONUNBUFFERED="1", NO_COLOR="1"), limit=4 * 1024 * 1024,
     )  # fmt: skip
-    try:
-        salida, _ = await asyncio.wait_for(proceso.communicate(), timeout=segundos)
-    except TimeoutError:
-        proceso.kill()
-        raise ErrorMotor("El comando tardó demasiado.") from None
     final: dict[str, Any] = {}
-    for linea in salida.decode("utf-8", errors="replace").splitlines():
-        try:
-            evento = json.loads(linea)
-        except json.JSONDecodeError:
-            continue
-        if evento.get("etapa") == "error":
-            raise ErrorMotor(evento.get("mensaje", "Error"), ayuda=evento.get("ayuda"))
-        if evento.get("etapa") == "resultado":
-            final = evento
+    try:
+        async with asyncio.timeout(segundos):
+            assert proceso.stdout is not None
+            async for crudo in proceso.stdout:
+                linea = crudo.decode("utf-8", errors="replace").strip()
+                if not linea:
+                    continue
+                try:
+                    evento = json.loads(linea)
+                except json.JSONDecodeError:
+                    continue
+                if evento.get("etapa") == "error":
+                    raise ErrorMotor(evento.get("mensaje", "Error"), ayuda=evento.get("ayuda"))
+                if evento.get("etapa") == "resultado":
+                    final = evento
+                if al_evento:
+                    al_evento(evento)
+            await proceso.wait()
+    except TimeoutError:
+        raise ErrorMotor("El comando tardó demasiado.") from None
+    finally:
+        if proceso.returncode is None:  # el aviso se fue antes de terminar: no dejamos un proceso suelto
+            proceso.kill()
     return final
 
 
