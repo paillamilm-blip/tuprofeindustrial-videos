@@ -408,10 +408,12 @@ class PaginaFabrica:
     def _fila_resultado(self, item: dict) -> None:
         ok = bool(item.get("ok"))
         pasado = ok and not item.get("promesa_incumplida")
+        lectura = float(item.get("lectura") or 0.0)
         etiqueta = " · ".join(
             str(texto)
             for texto in (
                 f"≈{item.get('duracion')} s" if ok and item.get("duracion") else "",
+                f"{lectura} s de lectura" if lectura > 0.05 else "",
                 nombre_molde(str(item.get("molde"))) if item.get("molde") else "",
                 ANGULOS.get(str(item.get("angulo")), ""),
                 DIFICULTADES.get(str(item.get("dificultad")), ""),

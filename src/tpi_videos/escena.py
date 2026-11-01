@@ -72,6 +72,7 @@ from .config import Marca
 from .errores import ErrorMotor
 from .guion import Bloque, Guion, sin_tildes
 from .rodaje import rodaje_de_guion
+from .revision import PISO_LECTURA, segundos_a_esperar
 from .voces import RESOLUCION, crear_servicio
 
 
@@ -383,6 +384,8 @@ class OpcionesEscena:
     # progreso(bloque_actual, total_bloques, seccion): para barras de progreso (panel)
     progreso: Callable[[int, int, str], None] | None = None
     solo_gancho: bool = False  # laboratorio de ganchos: cabecera + gancho, nada más
+    # Segundos que toda fórmula debe llevar completa y quieta antes de que entre el paso siguiente.
+    piso_lectura: float = PISO_LECTURA
 
 
 @dataclass
@@ -415,6 +418,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self.plumon = tema.animacion.titulos == "plumon"
         self.mayus = tema.tipografia.titulos.mayusculas
         self.bloques_voz: list[dict[str, Any]] = []
+        # Cuántos segundos esperó el piso de lectura en total: lo que el panel perdona de la promesa.
+        self.silencio_de_lectura = 0.0
         self._pendientes: list[Animation] = []  # transiciones para el próximo bloque de voz
         self._total_bloques = len(guion.textos_de_voz(marca.cierre.voz))
         # El molde decide las palabras; la receta de rodaje, cómo se filman esos pasos.
@@ -478,6 +483,17 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 "palabras": palabras or None,
             }
         )
+
+    def _da_lectura(self, desde: float) -> None:
+        """Estira el bloque hasta que la fórmula lleve su piso de segundos completa y quieta.
+
+        ``desde`` es el instante en que la fórmula dejó de moverse. Con el piso en 0 el video sale
+        exactamente como salía antes, que es lo que muestra el «cambiar» cuando se baja.
+        """
+        espera = segundos_a_esperar(self.op.piso_lectura, self.renderer.time - desde)
+        if espera > 1 / config.frame_rate:
+            self.silencio_de_lectura += espera
+            self.wait(espera)
 
     def hasta(self, tracker: Any, segundos: float) -> None:
         """Espera hasta ``segundos`` contados desde que empezó a hablar el bloque."""
@@ -828,6 +844,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 self.play(self._rebote(emoji))
             if formula is not None:
                 self.play(Write(formula), run_time=0.8)
+                quieto_desde = self.renderer.time
             for frase in destacar:
                 letras = c.frase_en_parrafo(p, frase)
                 t = self.momento(tr, frase)
@@ -836,6 +853,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     self.play(Indicate(letras, color=self.col.acento, scale_factor=1.18), run_time=0.5)
             if emoji is not None and self._restante(tr) > 1.0:
                 self.play(Wiggle(emoji, scale_value=1.08, rotation_angle=0.05 * TAU), run_time=0.8)
+            if formula is not None:
+                self._da_lectura(quieto_desde)
         salen = [m for m in (p, emoji, formula) if m is not None]
         self._pendientes.append(FadeOut(salen[0] if len(salen) == 1 else Group(*salen), shift=UP * 0.5))
 
@@ -1176,6 +1195,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 else:
                     aparecer += self._acercar_al_paso(eq)  # el golpe de cámara entra con la fórmula
                 self.play(*aparecer, run_time=float(np.clip(tr.duration * 0.45, 0.8, 1.6)))
+                quieto_desde = self.renderer.time  # desde acá la fórmula ya está completa en pantalla
                 if paso.visual is not None:
                     dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
 
@@ -1203,11 +1223,13 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     ):
                         self._primer_plano_de(marcos)
                         hizo_toma = True
+                    quieto_desde = self.renderer.time  # el recuadro y el acercamiento movieron el cuadro
 
                 if paso.error:
                     self.hasta(tr, tr.duration * 0.45)
                     cruz = c.tachado(eq, self.col.error)
                     self.play(Create(cruz), run_time=0.45)
+                    quieto_desde = self.renderer.time
                     if not hizo_toma:
                         # La fórmula y su ✗ tiemblan juntas (mismo centro, mismo movimiento).
                         # Si la cámara ya entró al término, ese empujón fue el énfasis y sobra el temblor.
@@ -1216,6 +1238,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                         if emoji is not None:
                             animaciones.append(self._rebote(emoji))
                         self.play(*animaciones, run_time=0.7)
+                        quieto_desde = self.renderer.time
                     linea_nueva.mobs.append(cruz)
                     if errores_total:
                         errores_vistos += 1
@@ -1225,6 +1248,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     if emoji is not None:
                         self.play(self._rebote(emoji))
 
+                if paso.tex:
+                    self._da_lectura(quieto_desde)  # sin esto la fórmula se va antes de terminarla de leer
                 if paso.error and receta.error == "sale" and not mitades:
                     # Un error ya mostrado y tachado no tiene por qué seguir estorbando el video. En
                     # las dos mitades el mito se queda: sin él a la vista no hay con qué comparar.
@@ -1326,12 +1351,14 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             if barra is not None:
                 self.hasta(tr, momento_del_destape(tr.duration))
                 self.play(FadeOut(barra, shift=UP * 0.55), run_time=0.45)
+            quieto_desde = self.renderer.time  # destapado y sin movimiento: acá empieza a leerse
             self.play(
                 Circumscribe(VGroup(caja, eq), color=self.col.acento, fade_out=True, time_width=0.5),
                 run_time=1.0,
             )
             if emoji is not None:
                 self.play(self._rebote(emoji))
+            self._da_lectura(quieto_desde)
         # Sin emoji, el mismo grupo vectorial de siempre (idéntico al estilo original)
         self.bloque_resultado = VGroup(cabeza, caja, eq) if emoji is None else Group(cabeza, caja, eq, emoji)
 
@@ -1442,6 +1469,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             "alto": config.pixel_height,
             "fps": config.frame_rate,
             "bloques": self.bloques_voz,
+            "silencio_de_lectura": round(float(self.silencio_de_lectura), 2),
         }
         self.op.linea_de_tiempo.parent.mkdir(parents=True, exist_ok=True)
         self.op.linea_de_tiempo.write_text(json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8")

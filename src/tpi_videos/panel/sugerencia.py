@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from ..formatos import (
     FORMATO_POR_DEFECTO,
@@ -19,6 +20,8 @@ from ..formatos import (
     puntuar_idea,
 )
 from ..moldes import MOLDES, nombre_molde, normalizar_molde
+from ..redactor import TECHO_DE_LECTURA
+from ..revision import PISO_LECTURA, coma
 from ..rodaje import QUE_HACE, RECETA_LIBRE, Receta, rodaje_para
 from ..temas import listar_temas
 
@@ -29,6 +32,7 @@ ETIQUETAS = {
     "tema": "Estilo",
     "voz": "Voz",
     "segundos": "Duración",
+    "lectura": "Lectura",
     "gancho": "Gancho",
     "rodaje": "Rodaje",
 }
@@ -37,6 +41,7 @@ BANDERAS = {  # cada pieza con la bandera real de `tpi producir`
     "tema": "--estilo",
     "voz": "--voz",
     "segundos": "--segundos",
+    "lectura": "--piso-lectura",
     "gancho": "--gancho",
 }
 LIBRE = RECETA_LIBRE  # la receta de los videos que no llevan molde
@@ -99,6 +104,8 @@ def opciones(clave: str) -> dict[str, str]:
         return {ident: tema.nombre for ident, tema, _propio in listar_temas()}
     if clave == "segundos":
         return {str(n): f"≈{n} s" for n in (30, 40, 50, 60, 70)}
+    if clave == "lectura":
+        return {"0": "Como hoy (sin piso)", "2": "2 s", "2.5": "2,5 s", "3": "3 s"}
     return {}
 
 
@@ -124,6 +131,7 @@ def armar(
         _una_tema(la_familia, cambios, preferencias),
         _una_voz(cambios, preferencias),
         _una_duracion(cambios, propuesta),
+        _una_lectura(cambios),
         _un_gancho(cambios, propuesta),
         _un_rodaje(el_molde.codigo),
     )
@@ -208,17 +216,46 @@ def _una_voz(cambios: dict[str, str], pref: Preferencias) -> Pieza:
 
 def _una_duracion(cambios: dict[str, str], propuesta: dict) -> Pieza:
     if "segundos" in cambios:
-        codigo, razon, tocada = (cambios["segundos"] or None), "Cambiado por ti.", True
+        codigo, razon, tocada = (
+            cambios["segundos"] or None,
+            "Cambiado por ti. Las fórmulas suman su lectura aparte.",
+            True,
+        )
     elif propuesta.get("segundos"):
-        codigo, razon, tocada = str(propuesta["segundos"]), "Lo prometió la idea.", False
+        codigo = str(propuesta["segundos"])
+        razon = f"Lo prometió la idea: las fórmulas suman hasta {TECHO_DE_LECTURA:g} s de lectura aparte."
+        tocada = False
     else:
-        codigo, razon, tocada = None, "La IA decide el largo (entre 30 y 75 s).", False
+        codigo, razon, tocada = None, "La IA decide el largo (entre 30 y 75 s); la lectura va aparte.", False
     return Pieza(
         clave="segundos",
         etiqueta=ETIQUETAS["segundos"],
         valor=f"≈{codigo} s" if codigo else "lo decide la IA",
         codigo=codigo,
         razon=razon,
+        tocada=tocada,
+    )
+
+
+def _una_lectura(cambios: dict[str, str]) -> Pieza:
+    """El piso de lectura: los segundos que toda fórmula queda quieta en pantalla. Es elegible, no una orden."""
+    tocada = "lectura" in cambios
+    codigo = cambios.get("lectura") or f"{PISO_LECTURA:g}"
+    valor = (
+        "sin piso: el ritmo de hoy"
+        if float(codigo) <= 0
+        else f"{float(codigo):.1f} s quietos por fórmula".replace(".", ",")
+    )
+    return Pieza(
+        clave="lectura",
+        etiqueta=ETIQUETAS["lectura"],
+        valor=valor,
+        codigo=codigo,
+        razon=(
+            "Cambiado por ti."
+            if tocada
+            else "El render lo calcula con el guion: ninguna fórmula se va antes de poder leerse."
+        ),
         tocada=tocada,
     )
 
@@ -250,6 +287,15 @@ def _un_rodaje(molde: str | None) -> Pieza:
         razon="Se cambia en Ajustes → Rodaje, no viaja al crear.",
         destino="/ajustes",
     )
+
+
+def clause_lectura(lectura: float) -> str:
+    """El pedazo de frase que dice cuántos segundos del video fueron de lectura, no de contenido.
+
+    Se muestra al lado de la promesa para que el «se pasó de lo prometido» no le cargue al motor el
+    silencio que él mismo garantizó. Con el piso en 0 (o sin fórmulas que esperar) no sale nada.
+    """
+    return f" · {coma(lectura)} s fueron de lectura" if lectura > 0.05 else ""
 
 
 def anotaciones(receta: Receta) -> tuple[str, ...]:
@@ -297,6 +343,31 @@ def variantes_seleccionadas(ideas: list[dict], marcas: list[bool]) -> list[dict]
 def args_compilacion(ideas: list[dict]) -> list[str]:
     """El comando que produce varias variantes de una: el mismo `tpi lote --ideas-json` de Fábrica."""
     return ["lote", "--ideas-json", _json(ideas)]
+
+
+def nombre_compilacion(cantidad: int) -> str:
+    """El nombre del trabajo, con su singular: «Compilar 1 variantes» se lee mal en el encabezado."""
+    return f"Compilar {cantidad} variante{'s' if cantidad != 1 else ''}"
+
+
+def dividir_variantes(items: list[dict]) -> dict[str, list[dict]]:
+    """Las variantes de un lote, separadas por lo que hay de verdad en el disco.
+
+    ``listas`` sólo pide el MP4 existente: un ítem «ok» sin archivo no es algo que se pueda reproducir.
+    ``esperando`` son las que quedaron a la espera de la IA (el motor las retoma solo), no un fallo.
+    """
+    listas: list[dict] = []
+    esperando: list[dict] = []
+    fallas: list[dict] = []
+    for item in items:
+        video = str(item.get("video") or "")
+        if item.get("ok") and video and Path(video).exists():
+            listas.append(item)
+        elif item.get("pendiente"):
+            esperando.append(item)
+        else:
+            fallas.append(item)
+    return {"listas": listas, "esperando": esperando, "fallas": fallas}
 
 
 def _json(datos) -> str:

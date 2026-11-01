@@ -8,7 +8,7 @@ resuelto paso a paso, unidades en el resultado, práctica de recuperación con u
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .guion import Guion
 from .visuales import analizar_circuito
@@ -18,6 +18,15 @@ from .visuales import analizar_circuito
 CARACTERES_POR_SEGUNDO = 15.0
 PAUSA_POR_BLOQUE = 0.35
 SEGUNDOS_ANIMACION_EXTRA = 2.0  # transiciones que ocurren fuera de la voz
+
+# Cuánto queda una fórmula completa y quieta con la voz que tenemos. Los tres números salen del render:
+# escena.py escribe la fórmula durante ~45 % del bloque (entre 0,8 y 1,6 s) y saca la línea anterior con
+# un fundido de 0,45 s. Verificado contra la línea de tiempo real de «El error al despejar x al cuadrado».
+FRACCION_DE_ESCRITURA = 0.45
+ESCRITURA_MIN = 0.8
+ESCRITURA_MAX = 1.6
+SALIDA_DE_LA_LINEA = 0.45
+PISO_LECTURA = 2.5  # s que toda fórmula debe quedar quieta para poder leerse en el celular
 
 _INICIOS_DEBILES = ("hola", "en este video", "hoy vamos", "hoy veremos", "bienvenid", "en el video de hoy")
 _SIMBOLOS_PROBLEMATICOS = {
@@ -54,6 +63,7 @@ class Revision:
     palabras: int
     bloques: int
     avisos: list[Aviso]
+    estirados: list[tuple[str, float]] = field(default_factory=list)  # (sección, segundos que le faltan)
 
 
 def _frases(texto: str) -> list[str]:
@@ -255,6 +265,19 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
                 )
 
     # Estilo, emojis y error típico
+    con_formula = _bloques_con_formula(guion)
+    estirados = _estirados_de_lectura(voces, con_formula, PISO_LECTURA)
+    if estirados:
+        avisos.append(
+            Aviso(
+                "sugerencia",
+                "lectura",
+                f"{len(estirados)} bloques necesitan más tiempo de lectura "
+                f"(piso {coma(PISO_LECTURA)} s): +{coma(sum(f for _, f in estirados))} s. "
+                "El render los estira solo; se cambia con --piso-lectura.",
+            )
+        )
+
     from .emojis import PATRON_EMOJI, es_valido
     from .guion import emojis_del_guion
     from .temas import existe_tema
@@ -289,8 +312,82 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
         avisos.append(Aviso("advertencia", "molde", problema))
 
     return Revision(
-        segundos=segundos, palabras=palabras, bloques=len(voces), avisos=avisos + _avisos_de_visuales(guion)
+        segundos=segundos,
+        palabras=palabras,
+        bloques=len(voces),
+        avisos=avisos + _avisos_de_visuales(guion),
+        estirados=estirados,
     )
+
+
+@dataclass
+class Ritmo:
+    """Lo que dura el video con la voz sola, y lo que necesita para que sus fórmulas se puedan leer."""
+
+    base: float
+    segundos: float
+    piso: float
+    estirados: list[tuple[str, float]]  # (sección, segundos que le faltan a esa fórmula)
+
+    @property
+    def motivo(self) -> str:
+        """La línea que el panel muestra bajo el número: de dónde sale y qué se puede cambiar."""
+        if not self.estirados:
+            return f"la voz sola ya deja cada fórmula quieta {coma(self.piso)} s."
+        return (
+            f"{len(self.estirados)} bloques necesitan más tiempo de lectura "
+            f"(piso {coma(self.piso)} s): +{coma(self.segundos - self.base)} s."
+        )
+
+
+def coma(valor: float) -> str:
+    return f"{valor:.1f}".replace(".", ",")
+
+
+def _quieto_estimado(segundos_de_voz: float) -> float:
+    """Cuánto queda la fórmula ya escrita y sin moverse, con la voz que tiene ese bloque."""
+    escritura = min(ESCRITURA_MAX, max(ESCRITURA_MIN, segundos_de_voz * FRACCION_DE_ESCRITURA))
+    return max(0.0, segundos_de_voz - escritura - SALIDA_DE_LA_LINEA)
+
+
+def segundos_a_esperar(piso: float, quieto: float) -> float:
+    """Cuánto hay que estirar un bloque para que su fórmula lleve ``piso`` segundos completa y quieta."""
+    return max(0.0, piso - quieto)
+
+
+def _bloques_con_formula(guion: Guion) -> set[str]:
+    """Las secciones que muestran una fórmula en pantalla; ahí es donde hay que leer, no oír."""
+    secciones = {"gancho"} if guion.gancho.tex else set()
+    secciones |= {f"dato {i}" for i, d in enumerate(guion.datos, 1) if d.tex}
+    secciones |= {f"paso {i}" for i, p in enumerate(guion.pasos, 1) if p.tex}
+    return secciones | {"resultado"}
+
+
+def _estirados_de_lectura(
+    voces: list[tuple[str, str]], con_formula: set[str], piso: float
+) -> list[tuple[str, float]]:
+    """(sección, segundos que faltan) por cada bloque con fórmula que no llega al piso de lectura."""
+    estirados = []
+    for seccion, voz in voces:
+        if seccion not in con_formula:
+            continue
+        falta = round(segundos_a_esperar(piso, _quieto_estimado(estimar_segundos(voz))), 2)
+        if falta > 0:
+            estirados.append((seccion, falta))
+    return estirados
+
+
+def necesita_segundos(guion: Guion, cierre_por_defecto: str, piso: float = PISO_LECTURA) -> Ritmo:
+    """El objetivo de duración que pide el guion: la voz, más lo que falta para leer cada fórmula.
+
+    No es una promesa escrita a mano: se deduce de los pasos que hay. Si el piso es 0 sale el video tal
+    como se graba hoy, que es lo que muestra el «cambiar» cuando lo baja.
+    """
+    base = revisar(guion, cierre_por_defecto).segundos
+    estirados = _estirados_de_lectura(
+        guion.textos_de_voz(cierre_por_defecto), _bloques_con_formula(guion), piso
+    )
+    return Ritmo(base=base, segundos=base + sum(f for _, f in estirados), piso=piso, estirados=estirados)
 
 
 def _textos_visibles(guion: Guion) -> list[tuple[str, str]]:

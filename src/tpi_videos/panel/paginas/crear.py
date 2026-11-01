@@ -20,7 +20,7 @@ from ...ideas import ANGULOS
 from ...moldes import nombre_molde
 from ...revision import Revision
 from ...temas import listar_temas
-from .. import biblioteca, formatos_ui
+from .. import biblioteca, formatos_ui, sugerencia
 from ..comun import PIEL, abrir_en_mac, titulo_seccion, url_medio
 from ..editor import EditorGuion
 from ..tareas import TAREAS, Tarea
@@ -677,6 +677,7 @@ class PaginaCrear:
                             ui.label(
                                 f"Prometido en la idea: ≈{promesa} s · el video duró "
                                 f"{resultado.get('duracion', 0)} s"
+                                f"{sugerencia.clause_lectura(float(resultado.get('lectura') or 0.0))}"
                             ).classes("tpi-ayuda")
                         for pendiente in resultado.get("pendientes") or []:
                             ui.label(f"⚠️ Por revisar: {pendiente}").classes("text-sm").style(

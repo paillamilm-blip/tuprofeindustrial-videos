@@ -36,6 +36,7 @@ def _resultado(raiz: Path) -> SimpleNamespace:
         portada=None,
         publicacion=None,
         duracion=42.0,
+        lectura=9.6,
         redaccion=SimpleNamespace(pendientes=[]),
     )
 
@@ -153,6 +154,21 @@ class LoteColaTest(unittest.TestCase):
         self.assertEqual(fases[-1], "kit")
         avances = [evento["video_avance"] for evento in eventos]
         self.assertEqual(avances, sorted(avances))
+
+    def test_el_piso_de_lectura_viaja_a_cada_video(self) -> None:
+        lote_id, ideas = self._lote()
+        pisos: list[object] = []
+
+        def producir_falso(enunciado, **kwargs):
+            pisos.append(kwargs.get("piso"))
+            return _resultado(self.raiz)
+
+        with patch("tpi_videos.lote.producir", side_effect=producir_falso):
+            items = producir_lote(ideas[:1], cola_id=lote_id, piso=2.5)
+
+        self.assertTrue(items[0].ok, items[0].error)
+        self.assertEqual(pisos, [2.5])
+        self.assertEqual(items[0].lectura, 9.6, "el item del lote lleva los segundos que esperó el render")
 
     def test_si_la_cola_no_se_puede_escribir_el_video_sigue(self) -> None:
         lote_id, ideas = self._lote()

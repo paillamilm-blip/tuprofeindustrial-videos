@@ -5,11 +5,21 @@ comando que sale de ahí. Cada pieza mostrada tiene que existir como bandera de 
 cada razón tiene que decir de dónde vino el valor.
 """
 
+import tempfile
 import unittest
+from pathlib import Path
 
 from tpi_videos.formatos import formato
 from tpi_videos.moldes import MOLDES
-from tpi_videos.panel.sugerencia import BANDERAS, Preferencias, anotaciones, armar, opciones
+from tpi_videos.panel.sugerencia import (
+    BANDERAS,
+    Preferencias,
+    anotaciones,
+    armar,
+    dividir_variantes,
+    nombre_compilacion,
+    opciones,
+)
 from tpi_videos.rodaje import RECETA_LIBRE, rodaje_para
 
 PREF = Preferencias(tema="hoja_de_desarrollo", voz="es-CL-LorenzoNeural", voces={"es-CL-LorenzoNeural": "Lorenzo (Chile)"})
@@ -26,7 +36,7 @@ class SugerenciaTest(unittest.TestCase):
         s = armar(SIN_IDEA, {}, PREF)
         self.assertEqual(s.bloqueada(), "Escribe el tema o pega el enunciado.")
         self.assertEqual(
-            claves(s), {"familia", "molde", "tema", "voz", "segundos", "gancho", "rodaje"}
+            claves(s), {"familia", "molde", "tema", "voz", "segundos", "lectura", "gancho", "rodaje"}
         )
 
     def test_la_frase_delata_la_familia_y_lo_dice(self):
@@ -68,6 +78,13 @@ class SugerenciaTest(unittest.TestCase):
         self.assertEqual(s.pieza("molde").razon, "Lo trajo la idea que elegiste.")
         self.assertEqual(s.pieza("gancho").valor, "«¿Adivinaste?»")
         self.assertEqual(s.pieza("segundos").valor, "≈42 s")
+
+    def test_la_promesa_de_duracion_dice_lo_que_va_aparte(self):
+        """El ≈42 s de la tarjeta es la voz: quien elige tiene que saber que la lectura se suma."""
+        s = armar("porcentajes", {}, PREF, {"segundos": 42, "titulo": "El dato"})
+        self.assertIn("hasta 12 s de lectura", s.pieza("segundos").razon)
+        s_ia = armar("porcentajes", {}, PREF)
+        self.assertIn("lectura", s_ia.pieza("segundos").razon)
 
     def test_el_gancho_escrito_por_vas_reemplaza_al_de_la_idea(self):
         propuesta = {"gancho": "¿Adivinaste?", "gancho_elegido": {"texto": "¿Adivinaste?"}}
@@ -134,13 +151,64 @@ class PiezasTest(unittest.TestCase):
         self.assertIn("pizarra_nocturna", opciones("tema"))
 
     def test_solo_se_muestran_las_banderas_reales(self):
-        self.assertEqual(set(BANDERAS), {"molde", "tema", "voz", "segundos", "gancho"})
+        self.assertEqual(set(BANDERAS), {"molde", "tema", "voz", "segundos", "lectura", "gancho"})
+
+    def test_el_piso_de_lectura_viaja_aunque_no_se_toque(self):
+        """Lo que muestra la tarjeta y lo que recibe el motor tienen que ser el mismo comando."""
+        from tpi_videos.revision import PISO_LECTURA
+
+        s = armar("porcentajes", {}, PREF)
+        args = list(s.args)
+        self.assertEqual(args[args.index("--piso-lectura") + 1], f"{PISO_LECTURA:g}")
+
+    def test_la_lectura_muestra_su_valor_aunque_nadie_la_toque(self) -> None:
+        """El piso de lectura no es un secreto del motor: se ve, y trae su bandera real."""
+        s = armar("porcentajes", {}, PREF)
+        lectura = s.pieza("lectura")
+        self.assertIsNotNone(lectura)
+        self.assertFalse(lectura.tocada)
+        self.assertIn("--piso-lectura", list(s.args))
+
+    def test_el_piso_bajado_a_cero_viaja_en_el_comando(self) -> None:
+        """«Como hoy» es una opción de verdad: el 0 tiene que llegar al motor, no perderse."""
+        s = armar("porcentajes", {"lectura": "0"}, PREF)
+        args = list(s.args)
+        self.assertEqual(args[args.index("--piso-lectura") + 1], "0")
+        self.assertTrue(s.pieza("lectura").tocada)
+
+    def test_las_opciones_de_lectura_son_seconds_elegibles(self) -> None:
+        self.assertEqual(set(opciones("lectura")), {"0", "2", "2.5", "3"})
 
     def test_anotaciones_de_la_receta_libre(self):
         """La portada de la pantalla escribe cuatro cosas, todas salidas de la receta."""
         textos = anotaciones(rodaje_para(RECETA_LIBRE))
         self.assertEqual(len(textos), 4)
         self.assertTrue(all(t for t in textos))
+
+
+class CompilarTest(unittest.TestCase):
+    """Lo que la pestaña pinta cuando se compilaron varias variantes de una."""
+
+    def test_una_variante_se_nombra_en_singular(self) -> None:
+        self.assertEqual(nombre_compilacion(1), "Compilar 1 variante")
+        self.assertEqual(nombre_compilacion(3), "Compilar 3 variantes")
+
+    def test_solo_es_lista_si_el_mp4_existe(self) -> None:
+        with tempfile.TemporaryDirectory() as caja:
+            video = Path(caja) / "uno.mp4"
+            video.write_bytes(b"mp4")
+            partidos = dividir_variantes(
+                [
+                    {"titulo": "con archivo", "ok": True, "video": str(video)},
+                    {"titulo": "dice ok pero no está", "ok": True, "video": str(Path(caja) / "roto.mp4")},
+                    {"titulo": "esperando a la IA", "ok": False, "pendiente": True},
+                    {"titulo": "falló", "ok": False, "error": "no cerró la animación"},
+                ]
+            )
+
+        self.assertEqual([i["titulo"] for i in partidos["listas"]], ["con archivo"])
+        self.assertEqual([i["titulo"] for i in partidos["esperando"]], ["esperando a la IA"])
+        self.assertEqual([i["titulo"] for i in partidos["fallas"]], ["dice ok pero no está", "falló"])
 
 
 if __name__ == "__main__":
