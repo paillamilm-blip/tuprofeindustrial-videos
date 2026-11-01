@@ -186,6 +186,40 @@ class PiezasTest(unittest.TestCase):
         self.assertTrue(all(t for t in textos))
 
 
+class EstiloPorMoldeTest(unittest.TestCase):
+    """El estilo visual también se recomienda: cada molde se ve mejor en un tema distinto."""
+
+    def test_un_reto_se_recomienda_en_neon(self) -> None:
+        s = armar("apotema de un hexágono", {}, PREF, {"molde": "reto", "titulo": "El reto"})
+        estilo = s.pieza("tema")
+        self.assertEqual(estilo.codigo, "neon_reja")
+        self.assertFalse(estilo.tocada)
+        self.assertIn("reto", estilo.razon.lower())
+
+    def test_los_cinco_moldes_tienen_estilo_y_ninguno_se_repite(self) -> None:
+        """Las 3 ideas de un lote traen moldes distintos: los estilos salen distintos solos."""
+        codigos = {
+            armar("porcentajes", {}, PREF, {"molde": clave, "titulo": "La idea"}).pieza("tema").codigo
+            for clave in MOLDES
+        }
+        self.assertEqual(len(codigos), len(MOLDES))
+        from tpi_videos.temas import listar_temas
+
+        validos = {ident for ident, _tema, _propio in listar_temas()}
+        self.assertTrue(codigos <= validos, "no puedo recomendar un estilo que el motor no tiene")
+
+    def test_su_cambio_le_gana_al_molde(self) -> None:
+        s = armar("porcentajes", {"tema": "pizarra_nocturna"}, PREF, {"molde": "reto", "titulo": "La idea"})
+        self.assertEqual(s.pieza("tema").codigo, "pizarra_nocturna")
+        self.assertTrue(s.pieza("tema").tocada)
+
+    def test_sin_molde_no_inventa_un_estilo(self) -> None:
+        """Sin familia y sin molde la tarjeta sigue diciendo «tu estilo de siempre»: nada bloqueado."""
+        s = armar("una frase que no delata nada", {}, PREF)
+        self.assertEqual(s.pieza("tema").codigo, PREF.tema)
+        self.assertEqual(s.pieza("tema").razon, "Tu estilo de siempre (Ajustes).")
+
+
 class CompilarTest(unittest.TestCase):
     """Lo que la pestaña pinta cuando se compilaron varias variantes de una."""
 

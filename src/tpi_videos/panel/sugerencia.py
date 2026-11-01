@@ -48,6 +48,23 @@ LIBRE = RECETA_LIBRE  # la receta de los videos que no llevan molde
 # Los cuatro mandos que se ven en la pantalla; los otros cuatro sólo cambian una letra del guion.
 MANDOS_VISTOS = (("gancho", "La apertura"), ("pasos", "Los pasos"), ("deriva", "El cuadro"), ("partida", "El tablero"))
 
+# El molde también decide cómo se ve el video: cada uno tiene su tema. Coincide con el estilo que ya
+# traían las familias, así que la recomendación funciona incluso cuando la frase no delató ninguna.
+TEMA_POR_MOLDE = {
+    "reto": "neon_reja",
+    "mito_realidad": "vineta_cine",
+    "tres_errores": "rotulador",
+    "pov": "kraft_tiza",
+    "nadie_te_enseno": "plano_azul",
+}
+MOTIVO_POR_MOLDE = {
+    "reto": "Un reto pide neón: se lee como desafío.",
+    "mito_realidad": "El contraste mito/realidad funciona en cine.",
+    "tres_errores": "Tres errores seguidos se siguen mejor en papel.",
+    "pov": "Un POV se siente en cuaderno, no en pantalla.",
+    "nadie_te_enseno": "El dato sorpresa va en plano azul.",
+}
+
 
 @dataclass(frozen=True)
 class Preferencias:
@@ -128,7 +145,7 @@ def armar(
     piezas = (
         _una_familia(la_familia, toco_familia, idea),
         el_molde,
-        _una_tema(la_familia, cambios, preferencias),
+        _una_tema(la_familia, cambios, preferencias, el_molde.codigo),
         _una_voz(cambios, preferencias),
         _una_duracion(cambios, propuesta),
         _una_lectura(cambios),
@@ -192,9 +209,11 @@ def _una_molde(la_familia, cambios: dict[str, str], propuesta: dict) -> Pieza:
     return Pieza("molde", ETIQUETAS["molde"], nombre_molde(codigo), codigo, razon, tocada)
 
 
-def _una_tema(la_familia, cambios: dict[str, str], pref: Preferencias) -> Pieza:
+def _una_tema(la_familia, cambios: dict[str, str], pref: Preferencias, molde: str | None = None) -> Pieza:
     if "tema" in cambios:
         codigo, razon, tocada = (cambios["tema"] or pref.tema), "Cambiado por ti.", True
+    elif molde and molde in TEMA_POR_MOLDE:
+        codigo, razon, tocada = TEMA_POR_MOLDE[molde], MOTIVO_POR_MOLDE[molde], False
     elif la_familia:
         codigo, razon, tocada = la_familia.tema, f"El estilo de {la_familia.nombre}.", False
     else:
