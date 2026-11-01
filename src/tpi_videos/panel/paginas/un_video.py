@@ -22,7 +22,7 @@ from ...errores import ErrorMotor
 from .. import formatos_ui, sugerencia
 from ..comun import PIEL, abrir_en_mac, url_medio
 from ..miniaturas import dibujar_miniatura
-from ..tareas import TAREAS, Tarea
+from ..tareas import TAREAS, Tarea, consultar
 from .ajustes import VOCES
 from .crear import ETAPAS, ETAPA_PASO, TEMAS_SUGERIDOS
 from .videos import abrir_kit
@@ -42,6 +42,15 @@ ICONO_PIEZA = {
 _VOCES = {clave: re.sub(r"^[^\w]*", "", nombre) for clave, nombre in VOCES.items()}
 # Las ideas de la IA que la tarjeta lee para dejar de ser un secreto
 CAMPOS_IDEA = ("materia", "nivel", "titulo", "gancho", "gancho_elegido", "ganchos", "molde", "segundos")
+# Lo que de verdad ocurre al pedir ideas, en el orden en que lo avisa el motor. No hay porcentajes
+# intermedios que mostrar: `tpi ideas` sólo avisa al salir y al volver, así que la barra mide el tiempo.
+PASOS_IDEAS = (
+    "Tu tema viaja a Gemini",
+    "La IA está escribiendo las 3 ideas",
+    "Las ideas llegan a la pantalla",
+)
+_VENTANA_IDEAS = 90.0  # s: lo que suele tardar un viaje a Gemini (llena la barra hasta el 92 %)
+_TICK_IDEAS = 0.5
 
 
 def _propuesta(idea: dict) -> dict:
@@ -60,6 +69,8 @@ class PaginaUnVideo:
         self._miniatura: dict[tuple, Path] = {}  # manim no se repite dos veces en la misma pantalla
         self._variantes: list[dict] = []  # las 3 ideas de la IA, tales como viajaron
         self.marcas: list[bool] = []  # cuáles quiere producir: la opción B
+        self._paso_ideas = 0  # en qué proceso va el pedido de ideas (0 = aún no pedido)
+        self._segundos_ideas = 0.0  # los segundos reales que lleva esperando
 
     # ── el armazón ──────────────────────────────────────────────────────────────────────
 
@@ -136,8 +147,13 @@ class PaginaUnVideo:
                     "Pedir 3 ideas a la IA", icon="lightbulb", on_click=self._buscar_ideas
                 ).props("outline no-caps")
                 self.estado_ideas = ui.label("").classes("tpi-ayuda")
-            self.barra_ideas = ui.linear_progress(show_value=False).props("indeterminate").classes("w-full")
+            self.barra_ideas = ui.linear_progress(value=0, show_value=False).classes("w-full")
             self.barra_ideas.set_visibility(False)
+            self.pasos_ideas = ui.column().classes("w-full gap-1")
+            self.pasos_ideas.set_visibility(False)
+            # Un reloj que anda mientras dura el viaje a la IA: la barra y los segundos se ven mover
+            # aunque el motor sólo avise al salir y al volver (fuera de la pantalla no hay más datos).
+            self._reloj_ideas = ui.timer(_TICK_IDEAS, self._tic_ideas, active=False, immediate=False)
             self.tarjetas_ideas = ui.column().classes("w-full gap-2")
             self._lugar_comun(self.tarjetas_ideas)
             with ui.row().classes("w-full items-center gap-3 no-wrap") as self.barra_variantes:
@@ -165,29 +181,67 @@ class PaginaUnVideo:
         if not texto:
             ui.notify("Escribe un tema primero (ej. «Porcentajes»).", type="warning")
             return
-        if TAREAS.ocupado():
-            ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
-            return
         self.boton_ideas.disable()
-        self.barra_ideas.set_visibility(True)
         self.tarjetas_ideas.clear()  # las ideas anteriores ya valieron: la pared nueva las pinta encima
         self._variantes, self.marcas = [], []
         self.barra_variantes.set_visibility(False)
         self._lugar_comun(self.tarjetas_ideas)
-        self.estado_ideas.text = "La IA está pensando 3 ideas…"
-        tarea = await TAREAS.ejecutar("Buscando ideas", ["ideas", "--", texto])
-        self.boton_ideas.enable()
-        self.barra_ideas.set_visibility(False)
-        self.estado_ideas.text = ""
-        if not tarea.ok:
-            if not tarea.cancelada:
-                self._avisar_error(tarea)
+        self._paso_ideas, self._segundos_ideas = 0, 0.0
+        self.barra_ideas.value = 0.0
+        self.barra_ideas.set_visibility(True)
+        self.pasos_ideas.set_visibility(True)
+        self._pintar_pasos()
+        self.estado_ideas.text = "0 s"
+        self._reloj_ideas.activate()
+        # Pedir ideas es un viaje a la IA (red, sin LaTeX ni FFmpeg): corre fuera de la fila de TAREAS,
+        # así que un video grabándose o una vista previa nunca tapan este botón.
+        error: str | None = None
+        try:
+            resultado = await consultar(["ideas", "--", texto], segundos=150, al_evento=self._al_aviso_ia)
+        except ErrorMotor as e:
+            resultado, error = {}, str(e)
+        finally:
+            self._reloj_ideas.deactivate()
+            self.boton_ideas.enable()
+            self.barra_ideas.set_visibility(False)
+            self.pasos_ideas.set_visibility(False)
+            self.estado_ideas.text = ""
+        if error is not None:
+            ui.notify(error, type="negative", multi_line=True)
             return
-        ideas = list(tarea.resultado.get("ideas") or [])
+        ideas = list(resultado.get("ideas") or [])
         if not ideas:
             ui.notify("La IA no trajo ideas: prueba con un tema más concreto.", type="warning")
             return
         self._mostrar_ideas(ideas)
+
+    def _al_aviso_ia(self, evento: dict) -> None:
+        """El motor avisó algo: se pinta el proceso en el que estamos, con sus palabras."""
+        if evento.get("etapa") == "resultado":
+            self._paso_ideas = len(PASOS_IDEAS)
+        elif self._paso_ideas < 1:
+            self._paso_ideas = 1  # ya salió el pedido de la computadora: está escribiendo la IA
+        self._pintar_pasos(str(evento.get("detalle") or ""))
+
+    def _tic_ideas(self) -> None:
+        self._segundos_ideas += _TICK_IDEAS
+        self.barra_ideas.value = min(self._segundos_ideas / _VENTANA_IDEAS, 0.92)
+        self.estado_ideas.text = f"{round(self._segundos_ideas)} s"
+
+    def _pintar_pasos(self, aviso: str = "") -> None:
+        """Los procesos del pedido: lo hecho con tilde, lo que anda con reloj, lo que falta con círculo.
+
+        Nunca sólo el color: cada línea lleva su icono y su texto, se lee igual en escala de grises.
+        """
+        self.pasos_ideas.clear()
+        with self.pasos_ideas:
+            for puesto, nombre in enumerate(PASOS_IDEAS):
+                if puesto < self._paso_ideas:
+                    self._nota("task_alt", PIEL["exito"], nombre)
+                elif puesto == self._paso_ideas:
+                    self._nota("hourglass_top", PIEL["marca"], aviso if aviso else f"{nombre}…")
+                else:
+                    self._nota("radio_button_unchecked", PIEL["gris"], nombre)
 
     def _mostrar_ideas(self, ideas: list[dict]) -> None:
         self.tarjetas_ideas.clear()
@@ -438,10 +492,6 @@ class PaginaUnVideo:
             with ui.row().classes("gap-3 items-center"):
                 ui.button("Volver a intentar", icon="refresh", on_click=self._arrancar).props("outline no-caps")
                 ui.link("Revisar Ajustes", "/ajustes").classes("font-bold")
-
-    def _avisar_error(self, t: Tarea) -> None:
-        error = t.error or {}
-        ui.notify(f"{error.get('mensaje', 'No salió.')} {error.get('ayuda') or ''}".strip(), type="negative")
 
     def _nota(self, icono: str, color: str, texto: str) -> None:
         """Un aviso con su icono y su color, nunca solo con el color (se lee igual en escala de grises)."""
