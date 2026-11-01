@@ -88,7 +88,7 @@ class Fondo(_Base):
 class Hoja(_Base):
     """La hoja cuadriculada del marco "hoja" (textos vacíos = no se muestran)."""
 
-    encabezado: str = "HOJADEDESARROLLO"
+    encabezado: str = "HOJA DE DESARROLLO"
     etiqueta: str = "Notas"
     fecha: str = "Fecha:"
     color: str = "#FFFFFF"

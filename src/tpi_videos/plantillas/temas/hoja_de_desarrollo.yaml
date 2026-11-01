@@ -25,7 +25,7 @@ nota: {rol: titulos, escala: 1.45, color: titulos}
 formulas_negrita: false
 fondo: {tipo: imagen, imagen: difuminado}
 hoja:
-  encabezado: "HOJADEDESARROLLO"
+  encabezado: "HOJA DE DESARROLLO"
   etiqueta: "Notas"
   fecha: "Fecha:"
   color: "#FFFFFF"
