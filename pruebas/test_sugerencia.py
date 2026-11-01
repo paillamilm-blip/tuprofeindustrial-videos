@@ -79,6 +79,13 @@ class SugerenciaTest(unittest.TestCase):
         self.assertEqual(s.pieza("gancho").valor, "«¿Adivinaste?»")
         self.assertEqual(s.pieza("segundos").valor, "≈42 s")
 
+    def test_la_promesa_de_duracion_dice_lo_que_va_aparte(self):
+        """El ≈42 s de la tarjeta es la voz: quien elige tiene que saber que la lectura se suma."""
+        s = armar("porcentajes", {}, PREF, {"segundos": 42, "titulo": "El dato"})
+        self.assertIn("hasta 12 s de lectura", s.pieza("segundos").razon)
+        s_ia = armar("porcentajes", {}, PREF)
+        self.assertIn("lectura", s_ia.pieza("segundos").razon)
+
     def test_el_gancho_escrito_por_vas_reemplaza_al_de_la_idea(self):
         propuesta = {"gancho": "¿Adivinaste?", "gancho_elegido": {"texto": "¿Adivinaste?"}}
         s = armar("un dato curioso", {"gancho": "Lo mío"}, PREF, propuesta)

@@ -20,6 +20,7 @@ from ..formatos import (
     puntuar_idea,
 )
 from ..moldes import MOLDES, nombre_molde, normalizar_molde
+from ..redactor import TECHO_DE_LECTURA
 from ..revision import PISO_LECTURA, coma
 from ..rodaje import QUE_HACE, RECETA_LIBRE, Receta, rodaje_para
 from ..temas import listar_temas
@@ -215,11 +216,17 @@ def _una_voz(cambios: dict[str, str], pref: Preferencias) -> Pieza:
 
 def _una_duracion(cambios: dict[str, str], propuesta: dict) -> Pieza:
     if "segundos" in cambios:
-        codigo, razon, tocada = (cambios["segundos"] or None), "Cambiado por ti.", True
+        codigo, razon, tocada = (
+            cambios["segundos"] or None,
+            "Cambiado por ti. Las fórmulas suman su lectura aparte.",
+            True,
+        )
     elif propuesta.get("segundos"):
-        codigo, razon, tocada = str(propuesta["segundos"]), "Lo prometió la idea.", False
+        codigo = str(propuesta["segundos"])
+        razon = f"Lo prometió la idea: las fórmulas suman hasta {TECHO_DE_LECTURA:g} s de lectura aparte."
+        tocada = False
     else:
-        codigo, razon, tocada = None, "La IA decide el largo (entre 30 y 75 s).", False
+        codigo, razon, tocada = None, "La IA decide el largo (entre 30 y 75 s); la lectura va aparte.", False
     return Pieza(
         clave="segundos",
         etiqueta=ETIQUETAS["segundos"],
