@@ -48,6 +48,7 @@ class ItemLote:
     portada: Path | None = None
     publicacion: Path | None = None
     duracion: float = 0.0
+    lectura: float = 0.0
     promesa_incumplida: bool = False
     pendientes: list[str] = field(default_factory=list)
     error: str | None = None
@@ -70,6 +71,7 @@ class ItemLote:
             "portada": self.portada,
             "publicacion": self.publicacion,
             "duracion": round(self.duracion, 1),
+            "lectura": round(self.lectura, 1),
             "prometido": self.idea.segundos,
             "promesa_incumplida": self.promesa_incumplida,
             "pendientes": self.pendientes,
@@ -124,7 +126,8 @@ def _item(idea: Idea, resultado: ResultadoProduccion, intentos: int = 1) -> Item
         portada=resultado.portada,
         publicacion=resultado.publicacion,
         duracion=resultado.duracion,
-        promesa_incumplida=se_paso_de_largo(resultado.duracion, idea.segundos),
+        lectura=resultado.lectura,
+        promesa_incumplida=se_paso_de_largo(resultado.duracion, idea.segundos, resultado.lectura),
         pendientes=list(resultado.redaccion.pendientes),
         intentos=intentos,
     )
@@ -203,6 +206,7 @@ def producir_lote(
     proveedor: str | None = None,
     voz: str | None = None,
     velocidad: str | None = None,
+    piso: float | None = None,
     subtitulos: bool = True,
     sincronizar: str = "auto",
     revisar_con_ia: bool = True,
@@ -251,6 +255,7 @@ def producir_lote(
             proveedor=proveedor,
             voz=voz,
             velocidad=velocidad,
+            piso=piso,
             subtitulos=subtitulos,
             sincronizar=sincronizar,
             revisar_con_ia=revisar_con_ia,
@@ -394,6 +399,7 @@ def _una_idea(
     proveedor: str | None,
     voz: str | None,
     velocidad: str | None,
+    piso: float | None,
     subtitulos: bool,
     sincronizar: str,
     revisar_con_ia: bool,
@@ -437,6 +443,7 @@ def _una_idea(
                 gancho_variantes=[g.model_dump() for g in idea.ganchos] or None,
                 titulo=idea.titulo,
                 segundos=idea.segundos,
+                piso=piso,
                 avisar=avisar,
                 progreso=progreso,
                 reanudar=reanudar,

@@ -83,6 +83,11 @@ def _minutos(segundos: float) -> str:
     return f"{m} min {s:02d} s" if m else f"{s} s"
 
 
+def _de_lectura(segundos: float) -> str:
+    """Cuántos de esos segundos fueron el piso de lectura, no contenido: se dice siempre igual."""
+    return f" · {segundos:.1f} s fueron de lectura" if segundos > 0.05 else ""
+
+
 def _dividir_voz(valor: str | None) -> tuple[str | None, str | None]:
     """``--voz`` acepta un servicio (edge | gtts | silencio) o el nombre de una voz."""
     from .voces import PROVEEDORES
@@ -203,17 +208,19 @@ def cmd_crear(args: argparse.Namespace) -> int:
         modelo_whisper=args.modelo,
         carpeta_salida=Path(args.salida) if args.salida else None,
         tema=getattr(args, "tema", None),
+        piso=getattr(args, "piso_lectura", None),
         progreso=_progreso_json if json_activo else None,
     )
     if json_activo:
         _emitir(etapa="resultado", avance=1.0, video=resultado.video, srt=resultado.srt, tema=resultado.tema,
-                duracion=round(resultado.duracion, 1), segundos=round(resultado.segundos_proceso))  # fmt: skip
+                duracion=round(resultado.duracion, 1), lectura=round(resultado.lectura, 1),
+                segundos=round(resultado.segundos_proceso))  # fmt: skip
     nombres = {"voz": "marcas exactas de la voz", "whisper": "Whisper", "estimado": "tiempos estimados"}
     fuentes = ", ".join(nombres[f] for f in sorted(resultado.fuentes_tiempo)) or "sin subtítulos"
     ruta = _ruta_amigable(resultado.video)
     consola.print(f"\n[green bold]✅ Video listo:[/] {ruta}")
     consola.print(
-        f"   Estilo: {resultado.tema} · Duración: {resultado.duracion:.1f} s · "
+        f"   Estilo: {resultado.tema} · Duración: {resultado.duracion:.1f} s{_de_lectura(resultado.lectura)} · "
         f"Proceso: {_minutos(resultado.segundos_proceso)} · Subtítulos: {fuentes}"
     )
     if resultado.srt:
@@ -403,6 +410,7 @@ def _producir(
         gancho=gancho if gancho is not None else getattr(args, "gancho", None),
         titulo=titulo if titulo is not None else getattr(args, "titulo", None),
         segundos=prometido,
+        piso=getattr(args, "piso_lectura", None),
         dificultad=dificultad if dificultad is not None else getattr(args, "dificultad", None),
         molde=molde,
         gancho_variante=variante,
@@ -416,6 +424,7 @@ def _producir(
             etapa="resultado", avance=1.0,
             guion=resultado.ruta_guion, video=resultado.video, srt=resultado.srt,
             tema=resultado.tema, duracion=round(resultado.duracion, 1), prometido=prometido,
+            lectura=round(resultado.lectura, 1),
             portada=resultado.portada, publicacion=resultado.publicacion,
             supuestos=resultado.redaccion.supuestos, pendientes=resultado.redaccion.pendientes,
             revisado_por_ia=resultado.redaccion.revisado_por_ia,
@@ -430,16 +439,19 @@ def _producir(
         if ruta is not None:
             consola.print(f"[green]✅[/] [bold]{etiqueta.capitalize()}:[/] {_ruta_amigable(Path(ruta))}")
     consola.print(
-        f"   Estilo: {resultado.tema} · Duración: {resultado.duracion:.1f} s · Subtítulos: {fuentes}"
+        f"   Estilo: {resultado.tema} · Duración: {resultado.duracion:.1f} s{_de_lectura(resultado.lectura)}"
+        f" · Subtítulos: {fuentes}"
     )
     if prometido:
-        if promesa_incumplida(resultado.duracion, prometido):
+        # Los segundos que el piso de lectura esperó no son contenido de más: no se los cobramos a la promesa.
+        lectura = _de_lectura(resultado.lectura)
+        if promesa_incumplida(resultado.duracion, prometido, resultado.lectura):
             consola.print(
                 f"   [yellow]⚠️ La idea prometió ≈{prometido} s y el video duró "
-                f"{resultado.duracion:.1f} s: acorta pasos en el guion.[/]"
+                f"{resultado.duracion:.1f} s{lectura}: acorta pasos en el guion.[/]"
             )
         else:
-            consola.print(f"   [dim]Prometido en la idea: ≈{prometido} s · cumplido.[/]")
+            consola.print(f"   [dim]Prometido en la idea: ≈{prometido} s · cumplido{lectura}.[/]")
     for supuesto in resultado.redaccion.supuestos:
         consola.print(f"   [cyan]ℹ Supuesto de la IA:[/] {supuesto}")
     for pendiente in resultado.redaccion.pendientes:
@@ -1132,6 +1144,11 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--borrador", action="store_true", help="calidad baja y rápida para revisar")
     s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
     s.add_argument("--velocidad", help="velocidad de la voz, ej. +10%% o -5%%")
+    s.add_argument(
+        "--piso-lectura",
+        type=float,
+        help="segundos que cada fórmula queda completa y quieta (0 = el ritmo de hoy)",
+    )
     s.add_argument("--sin-subtitulos", action="store_true", help="no quemar subtítulos")
     s.add_argument(
         "--sincronizar",
@@ -1251,6 +1268,11 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--estilo", help="estilo visual del video, ej. pizarra_nocturna (ver ./tpi temas)")
     s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
     s.add_argument("--velocidad", help="velocidad de la voz, ej. +10%% o -5%%")
+    s.add_argument(
+        "--piso-lectura",
+        type=float,
+        help="segundos que cada fórmula queda completa y quieta (0 = el ritmo de hoy)",
+    )
     s.add_argument("--sin-subtitulos", action="store_true", help="no quemar subtítulos")
     s.add_argument(
         "--sincronizar",

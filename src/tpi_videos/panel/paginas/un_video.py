@@ -19,6 +19,7 @@ from nicegui import events, ui
 from ... import ia
 from ...config import cargar_marca
 from ...errores import ErrorMotor
+from ...moldes import nombre_molde
 from .. import formatos_ui, sugerencia
 from ..comun import PIEL, abrir_en_mac, url_medio
 from ..miniaturas import dibujar_miniatura
@@ -27,14 +28,28 @@ from .ajustes import VOCES
 from .crear import ETAPAS, ETAPA_PASO, TEMAS_SUGERIDOS
 from .videos import abrir_kit
 
-# Los trabajos que esta pantalla sabe retomar si se recarga a medias
-PROPIOS = ("Video",)
+# Los trabajos que esta pantalla sabe retomar si se recarga a medias. «Compilar» está porque la tarea la
+# lanza esta misma pestaña: si no se siguiera, terminaría el lote y la pantalla no mostraría nada.
+PROPIOS = ("Video", "Compilar")
+
+
+def _es_compilacion(t: Tarea) -> bool:
+    """Si el trabajo en curso es el lote de variantes, no el video único: la pantalla los trata distinto."""
+    return t.nombre.startswith("Compilar")
+
+
+def _cuenta(n: int, singular: str, plural: str) -> str:
+    """«1 variante lista» y «2 variantes listas»: el número y su palabra siempre van de acuerdo."""
+    return f"{n} {singular if n == 1 else plural}"
+
+
 ICONO_PIEZA = {
     "familia": "category",
     "molde": "movie_filter",
     "tema": "palette",
     "voz": "record_voice_over",
     "segundos": "timer",
+    "lectura": "visibility",
     "gancho": "bolt",
     "rodaje": "videocam",
 }
@@ -49,8 +64,11 @@ PASOS_IDEAS = (
     "La IA está escribiendo las 3 ideas",
     "Las ideas llegan a la pantalla",
 )
-_VENTANA_IDEAS = 90.0  # s: lo que suele tardar un viaje a Gemini (llena la barra hasta el 92 %)
+_VENTANA_IDEAS = 240.0  # s: a cuánto se llena la barra. Gemini suele tardar ~1 min, pero pasa de 2 sin error
 _TICK_IDEAS = 0.5
+# Cuánto se aguanta el viaje antes de darlo por perdido. El cliente de Gemini tiene su propio techo de
+# 15 minutos y reintentos: cortarlo a los 150 s mataba pedidos que iban bien y seguían escribiendo.
+_ESPERA_IDEAS = 600.0
 
 
 def _propuesta(idea: dict) -> dict:
@@ -164,8 +182,8 @@ class PaginaUnVideo:
             self.boton_compilar.disable()
             self.barra_variantes.set_visibility(False)
             ui.label(
-                "«Compilar» manda una sola tarea: produce de a una las variantes marcadas y el avance "
-                "lo ves en «Cola y biblioteca»."
+                "«Compilar» manda una sola tarea: produce de a una las variantes marcadas. El avance lo "
+                "ves acá abajo y, al terminar, cada video con su botón de play."
             ).classes("tpi-ayuda text-xs")
 
     def _lugar_comun(self, contenedor) -> None:
@@ -197,7 +215,9 @@ class PaginaUnVideo:
         # así que un video grabándose o una vista previa nunca tapan este botón.
         error: str | None = None
         try:
-            resultado = await consultar(["ideas", "--", texto], segundos=150, al_evento=self._al_aviso_ia)
+            resultado = await consultar(
+                ["ideas", "--", texto], segundos=_ESPERA_IDEAS, al_evento=self._al_aviso_ia
+            )
         except ErrorMotor as e:
             resultado, error = {}, str(e)
         finally:
@@ -232,6 +252,7 @@ class PaginaUnVideo:
         """Los procesos del pedido: lo hecho con tilde, lo que anda con reloj, lo que falta con círculo.
 
         Nunca sólo el color: cada línea lleva su icono y su texto, se lee igual en escala de grises.
+        El aviso largo de Gemini se parte en dos líneas si no cabe, para que no tape los botones.
         """
         self.pasos_ideas.clear()
         with self.pasos_ideas:
@@ -239,7 +260,12 @@ class PaginaUnVideo:
                 if puesto < self._paso_ideas:
                     self._nota("task_alt", PIEL["exito"], nombre)
                 elif puesto == self._paso_ideas:
-                    self._nota("hourglass_top", PIEL["marca"], aviso if aviso else f"{nombre}…")
+                    self._nota(
+                        "hourglass_top",
+                        PIEL["marca"],
+                        (aviso if aviso else f"{nombre}…").replace(" (unos segundos)", ""),
+                        quebrar=True,
+                    )
                 else:
                     self._nota("radio_button_unchecked", PIEL["gris"], nombre)
 
@@ -275,17 +301,27 @@ class PaginaUnVideo:
         self._contador()
 
     def _contador(self) -> None:
-        """Las marcadas mandan: contador, botón prendido sólo con una arriba y el número adentro."""
+        """Las marcadas mandan: contador, botón prendido sólo con una arriba y el número adentro.
+
+        Con un trabajo en curso se apaga: dos tareas a la vez no se pueden correr, y un botón prendido
+        que no hace nada es una promesa rota.
+        """
         n = sum(self.marcas)
-        self.contador_variantes.text = f"{n} seleccionada{'s' if n != 1 else ''}" if n else "ninguna seleccionada"
+        self.contador_variantes.text = (
+            _cuenta(n, "seleccionada", "seleccionadas") if n else "ninguna seleccionada"
+        )
         self.boton_compilar.set_text(f"Compilar seleccionados{' (' + str(n) + ')' if n else ''}")
-        if n:
+        if n and not self._trabajando():
             self.boton_compilar.enable()
         else:
             self.boton_compilar.disable()
 
     def _compilar(self) -> None:
-        """La opción B: las variantes marcadas salen de una, con el mismo `tpi lote` de Fábrica."""
+        """La opción B: las variantes marcadas salen de una, con el mismo `tpi lote` de Fábrica.
+
+        La tarea se mira acá mismo: antes la pestaña lanzaba el lote y lo perdía de vista (seguía sólo
+        los trabajos «Video»), así que al terminar no mostraba nada y no había cómo ver el video.
+        """
         try:
             elegidas = sugerencia.variantes_seleccionadas(self._variantes, self.marcas)
         except ValueError:
@@ -297,20 +333,37 @@ class PaginaUnVideo:
             ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
             return
         cantidad = len(elegidas)
-        TAREAS.lanzar(f"Compilar {cantidad} variantes", sugerencia.args_compilacion(elegidas))
+        self.mio = True
+        self._visto = None
+        TAREAS.lanzar(sugerencia.nombre_compilacion(cantidad), sugerencia.args_compilacion(elegidas))
+        self.zona_resultado.clear()
+        self.zona_resultado.set_visibility(False)
+        self.zona_trabajo.set_visibility(True)
+        self.boton_cancelar.set_visibility(True)
+        self.titulo_trabajo.text = f"Compilando {_cuenta(cantidad, 'variante', 'variantes')}"
+        self.barra.value = 0.0
+        self.porcentaje.text = "0 %"
+        self.detalle.text = "La IA está escribiendo el guion de la primera…"
+        self.boton_arrancar.disable()
+        self._contador()  # el propio botón de compilar se apaga: dos tareas a la vez no se puede
+        # la tarjeta de la derecha queda editable: al lote no le sirve, lo que viajó son las ideas marcadas
         ui.notify(
-            f"{'Puesta' if cantidad == 1 else 'Puestas'} en cola {cantidad} "
-            f"variante{'s' if cantidad != 1 else ''}: el avance lo ves en «Cola y biblioteca».",
+            f"En marcha: {_cuenta(cantidad, 'variante', 'variantes')}. "
+            "El avance y los videos se ven acá abajo.",
             type="positive",
         )
 
     def _usar_idea(self, idea: dict) -> None:
         """La idea entra completa a la caja y a la receta: su molde, su gancho, su largo ya no son un secreto."""
+        self._cargar_idea(idea)
+        ui.notify("Idea cargada: mira la tarjeta de la derecha y toca «Crear el video».", type="positive")
+
+    def _cargar_idea(self, idea: dict) -> None:
+        """La idea a la caja y a la receta, sin aviso: la usan «Usar esta idea» y el reintento de una variante."""
         self.idea.value = str(idea.get("enunciado") or idea.get("titulo") or "").strip()
         # va después del valor: `_al_escribir` limpia la propuesta, acá vuelve a cargarla
         self.propuesta = _propuesta(idea)
         self._pintar()
-        ui.notify("Idea cargada: mira la tarjeta de la derecha y toca «Crear el video».", type="positive")
 
     # ── el botón ────────────────────────────────────────────────────────────────────────
 
@@ -328,7 +381,7 @@ class PaginaUnVideo:
     def _pantalla_trabajo(self) -> None:
         with ui.card().classes("tpi-hoja w-full p-5 gap-2"):
             with ui.row().classes("w-full items-center justify-between"):
-                ui.label("Grabando").classes("tpi-titulo text-lg")
+                self.titulo_trabajo = ui.label("Grabando").classes("tpi-titulo text-lg")
                 self.boton_cancelar = ui.button("Cancelar", icon="stop", on_click=TAREAS.cancelar).props(
                     "flat color=negative"
                 )
@@ -357,6 +410,7 @@ class PaginaUnVideo:
         TAREAS.lanzar("Video completo", list(su.args))
         self.zona_resultado.clear()
         self.zona_resultado.set_visibility(False)
+        self.titulo_trabajo.text = "Grabando"
         self._abloquear(True, su)
         self.zona_trabajo.set_visibility(True)
         self.barra.value = 0.0
@@ -368,10 +422,11 @@ class PaginaUnVideo:
         """Mientras graba, la tarjeta se vuelve de solo lectura: lo que ya viajó al motor no se toca.
 
         La tarjeta entera se repinta con `solo_lectura` puesto (sus controles se crean ya apagados); acá
-        sólo se apagan los que viven fuera de ella.
+        sólo se apagan los que viven fuera de ella. Pedir ideas no se apaga: ese viaje a la IA corre
+        fuera de la fila de trabajos, así que un video grabándose nunca tapa el botón.
         """
         self.solo_lectura = grabando
-        for elemento in (self.idea, self.boton_arrancar, self.boton_ideas):
+        for elemento in (self.idea, self.boton_arrancar):
             if grabando:
                 elemento.disable()
             else:
@@ -381,6 +436,7 @@ class PaginaUnVideo:
         else:
             self._visto = None  # al terminar, la tarjeta vuelve a seguir lo que está escrito
             self._pintar()
+        self._contador()  # «Compilar» se prende o se apaga según si hay tarea en curso
 
     def _mirar(self) -> None:
         """El trabajo es de la app, no de esta pestaña: acá solo se mira, aunque se recargue la página."""
@@ -422,7 +478,13 @@ class PaginaUnVideo:
         try:
             with self.zona_resultado:
                 if t.ok:
-                    self._pantalla_resultado(t.resultado)
+                    # el trabajo manda la forma del resultado: un lote se pinta por variante, el video único
+                    # con su pantalla de siempre (si se decide por lo que trajo, una tarea sin resultado
+                    # terminaría mostrando «Video listo» sin video).
+                    if _es_compilacion(t):
+                        self._pantalla_variantes(list(t.resultado.get("lote") or []))
+                    else:
+                        self._pantalla_resultado(t.resultado)
                 else:
                     error = t.error or {}
                     self._pantalla_error(error.get("mensaje", "El motor no respondió."), error.get("ayuda"))
@@ -431,6 +493,104 @@ class PaginaUnVideo:
             with self.zona_resultado:
                 self._pantalla_error("El panel no alcanzó a leer el resultado.", str(e))
         self.zona_resultado.set_visibility(True)
+
+    def _pantalla_variantes(self, items: list[dict]) -> None:
+        """Lo que mandó «Compilar»: una tarjeta por variante, cada una con su botón de play.
+
+        Se pinta según lo que hay de verdad en el disco (``dividir_variantes``), no según el `ok` del
+        motor: una variante sin su MP4 no es algo que se pueda reproducir, y una que quedó a la espera
+        de la IA no es un fallo.
+        """
+        partidos = sugerencia.dividir_variantes(items)
+        grupos = [_cuenta(len(partidos["listas"]), "variante lista", "variantes listas")]
+        if partidos["esperando"]:
+            grupos.append(f"{len(partidos['esperando'])} a la espera de la IA")
+        if partidos["fallas"]:
+            grupos.append(_cuenta(len(partidos["fallas"]), "variante no salió", "variantes no salieron"))
+        todo_ok = bool(partidos["listas"]) and not partidos["fallas"]
+        with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
+            with ui.row().classes("items-center gap-2 no-wrap"):
+                ui.icon("task_alt" if todo_ok else "info").classes("text-xl").set_text_color(
+                    PIEL["exito"] if todo_ok else PIEL["aviso_fuerte"]
+                )
+                ui.label("Así quedó").classes("tpi-titulo text-lg")
+                ui.label(" · ".join(grupos)).classes("tpi-ayuda")
+            for item in partidos["listas"]:
+                self._variante_lista(item)
+            if not items:
+                self._nota(
+                    "priority_high",
+                    PIEL["aviso_fuerte"],
+                    "El lote terminó sin avisar qué salió: míralo en «Cola y biblioteca».",
+                )
+            for item in partidos["esperando"]:
+                self._nota(
+                    "hourglass_top",
+                    PIEL["marca"],
+                    f"«{item.get('titulo') or 'Una variante'}» todavía la está escribiendo la IA: "
+                    "el motor la retoma solo, la ves en «Cola y biblioteca».",
+                )
+            for item in partidos["fallas"]:
+                self._variante_fallada(item)
+            with ui.row().classes("gap-2 no-wrap items-center pt-1"):
+                ui.link("Verlas todas en Cola y biblioteca", "/cola").classes("text-sm font-bold")
+                ui.label("Cada video tiene su carpeta en salida/ y ninguno se borra.").classes(
+                    "tpi-ayuda text-xs"
+                )
+
+    def _variante_lista(self, item: dict) -> None:
+        video = Path(str(item.get("video") or ""))
+        idea = item.get("idea") or {}
+        with ui.row().classes("w-full items-start gap-4 border-t pt-3 no-wrap"):
+            if fuente := url_medio(video):
+                ui.video(fuente).classes("w-[190px] shrink-0 aspect-[9/16] rounded-lg bg-black").props(
+                    'preload="metadata"'
+                )
+            with ui.column().classes("gap-1 min-w-0"):
+                ui.label(str(item.get("titulo") or "Una variante")).classes("font-bold")
+                ui.label(
+                    f"≈{item.get('duracion', 0)} s · molde {nombre_molde(idea.get('molde'))} · "
+                    f"{str(idea.get('nivel') or '')}"
+                ).classes("tpi-ayuda text-sm")
+                for pendiente in item.get("pendientes") or []:
+                    self._nota("priority_high", PIEL["aviso_fuerte"], f"Por revisar: {pendiente}")
+                with ui.row().classes("gap-2 no-wrap items-center"):
+                    ui.button(
+                        "Abrir en el Mac", icon="open_in_new", on_click=lambda v=video: abrir_en_mac(v)
+                    ).props("outline dense no-caps size=sm")
+                    ui.button(
+                        "Ver el kit para publicar",
+                        icon="inventory_2",
+                        on_click=lambda v=video: abrir_kit(v.parent),
+                    ).props("flat dense no-caps size=sm")
+
+    def _variante_fallada(self, item: dict) -> None:
+        idea = item.get("idea") or {}
+        with ui.row().classes("w-full items-start gap-4 border-t pt-3 no-wrap"):
+            ui.icon("error", size="22px").set_text_color(PIEL["error"])
+            with ui.column().classes("gap-1 min-w-0"):
+                ui.label(str(item.get("titulo") or "Una variante")).classes("font-bold")
+                ui.label(str(item.get("error") or "El motor no dijo qué pasó.")).classes(
+                    "tpi-ayuda text-sm whitespace-pre-wrap"
+                )
+                if item.get("ayuda"):
+                    ui.label(f"→ {item['ayuda']}").classes("text-xs").style(f"color:{PIEL['aviso_fuerte']}")
+            ui.button(
+                "Intentar solo esa de nuevo",
+                icon="refresh",
+                on_click=lambda i=idea: self._reintentar_variante(i),
+            ).props("outline dense no-caps").classes("self-center shrink-0")
+
+    def _reintentar_variante(self, idea: dict) -> None:
+        """La misma idea, sin volverle a pedir nada a la IA: entra a la caja y se produce sola."""
+        if not idea:
+            ui.notify("Esa variante no trajo su idea: prueba a pedirla otra vez.", type="warning")
+            return
+        if TAREAS.ocupado():
+            ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+            return
+        self._cargar_idea(idea)
+        self._arrancar()
 
     def _pantalla_resultado(self, resultado: dict) -> None:
         video = Path(str(resultado.get("video") or ""))
@@ -451,7 +611,9 @@ class PaginaUnVideo:
                     promesa = resultado.get("prometido")
                     if promesa:
                         ui.label(
-                            f"La idea prometió ≈{promesa} s y el video duró {resultado.get('duracion', 0)} s."
+                            f"La idea prometió ≈{promesa} s y el video duró "
+                            f"{resultado.get('duracion', 0)} s"
+                            f"{sugerencia.clause_lectura(float(resultado.get('lectura') or 0.0))}."
                         ).classes("tpi-ayuda")
                     for pendiente in resultado.get("pendientes") or []:
                         self._nota("priority_high", PIEL["aviso_fuerte"], f"Por revisar: {pendiente}")
@@ -493,11 +655,15 @@ class PaginaUnVideo:
                 ui.button("Volver a intentar", icon="refresh", on_click=self._arrancar).props("outline no-caps")
                 ui.link("Revisar Ajustes", "/ajustes").classes("font-bold")
 
-    def _nota(self, icono: str, color: str, texto: str) -> None:
-        """Un aviso con su icono y su color, nunca solo con el color (se lee igual en escala de grises)."""
-        with ui.row().classes("items-start gap-2 no-wrap"):
+    def _nota(self, icono: str, color: str, texto: str, quebrar: bool = False) -> None:
+        """Un aviso con su icono y su color, nunca solo con el color (se lee igual en escala de grises).
+
+        `quebrar` es para el texto que escribe la IA y no se sabe cuánto mide: sin él, una frase larga de
+        Gemini se estira en una sola línea y tapa los botones de abajo.
+        """
+        with ui.row().classes("items-start gap-2" + ("" if quebrar else " no-wrap")):
             ui.icon(icono, size="16px").set_text_color(color)
-            ui.label(texto).classes("text-sm leading-snug")
+            ui.label(texto).classes("text-sm leading-snug" + (" text-wrap" if quebrar else ""))
 
     # ── la tarjeta de la derecha ────────────────────────────────────────────────────────
 
@@ -627,6 +793,10 @@ class PaginaUnVideo:
         if clave == "segundos":
             self._dialogo_lista(clave, "¿Cuánto dura?", sugerencia.opciones(clave), codigo)
             return
+        if clave == "lectura":
+            # No hay «que lo decida la IA»: el piso es un tiempo, y 0 ya es una opción de la lista.
+            self._dialogo_lista(clave, "Tiempo para leer cada fórmula", sugerencia.opciones(clave), codigo, False)
+            return
         if clave == "tema":
             self._dialogo_lista(clave, "Tu estilo de siempre", sugerencia.opciones(clave), codigo, False)
             return
@@ -690,15 +860,26 @@ class PaginaUnVideo:
     # ── retomar al recargar ─────────────────────────────────────────────────────────────
 
     def _reanudar(self) -> None:
-        """Se recargó la pestaña con un video a medio hacer: la tarjeta se pone a mirarlo otra vez."""
+        """Se recargó la pestaña con un trabajo propio en curso (o ya terminado): se vuelve a él."""
         t = TAREAS.actual
         if t is None or not t.nombre.startswith(PROPIOS):
             return
         self.zona_resultado.clear()
         self.zona_resultado.set_visibility(False)
+        if t.terminada:
+            # Ya terminó mientras la pestaña estaba cerrada: se pinta lo que salió, si no la pantalla
+            # quedaría otra vez en blanco y no habría cómo ver el video (la queja que destapó esto).
+            if t.ok or t.error:
+                self._mostrar_resultado(t)
+            return
         self.zona_trabajo.set_visibility(True)
-        self.boton_cancelar.set_visibility(not t.terminada)
+        self.titulo_trabajo.text = "Compilando variantes" if _es_compilacion(t) else "Grabando"
+        self.boton_cancelar.set_visibility(True)
         self._avance(t)
-        if not t.terminada:
-            self.mio = True
+        self.mio = True
+        if _es_compilacion(t):
+            # el lote lleva las ideas marcadas, no la tarjeta: no se le apaga nada que siga sirviendo
+            self.boton_arrancar.disable()
+            self._contador()
+        else:
             self._abloquear(True)

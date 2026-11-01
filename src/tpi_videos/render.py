@@ -28,6 +28,7 @@ class ResultadoVideo:
     srt: Path | None = None
     fuentes_tiempo: set[str] = field(default_factory=set)
     tema: str = ""  # nombre visible del estilo usado
+    lectura: float = 0.0  # s que el piso de lectura esperó: silencio pedido, no contenido de más
 
 
 def slug(texto: str) -> str:
@@ -62,12 +63,14 @@ def renderizar_manim(
     carpeta: Path,
     progreso: Callable[[int, int, str], None] | None = None,
     solo_gancho: bool = False,
+    piso: float | None = None,
 ) -> tuple[Path, dict]:
     entorno.preparar()
     entorno.registrar_fuentes()
     from manim import tempconfig
 
     from .escena import OpcionesEscena, VideoEjercicio
+    from .revision import PISO_LECTURA
     from .tex import plantilla_tex
 
     cal = CALIDADES[calidad]
@@ -95,7 +98,13 @@ def renderizar_manim(
             marca=marca,
             tema=tema,
             opciones=OpcionesEscena(
-                proveedor, voz, velocidad, linea, progreso=progreso, solo_gancho=solo_gancho
+                proveedor,
+                voz,
+                velocidad,
+                linea,
+                progreso=progreso,
+                solo_gancho=solo_gancho,
+                piso_lectura=PISO_LECTURA if piso is None else piso,
             ),
         )
         escena.render()
@@ -115,6 +124,7 @@ def crear_video(
     carpeta_salida: Path | None = None,
     tema: str | None = None,
     progreso: Progreso | None = None,
+    piso: float | None = None,
 ) -> ResultadoVideo:
     """Crea el video. Estilo: ``tema`` (si se pide) > ``tema:`` del guion > ``tema:`` de marca.yaml."""
     from .postproduccion import duracion, quemar_subtitulos, recodificar
@@ -146,7 +156,7 @@ def crear_video(
 
     video_manim, linea = renderizar_manim(
         guion, marca, estilo_video, calidad, proveedor, voz, velocidad, carpeta,
-        progreso=por_bloque if progreso else None,
+        progreso=por_bloque if progreso else None, piso=piso,
     )  # fmt: skip
     final = carpeta / (f"{nombre}.mp4" if calidad == "final" else f"{nombre}_{calidad}.mp4")
     # Para «Mis videos» del panel (rehacer con otro estilo) y para el kit de publicación
@@ -183,6 +193,8 @@ def crear_video(
         recodificar(video_manim, final, CALIDADES[calidad], estilo_video.resplandor)
 
     resultado.duracion = duracion(final)
+    # Lo que el piso de lectura esperó, medido en la escena (0 en renders antiguos sin la clave).
+    resultado.lectura = float(linea.get("silencio_de_lectura") or 0.0)
     resultado.segundos_proceso = time.time() - inicio
     avisar("listo", 1.0, str(final))
     return resultado
@@ -281,6 +293,7 @@ def crear_clip_gancho(
     crudo, _ = renderizar_manim(
         guion, marca, estilo, calidad, proveedor, voz, velocidad, destino.parent,
         progreso=por_bloque if progreso else None, solo_gancho=True,
+        piso=0.0,  # el laboratorio compara ganchos seguidos: el silencio del piso ahí estorba
     )  # fmt: skip
     shutil.copyfile(crudo, destino)
     if progreso:
