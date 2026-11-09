@@ -57,6 +57,7 @@ from manim import (
     SurroundingRectangle,
     TransformMatchingTex,
     UpdateFromAlphaFunc,
+    ValueTracker,
     VGroup,
     VMobject,
     Wiggle,
@@ -133,6 +134,29 @@ def deriva_desplazamiento(segundos: float) -> tuple[float, float, float]:
         ALCANCE_DERIVA * 0.62 * math.sin(0.53 * segundos),
         RESPIRO_DERIVA * (0.5 - 0.5 * math.cos(0.41 * segundos)),
     )
+
+
+def avance_de_movimiento(duracion: float, ventana: float) -> tuple[float, bool]:
+    """Cuánto de la simulación cabe en la voz, y si hubo que cortarla.
+
+    La física manda: el reloj de la simulación corre a su ritmo real y la escena no lo estira
+    ni lo apura. Si la voz se queda corta, se ve el principio y se avisa en la revisión.
+    """
+    if duracion <= 0 or ventana >= duracion:
+        return 1.0, False
+    return max(ventana / duracion, 0.0), True
+
+
+def plan_de_movimiento(duracion: float, restante: float) -> tuple[float, float, float, bool]:
+    """Reparte lo que queda de voz: un cuarto para que el dibujo entre y el resto para la física.
+
+    Devuelve ``(entrada, ventana, avance, se_corta)``. ``entrada + ventana == restante``, así el
+    paso nunca se pasa de la voz; cuando la física no cabe, ``avance`` dice dónde se corta.
+    """
+    entrada = max(restante * 0.25, 0.35)
+    ventana = max(restante - entrada, 0.35)
+    avance, se_corta = avance_de_movimiento(duracion, ventana)
+    return entrada, ventana, avance, se_corta
 
 
 # El tablero partido (``partida: mitades``): arriba el error con su rótulo MITO, abajo la forma
@@ -356,7 +380,7 @@ def encuadre_de_casillero(
 
 
 def casilleros_de_mitades(tope: float, fondo: float) -> dict[str, tuple[float, float, float]]:
-    """ ``(etiqueta, línea, alto máximo)`` de cada una de las dos mitades del tablero partido.
+    """``(etiqueta, línea, alto máximo)`` de cada una de las dos mitades del tablero partido.
 
     El casillero de abajo no se corre a mitad de video: si algún paso trae dibujo, su franja ya está
     reservada en ``fondo``, así que las dos mitades quedan fijadas desde el primer paso.
@@ -711,9 +735,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             # El pico también arrastra el encuadre hacia el objetivo: no puede irse de lo dibujado.
             salto = abs(centro_y - self._camara_centro)
             if salto > 1e-6:
-                colchon = max(
-                    0.0, self.paisaje.medio_alto - self.alto_cuadro * cercano / 2 - abs(centro_y)
-                )
+                colchon = max(0.0, self.paisaje.medio_alto - self.alto_cuadro * cercano / 2 - abs(centro_y))
                 sobrepaso = min(sobrepaso, 1.0 + colchon / salto)
             sobrepaso = min(sobrepaso, SOBREPASO_MAX)
             if sobrepaso > 1.02:
@@ -870,7 +892,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         emoji = None if g.visual is not None else self._emoji(g.emoji, 1.7 * k)
         formula = c.ecuacion(g.tex, c.TAM_ECUACION, self.col.formulas).set_z_index(1) if g.tex else None
         suelto = emoji is None and formula is None
-        y = (Y_GANCHO_LLENO if lleno else c.CENTRO_ZONA + (0.9 if suelto else 0.6))
+        y = Y_GANCHO_LLENO if lleno else c.CENTRO_ZONA + (0.9 if suelto else 0.6)
         if suelto:
             bloque = p
             p.move_to([0, y, 0])
@@ -1080,6 +1102,38 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         # (más abajo el dibujo se salta), en vez de achatar la imagen por debajo de cero.
         return fondo, centro, max(alto, 0.0)
 
+    def _mover_dibujo(
+        self, dibujo: d.Dibujo, duracion: float, restante: float, camara: list[Animation]
+    ) -> None:
+        """Entra el dibujo con lo justo y después corre su física en el tiempo real.
+
+        El reloj avanza lineal: la simulación dura lo que dura en el papel. Si la voz se queda
+        corta, se recorre sólo el trozo que cabe y la revisión ya avisó del corte.
+        """
+        entrada, ventana, avance, _ = plan_de_movimiento(duracion, restante)
+        animaciones: list[Animation] = [Create(m) for m in dibujo.trazo]
+        if dibujo.aparece:
+            animaciones.append(
+                LaggedStart(*[FadeIn(m, shift=UP * 0.1) for m in dibujo.aparece], lag_ratio=0.12)
+            )
+        if animaciones:
+            self.play(*animaciones, *camara, run_time=entrada)
+        elif camara:
+            self.play(*camara, run_time=entrada)
+        if dibujo.estela is not None:
+            self.add(dibujo.estela)
+        reloj = ValueTracker(0.0)
+        reloj.add_updater(lambda tracker: dibujo.vivo(tracker.get_value() * avance))
+        self.add(reloj)
+        self.play(
+            reloj.animate.set_value(1.0),
+            run_time=min(ventana, duracion),
+            rate_func=rate_functions.linear,
+        )
+        reloj.clear_updaters()
+        self.remove(reloj)
+        dibujo.vivo(avance)
+
     def _trazar_dibujo(
         self, paso: Any, centro_y: float, alto: float, tr: Any, mover_camara: bool = True
     ) -> d.Dibujo:
@@ -1108,6 +1162,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             camara = self._animaciones_camara(centro_y, self._camara_escala, run_time=0.55)
         else:
             camara = []  # el gancho se mira entero desde el reposo: acá la cámara no se mueve
+        if dibujo.vivo is not None and dibujo.duracion:
+            self._mover_dibujo(dibujo, dibujo.duracion, restante, camara)
+            return dibujo
         # El dibujo termina antes que la voz: lo que queda es el rato que se mira ya completo.
         if dibujo.trazo:
             self.play(
@@ -1373,11 +1430,15 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         filo = tono_de_tapa(cuerpo, "#000000", PROPORCION_PLIEGUE)
         nota = RoundedRectangle(corner_radius=0.12, width=ancho, height=alto)
         nota.set_fill(cuerpo, 1.0).set_stroke(filo, 2)
-        plegue = Polygon(
-            [ancho / 2 - ALTO_PLEGUE, -alto / 2 + 0.07, 0],
-            [ancho / 2 - 0.07, -alto / 2 + ALTO_PLEGUE, 0],
-            [ancho / 2 - ALTO_PLEGUE, -alto / 2 + ALTO_PLEGUE, 0],
-        ).set_fill(filo, 1.0).set_stroke(filo, 0)
+        plegue = (
+            Polygon(
+                [ancho / 2 - ALTO_PLEGUE, -alto / 2 + 0.07, 0],
+                [ancho / 2 - 0.07, -alto / 2 + ALTO_PLEGUE, 0],
+                [ancho / 2 - ALTO_PLEGUE, -alto / 2 + ALTO_PLEGUE, 0],
+            )
+            .set_fill(filo, 1.0)
+            .set_stroke(filo, 0)
+        )
         return VGroup(nota, plegue).move_to(centro).set_z_index(2)
 
     def _resultado(self) -> None:

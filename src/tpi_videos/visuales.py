@@ -6,6 +6,7 @@ y se devuelve lo que `componentes.py` necesita para dibujarlo, con errores en es
 
 from __future__ import annotations
 
+import functools
 import math
 import re
 from collections.abc import Callable
@@ -70,7 +71,7 @@ MARCAS_PROBABILIDAD = ("probabilidad",)
 MARCAS_ONDA = ("velocidad",)
 
 # Lo que se puede anotar en cada máquina: la óptica no lleva marcas (sus dos ángulos van siempre).
-MARCAS_PENDULO = ("periodo",)
+MARCAS_PENDULO = ("periodo", "velocidad")
 MARCAS_RESORTE = ("fuerza",)
 MARCAS_POLEA = ("aceleracion", "tension")
 
@@ -88,6 +89,7 @@ MARCAS_MOHR = ("principales", "cortante")
 MARCAS_OSCILADOR = ("regimen", "periodo", "decaimiento")
 MARCAS_PENDULO_DOBLE = ("energia", "angulos")
 HASTA_MAXIMA = 20.0  # segundos de simulación: más que eso, el video se queda esperando
+DURACION_RESORTE = 1.4  # s de estiramiento cuasiestático: el resorte no es un péndulo
 
 # Lo que el motor sabe dibujar como flecha en un diagrama de fuerzas.
 VECTORES: dict[str, str] = {
@@ -219,7 +221,9 @@ CAMPOS: dict[str, CampoVisual] = {
         CampoVisual("sigma_y", "Esfuerzo normal en Y", "texto", "20 MPa"),
         CampoVisual("cortante", "Esfuerzo cortante", "texto", "30 MPa"),
         CampoVisual("masa", "La masa que oscila", "texto", "2 kg   ·   500 g"),
-        CampoVisual("amortiguamiento", "Cuánto frena el amortiguador (vacío = sin fricción)", "texto", "8 N·s/m"),
+        CampoVisual(
+            "amortiguamiento", "Cuánto frena el amortiguador (vacío = sin fricción)", "texto", "8 N·s/m"
+        ),
         CampoVisual("duracion", "Cuántos segundos se simulan", "numero", "6   ·   8   ·   12"),
         CampoVisual("masa_1", "Masa del brazo de arriba", "texto", "1 kg"),
         CampoVisual("masa_2", "Masa del brazo de abajo", "texto", "1 kg"),
@@ -1042,18 +1046,14 @@ class Vector3D:
 def analizar_vector_3d(componentes: list[float], unidad: str = "") -> Vector3D:
     """Las dos longitudes que se dibujan: √(x²+y²) en el piso y √(piso²+z²) a lo largo del vector."""
     if len(componentes or []) != 3:
-        raise ValueError(
-            "un vector en el espacio necesita sus tres componentes (x, y, z), ej. «3; 4; 12»"
-        )
+        raise ValueError("un vector en el espacio necesita sus tres componentes (x, y, z), ej. «3; 4; 12»")
     try:
         x, y, z = (float(v) for v in componentes)
     except (TypeError, ValueError):
         crudo = "; ".join(str(v) for v in componentes)
         raise ValueError(f"las tres componentes del vector tienen que ser números, y leí «{crudo}»") from None
     if x == 0 and y == 0 and z == 0:
-        raise ValueError(
-            "un vector de (0, 0, 0) no tiene largo ni dirección: revisa las tres componentes"
-        )
+        raise ValueError("un vector de (0, 0, 0) no tiene largo ni dirección: revisa las tres componentes")
     piso = math.hypot(x, y)
     return Vector3D(x=x, y=y, z=z, piso=piso, norma=math.hypot(piso, z), unidad=unidad or "")
 
@@ -1296,6 +1296,8 @@ class Resorte:
 
 
 def _a_metros(valor: float, unidad: str) -> float:
+    if unidad.startswith("km"):
+        return valor * 1000
     if unidad.startswith("mm"):
         return valor / 1000
     if unidad.startswith("cm"):
@@ -1563,12 +1565,17 @@ def analizar_mohr(sigma_x: str, sigma_y: str, cortante: str) -> Mohr:
 
 def _a_kilos(valor: float, unidad: str) -> float:
     """«500 g» son 0,5 kg: la integral se escribe en kilo y en metro, no en lo que salió en la clase."""
-    return valor / 1000.0 if (unidad or "").startswith("g") else valor
+    u = unidad or ""
+    if u.startswith("mg"):
+        return valor / 1_000_000.0
+    return valor / 1000.0 if u.startswith("g") else valor
 
 
 def _desde_metros(unidad: str) -> float:
     """Cuántas unidades del guion hay en un metro, para devolver la curva en la medida que se escribió."""
     u = (unidad or "").strip()
+    if u.startswith("km"):
+        return 0.001
     if u.startswith("mm"):
         return 1000.0
     if u.startswith("cm"):
@@ -1579,12 +1586,13 @@ def _desde_metros(unidad: str) -> float:
 def _duracion_simulada(valor: float | None, por_defecto: float) -> float:
     hasta = por_defecto if valor is None else float(valor)
     if not 0 < hasta <= HASTA_MAXIMA:
-        raise ValueError(
-            f"duracion son segundos de video y va entre 0 y {HASTA_MAXIMA:.0f} (leí {valor})"
-        )
+        raise ValueError(f"duracion son segundos de video y va entre 0 y {HASTA_MAXIMA:.0f} (leí {valor})")
     return hasta
 
 
+# Cacheada: el guion, la revisión y el dibujo piden lo mismo; solve_ivp corre una sola vez.
+# Devuelve una instancia compartida: quien la recibe sólo la lee, no la modifica.
+@functools.cache
 def analizar_oscilador(
     masa: str,
     constante: str,
@@ -1613,6 +1621,8 @@ def analizar_oscilador(
     return o
 
 
+# Cacheada igual que el oscilador: una integración por consulta, resultado compartido de sólo lectura.
+@functools.cache
 def analizar_pendulo_doble(
     masa_1: str,
     masa_2: str,

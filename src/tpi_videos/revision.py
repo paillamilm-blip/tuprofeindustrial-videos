@@ -10,8 +10,15 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from .guion import Guion
-from .visuales import analizar_circuito
+from .guion import Guion, Visual
+from .visuales import (
+    DURACION_RESORTE,
+    analizar_circuito,
+    analizar_oscilador,
+    analizar_pendulo,
+    analizar_pendulo_doble,
+    analizar_proyectil,
+)
 
 # Calibrado con la voz es-CL de edge-tts a +5 % de velocidad (~15 caracteres por segundo,
 # contando espacios y signos) más una pequeña pausa al final de cada bloque.
@@ -70,6 +77,36 @@ def _frases(texto: str) -> list[str]:
     return [f.strip() for f in re.split(r"(?<=[.!?¿¡])\s+", texto) if f.strip()]
 
 
+def _duracion_de_movimiento(visual: Visual) -> float | None:
+    """Los segundos de física que pide el dibujo, o ``None`` si el dibujo es quieto."""
+    if visual.tipo == "proyectil":
+        return analizar_proyectil(visual.velocidad, visual.angulo or 0.0).tiempo
+    if visual.tipo == "pendulo":
+        return analizar_pendulo(visual.longitud or "", visual.angulo or 0.0).periodo
+    if visual.tipo == "resorte":
+        return DURACION_RESORTE
+    if visual.tipo == "oscilador":
+        return analizar_oscilador(
+            visual.masa or "",
+            visual.constante or "",
+            visual.amplitud or "",
+            visual.amortiguamiento or "",
+            visual.duracion,
+        ).hasta
+    if visual.tipo == "pendulo_doble":
+        figura = analizar_pendulo_doble(
+            visual.masa_1 or "",
+            visual.masa_2 or "",
+            visual.longitud_1 or "",
+            visual.longitud_2 or "",
+            visual.angulo_1 or 0.0,
+            visual.angulo_2 or 0.0,
+            visual.duracion,
+        )
+        return figura.t[-1] - figura.t[0]
+    return None
+
+
 def _avisos_de_visuales(guion: Guion) -> list[Aviso]:
     """Que el dibujo se pueda trazar: el gráfico dice qué representa cada eje y la figura se ve en el celular."""
     avisos: list[Aviso] = []
@@ -78,6 +115,21 @@ def _avisos_de_visuales(guion: Guion) -> list[Aviso]:
         if v is None:
             continue
         donde = f"paso {i} (visual)"
+        fisica = _duracion_de_movimiento(v)
+        if fisica is not None:
+            voz = estimar_segundos(paso.voz)
+            if fisica > voz:
+                segundos = f"{fisica:.1f}".replace(".", ",")
+                hablado = f"{voz:.1f}".replace(".", ",")
+                avisos.append(
+                    Aviso(
+                        "advertencia",
+                        donde,
+                        f"el movimiento dura {segundos} s y la voz de este paso dura unos {hablado} s: "
+                        "el motor no comprime la física, así que el recorrido se corta antes de terminar. "
+                        "Alarga la voz del paso o baja la duración del visual.",
+                    )
+                )
         if v.tipo == "circuito":
             # Un rótulo sin número («cuatro ohmios») no revienta hasta el render: lo avisamos aquí.
             try:
