@@ -143,7 +143,8 @@ pasos:
   cierre), nunca dentro de `texto` o `voz`. Lista: `./tpi emojis`.
 - **Tus propias imágenes:** guarda un PNG con fondo transparente en `mis_ajustes/stickers/` (por ejemplo
   `mascota.png`, o súbelo en el panel: Ajustes → Tus stickers) y escribe `emoji: mascota`. En el `cierre`
-  reemplaza al engranaje de la marca.
+  reemplaza al engranaje de la marca. El `emoji:` de la marca (tu logo) va además arriba, en la cabecera
+  de todo el video.
 - Ejemplo completo: `guiones/ejemplos/matematica_error_binomio.yaml`. La IA (`./tpi redactar`) también
   elige emojis y agrega un error típico cuando existe uno famoso — y un dibujo (gráfico, fuerzas o circuito)
   cuando el ejercicio lo pide. Para verlo en pantalla: `./tpi crear guiones/ejemplos/visuales_tres_tipos.yaml`.

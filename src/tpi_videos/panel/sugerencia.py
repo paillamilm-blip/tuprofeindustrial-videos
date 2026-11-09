@@ -19,6 +19,8 @@ from ..formatos import (
     palabra_que_delata,
     puntuar_idea,
 )
+from ..guion import MATERIAS
+from ..ideas import DIFICULTADES
 from ..moldes import MOLDES, nombre_molde, normalizar_molde
 from ..redactor import TECHO_DE_LECTURA
 from ..revision import PISO_LECTURA, coma
@@ -29,6 +31,9 @@ from ..temas import listar_temas
 ETIQUETAS = {
     "familia": "Familia",
     "molde": "Molde",
+    "materia": "Materia",
+    "nivel": "Nivel",
+    "dificultad": "Dificultad",
     "tema": "Estilo",
     "voz": "Voz",
     "segundos": "Duración",
@@ -38,6 +43,9 @@ ETIQUETAS = {
 }
 BANDERAS = {  # cada pieza con la bandera real de `tpi producir`
     "molde": "--molde",
+    "materia": "--materia",
+    "nivel": "--nivel",
+    "dificultad": "--dificultad",
     "tema": "--estilo",
     "voz": "--voz",
     "segundos": "--segundos",
@@ -65,14 +73,20 @@ MOTIVO_POR_MOLDE = {
     "nadie_te_enseno": "El dato sorpresa va en plano azul.",
 }
 
+# El motor nombra las materias en mayúsculas (son rótulos del video); la tarjeta las muestra normales.
+NOMBRE_MATERIA = {clave: nombre.capitalize() for clave, nombre in MATERIAS.items()}
+
 
 @dataclass(frozen=True)
 class Preferencias:
-    """Lo que ya está guardado en Ajustes: el estilo y la voz de siempre, con sus nombres para mostrar."""
+    """Lo que ya está guardado en Ajustes: el estilo y la voz de siempre, y su público de siempre."""
 
     tema: str = "hoja_de_desarrollo"
     voz: str = "es-CL-LorenzoNeural"
     voces: dict[str, str] = field(default_factory=dict)
+    materia: str | None = None
+    nivel: str | None = None
+    dificultad: str | None = None
 
 
 @dataclass(frozen=True)
@@ -117,6 +131,10 @@ def opciones(clave: str) -> dict[str, str]:
         return {c: f.nombre for c, f in cargar_formatos().items()}
     if clave == "molde":
         return {c: m.nombre for c, m in MOLDES.items()}
+    if clave == "materia":
+        return dict(NOMBRE_MATERIA)
+    if clave == "dificultad":
+        return dict(DIFICULTADES)
     if clave == "tema":
         return {ident: tema.nombre for ident, tema, _propio in listar_temas()}
     if clave == "segundos":
@@ -145,6 +163,9 @@ def armar(
     piezas = (
         _una_familia(la_familia, toco_familia, idea),
         el_molde,
+        _una_materia(cambios, preferencias, propuesta),
+        _un_nivel(cambios, preferencias, propuesta),
+        _una_dificultad(cambios, preferencias, propuesta),
         _una_tema(la_familia, cambios, preferencias, el_molde.codigo),
         _una_voz(cambios, preferencias),
         _una_duracion(cambios, propuesta),
@@ -207,6 +228,64 @@ def _una_molde(la_familia, cambios: dict[str, str], propuesta: dict) -> Pieza:
     else:
         codigo, razon, tocada = None, "Tu frase no delató un molde: lo decide la IA.", False
     return Pieza("molde", ETIQUETAS["molde"], nombre_molde(codigo), codigo, razon, tocada)
+
+
+def _una_materia(cambios: dict[str, str], pref: Preferencias, propuesta: dict) -> Pieza:
+    if "materia" in cambios:
+        codigo, razon, tocada = (cambios["materia"] or None), "Cambiado por ti.", True
+    elif propuesta.get("materia"):
+        codigo, razon, tocada = str(propuesta["materia"]), "Lo trajo la idea que elegiste.", False
+    elif pref.materia:
+        codigo, razon, tocada = pref.materia, "Tu predeterminado (Ajustes).", False
+    else:
+        codigo, razon, tocada = None, "La IA la deduce de la frase.", False
+    return Pieza(
+        clave="materia",
+        etiqueta=ETIQUETAS["materia"],
+        valor=NOMBRE_MATERIA.get(codigo, codigo) if codigo else "lo deduce la IA",
+        codigo=codigo,
+        razon=razon,
+        tocada=tocada,
+    )
+
+
+def _un_nivel(cambios: dict[str, str], pref: Preferencias, propuesta: dict) -> Pieza:
+    """El nivel es texto libre —el motor lo manda tal cual al guion—, por eso no tiene lista."""
+    if "nivel" in cambios:
+        codigo, razon, tocada = (cambios["nivel"].strip() or None), "Cambiado por ti.", True
+    elif str(propuesta.get("nivel") or "").strip():
+        codigo, razon, tocada = str(propuesta["nivel"]).strip(), "Lo trajo la idea que elegiste.", False
+    elif (pref.nivel or "").strip():
+        codigo, razon, tocada = pref.nivel.strip(), "Tu predeterminado (Ajustes).", False
+    else:
+        codigo, razon, tocada = None, "La IA lo deduce; si nada lo dice, es enseñanza media.", False
+    return Pieza(
+        clave="nivel",
+        etiqueta=ETIQUETAS["nivel"],
+        valor=codigo or "lo deduce la IA",
+        codigo=codigo,
+        razon=razon,
+        tocada=tocada,
+    )
+
+
+def _una_dificultad(cambios: dict[str, str], pref: Preferencias, propuesta: dict) -> Pieza:
+    if "dificultad" in cambios:
+        codigo, razon, tocada = (cambios["dificultad"] or None), "Cambiado por ti.", True
+    elif propuesta.get("dificultad"):
+        codigo, razon, tocada = str(propuesta["dificultad"]), "Lo trajo la idea que elegiste.", False
+    elif pref.dificultad:
+        codigo, razon, tocada = pref.dificultad, "Tu predeterminado (Ajustes).", False
+    else:
+        codigo, razon, tocada = None, "La IA reparte las 3 dificultades del lote.", False
+    return Pieza(
+        clave="dificultad",
+        etiqueta=ETIQUETAS["dificultad"],
+        valor=DIFICULTADES.get(codigo, codigo) if codigo else "la decide la IA",
+        codigo=codigo,
+        razon=razon,
+        tocada=tocada,
+    )
 
 
 def _una_tema(la_familia, cambios: dict[str, str], pref: Preferencias, molde: str | None = None) -> Pieza:
@@ -332,9 +411,10 @@ def _nombre_tema(codigo: str | None) -> str:
 def _args(idea: str, piezas: tuple[Pieza, ...], propuesta: dict, kit: bool) -> tuple[str, ...]:
     """El comando exacto. Las variantes de gancho de la IA viajan en JSON, como en Fábrica."""
     args = ["producir"]
-    for clave in ("materia", "nivel", "titulo"):
-        if propuesta.get(clave):
-            args += [f"--{clave}", str(propuesta[clave])]
+    # La materia, el nivel y la dificultad ya viajan como piezas: desde acá sólo se repite lo que
+    # ninguna tarjeta muestra (el título), o la bandera llegaría dos veces.
+    if propuesta.get("titulo"):
+        args += ["--titulo", str(propuesta["titulo"])]
     for pieza in piezas:
         bandera = BANDERAS.get(pieza.clave)
         if bandera and pieza.codigo and bandera != "--gancho":

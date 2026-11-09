@@ -150,9 +150,7 @@ def _limpiar(textos: TextosPublicacion) -> TextosPublicacion:
         etiquetas.insert(0, "#tuprofeindustrial")
     # TikTok e Instagram piden que el contenido generado por IA se declare en el texto,
     # no solo en la configuración de la cuenta; si ya viene dicho, no se repite.
-    textos = textos.model_copy(
-        update={c: _con_aviso(getattr(textos, c)) for c in _CAMPOS_CON_AVISO}
-    )
+    textos = textos.model_copy(update={c: _con_aviso(getattr(textos, c)) for c in _CAMPOS_CON_AVISO})
     return textos.model_copy(
         update={"hashtags": etiquetas[:12], "titulo_youtube": textos.titulo_youtube[:100]}
     )
@@ -220,6 +218,8 @@ def crear_kit(
             textos = textos_con_ia(guion, modelo)
         except ErrorMotor as e:  # el kit igual se crea, con la plantilla
             avisos.append(f"No se pudo usar la IA ({e.mensaje}); los textos se armaron con una plantilla.")
+        except Exception as e:  # una caída rara de la IA no debe botar un video ya hecho
+            avisos.append(f"No se pudo usar la IA ({e}); los textos se armaron con una plantilla.")
     aviso = " ".join(avisos) or None
     con_ia_real = textos is not None
     textos = _limpiar(textos or textos_de_plantilla(guion))

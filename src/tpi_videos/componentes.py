@@ -19,8 +19,10 @@ from __future__ import annotations
 import functools
 import logging
 import re
+from contextvars import ContextVar, Token
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from manim import (
@@ -56,11 +58,12 @@ from manim import (
 
 from . import tipografia
 from .errores import ErrorMotor
+from .guion import sin_tildes
 from .tex import corregir_decimales, partes
 
 # ------------------------------------------------------------------------------------------
-# Estilo activo (lo fija `usar_estilo` al comenzar cada video; cada video se crea en su propio
-# proceso). Los valores iniciales son los del estilo original "Pizarra nocturna".
+# Estilo activo (lo fija `usar_estilo` al comenzar cada video). Vive en un ContextVar: cada hilo
+# ve el suyo, así dos renders del mismo proceso no se pisan. Sin tema, manda "Pizarra nocturna".
 # ------------------------------------------------------------------------------------------
 
 
@@ -71,17 +74,59 @@ class Rol:
     escala: float = 1.0
 
 
-_TITULOS = Rol()
-_TEXTO = Rol()
+@dataclass(frozen=True)
+class _Estilo:
+    """Tipografía y diagramación de un tema, ya resueltas (sin volver a leer el YAML)."""
+
+    titulos: Rol = Rol()
+    texto: Rol = Rol()
+    ancho_util: float = 7.6
+    y_cabecera: float = 6.55
+    y_titulo: float = 5.55
+    y_zona_superior: float = 4.75
+    y_zona_inferior: float = -2.4
+    banda_subtitulo: float = 0.28
+    aire_dibujo: float = 0.28
+
+    @property
+    def centro_zona(self) -> float:
+        return (self.y_zona_superior + self.y_zona_inferior) / 2
+
+    @property
+    def alto_zona(self) -> float:
+        return self.y_zona_superior - self.y_zona_inferior
+
+
 _PESOS_TITULO = {HEAVY, ULTRABOLD, BOLD}
 
-ANCHO_UTIL = 7.6
-Y_CABECERA = 6.55
-Y_TITULO = 5.55
-Y_ZONA_SUPERIOR = 4.75
-Y_ZONA_INFERIOR = -2.4
-CENTRO_ZONA = (Y_ZONA_SUPERIOR + Y_ZONA_INFERIOR) / 2
-ALTO_ZONA = Y_ZONA_SUPERIOR - Y_ZONA_INFERIOR
+# Nombres de siempre, que siguen leyéndose como atributos del módulo (``c.Y_CABECERA``) y que ahora
+# resuelven contra el estilo del contexto en vez de contra una variable global.
+_NOMBRES_DE_SIEMPRE = {
+    "ANCHO_UTIL": "ancho_util",
+    "Y_CABECERA": "y_cabecera",
+    "Y_TITULO": "y_titulo",
+    "Y_ZONA_SUPERIOR": "y_zona_superior",
+    "Y_ZONA_INFERIOR": "y_zona_inferior",
+    "CENTRO_ZONA": "centro_zona",
+    "ALTO_ZONA": "alto_zona",
+    "BANDA_SUBTITULO": "banda_subtitulo",
+    "AIRE_DIBUJO": "aire_dibujo",
+}
+
+_ESTILO: ContextVar[_Estilo | None] = ContextVar("tpi_estilo", default=None)
+
+
+def __getattr__(nombre: str) -> Any:
+    campo = _NOMBRES_DE_SIEMPRE.get(nombre)
+    if campo is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {nombre!r}")
+    return getattr(estilo_activo(), campo)
+
+
+def estilo_activo() -> _Estilo:
+    """El estilo del tema que se está renderizando, o el de siempre si nadie fijó uno."""
+    return _ESTILO.get() or _Estilo()
+
 
 # Marco "hoja": la hoja cuadriculada ocupa casi todo el cuadro; los subtítulos van dentro, abajo.
 HOJA_ANCHO, HOJA_ALTO, HOJA_CENTRO_Y = 7.9, 11.6, 0.1
@@ -98,18 +143,37 @@ def ancho_util_de(tema) -> float:
     return _ZONAS[tema.marco]["ANCHO_UTIL"]
 
 
-def usar_estilo(tema) -> None:
-    """Aplica la tipografía y las zonas del tema (ver ``temas.Tema``)."""
-    global _TITULOS, _TEXTO, ANCHO_UTIL, Y_CABECERA, Y_TITULO, Y_ZONA_SUPERIOR, Y_ZONA_INFERIOR
-    global CENTRO_ZONA, ALTO_ZONA
+def _del_tema(tema) -> _Estilo:
     t = tema.tipografia
-    _TITULOS = Rol(t.titulos.familia, t.titulos.grosor, t.titulos.escala)
-    _TEXTO = Rol(t.texto.familia, t.texto.grosor, t.texto.escala)
     z = _ZONAS[tema.marco]
-    ANCHO_UTIL, Y_CABECERA, Y_TITULO = z["ANCHO_UTIL"], z["Y_CABECERA"], z["Y_TITULO"]
-    Y_ZONA_SUPERIOR, Y_ZONA_INFERIOR = z["Y_ZONA_SUPERIOR"], z["Y_ZONA_INFERIOR"]
-    CENTRO_ZONA = (Y_ZONA_SUPERIOR + Y_ZONA_INFERIOR) / 2
-    ALTO_ZONA = Y_ZONA_SUPERIOR - Y_ZONA_INFERIOR
+    layout = getattr(tema, "layout", None)
+
+    def zona(campo: str, clave: str) -> float:
+        """Lo que pide el tema; si no lo pide, lo del marco (pizarra u hoja)."""
+        elegido = getattr(layout, campo, None) if layout is not None else None
+        return float(z[clave] if elegido is None else elegido)
+
+    return _Estilo(
+        titulos=Rol(t.titulos.familia, t.titulos.grosor, t.titulos.escala),
+        texto=Rol(t.texto.familia, t.texto.grosor, t.texto.escala),
+        ancho_util=z["ANCHO_UTIL"],
+        y_cabecera=zona("y_cabecera", "Y_CABECERA"),
+        y_titulo=z["Y_TITULO"],
+        y_zona_superior=zona("y_zona_enunciado", "Y_ZONA_SUPERIOR"),
+        y_zona_inferior=zona("y_zona_pasos", "Y_ZONA_INFERIOR"),
+        banda_subtitulo=float(getattr(layout, "banda_subtitulo", 0.28) if layout is not None else 0.28),
+        aire_dibujo=float(getattr(layout, "aire_dibujo", 0.28) if layout is not None else 0.28),
+    )
+
+
+def usar_estilo(tema) -> Token[_Estilo]:
+    """Fija tipografía y diagramación del tema en el contexto actual (ver ``temas.Tema``)."""
+    return _ESTILO.set(_del_tema(tema))
+
+
+def restablecer_estilo(token: Token[_Estilo]) -> None:
+    """Deshace un ``usar_estilo``: vuelve al estilo que había antes en este contexto."""
+    _ESTILO.reset(token)
 
 
 TAM_GANCHO = 60
@@ -132,7 +196,8 @@ def _letra(peso: str) -> tuple[str, str, float]:
     """(familia, grosor real, escala) para un texto que pide ``peso``.
 
     Los pesos fuertes (títulos, etiquetas, marca) usan la letra de títulos; el resto, la de texto."""
-    rol = _TITULOS if peso in _PESOS_TITULO else _TEXTO
+    est = estilo_activo()
+    rol = est.titulos if peso in _PESOS_TITULO else est.texto
     grosor = peso if rol.grosor == "conservar" else rol.grosor
     return rol.familia, tipografia.grosor_disponible(rol.familia, grosor), rol.escala
 
@@ -328,7 +393,7 @@ def parrafo(
     ``interlineado``: espacio extra entre líneas como fracción del tamaño de letra.
     ``max_lineas``: si el texto ocupa más líneas, la letra se achica (hasta un 30 %).
     ``mayus``: todo en mayúsculas (las frases a destacar también)."""
-    ancho_max = ANCHO_UTIL if ancho_max is None else ancho_max
+    ancho_max = estilo_activo().ancho_util if ancho_max is None else ancho_max
     familia, grosor, escala = _letra(peso)
     tam = tam * escala
     if mayus:
@@ -382,6 +447,83 @@ def numeros_en(contenido: str) -> list[str]:
     return [m.strip("¿?¡!.,;:") for m in re.findall(r"\S*\d\S*", contenido)]
 
 
+_HASTA_VEINTINUEVE = (
+    "cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez",
+    "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho",
+    "diecinueve", "veinte", "veintiuno", "veintidós", "veintitrés", "veinticuatro", "veinticinco",
+    "veintiséis", "veintisiete", "veintiocho", "veintinueve",
+)  # fmt: skip
+_DECENAS = {30: "treinta", 40: "cuarenta", 50: "cincuenta", 60: "sesenta", 70: "setenta",
+            80: "ochenta", 90: "noventa"}  # fmt: skip
+_CENTENAS = {1: "ciento", 2: "doscientos", 3: "trescientos", 4: "cuatrocientos", 5: "quinientos",
+             6: "seiscientos", 7: "setecientos", 8: "ochocientos", 9: "novecientos"}  # fmt: skip
+
+
+def _tres_cifras(n: int) -> str:
+    """0..999 dicho en español: del 16 al 29 se escribe junto y de 31 en adelante lleva «y»."""
+    if n < 30:
+        return _HASTA_VEINTINUEVE[n]
+    centena, resto = divmod(n, 100)
+    if centena:
+        if resto == 0:
+            return "cien" if centena == 1 else _CENTENAS[centena]
+        return f"{_CENTENAS[centena]} {_tres_cifras(resto)}"
+    decena, unidad = divmod(resto, 10)
+    if unidad == 0:
+        return _DECENAS[decena * 10]
+    return f"{_DECENAS[decena * 10]} y {_HASTA_VEINTINUEVE[unidad]}"
+
+
+def _hasta_el_millon(n: int) -> str:
+    """0..999 999: los miles se agrupan de a tres y el «mil» suelto no lleva «uno» delante."""
+    if n < 1000:
+        return _tres_cifras(n)
+    millar, resto = divmod(n, 1000)
+    nombre = "mil" if millar == 1 else f"{_tres_cifras(millar)} mil"
+    return nombre if resto == 0 else f"{nombre} {_tres_cifras(resto)}"
+
+
+def numero_en_palabras(frase: str) -> str | None:
+    """Cómo se dice una frase que es un número: '12' → 'doce', '9,8' → 'nueve coma ocho'.
+
+    Devuelve ``None`` para lo que la voz no lee como número entero o decimal con coma: un número
+    escrito con puntos de miles no se inventa, porque ahí el resaltado tiene más chances de
+    equivocarse que de acertar.
+    """
+    cifra = re.fullmatch(r"(\d{1,6})(?:,(\d+))?°?", frase.strip())
+    if not cifra:
+        return None
+    dicho = _hasta_el_millon(int(cifra.group(1)))
+    if cifra.group(2):
+        dicho += " coma " + " ".join(_HASTA_VEINTINUEVE[int(d)] for d in cifra.group(2))
+    return dicho
+
+
+def busca_en_la_voz(texto: str, frase: str) -> int:
+    """Dónde suena ``frase`` dentro de la transcripción de la voz, o -1 si no se dijo.
+
+    Primero se busca tal cual está escrita. Si no está y la frase es un número, se busca dicho: el
+    gancho se escribe «12» pero la voz lo lee «doce», y ahí el resaltado nunca sonaba.
+    """
+    base = sin_tildes(texto.lower())
+    aguja = sin_tildes(frase.lower())
+    if aguja and base.find(aguja) >= 0:
+        return base.find(aguja)
+    dicho = numero_en_palabras(frase)
+    if dicho is None:
+        return -1
+    # «1» se dice «un» cuando acompaña: «avanza un centímetro», no «avanza uno centímetro».
+    encontrada = re.search(rf"\b{re.escape(sin_tildes(dicho))}\b", base)
+    if encontrada:
+        return encontrada.start()
+    if dicho != "uno":
+        return -1
+    # Con más de un «un» no hay forma de saber cuál es el número («Un vector avanza 1 cm» tiene
+    # dos), y resaltar el equivocado es peor que no resaltar.
+    unos = list(re.finditer(r"\bun\b", base))
+    return unos[0].start() if len(unos) == 1 else -1
+
+
 # ------------------------------------------------------------------------------------------
 # Fórmulas
 # ------------------------------------------------------------------------------------------
@@ -391,7 +533,7 @@ def ecuacion(
     tex: str, tam: float = TAM_ECUACION, color: str = "#FFFFFF", ancho_max: float | None = None
 ) -> MathTex:
     """Fórmula dividida en partes (para animar cada término). Si la división falla, usa una sola."""
-    ancho_max = ANCHO_UTIL if ancho_max is None else ancho_max
+    ancho_max = estilo_activo().ancho_util if ancho_max is None else ancho_max
     tex = corregir_decimales(tex)
     piezas = partes(tex)
     registro = logging.getLogger("manim")

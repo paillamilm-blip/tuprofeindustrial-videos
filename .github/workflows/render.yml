@@ -17,7 +17,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: TeX, FFmpeg y las librerías de Manim
         run: |
@@ -30,6 +30,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
+
+      - name: Comprobar que uv.lock sigue al día
+        # Si alguien agrega o cambia una dependencia en pyproject.toml sin regenerar el lock, se corta acá.
+        run: |
+          python -m pip install --quiet uv
+          uv lock --check
 
       - name: Pruebas del motor
         # Cola, hitos, espera de la IA y eventos del panel: sin Manim, sin NiceGUI y sin internet.

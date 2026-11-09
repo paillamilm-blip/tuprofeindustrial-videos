@@ -64,7 +64,7 @@ QUE_HACE = {
     "contador": {"errores": "chip «✗ 2 de 3» arriba", "ninguno": "sin contador"},
     "primer_plano": {"destacar": "entra al término que cambia", "nada": "sin acercamientos"},
     "gancho": {"tarjeta": "la pregunta en una tarjeta", "lleno": "la pregunta ocupa todo el cuadro"},
-    "deriva": {"fija": "quieto", "en_mano": "respira y se desliza, como en mano"},
+    "deriva": {"fija": "sin paneo, respira", "en_mano": "respira y se desliza, como en mano"},
     "partida": {"seguida": "una columna que avanza", "mitades": "partido: MITO arriba, REALIDAD abajo"},
     "tapar_resultado": {
         "visible": "se ve al aparecer",

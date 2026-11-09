@@ -161,7 +161,8 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
     avisos: list[Aviso] = []
     voces = guion.textos_de_voz(cierre_por_defecto)
     segundos = sum(estimar_segundos(t) for _, t in voces) + SEGUNDOS_ANIMACION_EXTRA
-    segundos += sum(p.visual.segundos for p in guion.pasos if p.visual)  # el dibujo se mira un rato más
+    dibujos = [guion.gancho.visual, *(p.visual for p in guion.pasos)]
+    segundos += sum(v.segundos for v in dibujos if v)  # el dibujo se mira un rato más
     palabras = sum(len(t.split()) for _, t in voces)
 
     # Duración total
@@ -353,6 +354,12 @@ def _quieto_estimado(segundos_de_voz: float) -> float:
 def segundos_a_esperar(piso: float, quieto: float) -> float:
     """Cuánto hay que estirar un bloque para que su fórmula lleve ``piso`` segundos completa y quieta."""
     return max(0.0, piso - quieto)
+
+
+def espera_de_lectura(piso: float, *, completa_desde: float, fin_de_bloque: float) -> float:
+    """Lo que falta esperar: la fórmula ya sumó lectura desde que quedó completa hasta el fin del
+    bloque, incluida la voz que sigue hablando y los énfasis dibujados sobre ella."""
+    return segundos_a_esperar(piso, fin_de_bloque - completa_desde)
 
 
 def _bloques_con_formula(guion: Guion) -> set[str]:

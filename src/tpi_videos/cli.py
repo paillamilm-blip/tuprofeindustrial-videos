@@ -17,6 +17,7 @@
 ./tpi panel                          abre el panel de control en el navegador (solo en este Mac)
 ./tpi icono                          crea el ícono del panel en el Escritorio y te lo muestra en Finder
 ./tpi publicar salida/x/x.mp4        portada + título, descripción y hashtags para publicar
+./tpi podar                          borra cachés temporales viejos (dibujos 3D y audios de voz)
 ./tpi vista-previa --tema X          3 cuadros de muestra de un estilo
 """
 
@@ -629,10 +630,14 @@ def cmd_ganchos(args: argparse.Namespace) -> int:
 
     if not json_activo:
         consola.print(f"\n[bold]🎣 Probando {len(idea.ganchos)} gancho(s)[/] en 540×960, sin subtítulos.\n")
+    proveedor, voz = _dividir_voz(args.voz)
+    sin_voz = args.sin_voz or proveedor == "silencio"
     manifiesto = renderizar_ganchos(
         idea,
         calidad="borrador",
-        sin_voz=args.sin_voz,
+        proveedor=proveedor,
+        voz=voz,
+        sin_voz=sin_voz,
         progreso=_progreso_json if json_activo else None,
     )
     if json_activo:
@@ -855,6 +860,7 @@ def _cmd_reanudar(args: argparse.Namespace, *, json_activo: bool, avisar) -> int
             espera=args.espera,
             cola_id=lote["id"],
             reintentos=None,
+            workers=args.workers,
             avisar=avisar,
             progreso=_progreso_json if json_activo else None,
         )
@@ -863,6 +869,107 @@ def _cmd_reanudar(args: argparse.Namespace, *, json_activo: bool, avisar) -> int
         return 0
     finally:
         cola.soltar_candado()
+
+
+def _rutas_de_guiones(tema: str) -> list[Path] | None:
+    """Si lo que se pasó como tema es una carpeta o un .yaml, son guiones ya escritos (sin IA)."""
+    ruta = Path(tema).expanduser()
+    if not ruta.exists():
+        return None
+    if ruta.is_dir():
+        return sorted([*ruta.glob("*.yaml"), *ruta.glob("*.yml")])
+    return [ruta]
+
+
+def _idea_de_guion(guion) -> Any:
+    from .ideas import Idea
+
+    return Idea(
+        angulo="paso_a_paso",
+        titulo=guion.titulo,
+        gancho=guion.gancho.texto,
+        enunciado=guion.enunciado.texto,
+        materia=guion.materia,
+        nivel=guion.nivel or "2° medio",
+        porque="El guion ya estaba escrito: se salta la redacción con IA.",
+        segundos=45,
+        emoji=guion.gancho.emoji or "",
+        molde=guion.molde or "",
+    )
+
+
+def _cmd_lote_de_guiones(args: argparse.Namespace, rutas: list[Path], json_activo: bool, avisar) -> int:
+    """Produce guiones ya escritos (de una carpeta o un archivo) sin pedirle nada a la IA."""
+    from . import cola
+    from .guion import cargar_guion
+    from .ia import MODELO_POR_DEFECTO
+    from .lote import producir_lote
+
+    guiones: list[tuple[Path, Any]] = []
+    for ruta in rutas:
+        try:
+            guiones.append((ruta, cargar_guion(ruta)))
+        except ErrorMotor as error:
+            avisar(f"Salto «{ruta.name}»: {error.mensaje}")
+    if not guiones:
+        raise ErrorMotor(
+            "No encontré guiones en esa ruta.",
+            ayuda="Pásame una carpeta con archivos .yaml o el .yaml de un guion.",
+        )
+
+    proveedor, voz = _dividir_voz(args.voz)
+    ajustes = _ajustes_lote(args, args.modelo or MODELO_POR_DEFECTO, proveedor, voz)
+    tema = f"Guiones de {guiones[0][0].parent.name}"
+    if not cola.tomar_candado():
+        raise ErrorMotor(
+            "Ya hay un lote en curso.",
+            ayuda="Espera a que termine (mira Fábrica) o ciérralo antes de lanzar otro.",
+        )
+    try:
+        if cola.cargar().get("roto"):
+            avisar("La cola anterior estaba dañada y se apartó: esos videos no se pudieron reanudar.")
+        ideas = [_idea_de_guion(guion) for _, guion in guiones]
+        lote_id = cola.nuevo_lote(tema, ajustes, ideas=ideas)
+        for (ruta, _), video in zip(guiones, cola.videos_del_lote(lote_id), strict=True):
+            cola.hito(
+                video["id"],
+                "guion",
+                {
+                    "ruta": str(ruta.resolve()),
+                    "pendientes": [],
+                    "supuestos": [],
+                    "rondas": 0,
+                    "modelo": "",
+                    "revisado_por_ia": False,
+                },
+            )
+        if not json_activo:
+            como = "en paralelo" if args.workers > 1 else "de a uno"
+            consola.print(
+                f"\n[bold]📦 {len(ideas)} guiones ya escritos[/] · {como} · "
+                f"{args.workers} worker{'s' if args.workers > 1 else ''}.\n"
+                "   No se llama a la IA para redactar: se usa el .yaml tal como está.\n"
+            )
+        items = producir_lote(
+            ideas,
+            **_producir_desde_ajustes(ajustes),
+            espera=args.espera,
+            cola_id=lote_id,
+            reintentos=None,
+            workers=args.workers,
+            avisar=avisar,
+            progreso=_progreso_json if json_activo else None,
+        )
+    finally:
+        cola.soltar_candado()
+
+    _resultado_lote(items, ideas, tema, lote_id, json_activo)
+    _mostrar_lote(items, tema)
+    if args.abrir:
+        for item in items:
+            if item.ok:
+                _abrir(Path(item.video))
+    return 0
 
 
 def cmd_lote(args: argparse.Namespace) -> int:
@@ -890,6 +997,10 @@ def cmd_lote(args: argparse.Namespace) -> int:
                 "Para reanudar no indiques tema ni ideas; usa --cola-id si quieres elegir un lote."
             )
         return _cmd_reanudar(args, json_activo=json_activo, avisar=avisar)
+
+    rutas = _rutas_de_guiones(tema) if tema and not args.ideas_json else None
+    if rutas is not None:
+        return _cmd_lote_de_guiones(args, rutas, json_activo, avisar)
 
     # El candado va antes de cargar la voz: si ya hay un lote en curso no tiene sentido cargar Manim.
     if not cola.tomar_candado():
@@ -938,6 +1049,7 @@ def cmd_lote(args: argparse.Namespace) -> int:
             espera=args.espera,
             cola_id=lote_id,
             reintentos=None,
+            workers=args.workers,
             avisar=avisar,
             progreso=_progreso_json if json_activo else None,
         )
@@ -1015,6 +1127,35 @@ def cmd_vista_previa(args: argparse.Namespace) -> int:
     if args.abrir:
         for cuadro in cuadros:
             _abrir(cuadro)
+    return 0
+
+
+def cmd_podar(args: argparse.Namespace) -> int:
+    from .mantenimiento import podar_temporales
+
+    if args.dias < 0 or args.max_mb < 0:
+        raise ErrorMotor(
+            "Los días y los MB no pueden ser negativos.",
+            ayuda="Ej. ./tpi podar --dias 7 --max-mb 500",
+        )
+    vista = podar_temporales(dias=args.dias, max_tamano_mb=args.max_mb, aplicar=False)
+    if not vista.archivos:
+        consola.print("[green]No hay nada que podar:[/] las cachés temporales están al día.")
+        return 0
+    megas = vista.bytes / (1024 * 1024)
+    consola.print(f"\n[bold]🧹 {len(vista.archivos)} archivo(s) temporales[/] · {megas:.1f} MB")
+    consola.print("   Son dibujos 3D y audios de voz que se pueden volver a generar.")
+    if not args.si:
+        try:
+            respuesta = input("¿Los borro? [s/N] ").strip().lower()
+        except EOFError:
+            respuesta = ""
+        if respuesta not in ("s", "si", "sí"):
+            consola.print("No borré nada.")
+            return 0
+    hecha = podar_temporales(dias=args.dias, max_tamano_mb=args.max_mb)
+    liberados = hecha.bytes / (1024 * 1024)
+    consola.print(f"[green]✅ Liberé {liberados:.1f} MB[/] en {len(hecha.archivos)} archivo(s).")
     return 0
 
 
@@ -1293,6 +1434,8 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--idea-json", help=argparse.SUPPRESS)  # la idea completa, desde el panel
     s.add_argument("--elegir", type=int, help="deja ese gancho en el guion sin renderizar")
     s.add_argument("--sin-voz", action="store_true", help="clips sin voz (más rápidos)")
+    s.add_argument("--borrador", action="store_true", help="clips rápidos en 540×960 (ya sale así)")
+    s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_ganchos)
 
@@ -1319,6 +1462,12 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--solo-pendientes", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.add_argument("--cola-id", help=argparse.SUPPRESS)  # para el panel
+    s.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="cuántos videos a la vez (por defecto 1: de uno en uno; ej. 2 usa dos núcleos)",
+    )
     s.add_argument(
         "--espera",
         type=float,
@@ -1381,6 +1530,12 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_publicar)
+
+    s = sub.add_parser("podar", help="borra cachés temporales viejos (dibujos 3D y audios de voz)")
+    s.add_argument("--dias", type=int, default=7, help="edad mínima para borrar (por defecto 7 días)")
+    s.add_argument("--max-mb", type=int, default=500, help="cuota de salida/_3d en MB (por defecto 500)")
+    s.add_argument("--si", action="store_true", help="borra sin preguntar")
+    s.set_defaults(func=cmd_podar)
 
     s = sub.add_parser("vista-previa", help="3 cuadros de muestra de un estilo (unos segundos)")
     s.add_argument("--tema", help="estilo (por defecto, el de marca.yaml)")

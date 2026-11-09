@@ -1,0 +1,58 @@
+# Guion redactado con IA (gemini-3.6-flash) el 01-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se asume que los cambios porcentuales se aplican sucesivamente sobre el saldo vigente.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "El mito del doble descuento"
+materia: matematica
+nivel: "1° medio"
+molde: mito_realidad
+
+gancho:
+  texto: "Subir 50% y bajar 50% no da lo mismo"
+  voz: "Subir cincuenta por ciento y luego bajar cincuenta por ciento no da lo mismo."
+  emoji: "⚠️"
+
+enunciado:
+  texto: "Un polerón cuesta 20000 pesos. Sube un 50% y luego baja un 50% sobre el nuevo precio. ¿Cuánto cuesta?"
+  voz: "Un polerón a veinte mil sube un cincuenta por ciento y baja otro cincuenta. ¿Cuánto cuesta?"
+  destacar: ["20000 pesos", "Sube un 50%", "baja un 50%"]
+
+datos:
+  - tex: 'P = 20000\ \text{pesos}'
+    voz: "Precio inicial, veinte mil pesos."
+
+pasos:
+  - nota: "Creencia falsa"
+    tex: 'P_{final} = 20000\ \text{pesos}'
+    voz: "Creer que queda igual es el error común."
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Calculamos el alza"
+    tex: 'P_1 = 20000 \cdot 1,5 = 30000\ \text{pesos}'
+    voz: "Primero sumamos el cincuenta por ciento, llegando a treinta mil."
+    emoji: "💡"
+    visual:
+      tipo: barras
+      categorias: ['Inicial 20000', 'Alza 30000', 'Final 15000']
+  - nota: "Aplicamos descuento"
+    tex: 'P_{final} = 30000 \cdot 0,5 = 15000\ \text{pesos}'
+    voz: "Luego el descuento se aplica sobre los treinta mil."
+    emoji: "✅"
+
+resultado:
+  tex: 'P_{final} = 15000\ \text{pesos}'
+  voz: "El precio final es quince mil pesos."
+  emoji: "🎯"
+
+verificacion:
+  texto: "El descuento se hace sobre una base mayor."
+  voz: "La base cambió."
+
+reto:
+  texto: "Si cuesta 40000, sube 20% y baja 20%, ¿cuánto queda?"
+  voz: "¿Y con cuarenta mil?"
+  emoji: "✍️"

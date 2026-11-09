@@ -18,11 +18,14 @@ import numpy as np
 from manim import (
     DEGREES,
     ORIGIN,
+    Arrow,
     Circle,
     Cone,
     Cylinder,
+    DashedLine,
     Group,
     ImageMobject,
+    Line,
     Prism,
     Sphere,
     ThreeDCamera,
@@ -47,6 +50,7 @@ VISTAS: dict[str, tuple[float, float]] = {
 
 PX = 1300  # ancho del PNG; con el zoom de cámara (0,84) sigue nítido, sin estirarse
 LARGO_MARCO = 3.2  # lado corto del marco 3D, en unidades de Manim
+LARGO_CAJA = 2.4  # la dimensión mayor del vector, en unidades de Manim
 OBJETIVO = 0.80  # cuánto del lado corto ocupa el cuerpo
 MARGEN_PX = 6  # aire que se deja al recortar, para no comerse el trazo
 
@@ -167,7 +171,7 @@ def _medidas(visual: Any) -> tuple[float, float, float]:
     return min(max(r, 0.35), 1.9), 3.0, 0.0
 
 
-def _ruta_cache(figura, vista, corte, r, h, a, col, papel) -> Path:
+def _ruta_cache(figura, vista, corte, r, h, a, col, papel, aspect: float) -> Path:
     huella = hashlib.sha1(
         json.dumps(
             [
@@ -178,6 +182,7 @@ def _ruta_cache(figura, vista, corte, r, h, a, col, papel) -> Path:
                 list(VISTAS[vista]),
                 __version__,
                 PX,  # más resolución = otro PNG: el viejo no sirve para el zoom
+                round(aspect, 3),  # la proporción de la banda: otro marco es otro PNG y otro recorte
                 corte,
                 round(r, 3),
                 round(h, 3),
@@ -186,6 +191,7 @@ def _ruta_cache(figura, vista, corte, r, h, a, col, papel) -> Path:
                 col.cuadricula,
                 col.acento,
                 col.formulas,
+                col.exito,  # la línea de «norma» se pinta con este color dentro del PNG
                 papel,
             ],
             ensure_ascii=False,
@@ -199,7 +205,7 @@ def _ruta_cache(figura, vista, corte, r, h, a, col, papel) -> Path:
 def _render(visual: Any, col: Any, ancho: float, alto: float, papel: str) -> tuple[Path, Cuadro3D]:
     figura, corte, vista = visual.figura, visual.corte, visual.vista
     r, h, a = _medidas(visual)
-    destino = _ruta_cache(figura, vista, corte, r, h, a, col, papel)
+    destino = _ruta_cache(figura, vista, corte, r, h, a, col, papel, aspect=alto / ancho)
     phi, theta = VISTAS[vista]
     if ancho >= alto:
         marco_alto, marco_ancho = LARGO_MARCO, LARGO_MARCO * ancho / alto
@@ -333,3 +339,183 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     todo.move_to(ORIGIN)
     todo = d._encajar(todo, ancho * 0.94, alto * 0.94)
     return d.Dibujo(mobs=todo, trazo=[], aparece=[imagen, *rótulos])
+
+
+def _dimensiones(visual: Any) -> tuple[float, float, float]:
+    """Las tres componentes llevadas a unidades de escena, con su signo y en proporción real.
+
+    Un vector (3, 4, 12) es una aguja parada y un (12, 4, 3) es una losa: si la caja siempre sale
+    del mismo tamaño relativo, el dibujo desmiente el número que está al lado.
+    """
+    v = visual.vector_3d()
+    k = LARGO_CAJA / (max(abs(v.x), abs(v.y), abs(v.z)) or 1.0)
+    return v.x * k, v.y * k, v.z * k
+
+
+def _puntas_ejes(x: float, y: float, z: float) -> list[np.ndarray]:
+    """Dónde termina cada eje: un poco más allá de su componente, para que la flecha no la tape.
+
+    Con una componente chica (o nula) el eje igual asoma su muñón: sin los tres muñones no hay
+    sistema de referencia, hay dos líneas y una flecha suelta.
+    """
+    minimo = 0.35 * LARGO_CAJA
+    puntas = []
+    for eje, valor in enumerate((x, y, z)):
+        punto = np.zeros(3)
+        punto[eje] = max(abs(valor) * 1.12, minimo) * (1 if valor >= 0 else -1)
+        puntas.append(punto)
+    return puntas
+
+
+def _piezas_vector(x: float, y: float, z: float, marcas: list[str], col: Any):
+    """(lo que va detrás del todo, lo que va al frente): los ejes o la caja, y el vector encima.
+
+    Las aristas se pintan tenues y las de atrás no se borran: sin z-buffer, una caja de alambre ya
+    dice dónde está cada esquina. Con la marca «ejes» el alambre se va: los tres ejes saliendo del
+    origen son lo que el alumno tiene que reconocer, y la caja sobraba. Lo que hay que seguir con el
+    ojo va encima, y por eso se pinta al final de todo.
+    """
+    detras = []
+    if "ejes" in marcas:
+        for punta_eje in _puntas_ejes(x, y, z):
+            detras.append(
+                Arrow(
+                    np.array([0.0, 0.0, 0.0]),
+                    punta_eje,
+                    buff=0,
+                    stroke_width=4,
+                    color=col.tenue,
+                    max_tip_length_to_length_ratio=0.22,
+                )
+            )
+    else:
+        esquinas = [np.array([sx * x, sy * y, sz * z]) for sx in (0, 1) for sy in (0, 1) for sz in (0, 1)]
+        for i in range(8):
+            for j in range(i + 1, 8):
+                if sum(a != b for a, b in zip(esquinas[i], esquinas[j])) == 1:
+                    detras.append(Line(esquinas[i], esquinas[j]).set_stroke(col.tenue, 2, 0.55))
+    origen = np.array([0.0, 0.0, 0.0])
+    proyeccion = np.array([x, y, 0.0])
+    punta = np.array([x, y, z])
+    encima = []
+    if "piso" in marcas:
+        # cuadricula es el color de la grilla: en la hoja de papel sale gris pálido y la diagonal
+        # desaparece. El acento es el único que se impone sobre el alambre de la caja.
+        encima.append(Line(origen, proyeccion).set_stroke(col.acento, 6))
+    if "norma" in marcas:
+        encima.append(DashedLine(proyeccion, punta, dash_length=0.14).set_stroke(col.exito, 4))
+    encima.append(
+        Arrow(
+            origen,
+            punta,
+            buff=0,
+            stroke_width=7,
+            color=col.formulas,
+            max_tip_length_to_length_ratio=0.14,
+        )
+    )
+    return detras, encima
+
+
+def _render_vector(visual: Any, col: Any, ancho: float, alto: float, papel: str) -> tuple[Path, Cuadro3D]:
+    x, y, z = _dimensiones(visual)
+    # Las marcas entran en la clave: con «piso» la diagonal va en el PNG y sin ella no, así que
+    # servir el cuerpo viejo con otro anotar mostraría una línea que el guion no pidió.
+    marcas = "+".join(visual.anotar) or "vector"
+    destino = _ruta_cache("vector_3d", "axonometrica", marcas, x, y, z, col, papel, aspect=alto / ancho)
+    phi, theta = VISTAS["axonometrica"]
+    if ancho >= alto:
+        marco_alto, marco_ancho = LARGO_MARCO, LARGO_MARCO * ancho / alto
+    else:
+        marco_ancho, marco_alto = LARGO_MARCO, LARGO_MARCO * alto / ancho
+    alto_px = int(round(PX * alto / ancho))
+    # La cámara y el encuadre se arman siempre, haya o no PNG en cache: las letras de los ejes se
+    # anclan proyectando sobre esta misma cámara, y construirlos cuesta milisegundos contra capturar.
+    camara = _camara(phi, theta, marco_ancho, marco_alto, alto_px, papel)
+    detras, encima = _piezas_vector(x, y, z, list(visual.anotar), col)
+    centro, factor = _encuadrar(camara, VGroup(*detras, *encima), marco_ancho, marco_alto)
+    lado = destino.with_suffix(".json")
+    if destino.exists() and lado.exists():
+        recorte = tuple(json.loads(lado.read_text(encoding="utf-8"))["recorte"])
+        return destino, Cuadro3D(camara, PX, alto_px, marco_ancho, marco_alto, recorte, centro, factor)
+
+    for m in VGroup(*detras).get_family():
+        camara.capture_mobject(m)
+    for m in VGroup(*encima).get_family():
+        camara.capture_mobject(m)
+    imagen = camara.get_image()
+    rgba, recorte = _png_transparente(
+        np.array(imagen.convert("RGB")), _rgb(papel), _rgb(col.formulas), con_contorno=False
+    )
+    Image.fromarray(rgba, "RGBA").save(destino)
+    # El recorte se guarda junto al PNG: si cambia el encuadre, el archivo viejo ya no sirve.
+    lado.write_text(json.dumps({"recorte": list(recorte)}), encoding="utf-8")
+    return destino, Cuadro3D(camara, PX, alto_px, marco_ancho, marco_alto, recorte, centro, factor)
+
+
+def dibujar_vector_3d(visual: Any, col: Any, ancho: float, alto: float, papel: str = "#FFFFFF") -> d.Dibujo:
+    """El vector con punta sobre sus tres ejes (o su caja), la diagonal del piso y la subida.
+
+    Las medidas van pegadas al cuerpo; con la marca «ejes» además salen las letras x, y, z en la punta
+    de cada eje, que es lo que hace que se lea como un sistema de referencia y no como un dibujo raro.
+    """
+    ruta, cuadro = _render_vector(visual, col, ancho, alto, papel)
+    imagen = ImageMobject(str(ruta))
+    cuerpo = visual.vector_3d()
+    unidad = cuerpo.unidad or ""
+
+    # (clave, valor, columna, altura relativa) — el orden de la lista es el orden en que aparecen.
+    filas = [("x", cuerpo.x, True, 0.30), ("y", cuerpo.y, True, 0.00), ("z", cuerpo.z, True, -0.30)]
+    if "piso" in visual.anotar:
+        filas.append(("piso", cuerpo.piso, False, -0.30))
+    if "norma" in visual.anotar:
+        filas.append(("v", cuerpo.norma, False, 0.30))
+    rótulos = []
+    for clave, valor, izquierda, _ in filas:
+        texto = f"{clave} = {d._numero_latex(valor)} {unidad}".strip()
+        rótulos.append(c.texto(texto, 24 if izquierda else 26, c.SEMIBOLD, col.texto))
+
+    # El cuerpo llena el alto de la franja: en el video la franja mide ~2 unidades y con el 80 % de
+    # OBJETIVO la caja quedaba como un juguete perdido en medio de la hoja.
+    imagen.scale(min(0.94 * alto / imagen.height, ancho / imagen.width))
+    imagen.move_to(ORIGIN)
+
+    parches, columna = VGroup(), VGroup()
+    for rotulo, (_, _, izquierda, y) in zip(rótulos, filas):
+        # Las columnas pegan al cuerpo, no al borde de la franja: en una aguja (3, 4, 12) el hueco de
+        # tres unidades entre la caja y su propia medida se lee como si fueran dos dibujos distintos.
+        # Se miden contra la franja de dibujo, no contra el frame de manim: la miniatura y el video
+        # usan cuadros distintos y to_edge() correría las columnas según dónde se llame.
+        hueco = imagen.width / 2 + 0.24
+        centro = -(hueco + rotulo.width / 2) if izquierda else hueco + rotulo.width / 2
+        rotulo.move_to([centro, y * alto, 0.0])
+        fondo, rotulo = d._parche(rotulo, papel, 0.16)  # el mismo cartón que usa la lámina 2D
+        parches.add(fondo)
+        columna.add(rotulo)
+
+    if "ejes" in visual.anotar:
+        # Las letras del sistema ancladas a la punta de cada eje: sin ellas son tres flechas grises
+        # y el alumno no sabe cuál es la x. Se proyectan sobre la misma cámara que pintó el PNG.
+        escala = imagen.width / cuadro.recorte[2]  # unidades de escena por píxel del PNG recortado
+
+        def en_escena(punto: np.ndarray) -> np.ndarray:
+            px, py = cuadro.pixeles(punto)
+            return np.array(
+                [(px - cuadro.recorte[2] / 2) * escala, (cuadro.recorte[3] / 2 - py) * escala, 0.0]
+            )
+
+        raiz = en_escena(np.zeros(3))
+        for nombre, punta_eje in zip(("x", "y", "z"), _puntas_ejes(*_dimensiones(visual))):
+            sitio = en_escena(punta_eje)
+            direccion = sitio - raiz
+            norma = float(np.linalg.norm(direccion[:2])) or 1.0
+            rotulo = c.texto(nombre, 22, c.SEMIBOLD, col.tenue)
+            rotulo.move_to(sitio + 0.30 * direccion / norma)  # asoma más allá de la punta, no encima
+            fondo, rotulo = d._parche(rotulo, papel, 0.10)
+            parches.add(fondo)
+            columna.add(rotulo)
+
+    todo = Group(imagen, parches, columna)  # ImageMobject es raster: no entra en un VGroup
+    todo.move_to(ORIGIN)
+    todo = d._encajar(todo, ancho * 0.94, alto * 0.94)
+    return d.Dibujo(mobs=todo, trazo=[], aparece=[imagen, *columna])

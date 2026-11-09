@@ -215,6 +215,7 @@ def producir_lote(
     cola_id: str | None = None,
     dormir: Callable[[float], None] = time.sleep,
     reintentos: int | None = None,
+    workers: int = 1,
     avisar: Callable[[str], None] = lambda mensaje: None,
     progreso: Progreso | None = None,
 ) -> list[ItemLote]:
@@ -222,13 +223,49 @@ def producir_lote(
 
     Con ``cola_id`` el avance y los hitos quedan en la cola. ``espera=0`` marca el video pendiente sin
     dormir (tests y quien no quiere esperar); ``reintentos=None`` reintenta mientras el proceso viva.
+    ``workers > 1`` reparte los videos en varios procesos: el avance fino se sigue en la cola (Fábrica)
+    y la consola avisa al terminar cada uno. Con ``workers=1`` todo sigue igual que siempre.
     """
     from . import cola
 
     total = len(ideas)
-    items: list[ItemLote] = []
+    workers = max(1, int(workers))
     fichas = {ficha["posicion"]: ficha for ficha in cola.videos_del_lote(cola_id)} if cola_id else {}
     escribir = _guardar(avisar)
+
+    if workers > 1 and total > 1:
+        items = _producir_en_paralelo(
+            ideas,
+            workers=workers,
+            total=total,
+            fichas=fichas,
+            escribir=escribir,
+            opciones={
+                "materia": materia,
+                "nivel": nivel,
+                "dificultad": dificultad,
+                "modelo": modelo,
+                "calidad": calidad,
+                "estilo": estilo,
+                "proveedor": proveedor,
+                "voz": voz,
+                "velocidad": velocidad,
+                "piso": piso,
+                "subtitulos": subtitulos,
+                "sincronizar": sincronizar,
+                "revisar_con_ia": revisar_con_ia,
+                "con_kit": con_kit,
+            },
+            espera=espera,
+            reintentos=reintentos,
+            avisar=avisar,
+            progreso=progreso,
+        )
+        if cola_id:
+            escribir(cola.recalcular_lote, cola_id)
+        return items
+
+    items: list[ItemLote] = []
 
     for posicion, idea in enumerate(ideas, start=1):
         ficha = fichas.get(posicion)
@@ -272,42 +309,160 @@ def producir_lote(
         )
         items.append(item)
         if ficha:
-            if item.ok:
-                escribir(
-                    cola.actualizar_video,
-                    ficha["id"],
-                    estado="listo",
-                    fase="listo",
-                    avance=1.0,
-                    detalle="Listo",
-                    intentos=item.intentos,
-                    error=None,
-                    ayuda=None,
-                )
-            elif item.pendiente:
-                escribir(
-                    cola.actualizar_video,
-                    ficha["id"],
-                    estado="pendiente_ia",
-                    fase="esperando_ia",
-                    error=item.error,
-                    ayuda=item.ayuda,
-                    intentos=item.intentos,
-                )
+            _marcar_final(escribir, ficha, item)
+            if item.pendiente:
                 break
-            else:
-                escribir(
-                    cola.actualizar_video,
-                    ficha["id"],
-                    estado="fallo",
-                    fase="fallo",
-                    error=item.error,
-                    ayuda=item.ayuda,
-                    intentos=item.intentos,
-                )
     if cola_id:
         escribir(cola.recalcular_lote, cola_id)
     return items
+
+
+def _marcar_final(escribir: Callable[..., None], ficha: dict[str, Any], item: ItemLote) -> None:
+    """Deja en la cola cómo terminó el video: listo, pendiente de la IA o fallo."""
+    from . import cola
+
+    if item.ok:
+        escribir(
+            cola.actualizar_video,
+            ficha["id"],
+            estado="listo",
+            fase="listo",
+            avance=1.0,
+            detalle="Listo",
+            intentos=item.intentos,
+            error=None,
+            ayuda=None,
+        )
+    elif item.pendiente:
+        escribir(
+            cola.actualizar_video,
+            ficha["id"],
+            estado="pendiente_ia",
+            fase="esperando_ia",
+            error=item.error,
+            ayuda=item.ayuda,
+            intentos=item.intentos,
+        )
+    else:
+        escribir(
+            cola.actualizar_video,
+            ficha["id"],
+            estado="fallo",
+            fase="fallo",
+            error=item.error,
+            ayuda=item.ayuda,
+            intentos=item.intentos,
+        )
+
+
+@dataclass
+class _Encargo:
+    """Un video del lote, con datos simples para poder viajar a otro proceso."""
+
+    idea: Idea
+    posicion: int
+    total: int
+    ficha: dict[str, Any] | None
+    opciones: dict[str, Any]
+    espera: float
+    reintentos: int | None
+
+
+def _trabajar(encargo: _Encargo) -> ItemLote:
+    """Un video en su propio proceso. El avance y los hitos se escriben en la cola compartida."""
+    from . import cola
+
+    def sin_consola(mensaje: str) -> None:
+        return None
+
+    escribir = _guardar(sin_consola)
+    ficha = encargo.ficha
+    seguir = _Ficha(ficha, escribir) if ficha else None
+    avance_local, paso, aviso = _emitidores(encargo.posicion, encargo.total, None, sin_consola, seguir)
+    if ficha:
+        escribir(
+            cola.actualizar_video,
+            ficha["id"],
+            estado="redactando",
+            fase="redactando",
+            avance=0.05,
+            detalle="La IA está escribiendo…",
+            proximo_intento=None,
+        )
+    return _una_idea(
+        encargo.idea,
+        **encargo.opciones,
+        espera=encargo.espera,
+        dormir=time.sleep,
+        reintentos=encargo.reintentos,
+        reanudar=ficha.setdefault("hitos", {}) if ficha else {},
+        hito=seguir.hito if seguir else None,
+        avisar=aviso,
+        progreso=avance_local,
+        paso=paso,
+        esperar=lambda intento, segundos, _s=seguir, _p=paso: _esperar_ia(_s, _p, intento, segundos),
+    )
+
+
+def _producir_en_paralelo(
+    ideas: Sequence[Idea],
+    *,
+    workers: int,
+    total: int,
+    fichas: dict[int, dict[str, Any]],
+    escribir: Callable[..., None],
+    opciones: dict[str, Any],
+    espera: float,
+    reintentos: int | None,
+    avisar: Callable[[str], None],
+    progreso: Progreso | None,
+) -> list[ItemLote]:
+    """Reparte los videos en un pool de procesos y devuelve los resultados en el orden de entrada."""
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+
+    encargos = [
+        _Encargo(
+            idea=idea,
+            posicion=posicion,
+            total=total,
+            ficha=fichas.get(posicion),
+            opciones=opciones,
+            espera=espera,
+            reintentos=reintentos,
+        )
+        for posicion, idea in enumerate(ideas, start=1)
+    ]
+    resultados: dict[int, ItemLote] = {}
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        pendientes = {pool.submit(_trabajar, encargo): encargo for encargo in encargos}
+        for futuro in as_completed(pendientes):
+            encargo = pendientes[futuro]
+            try:
+                item = futuro.result()
+            except Exception as error:  # un worker que se cae no se lleva a los demás videos
+                item = _fallo(encargo.idea, error, 1)
+            resultados[encargo.posicion] = item
+            if encargo.ficha:
+                _marcar_final(escribir, encargo.ficha, item)
+            if progreso:
+                estado = "listo" if item.ok else ("pendiente_ia" if item.pendiente else "fallo")
+                progreso(
+                    "video final",
+                    round(len(resultados) / total, 3),
+                    f"Video {encargo.posicion} de {total} · "
+                    + ("listo" if item.ok else (item.error or "no salió")),
+                    video=encargo.posicion,
+                    total=total,
+                    video_avance=1.0 if item.ok else 0.0,
+                    fase=estado,
+                    estado=estado,
+                )
+            else:
+                avisar(
+                    f"Video {encargo.posicion} de {total}: "
+                    + ("listo" if item.ok else (item.error or "no salió"))
+                )
+    return [resultados[posicion] for posicion in sorted(resultados)]
 
 
 def _esperar_ia(

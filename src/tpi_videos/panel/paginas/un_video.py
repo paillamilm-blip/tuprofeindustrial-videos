@@ -46,6 +46,9 @@ def _cuenta(n: int, singular: str, plural: str) -> str:
 ICONO_PIEZA = {
     "familia": "category",
     "molde": "movie_filter",
+    "materia": "menu_book",
+    "nivel": "school",
+    "dificultad": "trending_up",
     "tema": "palette",
     "voz": "record_voice_over",
     "segundos": "timer",
@@ -56,7 +59,7 @@ ICONO_PIEZA = {
 # La bandera que abre cada nombre en Ajustes sobra acá: el país ya está escrito entre paréntesis.
 _VOCES = {clave: re.sub(r"^[^\w]*", "", nombre) for clave, nombre in VOCES.items()}
 # Las ideas de la IA que la tarjeta lee para dejar de ser un secreto
-CAMPOS_IDEA = ("materia", "nivel", "titulo", "gancho", "gancho_elegido", "ganchos", "molde", "segundos")
+CAMPOS_IDEA = ("materia", "nivel", "dificultad", "titulo", "gancho", "gancho_elegido", "ganchos", "molde", "segundos")
 # Lo que de verdad ocurre al pedir ideas, en el orden en que lo avisa el motor. No hay porcentajes
 # intermedios que mostrar: `tpi ideas` sólo avisa al salir y al volver, así que la barra mide el tiempo.
 PASOS_IDEAS = (
@@ -677,9 +680,16 @@ class PaginaUnVideo:
         )
 
     def _preferencias(self) -> sugerencia.Preferencias:
-        """El estilo y la voz de siempre, los que están guardados en Ajustes."""
+        """Lo de siempre: el estilo, la voz y el público que están guardados en Ajustes."""
         marca = cargar_marca()
-        return sugerencia.Preferencias(tema=marca.tema, voz=marca.voz.nombre, voces=dict(_VOCES))
+        return sugerencia.Preferencias(
+            tema=marca.tema,
+            voz=marca.voz.nombre,
+            voces=dict(_VOCES),
+            materia=marca.publico.materia or None,
+            nivel=marca.publico.nivel or None,
+            dificultad=marca.publico.dificultad or None,
+        )
 
     def _pintar(self) -> None:
         if self._trabajando():
@@ -790,6 +800,10 @@ class PaginaUnVideo:
         if clave == "gancho":
             self._dialogo_texto(clave, "Escribe el gancho", codigo)
             return
+        if clave == "nivel":
+            # Texto libre: el motor lo manda tal cual, así que no hay lista que mostrar.
+            self._dialogo_texto(clave, "¿Para qué nivel?", codigo, "Que lo deduzca la IA")
+            return
         if clave == "segundos":
             self._dialogo_lista(clave, "¿Cuánto dura?", sugerencia.opciones(clave), codigo)
             return
@@ -834,7 +848,9 @@ class PaginaUnVideo:
                 ui.button("Cambiar", on_click=lambda: aplicar(opciones_ui.value)).props("no-caps")
         dialogo.open()
 
-    def _dialogo_texto(self, clave: str, titulo: str, actual: str) -> None:
+    def _dialogo_texto(
+        self, clave: str, titulo: str, actual: str, boton_ia: str = "Que lo escriba la IA"
+    ) -> None:
         with ui.dialog() as dialogo, ui.card().classes("p-5 gap-3 w-[440px]"):
             ui.label(titulo).classes("tpi-titulo text-base")
             campo = ui.textarea(value=actual).props("outlined autogrow").classes("w-full")
@@ -845,7 +861,7 @@ class PaginaUnVideo:
                 ui.button(
                     "Cambiar", on_click=lambda: self._guardar(clave, str(campo.value or ""), dialogo)
                 ).props("no-caps")
-                ui.button("Que lo escriba la IA", on_click=lambda: self._guardar(clave, "", dialogo)).props(
+                ui.button(boton_ia, on_click=lambda: self._guardar(clave, "", dialogo)).props(
                     "flat no-caps"
                 )
                 ui.button("Mejor no", on_click=dialogo.close).props("flat no-caps")

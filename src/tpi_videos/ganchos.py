@@ -21,7 +21,8 @@ Progreso = Callable[[str, float, str], None]
 
 
 def _huella(idea: Idea) -> str:
-    base = f"{idea.titulo}|{idea.enunciado}|{[g.texto for g in idea.ganchos]}"
+    visuales = [g.visual.model_dump_json() if g.visual else "" for g in idea.ganchos]
+    base = f"{idea.titulo}|{idea.enunciado}|{[g.texto for g in idea.ganchos]}|{visuales}"
     return hashlib.sha1(base.encode("utf-8")).hexdigest()[:12]
 
 
@@ -56,6 +57,7 @@ def idea_desde_guion(guion: Guion) -> Idea:
             emoji=g.emoji or "",
             tex=g.tex or "",
             voz=g.voz or "",
+            visual=g.visual,
         )
         for n, g in enumerate([guion.gancho, *guion.gancho_variantes])
     ]
@@ -85,6 +87,7 @@ def guion_de_vista_previa(idea: Idea, variante: GanchoIdea) -> Guion:
             "voz": variante.voz or variante.texto,
             "emoji": variante.emoji or None,
             "tex": variante.tex or None,
+            "visual": variante.visual.model_dump(exclude_none=True) if variante.visual else None,
         },
         "enunciado": {"texto": idea.enunciado or idea.titulo, "voz": idea.enunciado or idea.titulo},
         "pasos": [{"voz": "Vista previa del gancho.", "nota": "Vista previa"}],

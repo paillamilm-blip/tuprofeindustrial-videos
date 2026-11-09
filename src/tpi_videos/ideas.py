@@ -25,7 +25,7 @@ from . import ia
 from .emojis import lista_para_ia, normalizar_para_ia, quitar_emojis
 from .entorno import PLANTILLAS_DIR
 from .errores import ErrorMotor
-from .guion import Gancho, Guion, sin_tildes
+from .guion import Gancho, Guion, Visual, sin_tildes
 from .moldes import moldes_para_ia, normalizar_molde
 from .redactor import ResultadoRedaccion, pedir_json, redactar
 
@@ -69,6 +69,7 @@ class GanchoIdea(BaseModel):
     emoji: str = ""
     tex: str = ""  # fórmula corta bajo el gancho
     voz: str = ""  # si falta, se usa texto
+    visual: Visual | None = None  # el dibujo del gancho, para que el laboratorio muestre lo mismo
 
 
 def _estilo(valor: str) -> str:

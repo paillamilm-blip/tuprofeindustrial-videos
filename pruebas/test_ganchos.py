@@ -35,6 +35,31 @@ class GanchosTest(unittest.TestCase):
         self.assertEqual(g.gancho.texto, idea.ganchos[0].texto)
         self.assertEqual(g.titulo, idea.titulo)
 
+    def test_el_visual_del_gancho_llega_al_clip(self):
+        datos = guion_datos()
+        datos["gancho"]["visual"] = {"tipo": "vector_3d", "componentes": [3, 4, 12], "unidad": "cm"}
+        idea = idea_desde_guion(Guion.model_validate(datos))
+
+        self.assertEqual(idea.ganchos[0].visual.tipo, "vector_3d")
+        g = guion_de_vista_previa(idea, idea.ganchos[0])
+        self.assertIsNotNone(g.gancho.visual)
+        self.assertEqual(g.gancho.visual.tipo, "vector_3d")
+        self.assertEqual(list(g.gancho.visual.componentes), [3, 4, 12])
+
+    def test_cada_variante_conserva_su_propio_visual(self):
+        datos = guion_datos()
+        datos["gancho_variantes"][0]["visual"] = {
+            "tipo": "circuito",
+            "fuente": "9 V",
+            "resistencias": ["4 Ω", "6 Ω"],
+        }
+        idea = idea_desde_guion(Guion.model_validate(datos))
+
+        self.assertIsNone(idea.ganchos[0].visual)
+        self.assertEqual(idea.ganchos[1].visual.tipo, "circuito")
+        g = guion_de_vista_previa(idea, idea.ganchos[1])
+        self.assertEqual(g.gancho.visual.tipo, "circuito")
+
     def test_elegir_intercambia_sin_duplicar(self):
         with tempfile.TemporaryDirectory() as tmp:
             ruta = Path(tmp) / "guion.yaml"

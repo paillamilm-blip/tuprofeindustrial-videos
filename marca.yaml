@@ -34,8 +34,9 @@ voz:
 cierre:
   texto: "Ejercicio resuelto paso a paso"
   voz: "Ejercicio resuelto paso a paso. Nos vemos en el próximo."
-  # Sticker del cierre: el nombre de un PNG subido en Ajustes → Tus stickers (ej. logo).
-  # Vacío = el engranaje dibujado. Un guion puede pedir otro en su propio «cierre:».
+  # Tu logo: el nombre de un PNG subido en Ajustes → Tus stickers (ej. logo). Va arriba en todo
+  # el video y también en el cierre, salvo que el guion pida otro sticker en su propio «cierre:».
+  # Vacío = el engranaje dibujado.
   emoji: ""
 
 subtitulos:         # estilo CapCut

@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from concurrent.futures import Future
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -184,6 +185,114 @@ class LoteColaTest(unittest.TestCase):
 
         self.assertEqual([item.ok for item in items], [True, True])
         self.assertEqual(sum("No pude guardar" in aviso for aviso in avisos), 1)
+
+
+class EjecutorInmediato:
+    """El pool de procesos, pero corriendo el trabajo acá mismo: prueba la orquestación sin renders."""
+
+    def __init__(self, max_workers: int) -> None:
+        self.max_workers = max_workers
+        self.encargos = 0
+
+    def __enter__(self) -> "EjecutorInmediato":
+        return self
+
+    def __exit__(self, *exc_info: object) -> bool:
+        return False
+
+    def submit(self, funcion, encargo):
+        self.encargos += 1
+        futuro: Future = Future()
+        try:
+            futuro.set_result(funcion(encargo))
+        except BaseException as error:  # igual que un worker que se cae
+            futuro.set_exception(error)
+        return futuro
+
+
+class LoteWorkersTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.viejo = os.environ.get("TPI_RAIZ")
+        os.environ["TPI_RAIZ"] = self.tmp.name
+        self.raiz = Path(self.tmp.name)
+
+    def tearDown(self) -> None:
+        if self.viejo is None:
+            os.environ.pop("TPI_RAIZ", None)
+        else:
+            os.environ["TPI_RAIZ"] = self.viejo
+        self.tmp.cleanup()
+
+    def _lote(self) -> tuple[str, list[Idea]]:
+        ideas = [_idea(1), _idea(2)]
+        lote_id = cola.nuevo_lote("Tema", {})
+        cola.agregar_videos(lote_id, ideas)
+        return lote_id, ideas
+
+    def test_workers_uno_no_abre_ningun_proceso(self) -> None:
+        lote_id, ideas = self._lote()
+        with (
+            patch("tpi_videos.lote.producir", side_effect=[_resultado(self.raiz), _resultado(self.raiz)]),
+            patch(
+                "concurrent.futures.ProcessPoolExecutor",
+                side_effect=AssertionError("no debe abrir procesos"),
+            ),
+        ):
+            items = producir_lote(ideas, cola_id=lote_id, workers=1)
+
+        self.assertEqual([item.ok for item in items], [True, True])
+
+    def test_workers_invalido_se_trata_como_uno(self) -> None:
+        lote_id, ideas = self._lote()
+        with (
+            patch("tpi_videos.lote.producir", side_effect=[_resultado(self.raiz), _resultado(self.raiz)]),
+            patch(
+                "concurrent.futures.ProcessPoolExecutor",
+                side_effect=AssertionError("no debe abrir procesos"),
+            ),
+        ):
+            items = producir_lote(ideas, cola_id=lote_id, workers=0)
+
+        self.assertEqual([item.ok for item in items], [True, True])
+
+    def test_dos_workers_procesan_todo_y_dejan_la_cola_lista(self) -> None:
+        lote_id, ideas = self._lote()
+        ejecutor = EjecutorInmediato(2)
+        with (
+            patch("tpi_videos.lote.producir", side_effect=[_resultado(self.raiz), _resultado(self.raiz)]),
+            patch("concurrent.futures.ProcessPoolExecutor", return_value=ejecutor),
+        ):
+            items = producir_lote(ideas, cola_id=lote_id, workers=2)
+
+        self.assertEqual(ejecutor.max_workers, 2)
+        self.assertEqual(ejecutor.encargos, 2)
+        self.assertEqual([item.idea.titulo for item in items], [idea.titulo for idea in ideas])
+        self.assertEqual([video["estado"] for video in cola.videos_del_lote(lote_id)], ["listo", "listo"])
+        self.assertEqual(cola.cargar()["lotes"][0]["estado"], "listo")
+
+    def test_cada_worker_escribe_sus_hitos_y_su_avance_en_la_cola(self) -> None:
+        lote_id, ideas = self._lote()
+        observado: dict = {}
+
+        def producir_falso(enunciado, **kwargs):
+            kwargs["hito"]("guion", {"ruta": "guiones/x.yaml"})
+            kwargs["progreso"]("animacion", 0.5, "mitad")
+            observado["video"] = cola.videos_del_lote(lote_id)[0]
+            return _resultado(self.raiz)
+
+        with (
+            patch("tpi_videos.lote.producir", side_effect=producir_falso),
+            patch("concurrent.futures.ProcessPoolExecutor", return_value=EjecutorInmediato(2)),
+        ):
+            items = producir_lote(ideas, cola_id=lote_id, workers=2)
+
+        self.assertTrue(all(item.ok for item in items))
+        self.assertEqual(observado["video"]["estado"], "animando")
+        self.assertAlmostEqual(observado["video"]["avance"], 0.575)
+        for video in cola.videos_del_lote(lote_id):
+            self.assertEqual(video["hitos"]["guion"]["ruta"], "guiones/x.yaml")
+            self.assertEqual(video["estado"], "listo")
 
 
 if __name__ == "__main__":

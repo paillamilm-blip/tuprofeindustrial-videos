@@ -52,6 +52,19 @@ def verificar_requisitos(subtitulos: bool) -> None:
         )
 
 
+# El intermedio va directo a FFmpeg (subtítulos, volumen y el MP4 final). Comprimirlo de más pierde
+# detalle antes de la pasada final; de menos cuesta tiempo y disco sin que se note en el video.
+CRF_INTERMEDIO = {"borrador": "20", "final": "16"}
+
+
+def _opciones_del_intermedio(calidad: str, tema: Tema) -> dict[str, str]:
+    opciones = {"crf": CRF_INTERMEDIO.get(calidad, "18")}
+    # El estilo de siempre conserva su codificador (sin preset); los demás, el rápido.
+    if not tema.usar_marca:
+        opciones["preset"] = "veryfast"
+    return opciones
+
+
 def renderizar_manim(
     guion: Guion,
     marca: Marca,
@@ -89,8 +102,8 @@ def renderizar_manim(
         "verbosity": "ERROR",
         "progress_bar": "none" if progreso else "display",
         # Intermedio de alta calidad (se recodifica al final). "veryfast" lo hace ~2× más rápido con fondos
-        # con detalle (foto, hoja); el estilo original conserva su configuración y sale idéntico a antes.
-        "video_encoder_options": {"crf": "12"} if tema.usar_marca else {"crf": "12", "preset": "veryfast"},
+        # con detalle (foto, hoja); el estilo original conserva su configuración.
+        "video_encoder_options": _opciones_del_intermedio(calidad, tema),
     }
     with tempconfig(configuracion):
         escena = VideoEjercicio(

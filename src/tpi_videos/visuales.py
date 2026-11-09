@@ -22,6 +22,7 @@ SEGUNDOS_VISUAL = {
     "circulo_trig": 3.0,
     "solido": 3.0,
     "solido_3d": 3.2,  # el relieve se mira un poco más que la lámina
+    "vector_3d": 3.2,  # dos triángulos superpuestos hay que seguirlos con el ojo
     "venn": 3.0,
     "recta": 2.5,
     "probabilidad": 3.0,
@@ -54,6 +55,9 @@ MARCAS_CIRCULO = ("seno", "coseno", "tangente")
 
 # Lo que se puede anotar en un sólido.
 MARCAS_SOLIDO = ("volumen", "area")
+
+# Lo que se puede anotar en un vector del espacio: la sombra apoyada en el piso y el largo real.
+MARCAS_VECTOR_3D = ("ejes", "piso", "norma")
 
 # Los cuerpos que el motor sabe dibujar como lámina de libro.
 SOLIDOS = ("cubo", "cilindro", "cono", "esfera")
@@ -136,6 +140,8 @@ CAMPOS: dict[str, CampoVisual] = {
         CampoVisual("rango", "Rango del eje horizontal", "numeros", "0 a 2,5"),
         CampoVisual("marcar", "Puntos con su valor escrito", "numeros", "0; 2,45"),
         CampoVisual("cuerpo", "El cuerpo", "opcion", "", (("bloque", "Bloque (una caja)"), ("bola", "Bola"))),
+        CampoVisual("componentes", "Las tres componentes (x, y, z)", "numeros", "3; 4; 12"),
+        CampoVisual("unidad", "La unidad de las tres", "texto", "cm"),
         CampoVisual("vectores", "Flechas del cuerpo", "lista"),
         CampoVisual("angulo", "Ángulo en grados", "numero", "30"),
         CampoVisual("descomponer", "Partir el peso en P sen θ y P cos θ", "booleano"),
@@ -276,6 +282,15 @@ VISUALES: dict[str, TipoVisual] = {
                 "vista": "axonometrica",
                 "anotar": ["volumen"],
             },
+        ),
+        TipoVisual(
+            "vector_3d",
+            "Vector dentro de una caja (3D)",
+            "matematica",
+            "↗",
+            ("componentes", "unidad", "anotar"),
+            MARCAS_VECTOR_3D,
+            ejemplo={"componentes": [3, 4, 12], "unidad": "cm", "anotar": ["piso", "norma"]},
         ),
         TipoVisual(
             "venn",
@@ -1010,6 +1025,37 @@ def analizar_solido(
         altura=medidas.get("altura"),
         lado=medidas.get("lado"),
     )
+
+
+@dataclass
+class Vector3D:
+    """Un vector metido en una caja: su sombra sobre el piso y su largo, ya resueltos."""
+
+    x: float
+    y: float
+    z: float
+    piso: float  # la diagonal de la base: el Pitágoras que se ve acostado
+    norma: float  # el largo del vector: el Pitágoras que se ve parado
+    unidad: str = ""
+
+
+def analizar_vector_3d(componentes: list[float], unidad: str = "") -> Vector3D:
+    """Las dos longitudes que se dibujan: √(x²+y²) en el piso y √(piso²+z²) a lo largo del vector."""
+    if len(componentes or []) != 3:
+        raise ValueError(
+            "un vector en el espacio necesita sus tres componentes (x, y, z), ej. «3; 4; 12»"
+        )
+    try:
+        x, y, z = (float(v) for v in componentes)
+    except (TypeError, ValueError):
+        crudo = "; ".join(str(v) for v in componentes)
+        raise ValueError(f"las tres componentes del vector tienen que ser números, y leí «{crudo}»") from None
+    if x == 0 and y == 0 and z == 0:
+        raise ValueError(
+            "un vector de (0, 0, 0) no tiene largo ni dirección: revisa las tres componentes"
+        )
+    piso = math.hypot(x, y)
+    return Vector3D(x=x, y=y, z=z, piso=piso, norma=math.hypot(piso, z), unidad=unidad or "")
 
 
 @dataclass

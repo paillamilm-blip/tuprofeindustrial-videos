@@ -1,0 +1,56 @@
+# Guion redactado con IA (gemini-3.6-flash) el 01-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "El error al pasar m² a cm²"
+materia: ingenieria
+nivel: "enseñanza media (Chile)"
+molde: mito_realidad
+
+gancho:
+  texto: "¿1 m² equivale a 100 cm²?"
+  voz: "¿Un metro cuadrado equivale a cien centímetros cuadrados? ¡Cuidado!"
+  tex: '1\ \text{m}^2 = 100\ \text{cm}^2\ ?'
+  emoji: "🚨"
+
+enunciado:
+  texto: "Una plancha metálica de construcción mide 2,5 m². Para calcular su recubrimiento necesitas el área en cm². ¿A cuántos cm² equivale esa plancha?"
+  voz: "Pasemos dos coma cinco metros cuadrados a centímetros cuadrados."
+  destacar: ["2,5 m²", "cm²"]
+
+datos:
+  - tex: 'A = 2,5\ \text{m}^2'
+    voz: "Tenemos dos coma cinco metros cuadrados."
+  - tex: 'A = ?\ \text{cm}^2'
+    voz: "Buscamos el área en centímetros cuadrados."
+
+pasos:
+  - nota: "Error típico"
+    tex: 'A = 2,5 \cdot 100 = 250\ \text{cm}^2'
+    voz: "Muchos multiplican por cien, pero eso está mal."
+    destacar: ['2,5 \cdot 100']
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Factor real"
+    tex: '1\ \text{m}^2 = 10000\ \text{cm}^2'
+    voz: "Un metro cuadrado son diez mil centímetros cuadrados."
+    destacar: ['10000\ \text{cm}^2']
+    emoji: "💡"
+  - nota: "Multiplicamos"
+    tex: 'A = 2,5 \cdot 10000'
+    voz: "Multiplicamos dos coma cinco por diez mil."
+
+resultado:
+  tex: 'A = 25000\ \text{cm}^2'
+  voz: "Obtenemos veinticinco mil centímetros cuadrados."
+  emoji: "🎯"
+
+verificacion:
+  texto: "El factor 100 de longitud se eleva al cuadrado."
+  voz: "El factor cien de longitud se eleva al cuadrado."
+
+reto:
+  texto: "¿A cuántos cm² equivalen 1,5 m²?"
+  voz: "¿A cuántos centímetros cuadrados equivalen uno coma cinco metros cuadrados?"
+  emoji: "✍️"

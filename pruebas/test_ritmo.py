@@ -8,7 +8,7 @@ garantiza, porque el panel lo muestra como valor elegible con su «cambiar».
 import unittest
 
 from tpi_videos.guion import Guion
-from tpi_videos.revision import necesita_segundos, revisar, segundos_a_esperar
+from tpi_videos.revision import espera_de_lectura, necesita_segundos, revisar, segundos_a_esperar
 
 
 def _guion(pasos, resultado_voz="Las dos soluciones son cero y cinco.", gancho_tex=None):
@@ -77,6 +77,32 @@ class CuantoEsperarTest(unittest.TestCase):
 
     def test_piso_cero_es_el_video_de_hoy(self):
         self.assertEqual(segundos_a_esperar(0.0, 0.86), 0.0)
+
+
+class EsperaDeLecturaTest(unittest.TestCase):
+    """De dónde a dónde se mide la lectura en el render.
+
+    El defecto que estas pruebas cierran: el piso se contaba desde el último movimiento y en mitad
+    de la frase, así el bloque se estiraba con silencio mientras la voz todavía hablaba. Cumplía la
+    cuenta de segundos y el video se quedaba pegado.
+    """
+
+    def test_la_voz_que_sigue_hablando_cuenta_como_lectura(self):
+        # la fórmula quedó completa al segundo 2,0 y la voz termina al 4,8: llevó 2,8 s a la vista
+        self.assertEqual(espera_de_lectura(2.5, completa_desde=2.0, fin_de_bloque=4.8), 0.0)
+
+    def test_el_reloj_arranca_con_la_formula_y_no_con_el_enfasis(self):
+        # completa al 0,5; encima salen el recuadro, la ✗ y el temblor hasta el 3,0: sigue siendo lectura
+        self.assertEqual(espera_de_lectura(2.5, completa_desde=0.5, fin_de_bloque=3.0), 0.0)
+        # contándolo desde el énfasis (como se hacía) el mismo bloque pedía 2,5 s de cuadro muerto
+        self.assertEqual(espera_de_lectura(2.5, completa_desde=3.0, fin_de_bloque=3.0), 2.5)
+
+    def test_piso_cero_sigue_sin_agregar_nada(self):
+        self.assertEqual(espera_de_lectura(0.0, completa_desde=1.0, fin_de_bloque=1.2), 0.0)
+
+    def test_un_bloque_corto_espera_lo_que_falta(self):
+        # la voz termina al 1,4 y la fórmula estaba completa desde el 0,4: sólo llevó 1,0 s a la vista
+        self.assertAlmostEqual(espera_de_lectura(2.5, completa_desde=0.4, fin_de_bloque=1.4), 1.5)
 
 
 class RevisionConLecturaTest(unittest.TestCase):

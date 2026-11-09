@@ -73,7 +73,7 @@ class Voz(_Base):
 class Cierre(_Base):
     texto: str = "Ejercicio resuelto paso a paso"
     voz: str = "Ejercicio resuelto paso a paso. Nos vemos en el próximo."
-    emoji: str = ""  # sticker del cierre (tu logo); vacío = el engranaje dibujado
+    emoji: str = ""  # tu logo: va en la cabecera y en el cierre; vacío = el engranaje dibujado
 
 
 class EstiloSubtitulos(_Base):
@@ -95,10 +95,19 @@ class EstiloSubtitulos(_Base):
     )
 
 
+class Publico(_Base):
+    """La materia, el nivel y la dificultad de siempre; vacío = que los deduzca la IA."""
+
+    materia: str = ""
+    nivel: str = ""
+    dificultad: str = ""
+
+
 class Marca(_Base):
     nombre: str = "Tu Profe Industrial"
     usuario: str = "@tuprofeindustrial"
     tema: str = "hoja_de_desarrollo"  # estilo visual por defecto (ver ./tpi temas)
+    publico: Publico = Publico()  # su materia, nivel y dificultad de siempre
     # Colores, materias y subtítulos del tema "pizarra_nocturna" (el estilo original del motor)
     colores: Colores = Colores()
     materias: ColoresMateria = ColoresMateria()

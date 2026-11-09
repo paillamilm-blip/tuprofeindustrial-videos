@@ -1,0 +1,67 @@
+# Guion redactado con IA (gemini-3.8-flash) el 01-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se calcula el precio final considerando descuentos sucesivos sobre el saldo.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "El mito del doble descuento"
+materia: matematica
+nivel: "1° medio"
+molde: mito_realidad
+
+gancho:
+  texto: "¿Un 20% más 30% da 50% de descuento?"
+  voz: "Un veinte más treinta por ciento no da cincuenta por ciento"
+  tex: '20\% + 30\% \neq 50\%'
+  emoji: "❌"
+
+gancho_variantes:
+  - texto: "El error clásico en liquidaciones que arruina tu bolsillo"
+    voz: "El error clásico en liquidaciones que arruina tu bolsillo"
+    emoji: "🚨"
+  - texto: "Creías que tenías mitad de precio en esta tienda"
+    voz: "Creías que tenías mitad de precio en esta tienda"
+    emoji: "👀"
+
+enunciado:
+  texto: "Una chaqueta de 40000 pesos tiene un 20% de descuento y luego un 30% adicional sobre lo rebajado. Calcula su precio final."
+  voz: "Una chaqueta de cuarenta mil pesos tiene veinte y luego treinta por ciento de descuento."
+  destacar: ["40000 pesos", "20% de descuento", "30% adicional"]
+
+datos:
+  - tex: 'P_0 = 40000\ \text{pesos}'
+    voz: "El precio inicial es cuarenta mil pesos."
+  - tex: 'P_f = ?'
+    voz: "Buscamos el valor final."
+
+pasos:
+  - nota: "Mito común"
+    tex: 'P = 40000 \cdot (1 - 0,5) = 20000\ \text{pesos}'
+    voz: "Muchos suman los descuentos y creen pagar la mitad. Está mal."
+    destacar: ['20000\ \text{pesos}']
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Primer descuento"
+    tex: 'P_1 = 40000 \cdot 0,8 = 32000\ \text{pesos}'
+    voz: "Primero pagas el ochenta por ciento, que son treinta y dos mil pesos."
+    destacar: ['32000\ \text{pesos}']
+    emoji: "💡"
+  - nota: "Descuento adicional"
+    tex: 'P_f = 32000 \cdot 0,7'
+    voz: "Y a ese monto le aplicas el setenta por ciento."
+
+resultado:
+  tex: 'P_f = 22400\ \text{pesos}'
+  voz: "El precio final es veintidós mil cuatrocientos pesos."
+  emoji: "✅"
+
+verificacion:
+  texto: "El descuento real fue del 44%, nunca del 50%."
+  voz: "El descuento real fue cuarenta y cuatro por ciento."
+
+reto:
+  texto: "¿Cuánto pagarías con 10% y luego 20% sobre 50000 pesos?"
+  voz: "¿Cuánto pagarías con diez y luego veinte por ciento?"
+  emoji: "✍️"

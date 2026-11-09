@@ -2335,6 +2335,10 @@ def _dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str
         from .dibujos_3d import dibujar_solido_3d  # adentro: manim 3D no debe pesar en los dibujos 2D
 
         return dibujar_solido_3d(visual, col, ancho, alto, papel)
+    if visual.tipo == "vector_3d":
+        from .dibujos_3d import dibujar_vector_3d  # misma cámara 3D, con sus líneas y su flecha
+
+        return dibujar_vector_3d(visual, col, ancho, alto, papel)
     if visual.tipo == "venn":
         return venn(visual.venn(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "recta":

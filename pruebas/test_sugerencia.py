@@ -10,6 +10,8 @@ import unittest
 from pathlib import Path
 
 from tpi_videos.formatos import formato
+from tpi_videos.guion import MATERIAS
+from tpi_videos.ideas import DIFICULTADES
 from tpi_videos.moldes import MOLDES
 from tpi_videos.panel.sugerencia import (
     BANDERAS,
@@ -36,8 +38,12 @@ class SugerenciaTest(unittest.TestCase):
         s = armar(SIN_IDEA, {}, PREF)
         self.assertEqual(s.bloqueada(), "Escribe el tema o pega el enunciado.")
         self.assertEqual(
-            claves(s), {"familia", "molde", "tema", "voz", "segundos", "lectura", "gancho", "rodaje"}
-        )
+            claves(s),
+            {
+                "familia", "molde", "materia", "nivel", "dificultad",
+                "tema", "voz", "segundos", "lectura", "gancho", "rodaje",
+            },
+        )  # fmt: skip
 
     def test_la_frase_delata_la_familia_y_lo_dice(self):
         """«dato» es de la familia Datos: la razón tiene que nombrar la palabra que la delató."""
@@ -151,7 +157,13 @@ class PiezasTest(unittest.TestCase):
         self.assertIn("pizarra_nocturna", opciones("tema"))
 
     def test_solo_se_muestran_las_banderas_reales(self):
-        self.assertEqual(set(BANDERAS), {"molde", "tema", "voz", "segundos", "lectura", "gancho"})
+        self.assertEqual(
+            set(BANDERAS),
+            {
+                "molde", "materia", "nivel", "dificultad",
+                "tema", "voz", "segundos", "lectura", "gancho",
+            },
+        )  # fmt: skip
 
     def test_el_piso_de_lectura_viaja_aunque_no_se_toque(self):
         """Lo que muestra la tarjeta y lo que recibe el motor tienen que ser el mismo comando."""
@@ -218,6 +230,63 @@ class EstiloPorMoldeTest(unittest.TestCase):
         s = armar("una frase que no delata nada", {}, PREF)
         self.assertEqual(s.pieza("tema").codigo, PREF.tema)
         self.assertEqual(s.pieza("tema").razon, "Tu estilo de siempre (Ajustes).")
+
+
+class PublicoTest(unittest.TestCase):
+    """Materia, nivel y dificultad: la tarjeta existe, su valor viene de una lista real y nada bloquea."""
+
+    def test_el_predeterminado_de_ajustes_manda_cuando_no_hay_idea(self) -> None:
+        pref = Preferencias(
+            tema="hoja_de_desarrollo", voz="es-CL-LorenzoNeural", voces={},
+            materia="matematica", nivel="2° medio", dificultad="media",
+        )  # fmt: skip
+        s = armar("porcentajes", {}, pref)
+        self.assertEqual(s.pieza("materia").codigo, "matematica")
+        self.assertEqual(s.pieza("materia").valor, "Matemática")
+        self.assertEqual(s.pieza("materia").razon, "Tu predeterminado (Ajustes).")
+        self.assertEqual(s.pieza("nivel").valor, "2° medio")
+        self.assertEqual(s.pieza("dificultad").valor, "Media")
+
+    def test_la_idea_le_gana_al_predeterminado(self) -> None:
+        pref = Preferencias(tema="hoja_de_desarrollo", voz="es-CL-LorenzoNeural", voces={}, materia="matematica")
+        s = armar("porcentajes", {}, pref, {"materia": "fisica", "dificultad": "facil"})
+        self.assertEqual(s.pieza("materia").codigo, "fisica")
+        self.assertEqual(s.pieza("materia").razon, "Lo trajo la idea que elegiste.")
+        self.assertEqual(s.pieza("dificultad").codigo, "facil")
+
+    def test_su_cambio_gana_y_viaja_una_sola_bandera(self) -> None:
+        """La idea también trajo materia: el cambio de ella manda y la bandera no se repite."""
+        s = armar("porcentajes", {"materia": "ingenieria"}, PREF, {"materia": "fisica"})
+        self.assertEqual(s.pieza("materia").codigo, "ingenieria")
+        self.assertTrue(s.pieza("materia").tocada)
+        args = list(s.args)
+        self.assertEqual(args.count("--materia"), 1, "la bandera no puede viajar dos veces")
+        self.assertEqual(args[args.index("--materia") + 1], "ingenieria")
+
+    def test_sin_predeterminado_no_inventa_nada_y_no_viaja_la_bandera(self) -> None:
+        s = armar("una frase que no delata nada", {}, PREF)
+        for clave in ("materia", "nivel", "dificultad"):
+            self.assertIsNone(s.pieza(clave).codigo, f"{clave} no puede mandarle un valor a la IA")
+            self.assertIn("la IA", s.pieza(clave).valor)
+            self.assertNotIn(f"--{clave}", list(s.args))
+
+    def test_el_nivel_es_texto_libre_porque_el_motor_lo_acepta(self) -> None:
+        pref = Preferencias(
+            tema="hoja_de_desarrollo", voz="es-CL-LorenzoNeural", voces={}, nivel="técnico en electricidad"
+        )
+        s = armar("poleas", {}, pref)
+        args = list(s.args)
+        self.assertEqual(args[args.index("--nivel") + 1], "técnico en electricidad")
+
+    def test_las_listas_salen_del_motor_no_de_una_copia(self) -> None:
+        """El «cambiar» usa las materias y dificultades del motor: si el motor agrega una, aparece."""
+        self.assertEqual(set(opciones("materia")), set(MATERIAS))
+        self.assertEqual(opciones("dificultad"), DIFICULTADES)
+
+    def test_ninguna_tarjeta_de_publico_bloquea_el_paso(self) -> None:
+        """Sin idea y sin predeterminado las 3 tarjetas se muestran igual: nada le corta «Crear»."""
+        s = armar("", {}, PREF)
+        self.assertTrue({"materia", "nivel", "dificultad"} <= claves(s))
 
 
 class CompilarTest(unittest.TestCase):
