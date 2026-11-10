@@ -5,7 +5,8 @@ Marca SOLO errores reales:
 2. Coherencia: los números que dice la voz coinciden con las fórmulas; el resultado responde la pregunta del enunciado; el enunciado_texto es fiel al original; el reto se resuelve con los mismos pasos.
 3. Formato: LaTeX válido y sin $; coma decimal (9,8, no 9.8); las voces no tienen cifras ni símbolos matemáticos; cada "destacar" está copiado exactamente de su texto o fórmula.
 4. Error típico: un paso con "error": true muestra A PROPÓSITO una forma equivocada (se tacha en el video), y gancho_tex puede mostrarla si el gancho pregunta "¿Resuelves así?". No lo marques como error de matemática; sí verifica que la voz diga que está mal, que el error sea real y frecuente, y que el paso siguiente lo corrija.
-5. Emojis: solo en sus campos (gancho_emoji, emoji, resultado_emoji, reto_emoji), nunca dentro de textos o voces.
+5. Dibujos que se mueven: movimiento, desde y hasta van solo en un "grafico", con desde y hasta dentro del rango; los números del dibujo (radios, temperaturas, velocidades, largos) salen del enunciado; cada término de "halo" está copiado exactamente del tex de su paso; resaltar_cambio nunca va en un paso con "error": true. No marques como problema que un paso use halo, resaltar_cambio, despiece o resultado_destello: son recursos visuales, no errores.
+6. Emojis: solo en sus campos (gancho_emoji, emoji, resultado_emoji, reto_emoji), nunca dentro de textos o voces.
 
 No marques preferencias de estilo ni cosas que ya están bien. Cada problema: una frase concreta que diga dónde está y cómo corregirlo.
 Si todo está bien: aprobado = true y problemas = [].
