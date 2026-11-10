@@ -195,7 +195,7 @@ def _ideas(texto: str) -> str:
                     for i, e in enumerate(estilos)
                 ],
                 "molde": molde,
-                "enunciado": f"Ejercicio de {tema}: con datos concretos, calcula el resultado paso a paso y verifícalo.",
+                "enunciado": f"Ejercicio de {tema} ({angulo}): con datos concretos, calcula el resultado paso a paso y verifícalo.",
                 "materia": materia,
                 "nivel": "",
                 "dificultad": "media",
