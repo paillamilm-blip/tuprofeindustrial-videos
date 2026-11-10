@@ -1,0 +1,104 @@
+name: Capturas de la vista previa
+
+# Temporal: prueba el estilo por categoría y la «Vista Previa Rápida» del QC con Playwright.
+
+on:
+  pull_request:
+
+jobs:
+  capturas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: TeX, FFmpeg, el motor y Playwright
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended dvisvgm \
+            ffmpeg pkg-config libcairo2-dev libpango1.0-dev
+          python -m pip install --upgrade pip
+          pip install -e . playwright
+          python -m playwright install --with-deps chromium
+      - name: Datos de muestra (voz en silencio, solo en CI)
+        run: |
+          sed -i 's/^  proveedor: edge /  proveedor: silencio /' marca.yaml
+          grep -n "proveedor" marca.yaml
+          # Un guion de física SIN «tema:», para que el estilo salga de la categoría.
+          grep -v '^tema:' guiones/el_tiro_que_nunca_cae_donde_apuntas.yaml \
+            | sed 's/^titulo: .*/titulo: "AA Tiro sin estilo propio"/' > guiones/aa_tiro_sin_tema.yaml
+          grep -n "^tema:\|^materia:\|^titulo:" guiones/aa_tiro_sin_tema.yaml
+      - name: Estilo elegido por categoría (CLI)
+        run: |
+          for g in guiones/aa_tiro_sin_tema.yaml guiones/el_circulo_de_mohr.yaml guiones/el_cubo_partido.yaml; do
+            python - "$g" <<'EOF'
+          import sys
+          from tpi_videos.config import cargar_marca
+          from tpi_videos.guion import cargar_guion
+          from tpi_videos.temas import resolver_tema
+          g = cargar_guion(sys.argv[1])
+          print(sys.argv[1], "| materia:", g.materia, "| categoria:", g.categoria, "| tema del guion:", g.tema,
+                "| estilo:", resolver_tema(None, g, cargar_marca()), "| con --tema hoja_de_desarrollo:",
+                resolver_tema("hoja_de_desarrollo", g, cargar_marca()))
+          EOF
+          done
+      - name: Recorrido de clics
+        run: |
+          tpi panel --no-abrir --puerto 8765 > /tmp/panel.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8765/ > /dev/null && break; sleep 1; done
+          mkdir -p capturas
+          python - <<'EOF'
+          import time
+          from playwright.sync_api import sync_playwright
+
+          URL = "http://127.0.0.1:8765"
+          with sync_playwright() as p:
+              b = p.chromium.launch()
+              pag = b.new_page(viewport={"width": 1440, "height": 1100})
+              errores = []
+              pag.on("pageerror", lambda e: errores.append(str(e)))
+
+              def toma(nombre, **kw):
+                  time.sleep(1.2)
+                  pag.screenshot(path=f"capturas/{nombre}.png", **kw)
+
+              pag.goto(URL + "/")
+              pag.wait_for_selector("text=Lanzar Renderización en Lote")
+              pag.get_by_text("Guiones por aprobar").click()
+              pag.wait_for_selector(".tpi-insignia")
+              toma("01_insignias")
+              print("insignias:", [e.inner_text() for e in pag.locator(".tpi-insignia").all()[:12]])
+              print("colores:", pag.evaluate("""[...document.querySelectorAll('.tpi-insignia')].slice(0,6)
+                  .map(e => e.innerText + ' ' + getComputedStyle(e).backgroundColor)"""))
+
+              ficha = pag.locator(".tpi-ficha", has_text="AA Tiro sin estilo propio").first
+              ficha.scroll_into_view_if_needed()
+              ficha.get_by_role("button", name="Vista Previa Rápida").click()
+              ficha.locator(".q-linear-progress").wait_for(timeout=30000)
+              toma("02_progreso")
+              ficha.screenshot(path="capturas/03_progreso_tarjeta.png")
+              ficha.locator("video").wait_for(timeout=20 * 60 * 1000)
+              time.sleep(2)
+              ficha.scroll_into_view_if_needed()
+              toma("04_video_en_tarjeta")
+              ficha.screenshot(path="capturas/05_tarjeta_con_video.png")
+              src = ficha.locator("video").get_attribute("src")
+              print("video src:", src)
+              print("estado HTTP del video:", pag.request.get(URL + src).status if src else None)
+              print("botón ahora:", ficha.get_by_role("button").last.inner_text())
+              print("errores de la página:", errores or "ninguno")
+              b.close()
+          EOF
+          tail -30 /tmp/panel.log
+          ls -la salida/*/ || true
+          grep -h '"tema_clave"' salida/*/linea_de_tiempo.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capturas-vista-previa
+          path: capturas
+          retention-days: 7
