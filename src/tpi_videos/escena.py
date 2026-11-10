@@ -45,6 +45,7 @@ from manim import (
     Dot,
     FadeIn,
     FadeOut,
+    Flash,
     Group,
     ImageMobject,
     Indicate,
@@ -57,7 +58,6 @@ from manim import (
     SurroundingRectangle,
     TransformMatchingTex,
     UpdateFromAlphaFunc,
-    ValueTracker,
     VGroup,
     VMobject,
     Wiggle,
@@ -145,6 +145,23 @@ def avance_de_movimiento(duracion: float, ventana: float) -> tuple[float, bool]:
     if duracion <= 0 or ventana >= duracion:
         return 1.0, False
     return max(ventana / duracion, 0.0), True
+
+
+def movimiento_de(dibujo: d.Dibujo, avance: float) -> Animation:
+    """La animación que recorre la pose del dibujo de 0 a ``avance`` sobre su propio grupo.
+
+    El grupo del dibujo tiene que ser el objeto animado: así Manim lo vuelve a pintar en cada cuadro.
+    """
+    return UpdateFromAlphaFunc(dibujo.mobs, lambda _m, alfa: dibujo.vivo(alfa * avance))
+
+
+def recorrido_sin_fisica(ventana: float) -> tuple[float, float]:
+    """``(segundos, avance)`` de un recorrido sin reloj físico: ocupa la ventana entera y llega al final.
+
+    Una tangente que barre la curva o una órbita de cámara no tienen velocidad «real» que mentir:
+    se reparten en la voz del paso y siempre terminan en su pose final.
+    """
+    return max(ventana, 0.35), 1.0
 
 
 def plan_de_movimiento(duracion: float, restante: float) -> tuple[float, float, float, bool]:
@@ -791,6 +808,35 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self.wait(0.25)
         self.play(*self._mover_camara(*antes, run_time=0.4), run_time=0.4)
 
+    def _destello(self, caja: Mobject) -> list[Animation]:
+        """La confirmación: un aro del recuadro que se expande y se apaga, y rayos cortos alrededor."""
+        aro = caja.copy().set_fill(opacity=0).set_stroke(self.col.acento, 6, 1.0).set_z_index(2)
+        return [
+            aro.animate(rate_func=rate_functions.ease_out_cubic).scale(1.16).set_stroke(opacity=0.0),
+            Flash(
+                caja.get_center(),
+                color=self.col.acento,
+                flash_radius=max(caja.width, caja.height) / 2 + 0.25,
+                line_length=0.32,
+                num_lines=16,
+                line_stroke_width=5,
+            ),
+        ]
+
+    def _halos_del_paso(self, paso: Any, eq: Mobject, fuente: Mobject | None) -> VGroup | None:
+        """El resplandor del paso: los términos que el guion sigue (``halo``) y los que llegan nuevos.
+
+        Va detrás de la fórmula y sale con el paso siguiente, como los recuadros de ``destacar``.
+        """
+        partes: list[Mobject] = []
+        for buscado in paso.halo:
+            partes += [m for m in c.partes_por_tex(eq, buscado) if m not in partes]
+        if paso.resaltar_cambio and fuente is not None:
+            partes += [m for m in c.terminos_nuevos(fuente, eq) if m not in partes]
+        if not partes:
+            return None
+        return VGroup(*[c.halo_de(m, self.col.acento) for m in partes])
+
     def _tomar_aire(self) -> list[Animation]:
         """Vuelve al encuadre base antes del próximo golpe: sin ese retroceso, no hay golpe."""
         return self._animaciones_camara(0.0, escala_base(self.modo_camara), run_time=0.45)
@@ -1111,6 +1157,13 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         corta, se recorre sólo el trozo que cabe y la revisión ya avisó del corte.
         """
         entrada, ventana, avance, _ = plan_de_movimiento(duracion, restante)
+        recorrido = min(ventana, duracion)
+        if not dibujo.fisico:
+            # Sin física que respetar (tangente, área, órbita 3D): el recorrido llena la voz entera.
+            recorrido, avance = recorrido_sin_fisica(ventana)
+        # La pose de partida antes de entrar: un dibujo puede construirse en su pose final (la que ve
+        # la miniatura) y la escena siempre arranca el movimiento desde el principio.
+        dibujo.vivo(0.0)
         animaciones: list[Animation] = [Create(m) for m in dibujo.trazo]
         if dibujo.aparece:
             animaciones.append(
@@ -1122,16 +1175,16 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             self.play(*camara, run_time=entrada)
         if dibujo.estela is not None:
             self.add(dibujo.estela)
-        reloj = ValueTracker(0.0)
-        reloj.add_updater(lambda tracker: dibujo.vivo(tracker.get_value() * avance))
-        self.add(reloj)
+        # El dibujo entero es el que se anima: Manim congela en una imagen fija todo lo que no sea
+        # el objeto de la animación (ni tenga updater), así que un reloj aparte movía la pose sin
+        # que se volviera a pintar. Agregarlo también trae las piezas que nacen invisibles (halos,
+        # relleno del área) y que no pasan por la entrada.
+        self.add(dibujo.mobs)
         self.play(
-            reloj.animate.set_value(1.0),
-            run_time=min(ventana, duracion),
+            movimiento_de(dibujo, avance),
+            run_time=recorrido,
             rate_func=rate_functions.linear,
         )
-        reloj.clear_updaters()
-        self.remove(reloj)
         dibujo.vivo(avance)
 
     def _trazar_dibujo(
@@ -1209,6 +1262,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         pila: list[Linea] = []
         en_historial: set[int] = set()  # líneas ya achicadas (por id de la ecuación)
         resaltes: list[VGroup] = []
+        halos_vivos: list[VGroup] = []  # el resplandor del paso anterior: se va de golpe, no se desvanece
         extras_vivos: list[Mobject] = []  # emojis del paso anterior (salen en el siguiente)
         dibujo_vivo: d.Dibujo | None = None  # el dibujo del paso anterior (sale en el siguiente)
         ultima: Any = None  # última ecuación CORRECTA (origen de la transformación)
@@ -1283,6 +1337,11 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     ancla.shift(LEFT * hueco / 2)
                     emoji.next_to(ancla, RIGHT, buff=0.2)
 
+                # El halo se apaga de golpe: la línea a la que pertenece sube y se achica en esta misma
+                # animación, y un halo que se desvanece se quedaría flotando en el sitio viejo.
+                if halos_vivos:
+                    self.remove(*halos_vivos)
+                    halos_vivos = []
                 previas: list[Animation] = (
                     [FadeOut(r) for r in resaltes] + [FadeOut(x) for x in extras_vivos] + sale_dibujo
                 )
@@ -1335,8 +1394,19 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     aparecer += self._toma_de_casillero(eq)
                 else:
                     aparecer += self._acercar_al_paso(eq)  # el golpe de cámara entra con la fórmula
+                if paso.resaltar_cambio and fuente is not None and mapa is not None:
+                    # Lo que se cancela o se va se tacha sobre la fórmula anterior antes de viajar.
+                    tachas = VGroup(*[c.tacha_de(m, self.col.error) for m in c.terminos_nuevos(eq, fuente)])
+                    if len(tachas):
+                        self.add(fuente)
+                        self.play(LaggedStart(*[Create(t) for t in tachas], lag_ratio=0.2), run_time=0.4)
+                        aparecer.append(FadeOut(tachas))
                 self.play(*aparecer, run_time=float(np.clip(tr.duration * 0.45, 0.8, 1.6)))
                 completa_desde = self.renderer.time  # desde acá la fórmula ya está completa en pantalla
+                halos = self._halos_del_paso(paso, eq, fuente if mapa is not None else None)
+                if halos is not None:
+                    self.play(FadeIn(halos, scale=1.08), run_time=0.4)
+                    halos_vivos.append(halos)
                 if paso.visual is not None and alto_dibujo > 0:
                     dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
 
@@ -1407,7 +1477,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     if not paso.error:
                         ultima = eq
 
-        self.pila, self.resaltes, self.ultima = pila, resaltes, ultima
+        self.pila, self.resaltes, self.ultima = pila, resaltes + halos_vivos, ultima
         if self._chip_vivo is not None:
             self._pendientes.append(FadeOut(self._chip_vivo))
             self._chip_vivo = None
@@ -1502,6 +1572,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 Circumscribe(VGroup(caja, eq), color=self.col.acento, fade_out=True, time_width=0.5),
                 run_time=1.0,
             )
+            if r.destello:
+                self.play(*self._destello(caja), run_time=0.7)
             if emoji is not None:
                 self.play(self._rebote(emoji))
             self._da_lectura(tr, completa_desde)

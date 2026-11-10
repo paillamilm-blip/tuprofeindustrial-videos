@@ -22,6 +22,7 @@ from .visuales import (
     MARCAS_CERCHA,
     MARCAS_CIRCULO,
     MARCAS_ENGRANAJE,
+    MARCAS_FUNCION,
     MARCAS_MOHR,
     MARCAS_ONDA,
     MARCAS_OSCILADOR,
@@ -201,6 +202,10 @@ class Visual(_Base):
     marcar: list[float] = []
     eje_x: str | None = None  # ej. "tiempo (s)"
     eje_y: str | None = None  # ej. "altura (m)"
+    # Matemática viva (opcional): una tangente que recorre la curva o el área que se llena bajo ella
+    movimiento: Literal["", "tangente", "area"] = ""
+    desde: float | None = None  # x donde empieza el recorrido; vacío = el inicio del rango
+    hasta: float | None = None  # x donde termina; vacío = el fin del rango
 
     # diagrama_fuerzas
     cuerpo: Literal["bloque", "bola"] = "bloque"
@@ -229,6 +234,7 @@ class Visual(_Base):
     # solido_3d (además de figura / lado / radio / altura / anotar)
     vista: Literal["frente", "piso", "ala", "axonometrica"] = "axonometrica"
     corte: Literal["sin_corte", "mitad"] = "sin_corte"  # mitad solo en cubo: ver el validador
+    despiece: bool = False  # las piezas se separan al final de la órbita (caras, tapas o mitades)
 
     # vector_3d
     componentes: list[float] | None = None  # las tres: [3, 4, 12]
@@ -315,13 +321,68 @@ class Visual(_Base):
         "rango", "marcar", "vectores", "resistencias", "anotar", "categorias", mode="before"
     )(classmethod(lambda cls, v: None if v is None else _como_lista(v)))
 
+    def _validar_movimiento(self) -> None:
+        """La tangente o el área: un tramo que exista entero y lo que se lee en vivo, coherente."""
+        desconocidas = [m for m in self.anotar if m not in MARCAS_FUNCION]
+        if desconocidas:
+            raise ValueError(
+                f"«{desconocidas[0]}» no es una marca del gráfico; el motor sabe anotar "
+                f"{', '.join(MARCAS_FUNCION)} (con movimiento: tangente o area)"
+            )
+        if not self.movimiento:
+            if self.anotar:
+                raise ValueError(
+                    f"«{self.anotar[0]}» se lee mientras algo se mueve: agrega movimiento: "
+                    f"{'tangente' if self.anotar[0] == 'pendiente' else 'area'}"
+                )
+            if self.desde is not None or self.hasta is not None:
+                raise ValueError("desde y hasta marcan el recorrido: agrega movimiento: tangente o area")
+            return
+        pide = {"pendiente": "tangente", "area": "area"}
+        for marca in self.anotar:
+            if pide[marca] != self.movimiento:
+                raise ValueError(
+                    f"la marca «{marca}» va con movimiento: {pide[marca]}, y este gráfico dice "
+                    f"movimiento: {self.movimiento}"
+                )
+        f = analizar_funcion(self.funcion or "", self.variable, self.rango, self.marcar)
+        x0, x1 = f.rango_x
+        a = x0 if self.desde is None else float(self.desde)
+        b = x1 if self.hasta is None else float(self.hasta)
+        if not a < b:
+            raise ValueError(
+                f"el recorrido va de izquierda a derecha: desde ({a:g}) tiene que ser menor que hasta ({b:g})"
+            )
+        if a < x0 - 1e-9 or b > x1 + 1e-9:
+            raise ValueError(
+                f"el recorrido [{a:g}, {b:g}] se sale del rango del gráfico [{x0:g}, {x1:g}]; "
+                "ajusta desde/hasta o agranda el rango"
+            )
+        hueco = f.tramo_sin_huecos(a, b)
+        if hueco is not None:
+            raise ValueError(
+                f"la función no existe en x ≈ {hueco:.2f} (asíntota o raíz de un negativo), dentro del "
+                "recorrido: acorta desde/hasta para que no la cruce"
+            )
+
     @model_validator(mode="after")
     def _campos_del_tipo(self) -> Visual:
+        if self.movimiento and self.tipo != "grafico_funcion":
+            raise ValueError("movimiento (tangente o área) solo va en un grafico_funcion")
+        if self.despiece:
+            if self.tipo != "solido_3d":
+                raise ValueError("el despiece solo va en un solido_3d")
+            if self.figura == "esfera":
+                raise ValueError(
+                    "la esfera es una sola pieza y no tiene qué separar: quita despiece o usa cubo, "
+                    "cilindro o cono"
+                )
         if self.tipo == "grafico_funcion":
             if not (self.funcion or "").strip():
                 raise ValueError("un gráfico de función necesita la fórmula, ej. funcion: '-x^2 + 4x'")
             if self.rango is not None and len(self.rango) != 2:
                 raise ValueError("el rango son dos números, ej. rango: [0, 5]")
+            self._validar_movimiento()
         elif self.tipo == "diagrama_fuerzas":
             self.vectores = normalizar_vectores(self.vectores)
             if self.angulo is not None:
@@ -835,9 +896,13 @@ class Paso(_Base):
     visual: Visual | None = None
     # Error típico: la fórmula (equivocada) se tacha con una ✗ roja; no cuenta como paso correcto
     error: bool = False
+    # Álgebra viva (opcional): un resplandor sobre términos que se siguen paso a paso, y el cambio
+    # de la transformación a la vista (lo que se va se tacha, lo que llega se ilumina)
+    halo: list[str] = []
+    resaltar_cambio: bool = False
 
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
-    _lista = field_validator("destacar", mode="before")(classmethod(lambda cls, v: _como_lista(v)))
+    _lista = field_validator("destacar", "halo", mode="before")(classmethod(lambda cls, v: _como_lista(v)))
 
     @model_validator(mode="after")
     def _error_con_formula(self) -> Paso:
@@ -850,6 +915,7 @@ class Resultado(_Base):
     tex: str = Field(min_length=1)
     voz: str = Field(min_length=1)
     emoji: str | None = None
+    destello: bool = False  # un destello de confirmación sale del recuadro al cerrar la respuesta
 
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
 
@@ -1088,6 +1154,13 @@ def _visual_yaml(v: dict[str, Any], sangria: str = "      ") -> list[str]:
         for clave in ("eje_x", "eje_y"):
             if v.get(clave):
                 campos.append((clave, _dobles(v[clave])))
+        if v.get("movimiento"):
+            campos.append(("movimiento", v["movimiento"]))
+            for clave in ("desde", "hasta"):
+                if v.get(clave) is not None:
+                    campos.append((clave, _numero(v[clave])))
+            if v.get("anotar"):
+                campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     elif tipo == "diagrama_fuerzas":
         if v.get("cuerpo") not in (None, "bloque"):
             campos.append(("cuerpo", v["cuerpo"]))
@@ -1114,6 +1187,8 @@ def _visual_yaml(v: dict[str, Any], sangria: str = "      ") -> list[str]:
             campos.append(("vista", v.get("vista") or "axonometrica"))
             if v.get("corte") not in (None, "", "sin_corte"):
                 campos.append(("corte", v["corte"]))
+            if v.get("despiece"):
+                campos.append(("despiece", "true"))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     elif tipo == "vector_3d":
@@ -1298,6 +1373,10 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
             lineas.append(f"    destacar: [{', '.join(_simples(d) for d in p['destacar'])}]")
         if p.get("transformar") is False:
             lineas.append("    transformar: false")
+        if p.get("halo"):
+            lineas.append(f"    halo: [{', '.join(_simples(d) for d in p['halo'])}]")
+        if p.get("resaltar_cambio"):
+            lineas.append("    resaltar_cambio: true")
         if p.get("emoji"):
             lineas.append(f"    emoji: {_dobles(p['emoji'])}")
         if p.get("visual"):
@@ -1309,6 +1388,8 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
                f"  voz: {_dobles(guion['resultado']['voz'])}"]  # fmt: skip
     if guion["resultado"].get("emoji"):
         lineas.append(f"  emoji: {_dobles(guion['resultado']['emoji'])}")
+    if guion["resultado"].get("destello"):
+        lineas.append("  destello: true")
     for nombre in ("verificacion", "reto", "cierre"):
         if guion.get(nombre):
             bloque(nombre, guion[nombre])

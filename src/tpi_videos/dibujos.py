@@ -97,6 +97,9 @@ class Dibujo:
     vivo: Callable[[float], None] | None = None  # pinta la pose p ∈ [0, 1]
     duracion: float | None = None  # segundos de física que pide la pose
     estela: Mobject | None = None  # la traza que crece; la escena la agrega sola
+    # True: la pose corre a tiempo físico real (A). False: no hay reloj físico que respetar (una
+    # tangente, un área, una órbita de cámara) y el recorrido se reparte entero en la voz del paso.
+    fisico: bool = True
     # Lo que ``place`` corre el dibujo: la pose lo consulta para no volver al origen.
     desplazamiento: list[np.ndarray] = field(default_factory=lambda: [np.zeros(3)], repr=False)
 
@@ -273,8 +276,16 @@ def grafico_funcion(
     eje_x: str | None = None,
     eje_y: str | None = None,
     papel: str = "#FFFFFF",
+    movimiento: str = "",
+    desde: float | None = None,
+    hasta: float | None = None,
+    anotar: list[str] | None = None,
 ) -> Dibujo:
-    """Ejes con numeración, la curva trazada y un punto en cada raíz y en el vértice."""
+    """Ejes con numeración, la curva trazada y un punto en cada raíz y en el vértice.
+
+    Con ``movimiento`` el gráfico además vive: una tangente recorre la curva (y su pendiente se lee
+    al instante) o el área bajo ella se llena con su partición. Sin él, es el gráfico de siempre.
+    """
     x0, x1 = f.rango_x
     y0, y1 = f.rango_y()
     # Los números de los ejes necesitan su propio margen: a la izquierda y abajo.
@@ -366,8 +377,219 @@ def grafico_funcion(
     )
 
     todo = VGroup(ejes, VGroup(*curva), numeros, nombres, marcas)
-    _encajar(todo, ancho, alto)
-    return Dibujo(mobs=todo, trazo=[*ejes, *curva], aparece=[numeros, nombres, marcas])
+    if not movimiento:
+        _encajar(todo, ancho, alto)
+        return Dibujo(mobs=todo, trazo=[*ejes, *curva], aparece=[numeros, nombres, marcas])
+    fijo, desplazamiento = _encaje(todo, ancho, alto)
+    caja = (izquierda, derecha, abajo, arriba)
+    a = x0 if desde is None else float(desde)
+    b = x1 if hasta is None else float(hasta)
+    criticos = [x for x in f.puntos if a - 1e-9 <= x <= b + 1e-9]
+    vivas = _curva_viva(
+        f, p, fijo, caja, (y0, y1), horizontal, a, b, criticos, movimiento, anotar or [], col, papel
+    )
+    todo.add(*vivas.piezas)
+    vivas.vivo(0.0)
+    return Dibujo(
+        mobs=todo,
+        trazo=[*ejes, *curva],
+        aparece=[numeros, nombres, marcas, *vivas.aparece],
+        vivo=vivas.vivo,
+        duracion=SEGUNDOS_RECORRIDO,
+        desplazamiento=desplazamiento,
+        fisico=False,
+    )
+
+
+# Lo que dura, como referencia, un recorrido sin física (tangente, área, órbita). La escena no lo
+# respeta al pie de la letra: con ``fisico=False`` estira o comprime el recorrido a la voz del paso.
+SEGUNDOS_RECORRIDO = 4.0
+
+
+@dataclass
+class _Viva:
+    piezas: list[Mobject]  # todo lo que se agrega al dibujo
+    aparece: list[Mobject]  # lo que entra con FadeIn antes de empezar a moverse
+    vivo: Callable[[float], None]
+
+
+def _suave(t: float) -> float:
+    """Arranque y frenada suaves (smoothstep): el recorrido no da tirones al empezar ni al terminar."""
+    t = min(max(t, 0.0), 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def _recortar(
+    centro: np.ndarray, direccion: np.ndarray, largo: float, caja: tuple[float, float, float, float]
+) -> tuple[np.ndarray, np.ndarray]:
+    """El segmento de ``largo`` centrado en ``centro``, recortado a la caja de la gráfica (Liang–Barsky)."""
+    izq, der, aba, arr = caja
+    t0, t1 = -largo / 2, largo / 2
+    for p_, q_ in (
+        (-direccion[0], centro[0] - izq),
+        (direccion[0], der - centro[0]),
+        (-direccion[1], centro[1] - aba),
+        (direccion[1], arr - centro[1]),
+    ):
+        if abs(p_) < 1e-12:
+            continue
+        r = q_ / p_
+        if p_ < 0:
+            t0 = max(t0, r)
+        else:
+            t1 = min(t1, r)
+    if t1 < t0:
+        t0 = t1 = 0.0
+    return centro + direccion * t0, centro + direccion * t1
+
+
+def _curva_viva(
+    f: Funcion,
+    p: Callable[[float, float], np.ndarray],
+    fijo: Callable[[np.ndarray], np.ndarray],
+    caja: tuple[float, float, float, float],
+    rango_y: tuple[float, float],
+    eje: float,
+    a: float,
+    b: float,
+    criticos: list[float],
+    movimiento: str,
+    marcas: list[str],
+    col: Any,
+    papel: str,
+) -> _Viva:
+    """Las piezas móviles del gráfico vivo y su pose: todo se recalcula de la curva real.
+
+    La pose es pura: recibe 0..1 y deja el punto, la recta o el relleno donde dice la función. No crea
+    mobjects nuevos salvo el rótulo del valor, que se rehace solo cuando cambia el número escrito.
+    """
+    izq, der, aba, arr = caja
+    y0, y1 = rango_y
+    escala_x = (der - izq) / (f.rango_x[1] - f.rango_x[0])  # unidades de pantalla por unidad de x
+    escala_y = (arr - aba) / (y1 - y0)
+
+    def en_caja(x: float, y: float) -> np.ndarray:
+        return p(x, min(max(y, y0), y1))
+
+    # Los puntos críticos (raíces y vértice) se encienden cuando el recorrido pasa por ellos.
+    halos = [
+        Circle(radius=0.2)
+        .set_stroke(col.acento, 6, 0.0)
+        .set_fill(col.acento, 0.0)
+        .move_to(fijo(en_caja(x, f.y(x) or 0.0)))
+        for x in criticos
+        if f.y(x) is not None
+    ]
+    ancho_halo = max((b - a) * 0.09, 1e-6)
+
+    def encender(x_actual: float) -> None:
+        for halo, xc in zip(halos, [x for x in criticos if f.y(x) is not None], strict=True):
+            cerca = max(0.0, 1.0 - abs(x_actual - xc) / ancho_halo)
+            halo.set_stroke(opacity=0.85 * cerca).set_fill(opacity=0.18 * cerca)
+            halo.set_width(0.4 + 0.35 * cerca)
+
+    rotulo_caja = VGroup()  # el valor en vivo, con su papel detrás para que la curva no lo tape
+    escrito = [""]
+
+    def escribir(texto: str) -> None:
+        if texto == escrito[0]:
+            return
+        escrito[0] = texto
+        # Arriba a la derecha, alineado por la derecha: cambia de ancho sin moverse de su esquina.
+        # Se calcula cada vez: ``fijo`` sigue al dibujo cuando la escena lo cambia de sitio.
+        esquina = fijo(np.array([der - 0.1, arr - 0.05, 0.0]))
+        nuevo = c.texto(texto, 22, SEMIBOLD, col.texto)
+        nuevo.move_to(esquina + LEFT * nuevo.width / 2 + DOWN * nuevo.height / 2)
+        # Se cambian los hijos, no se usa become(): con otro número de letras become() rellena con
+        # copias y quedan letras fantasma. Los hijos viejos además se apagan: Manim arma la lista de
+        # lo que pinta al empezar cada animación y los seguiría dibujando encima del valor nuevo.
+        for viejo in rotulo_caja.submobjects:
+            viejo.set_opacity(0.0)
+        rotulo_caja.submobjects = list(_parche(nuevo, papel, 0.16).submobjects)
+
+    if movimiento == "tangente":
+        punto = Dot(radius=0.085).set_fill(col.error, 1).set_stroke(col.formulas, 2)
+        recta = Line(LEFT, RIGHT).set_stroke(col.tenue, 6)
+        largo = (der - izq) * 0.42
+        lee = "pendiente" in marcas
+
+        def vivo(t: float) -> None:
+            x = a + _suave(t) * (b - a)
+            y, m = f.y(x), f.derivada(x)
+            if y is None or m is None or not (y0 <= y <= y1):
+                punto.set_opacity(0.0)
+                recta.set_stroke(opacity=0.0)
+                encender(x)
+                return
+            centro = p(x, y)
+            # La pendiente en pantalla no es la de los datos: cada eje tiene su propia escala.
+            direccion = np.array([escala_x, m * escala_y, 0.0])
+            direccion /= float(np.linalg.norm(direccion))
+            ini, fin = _recortar(centro, direccion, largo, caja)
+            if float(np.linalg.norm(fin - ini)) < 1e-6:
+                fin = ini + direccion * 1e-3
+            recta.put_start_and_end_on(fijo(ini), fijo(fin))
+            # Plana se ve tenue; subiendo va al acento y bajando al rojo: el signo de m también se ve.
+            inclinacion = min(abs(m) * escala_y / escala_x / 1.5, 1.0)
+            destino = col.acento if m >= 0 else col.error
+            recta.set_stroke(ManimColor(col.tenue).interpolate(ManimColor(destino), inclinacion), opacity=1.0)
+            punto.move_to(fijo(centro)).set_opacity(1.0)
+            encender(x)
+            if lee:
+                escribir(f"m = {_numero_latex(m)}")
+
+        piezas: list[Mobject] = [*halos, recta, punto]
+        if lee:
+            piezas.append(rotulo_caja)
+        return _Viva(piezas=piezas, aparece=[recta, punto, *([rotulo_caja] if lee else [])], vivo=vivo)
+
+    # —— El área: se llena de izquierda a derecha, con la partición marcando los tramos ——————
+    base = min(max(eje, aba), arr)
+    positivo = VMobject().set_fill(col.acento, 0.38).set_stroke(width=0)
+    negativo = VMobject().set_fill(col.error, 0.32).set_stroke(width=0)
+    barrido = Line(UP, DOWN).set_stroke(col.acento, 4)
+    tramos = 8
+    particion = [Line(UP, DOWN).set_stroke(col.formulas, 2.5, 0.0) for _ in range(tramos - 1)]
+    cortes = [a + (b - a) * k / tramos for k in range(1, tramos)]
+    lee = "area" in marcas
+    muestras = 64
+
+    def relleno(x_fin: float, signo: float) -> list[np.ndarray]:
+        xs = [a + (x_fin - a) * i / muestras for i in range(muestras + 1)]
+        arriba_ = []
+        for x in xs:
+            y = f.y(x) or 0.0
+            y = max(y, 0.0) if signo > 0 else min(y, 0.0)
+            arriba_.append(fijo(en_caja(x, y)))
+        return [
+            fijo(np.array([p(a, 0.0)[0], base, 0.0])),
+            *arriba_,
+            fijo(np.array([p(x_fin, 0.0)[0], base, 0.0])),
+        ]
+
+    def vivo(t: float) -> None:
+        x = a + _suave(t) * (b - a)
+        x = max(x, a + (b - a) * 1e-3)
+        positivo.set_points_as_corners(relleno(x, 1.0))
+        negativo.set_points_as_corners(relleno(x, -1.0))
+        y = f.y(x) or 0.0
+        barrido.put_start_and_end_on(
+            fijo(np.array([p(x, 0.0)[0], base, 0.0])), fijo(en_caja(x, y)) + np.array([0.0, 1e-4, 0.0])
+        )
+        for linea, xc in zip(particion, cortes, strict=True):
+            yc = f.y(xc) or 0.0
+            linea.put_start_and_end_on(
+                fijo(np.array([p(xc, 0.0)[0], base, 0.0])), fijo(en_caja(xc, yc)) + np.array([0.0, 1e-4, 0.0])
+            )
+            linea.set_stroke(opacity=0.55 if xc <= x else 0.0)
+        encender(x)
+        if lee:
+            escribir(f"A ≈ {_numero_latex(f.area(a, x))}")
+
+    piezas = [negativo, positivo, *particion, *halos, barrido]
+    if lee:
+        piezas.append(rotulo_caja)
+    return _Viva(piezas=piezas, aparece=[barrido, *([rotulo_caja] if lee else [])], vivo=vivo)
 
 
 # ------------------------------------------------------------------------------------------
@@ -2552,7 +2774,17 @@ def _dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str
     papel = papel or col.fondo
     if visual.tipo == "grafico_funcion":
         return grafico_funcion(
-            visual.funcion_analizada(), col, ancho, alto, visual.eje_x, visual.eje_y, papel
+            visual.funcion_analizada(),
+            col,
+            ancho,
+            alto,
+            visual.eje_x,
+            visual.eje_y,
+            papel,
+            visual.movimiento,
+            visual.desde,
+            visual.hasta,
+            visual.anotar,
         )
     if visual.tipo == "diagrama_fuerzas":
         return diagrama_fuerzas(

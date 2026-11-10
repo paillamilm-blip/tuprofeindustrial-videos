@@ -81,6 +81,27 @@ class ElDibujoVivoTest(unittest.TestCase):
         self.assertIn(6.0, trampa.jugadas)  # sólo el trozo que cabe en la voz
         self.assertAlmostEqual(posiciones[-1], 0.6)  # la pose del corte, nunca la física comprimida
 
+    def test_lo_que_se_anima_es_el_dibujo_y_no_un_reloj_aparte(self):
+        """Manim congela en una imagen todo lo que no es el objeto animado: con un reloj aparte la
+        pose cambiaba pero el dibujo no se volvía a pintar y el video salía quieto."""
+        VideoEjercicio, Dibujo, VGroup, posiciones, trampa = self._trampa()
+        animadas = []
+        trampa.play = lambda *anims, run_time=None, **_k: (
+            animadas.extend(anims),
+            trampa.jugadas.append(run_time),
+        )
+        dib = Dibujo(mobs=VGroup(), vivo=posiciones.append, duracion=6.0)
+        VideoEjercicio._mover_dibujo(trampa, dib, 6.0, 8.0, [])
+        self.assertIs(animadas[-1].mobject, dib.mobs)
+
+    def test_sin_fisica_el_recorrido_llena_la_voz_y_llega_al_final(self):
+        VideoEjercicio, Dibujo, VGroup, posiciones, trampa = self._trampa()
+        dib = Dibujo(mobs=VGroup(), vivo=posiciones.append, duracion=4.0, fisico=False)
+        VideoEjercicio._mover_dibujo(trampa, dib, 4.0, 12.0, [])
+        self.assertIn(9.0, trampa.jugadas)  # 12 s de voz − 3 s de entrada: no se queda en 4 s
+        self.assertEqual(posiciones[0], 0.0)
+        self.assertEqual(posiciones[-1], 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()
