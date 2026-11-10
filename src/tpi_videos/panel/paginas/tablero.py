@@ -157,14 +157,20 @@ class ColaDeProduccion:
                 with ui.row().classes("items-center gap-3"):
                     if por_revisar:
                         ui.button(
-                            "Revisar guiones", icon="fact_check", on_click=lambda: self.ir_a("qc")
+                            color=None,
+                            text="Revisar guiones",
+                            icon="fact_check",
+                            on_click=lambda: self.ir_a("qc"),
                         ).props("flat no-caps").classes("tpi-sobrio")
                     if TAREAS.ocupado():
-                        ui.button("Detener", icon="stop", on_click=self._detener).props(
+                        ui.button(color=None, text="Detener", icon="stop", on_click=self._detener).props(
                             "flat no-caps"
                         ).classes("tpi-rojo")
                     boton = ui.button(
-                        "Lanzar Renderización en Lote", icon="play_arrow", on_click=self._lanzar
+                        color=None,
+                        text="Lanzar Renderización en Lote",
+                        icon="play_arrow",
+                        on_click=self._lanzar,
                     ).classes("tpi-boton-principal")
                     if LANZAMIENTO.activo or TAREAS.ocupado():
                         boton.text = "Produciendo…"
@@ -175,9 +181,9 @@ class ColaDeProduccion:
             t = TAREAS.actual
             if t is not None and not t.terminada:
                 with ui.column().classes("w-full gap-1"):
-                    ui.linear_progress(value=t.avance, show_value=False).props("rounded size=6px").classes(
-                        "w-full"
-                    )
+                    ui.linear_progress(value=t.avance, show_value=False, color=None).props(
+                        "rounded size=6px"
+                    ).classes("w-full")
                     ui.label(t.detalle or t.texto_etapa).classes("tpi-sobrio text-sm")
 
     def _lanzar(self) -> None:
@@ -244,18 +250,21 @@ class ColaDeProduccion:
                 if f.estado in cola.ESTADOS_ACTIVOS:
                     ui.label(f"{round(f.avance * 100)} %").classes("tpi-ambar text-xs")
             if f.estado in cola.ESTADOS_ACTIVOS:
-                ui.linear_progress(value=f.avance, show_value=False).props("rounded size=4px").classes(
-                    "w-full"
-                )
+                ui.linear_progress(value=f.avance, show_value=False, color=None).props(
+                    "rounded size=4px"
+                ).classes("w-full")
             if f.fallo and f.error:
                 ui.label(str(f.error)).classes("tpi-sobrio text-xs")
             if f.video is not None:
                 with ui.row().classes("gap-1 -ml-2"):
-                    ui.button("Ver", icon="play_circle", on_click=lambda v=f.video: _ver(v)).props(
-                        "flat dense no-caps"
-                    ).classes("tpi-verde")
                     ui.button(
-                        "Carpeta", icon="folder_open", on_click=lambda v=f.video: abrir_en_mac(v, True)
+                        color=None, text="Ver", icon="play_circle", on_click=lambda v=f.video: _ver(v)
+                    ).props("flat dense no-caps").classes("tpi-verde")
+                    ui.button(
+                        color=None,
+                        text="Carpeta",
+                        icon="folder_open",
+                        on_click=lambda v=f.video: abrir_en_mac(v, True),
                     ).props("flat dense no-caps").classes("tpi-sobrio")
 
 
@@ -356,17 +365,17 @@ class AprobacionDeGuiones:
                         ui.label(voz.texto).classes("tpi-voz")
                         for pausa in voz.pausas:
                             ui.label(f"pausa {pausa:g} s".replace(".", ",")).classes("tpi-pausa")
-        with ui.expansion("Detalles técnicos", icon="code").classes("w-full tpi-consola").props("dense"):
+        with ui.expansion("Detalles técnicos", icon="code").classes("w-full tpi-plegable").props("dense"):
             with ui.column().classes("w-full gap-2 p-2"):
                 for linea in f.tecnico:
                     ui.label(linea).classes("tpi-sobrio text-sm font-mono")
                 ui.code(f.yaml, language="yaml").classes("tpi-codigo w-full text-xs")
         with ui.row().classes("w-full justify-end gap-4 pt-2"):
-            ui.button("Rechazar / Editar", icon="close", on_click=lambda: self._rechazar(f)).classes(
-                "tpi-rechazar"
-            )
+            ui.button(
+                color=None, text="Rechazar / Editar", icon="close", on_click=lambda: self._rechazar(f)
+            ).classes("tpi-rechazar")
             aprobar = ui.button(
-                "Aprobar y Enviar a Cola", icon="check", on_click=lambda: self._aprobar(f)
+                color=None, text="Aprobar y Enviar a Cola", icon="check", on_click=lambda: self._aprobar(f)
             ).classes("tpi-aprobar")
             if not f.aprobable or f.estado == qc.APROBADO:
                 aprobar.disable()
@@ -409,9 +418,13 @@ class AprobacionDeGuiones:
                 ui.navigate.to(f"/crear?guion={quote(str(f.ruta))}")
 
             with ui.row().classes("w-full justify-end gap-3 pt-2"):
-                ui.button("Cancelar", on_click=dialogo.close).props("flat no-caps").classes("tpi-sobrio")
-                ui.button("Solo rechazar", on_click=solo_rechazar).classes("tpi-rechazar")
-                ui.button("Abrir en el editor", icon="edit", on_click=editar).classes("tpi-boton-principal")
+                ui.button(color=None, text="Cancelar", on_click=dialogo.close).props("flat no-caps").classes(
+                    "tpi-sobrio"
+                )
+                ui.button(color=None, text="Solo rechazar", on_click=solo_rechazar).classes("tpi-rechazar")
+                ui.button(color=None, text="Abrir en el editor", icon="edit", on_click=editar).classes(
+                    "tpi-boton-principal"
+                )
         dialogo.open()
 
 
@@ -433,7 +446,7 @@ def _titulo_de(ruta: Path) -> str:
 def _plegable(
     titulo: str, icono: str, subtitulo: str, construir: Callable[[], None], abierto: bool = False
 ) -> None:
-    caja = ui.expansion(titulo, icon=icono, caption=subtitulo, value=abierto).classes("w-full")
+    caja = ui.expansion(titulo, icon=icono, caption=subtitulo, value=abierto).classes("tpi-plegable w-full")
     hecho = {"listo": False}
 
     def armar() -> None:

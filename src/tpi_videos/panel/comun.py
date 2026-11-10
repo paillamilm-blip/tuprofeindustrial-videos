@@ -101,10 +101,13 @@ body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
 .tpi-pausa {{ display: inline-block; margin: 0 6px; padding: 0 8px; border-radius: 999px; font-size: .75rem;
   color: {PIEL["ambar"]}; box-shadow: inset 0 0 0 1px {PIEL["ambar"]}; vertical-align: middle; }}
 .tpi-hashtag {{ color: {PIEL["celeste_sala"]}; font-size: .9rem; }}
-.tpi-tablero .q-expansion-item {{ background: {PIEL["consola"]}; border-radius: 16px; overflow: hidden; }}
-.tpi-tablero .q-expansion-item + .q-expansion-item {{ margin-top: 12px; }}
-.tpi-tablero .q-expansion-item .q-item {{ min-height: 64px; color: {PIEL["texto_sala"]}; }}
+.tpi-plegable {{ background: {PIEL["consola"]}; border-radius: 16px; overflow: hidden; }}
+.tpi-plegable + .tpi-plegable {{ margin-top: 12px; }}
+.tpi-plegable > .q-expansion-item__container > .q-item {{ min-height: 64px; color: {PIEL["texto_sala"]}; }}
+.tpi-plegable > .q-expansion-item__container > .q-item .q-item__label--caption {{ color: {PIEL["tenue_sala"]}; }}
 .tpi-tablero .q-linear-progress {{ color: {PIEL["ambar"]}; }}
+.tpi-tablero .q-toggle__inner--truthy {{ color: {PIEL["ambar"]}; }}
+.tpi-tablero .q-btn {{ text-transform: none; }}
 .tpi-codigo {{ background: {PIEL["consola_alta"]} !important; border-radius: 12px; }}
 .tpi-hoja {{ color: {PIEL["tinta"]}; }}
 .tpi-marca {{ font-family: 'Comic Neue', sans-serif; font-weight: 700; letter-spacing: .03em; }}
@@ -199,7 +202,7 @@ def cabecera(con_menu: bool = True) -> None:
                 ui.label("TU PROFE INDUSTRIAL").classes("tpi-marca text-base leading-tight")
                 ui.label("Sala de producción").classes("tpi-sobrio text-xs")
         with ui.row().classes("items-center gap-4"):
-            chip = ui.chip("").props("outline").classes("tpi-ambar")
+            chip = ui.chip("", color=None).props("outline").classes("tpi-ambar")
             chip.set_visibility(False)
             ui.timer(0.7, lambda: _estado_tarea(chip))
             if con_menu:
