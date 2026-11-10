@@ -47,3 +47,9 @@ inclusion: always
   sigue siendo texto y se lee con `niveles.normalizar`). Los ramos de cada nivel, en `plantillas/malla.yaml` (o
   `mis_ajustes/malla.yaml`). `carrera` es opcional en el guion. En niveles universitarios, `redactar` agrega la
   pista de la malla: no escribir ejercicios de media para la universidad.
+- **Documentación al día con cada fase:** `README.md` (uso), `docs/GUIA_GUIONES.md` (campos del guion y los 33
+  dibujos), `docs/PLAN.md` (arquitectura y hoja de ruta), `DESIGN.md` (piel del panel: tokens de `PIEL`) y
+  `docs/ANALISIS_TECNICO.md` (cifras medidas, no estimadas). `docs/ANALISIS_TECNICO.html` se genera con
+  `python3 scripts/doc_a_html.py docs/ANALISIS_TECNICO.md docs/ANALISIS_TECNICO.html` (no editarlo a mano).
+  `docs/ESTUDIO_VISUAL_MATEMATICAS.*` es una observación fechada: no se reescribe sin observar de nuevo.
+  Cada fase nueva deja su diseño y su plan en `docs/superpowers/`.

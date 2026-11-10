@@ -4,6 +4,7 @@
 **Fecha de la observación:** 9 de noviembre de 2026.
 **Versión visual:** `docs/ESTUDIO_VISUAL_MATEMATICAS.html` (autocontenida, se abre con doble clic).
 **Qué es y qué no es:** es una muestra de **forma** (portadas, primer frame, ritmo, texto en pantalla) y de contadores públicos. No es un análisis de guiones completos ni de retención: esos datos no son públicos.
+**Vigencia (10-11-2026):** es una muestra fechada y no se volvió a observar. Mira cuentas de matemática escolar; no cubre el público universitario (Ing. Civil Industrial, Civil Eléctrica y en Obras Civiles) que el canal sumó en el PR #37. Para ese público haría falta una observación nueva. Sus reglas de forma (la promesa en el primer frame, el error tachado, el reto final) siguen siendo las que usan los moldes del motor.
 
 ---
 

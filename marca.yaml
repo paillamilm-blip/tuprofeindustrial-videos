@@ -4,7 +4,8 @@
 nombre: "Tu Profe Industrial"
 usuario: "@tuprofeindustrial"
 
-# Estilo visual de tus videos (ver ./tpi temas):
+# Estilo de respaldo (ver ./tpi temas). Casi nunca se usa: cada video lleva el estilo que el motor le sugiere
+# según su molde, dibujos y materia, o el que elijas en Aprobación de Guiones (QC). Este solo vale si no hay nada más.
 #   hoja_de_desarrollo → tu estilo de Instagram: hoja cuadriculada, títulos de cómic, subtítulos Bangers
 #   pizarra_nocturna   → el estilo original: pizarra azul noche (usa los colores y subtítulos de abajo)
 tema: hoja_de_desarrollo
