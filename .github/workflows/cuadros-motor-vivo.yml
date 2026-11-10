@@ -94,8 +94,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           ejemplos="visuales_tres_tipos fisica_caida_libre ingenieria_ley_de_ohm matematica_ecuacion_cuadratica matematica_error_binomio moldes_virales"
-          for lado in main rama; do
-            if [ "$lado" = main ]; then git checkout -q origin/main; else git checkout -q "$GITHUB_SHA"; fi
+          for lado in main main2 rama; do
+            if [ "$lado" != rama ]; then git checkout -q origin/main; else git checkout -q "$GITHUB_SHA"; fi
             pip install -q -e .
             rm -rf salida
             for e in $ejemplos; do
@@ -107,6 +107,10 @@ jobs:
             done
           done
           distintos=0
+          for e in $ejemplos; do
+            control=$(diff <(grep -v '^#' /tmp/main/$e.md5) <(grep -v '^#' /tmp/main2/$e.md5) | grep -c '^>')
+            echo "   control $e: main contra main → $control cuadros distintos"
+          done
           for e in $ejemplos; do
             if diff -q <(grep -v '^#' /tmp/main/$e.md5) <(grep -v '^#' /tmp/rama/$e.md5) > /dev/null; then
               echo "✅ $e: idéntico cuadro a cuadro ($(grep -vc '^#' /tmp/rama/$e.md5) cuadros)"
