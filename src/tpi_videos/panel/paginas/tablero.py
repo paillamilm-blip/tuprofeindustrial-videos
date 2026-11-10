@@ -122,6 +122,126 @@ def _abrir_editor(ruta: Path) -> None:
 # ------------------------------------------------------------------------------------------
 
 
+class ParaHoy:
+    """Un video al día: tres opciones del mismo nivel, una por materia, y un botón para crear la elegida."""
+
+    def __init__(self, al_crear: Callable[[], None]) -> None:
+        self.al_crear = al_crear
+        self.nivel: str | None = None
+        self.indice: dict[str, int] = {}
+
+    def render(self) -> None:
+        self.tarjeta()
+
+    @ui.refreshable_method
+    def tarjeta(self) -> None:
+        from ...config import cargar_marca
+        from .. import para_hoy
+
+        p = para_hoy.proponer(self.nivel, cargar_marca().publico.nivel)
+        with _consola():
+            with ui.row().classes("w-full items-center justify-between gap-4 flex-wrap"):
+                with ui.column().classes("gap-0"):
+                    _rotulo("Para hoy · elige uno")
+                    ui.label(
+                        f"Tres del mismo nivel ({p.nivel}), uno por materia." if p.nivel else "Tres opciones"
+                    ).classes("text-lg font-semibold")
+                with ui.row().classes("gap-2 items-center"):
+                    for nivel, materias in p.niveles.items():
+                        completo = len(materias) == len(para_hoy.CATEGORIAS)
+                        falta = ", ".join(para_hoy.nombre_categoria(c) for c in p.faltan(nivel))
+                        _clic(
+                            ui.label(nivel + ("" if completo else " · incompleto")).classes(
+                                "tpi-hashtag rounded-lg px-3 py-1 text-sm"
+                                + (" tpi-ficha-elegida" if nivel == p.nivel else "")
+                            ),
+                            lambda n=nivel: self._elegir_nivel(n),
+                            "Las tres materias tienen guion de este nivel" if completo else f"Falta {falta}",
+                        )
+            if p.hoy:
+                ui.label(f"✓ Hoy ya elegiste «{p.hoy[0]}». Mañana, otro.").classes("tpi-verde text-sm")
+            if not p.niveles:
+                ui.label("No hay guiones por revisar con un nivel claro (ej. «3° medio»).").classes(
+                    "tpi-sobrio"
+                )
+                return
+            with (
+                ui.element("div")
+                .classes("w-full grid gap-4")
+                .style("grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))")
+            ):
+                for categoria in para_hoy.CATEGORIAS:
+                    self._columna(categoria, p.opciones.get(categoria, []), p.nivel)
+
+    def _columna(self, categoria: str, opciones: list[Any], nivel: str) -> None:
+        from .. import para_hoy
+
+        with ui.column().classes("tpi-ficha w-full p-4 gap-2"):
+            ui.label(para_hoy.nombre_categoria(categoria)).classes(f"tpi-insignia tpi-insignia-{categoria}")
+            if not opciones:
+                ui.label(f"No hay guion de {para_hoy.nombre_categoria(categoria)} para {nivel}.").classes(
+                    "tpi-sobrio text-sm"
+                )
+                _clic(
+                    ui.label("Escribir uno (Crear a mano)").classes(
+                        "tpi-ambar text-sm rounded-lg px-2 -mx-2"
+                    ),
+                    lambda: ui.navigate.to("/avanzado"),
+                    "Avanzado → Crear a mano",
+                )
+                return
+            i = self.indice.get(categoria, 0) % len(opciones)
+            o = opciones[i]
+            _clic(
+                ui.label(o.titulo).classes("font-semibold leading-snug rounded-lg px-2 -mx-2"),
+                lambda: ui.navigate.to(f"/qc?guion={quote(str(o.ruta))}"),
+                "Leer la ficha completa en QC",
+            )
+            detalle = " · ".join(x for x in (o.molde, _nombre_estilo(o.estilo.clave, _temas())) if x)
+            ui.label(detalle).classes("tpi-sobrio text-xs")
+            for razon in o.razones:
+                ui.label(f"• {razon}").classes("tpi-sobrio text-xs leading-snug")
+            VistaPrevia(o.ruta).render()
+            with ui.row().classes("w-full items-center justify-between gap-2 pt-1"):
+                if len(opciones) > 1:
+                    ui.button(
+                        color=None,
+                        text=f"Otra ({i + 1}/{len(opciones)})",
+                        icon="shuffle",
+                        on_click=lambda c=categoria: self._otra(c),
+                    ).props("flat dense no-caps").classes("tpi-sobrio")
+                else:
+                    ui.label("Única de este nivel").classes("tpi-sobrio text-xs")
+                ui.button(
+                    color=None, text="Crear este", icon="movie", on_click=lambda o=o: self._crear(o)
+                ).classes("tpi-aprobar")
+
+    def _elegir_nivel(self, nivel: str) -> None:
+        self.nivel, self.indice = nivel, {}
+        self.tarjeta.refresh()
+
+    def _otra(self, categoria: str) -> None:
+        self.indice[categoria] = self.indice.get(categoria, 0) + 1
+        self.tarjeta.refresh()
+
+    def _crear(self, o: Any) -> None:
+        from ...cli import encolar_guion
+
+        try:
+            lote_id = encolar_guion(o.ruta)
+            qc.aprobar(o.ruta, lote_id)
+        except ErrorMotor as e:
+            ui.notify(f"No pude crearlo: {e.mensaje}", type="negative")
+            return
+        en_marcha = lanzar_en_lote()
+        ui.notify(
+            f"«{o.titulo}» va a producción." + ("" if en_marcha else " Queda en la cola."), type="positive"
+        )
+        self.indice = {}
+        self.tarjeta.refresh()
+        self.al_crear()
+
+
 class ColaDeProduccion:
     """El estado de la fábrica de un vistazo, y una sola acción: producir lo pendiente."""
 
@@ -131,9 +251,13 @@ class ColaDeProduccion:
 
     def render(self) -> None:
         self.firma = self._firma()  # lo recién pintado no se repinta: un clic no cae sobre algo que se va
+        ParaHoy(self._al_crear).render()
         self.resumen()
         self.columnas()
         ui.timer(1.5, self._mirar)
+
+    def _al_crear(self) -> None:
+        self.firma = ()  # la ficha nueva aparece en Pendientes en el próximo vistazo
 
     def _mirar(self) -> None:
         # Se repinta solo si algo cambió: un tablero que parpadea cansa la vista.

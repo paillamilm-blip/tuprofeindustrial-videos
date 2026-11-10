@@ -1,0 +1,82 @@
+name: Capturas de Para hoy
+
+# Temporal: la tarjeta «Para hoy» con los guiones reales del repo, en el navegador.
+
+on:
+  pull_request:
+
+jobs:
+  capturas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: El motor y Playwright
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libcairo2-dev libpango1.0-dev
+          python -m pip install --upgrade pip
+          pip install -e . playwright
+          python -m playwright install --with-deps chromium
+      - name: Lo que propone hoy (sin pantalla)
+        run: |
+          python - <<'EOF'
+          from tpi_videos.panel.para_hoy import proponer
+          p = proponer()
+          print("niveles:", {n: sorted(m) for n, m in p.niveles.items()})
+          print("elegido:", p.nivel, "· completos:", p.completos)
+          for c, ops in p.opciones.items():
+              for o in ops:
+                  print(f"  {c:11} {o.titulo[:50]:50} {o.estilo.clave:18} {' · '.join(o.razones)}")
+          EOF
+      - name: Recorrido
+        run: |
+          tpi panel --no-abrir --puerto 8765 > /tmp/panel.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8765/ > /dev/null && break; sleep 1; done
+          mkdir -p capturas
+          python - <<'EOF'
+          import json, time
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          URL = "http://127.0.0.1:8765"
+          with sync_playwright() as p:
+              b = p.chromium.launch(); pag = b.new_page(viewport={"width": 1440, "height": 1300})
+              errores = []; pag.on("pageerror", lambda e: errores.append(str(e)))
+              pag.goto(URL + "/")
+              tarjeta = pag.locator(".tpi-consola", has_text="Para hoy").first
+              tarjeta.wait_for(timeout=20000)
+              print("tarjeta:", tarjeta.inner_text().replace("\n", " | ")[:900])
+              time.sleep(1); pag.screenshot(path="capturas/01_para_hoy.png")
+
+              antes = tarjeta.locator(".tpi-ficha").nth(0).inner_text().split("\n")[1]
+              boton = tarjeta.get_by_role("button", name="Otra").first
+              if boton.count():
+                  boton.click(); time.sleep(1)
+                  despues = pag.locator(".tpi-consola", has_text="Para hoy").first.locator(".tpi-ficha").nth(0).inner_text().split("\n")[1]
+                  print("Otra:", antes, "→", despues)
+              pag.get_by_text("1° medio · incompleto").first.click(); time.sleep(1)
+              print("1° medio:", pag.locator(".tpi-consola", has_text="Para hoy").first.inner_text().replace("\n", " | ")[:500])
+              pag.screenshot(path="capturas/02_nivel_incompleto.png")
+              pag.get_by_text("3° medio", exact=True).first.click(); time.sleep(1)
+
+              t = pag.locator(".tpi-consola", has_text="Para hoy").first
+              titulo = t.locator(".tpi-ficha").nth(1).inner_text().split("\n")[1]
+              t.locator(".tpi-ficha").nth(1).get_by_role("button", name="Crear este").click()
+              time.sleep(3)
+              print("creado:", titulo)
+              print("aviso de hoy:", pag.get_by_text("Hoy ya elegiste").first.inner_text())
+              cola = json.loads(Path("salida/.cola/trabajos.json").read_text())
+              print("lotes en la cola:", [(l["tema"], [v.get("estado") for v in l["videos"]]) for l in cola["lotes"]])
+              pag.screenshot(path="capturas/03_creado.png")
+              print("errores de la página:", errores or "ninguno")
+              b.close()
+          EOF
+          grep -i "traceback" -A12 /tmp/panel.log | head -30 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: para-hoy
+          path: capturas
+          retention-days: 7
