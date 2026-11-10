@@ -42,3 +42,8 @@ inclusion: always
 - **IA (`tpi redactar`):** las instrucciones del modelo están en `src/tpi_videos/plantillas/ia/`. La IA
   devuelve datos en un esquema JSON fijo (nunca código) y todo guion pasa por las validaciones del motor.
   Probar cambios con un servidor falso de Gemini (`GOOGLE_GEMINI_BASE_URL`) si no hay clave disponible.
+- **Dos públicos:** enseñanza media (1° a 4° medio) y universidad (1° a 4° año de Ing. Civil Industrial, Civil
+  Eléctrica y en Obras Civiles). Los niveles y las carreras viven en `niveles.py` (única fuente; el nivel del guion
+  sigue siendo texto y se lee con `niveles.normalizar`). Los ramos de cada nivel, en `plantillas/malla.yaml` (o
+  `mis_ajustes/malla.yaml`). `carrera` es opcional en el guion. En niveles universitarios, `redactar` agrega la
+  pista de la malla: no escribir ejercicios de media para la universidad.

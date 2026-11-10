@@ -17,6 +17,7 @@ from ...emojis import stickers_dir, stickers_disponibles
 from ...entorno import raiz_proyecto
 from ...errores import ErrorMotor
 from ...moldes import MOLDES, nombre_molde
+from ...niveles import NIVELES, PUBLICOS, publico_de
 from ...rodaje import NOMBRE_MANDO, QUE_HACE, RECETA_LIBRE, campos_de_receta, guardar_receta
 from ...temas import (
     NOMBRE_CATEGORIA,
@@ -161,13 +162,18 @@ def _seccion_publico() -> None:
         "nivel": marca.publico.nivel,
         "dificultad": marca.publico.dificultad,
     }
-    with _tarjeta("Tu público", "La materia, el nivel y la dificultad con que trabajas siempre."):
+    with _tarjeta(
+        "Tu público",
+        "La materia, el nivel (enseñanza media o universidad de ingeniería) y la dificultad de siempre.",
+    ):
         ui.select(
             {"": "Que lo decida la IA", **NOMBRE_MATERIA}, label="Materia"
         ).props("outlined dense").classes("w-full").bind_value(datos, "materia")
-        ui.input("Nivel", placeholder="Ej. 2° medio o técnico en electricidad").props(
-            "outlined dense"
-        ).classes("w-full").bind_value(datos, "nivel")
+        niveles = {"": "Que lo deduzca la IA"}
+        niveles |= {n: f"{n} · {PUBLICOS[publico_de(n)]}" for n in NIVELES}
+        if datos["nivel"] and datos["nivel"] not in niveles:  # un nivel antiguo escrito a mano se conserva
+            niveles[datos["nivel"]] = f"{datos['nivel']} (escrito a mano)"
+        ui.select(niveles, label="Nivel").props("outlined dense").classes("w-full").bind_value(datos, "nivel")
         ui.select(
             {"": "Que la IA reparta las 3", **DIFICULTADES}, label="Dificultad"
         ).props("outlined dense").classes("w-full").bind_value(datos, "dificultad")

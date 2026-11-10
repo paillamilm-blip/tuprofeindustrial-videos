@@ -1155,6 +1155,8 @@ class Guion(_Base):
     titulo: str = Field(min_length=1)
     materia: Literal["matematica", "fisica", "ingenieria"]
     nivel: str | None = None
+    # Para la universidad: la carrera de la malla (ver niveles.py). Opcional, también en Ingeniería.
+    carrera: Literal["industrial", "electrica", "obras_civiles"] | None = None
     molde: str | None = None  # estructura narrativa (ver moldes.py); opcional
     tema: str | None = None  # estilo visual de este video (ver ./tpi temas)
     camara: Literal["quieta", "suave", "fuerte"] = "suave"  # cuánto se acerca la cámara en los pasos
@@ -1178,6 +1180,24 @@ class Guion(_Base):
             return valor
         limpio = sin_tildes(valor).strip().lower()
         return limpio[:-1] if limpio.endswith("s") else limpio  # "matemáticas" → "matematica"
+
+    @field_validator("carrera", mode="before")
+    @classmethod
+    def _normalizar_carrera(cls, valor: Any) -> Any:
+        """«Eléctrica», «obras civiles» o «Ing. Civil Industrial» quedan como su clave."""
+        if valor in (None, ""):
+            return None
+        limpio = sin_tildes(str(valor)).strip().lower()
+        for clave, pista in (
+            ("obras_civiles", "obras"),
+            ("electrica", "electric"),
+            ("industrial", "industrial"),
+        ):
+            if pista in limpio:
+                return clave
+        raise ValueError(
+            f"«{valor}» no es una carrera de la malla; usa industrial, electrica u obras_civiles"
+        )
 
     @field_validator("molde", mode="before")
     @classmethod
@@ -1658,6 +1678,8 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
         lineas.append(f"categoria: {categoria}  # sale de la materia; elige el estilo si no hay «tema»")
     if guion.get("nivel"):
         lineas.append(f"nivel: {_dobles(guion['nivel'])}")
+    if guion.get("carrera"):
+        lineas.append(f"carrera: {guion['carrera']}")
     if guion.get("molde"):
         lineas.append(f"molde: {guion['molde']}")
     for clave in ("tema", "voz", "velocidad"):

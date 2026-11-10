@@ -1480,8 +1480,13 @@ def redactar(
     gancho_variante: dict[str, Any] | None = None,
     gancho_variantes: list[dict[str, Any]] | None = None,
     avisar=lambda mensaje: None,
+    carrera: str | None = None,
 ) -> ResultadoRedaccion:
+    from .malla import pista_para_la_ia
+    from .niveles import normalizar
+
     entrada = leer_entrada(valor)
+    nivel = normalizar(nivel) or nivel  # «segundo año de ingeniería» → «2° año ingeniería»
     cliente = ia.cliente()
     sistema = _sistema()
     clave_molde = normalizar_molde(molde) if molde else ""
@@ -1501,6 +1506,8 @@ def redactar(
             "frases de una línea.",
         ]
     pistas = list(pistas or [])
+    if pista := pista_para_la_ia(nivel, materia, carrera):
+        pistas.append(pista)
     if molde:
         m = MOLDES[molde]
         pistas.append(f"MOLDE «{m.nombre}»: {m.estructura}. {m.pista}")
@@ -1542,6 +1549,8 @@ def redactar(
             datos["materia"] = materia
         if nivel:
             datos["nivel"] = nivel
+        if carrera:
+            datos["carrera"] = carrera
         try:
             guion = Guion.model_validate(datos)
         except ValidationError as e:

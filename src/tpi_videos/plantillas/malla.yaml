@@ -1,0 +1,139 @@
+# La malla del canal: los ramos y temas típicos de cada nivel, por materia.
+# Sirve para que la IA escriba ejercicios del ramo correcto y para completar los niveles que faltan.
+# Desde 3° año, Ingeniería trae ramos distintos por carrera: industrial, electrica y obras_civiles.
+# Para cambiarla sin tocar el motor: copia este archivo a mis_ajustes/malla.yaml y edita la copia.
+
+# ── A · Enseñanza media (currículum chileno) ─────────────────────────────────────────────────
+"1° medio":
+  matematica:
+    - "Números racionales y potencias"
+    - "Productos notables y factorización"
+    - "Sistemas de ecuaciones lineales"
+    - "Semejanza y teorema de Tales"
+  fisica:
+    - "Ondas y sonido"
+    - "Luz y óptica geométrica (reflexión y refracción)"
+    - "Sismos y ondas sísmicas"
+  ingenieria:
+    - "Unidades y conversiones en obra (m², m³, litros)"
+    - "Escalas en planos y maquetas"
+    - "Volumen de hormigón para una losa"
+
+"2° medio":
+  matematica:
+    - "Raíces y logaritmos"
+    - "Función cuadrática y su vértice"
+    - "Probabilidad de eventos"
+  fisica:
+    - "Movimiento rectilíneo (MRU y MRUA)"
+    - "Fuerzas y leyes de Newton"
+    - "Caída libre"
+  ingenieria:
+    - "Ley de Ohm y potencia eléctrica en el hogar"
+    - "Palancas y poleas (ventaja mecánica)"
+    - "Presupuesto de materiales con IVA"
+
+"3° medio":
+  matematica:
+    - "Vectores en el plano y el espacio"
+    - "Probabilidad condicional"
+    - "Modelos exponenciales (interés compuesto)"
+  fisica:
+    - "Trabajo, energía y potencia"
+    - "Conservación de la energía mecánica"
+    - "Oscilaciones (resorte y péndulo)"
+  ingenieria:
+    - "Esfuerzos en una pieza (círculo de Mohr)"
+    - "Engranajes y relación de transmisión"
+    - "Control de temperatura (lazo cerrado)"
+
+"4° medio":
+  matematica:
+    - "Trigonometría (seno, coseno y círculo unitario)"
+    - "Números complejos"
+    - "Estadística y distribución normal"
+  fisica:
+    - "Electricidad y circuitos"
+    - "Magnetismo e inducción"
+    - "Relatividad en la vida diaria (GPS)"
+  ingenieria:
+    - "Circuitos en serie y paralelo"
+    - "Caudal en tuberías"
+    - "Eficiencia de un motor eléctrico"
+
+# ── B · Universidad: Ing. Civil Industrial, Civil Eléctrica y en Obras Civiles ──────────────
+"1° año ingeniería":
+  matematica:
+    - "Cálculo I: límites y continuidad"
+    - "Cálculo I: derivadas y optimización"
+    - "Álgebra: matrices y determinantes"
+    - "Álgebra: números complejos"
+  fisica:
+    - "Física I: cinemática en dos dimensiones"
+    - "Física I: dinámica y roce"
+    - "Física I: trabajo, energía y momentum"
+  ingenieria:
+    - "Introducción a la ingeniería: estimación de órdenes de magnitud"
+    - "Dibujo técnico: vistas y escalas"
+    - "Programación: algoritmos para un cálculo de ingeniería"
+
+"2° año ingeniería":
+  matematica:
+    - "Cálculo II: integrales y áreas"
+    - "Cálculo III: derivadas parciales y gradiente"
+    - "Ecuaciones diferenciales de primer orden"
+    - "Álgebra lineal: sistemas, valores y vectores propios"
+  fisica:
+    - "Física II: electrostática y ley de Gauss"
+    - "Física III: ondas y oscilaciones amortiguadas"
+    - "Termodinámica: primera ley"
+  ingenieria:
+    - "Estática: equilibrio de cuerpos rígidos y reacciones"
+    - "Mecánica de materiales: esfuerzo y deformación"
+    - "Termodinámica aplicada: ciclos y eficiencia"
+
+"3° año ingeniería":
+  matematica:
+    - "Probabilidad y estadística: intervalos de confianza"
+    - "Métodos numéricos: Newton-Raphson"
+    - "Ecuaciones diferenciales de segundo orden"
+  fisica:
+    - "Mecánica de fluidos: Bernoulli y caudal"
+    - "Electromagnetismo: inducción y ley de Faraday"
+    - "Transferencia de calor: conducción"
+  ingenieria:
+    industrial:
+      - "Investigación de operaciones: programación lineal"
+      - "Contabilidad de costos: punto de equilibrio"
+      - "Ingeniería económica: VAN y TIR"
+    electrica:
+      - "Circuitos eléctricos: mallas, nodos y Thévenin"
+      - "Circuitos en corriente alterna: fasores e impedancia"
+      - "Máquinas eléctricas: transformadores"
+    obras_civiles:
+      - "Resistencia de materiales: flexión en vigas"
+      - "Mecánica de suelos: esfuerzos y asentamiento"
+      - "Topografía: nivelación y pendientes"
+
+"4° año ingeniería":
+  matematica:
+    - "Optimización: multiplicadores de Lagrange"
+    - "Estadística: regresión lineal"
+    - "Transformada de Laplace"
+  fisica:
+    - "Hidráulica: pérdidas de carga en tuberías"
+    - "Vibraciones: resonancia en estructuras"
+    - "Ondas electromagnéticas y líneas de transmisión"
+  ingenieria:
+    industrial:
+      - "Gestión de operaciones: inventarios (EOQ)"
+      - "Logística: modelos de transporte"
+      - "Control de calidad: gráficos de control"
+    electrica:
+      - "Sistemas eléctricos de potencia: flujo de carga"
+      - "Control automático: respuesta de un sistema de segundo orden"
+      - "Electrónica de potencia: rectificadores"
+    obras_civiles:
+      - "Análisis estructural: marcos y cerchas"
+      - "Hormigón armado: diseño de una viga"
+      - "Hidráulica de canales: caudal y Manning"

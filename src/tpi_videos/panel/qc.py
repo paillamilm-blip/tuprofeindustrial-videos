@@ -20,6 +20,7 @@ from ..config import cargar_marca
 from ..entorno import raiz_proyecto
 from ..errores import ErrorMotor
 from ..guion import Guion, cabecera_de, cargar_guion, fijar_tema
+from ..niveles import nombre_carrera
 from ..pausas import sin_pausas, trozos
 from ..temas import EstiloSugerido, estilo_del_guion, sugerir_tema_de_guion
 
@@ -143,6 +144,7 @@ class Ficha:
     error: str | None = None  # si el YAML no valida: se puede rechazar, no aprobar
     estilo: EstiloSugerido | None = None  # con el que saldrá: el elegido acá o, si no, el sugerido
     sugerido: EstiloSugerido | None = None  # el que el motor le propone a este video
+    carrera: str = ""  # el nombre de la carrera (universidad), vacío si no tiene
 
     @property
     def aprobable(self) -> bool:
@@ -230,6 +232,7 @@ def ficha(ruta: Path) -> Ficha:
         yaml=texto,
         estilo=estilo_del_guion(guion, marca),
         sugerido=sugerir_tema_de_guion(guion, marca),
+        carrera=nombre_carrera(guion.carrera),
     )
 
 

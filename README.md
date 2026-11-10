@@ -288,6 +288,27 @@ mismo nivel.
 > 💡 Las ideas usan lo que el motor ya sabe dibujar: fórmulas y texto en la pizarra, gráficos de funciones,
 > diagramas de fuerzas y circuitos. Si el ejercicio se entiende mejor con un dibujo, la idea lo pide sola.
 
+### Dos públicos: enseñanza media y universidad de ingeniería
+
+El canal hace Matemáticas, Física e Ingeniería para dos públicos:
+
+- **Enseñanza media:** 1° a 4° medio.
+- **Universidad:** 1° a 4° año de **Ingeniería Civil Industrial**, **Ingeniería Civil Eléctrica** e **Ingeniería en
+  Obras Civiles**. Desde 3° año, Ingeniería tiene ramos propios de cada carrera.
+
+Los ramos y temas de cada nivel están en `src/tpi_videos/plantillas/malla.yaml`. Si tu universidad usa otros, copia
+ese archivo a `mis_ajustes/malla.yaml` y edítalo. Cuando el nivel es universitario, la IA escribe el ejercicio de un
+ramo de ese año, no uno de media.
+
+«Para hoy» (en Cola de Producción) te propone tres guiones del mismo nivel, uno por materia. Si a un nivel le falta
+una materia, toca **«Pedírselo a la IA»**, o completa todo desde la Terminal:
+
+```bash
+./tpi completar-niveles --simular                 # muestra lo que falta y qué escribiría
+./tpi completar-niveles --publico universidad     # escribe hasta 3 (usa Gemini); repite para seguir
+./tpi redactar "…" --nivel "3° año ingeniería" --carrera electrica
+```
+
 ## 6. Comandos
 
 | Comando | Qué hace |
@@ -299,6 +320,7 @@ mismo nivel.
 | `./tpi ideas "TEMA"` | La IA propone 3 ideas de video; eliges una y la hace completa (`--sin-video` solo las muestra) |
 | `./tpi producir ENUNCIADO` | Del enunciado al video final + kit de publicación, todo en un comando |
 | `./tpi lote "TEMA"` | Los 3 videos de las 3 ideas en una sola pasada (guion + video final + kit de cada uno) |
+| `./tpi completar-niveles` | La IA escribe los guiones que faltan para que cada nivel tenga las 3 materias (`--simular` para ver primero) |
 | `./tpi ganchos GUION.yaml` | Prueba los ganchos alternativos del guion como clips cortos (`--elegir N` deja uno fijo) |
 | `./tpi clave` | Guarda tu clave de Gemini para `redactar` y el kit de publicación |
 | `./tpi nuevo NOMBRE --materia fisica` | Crea `guiones/NOMBRE.yaml` desde la plantilla |

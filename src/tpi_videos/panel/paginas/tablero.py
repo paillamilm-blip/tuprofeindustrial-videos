@@ -17,6 +17,7 @@ from nicegui import background_tasks, ui
 
 from ... import cola
 from ...errores import ErrorMotor
+from ...niveles import CARRERA_CORTA, NIVELES, PUBLICOS
 from .. import qc
 from ..comun import abrir_en_mac, cabecera, confirmar, piel_de_la_pagina, url_medio
 from ..supervision import (
@@ -131,6 +132,7 @@ class ParaHoy:
         self.indice: dict[str, int] = {}
 
     def render(self) -> None:
+        self.ancla = ui.element("div").classes("hidden")  # los relojes viven acá: la tarjeta se repinta
         self.tarjeta()
 
     @ui.refreshable_method
@@ -139,36 +141,29 @@ class ParaHoy:
         from .. import para_hoy
 
         p = para_hoy.proponer(self.nivel, cargar_marca().publico.nivel)
+        if self.nivel and p.nivel != self.nivel:  # eligió un nivel sin guiones: se muestra vacío, no otro
+            p.nivel, p.opciones = self.nivel, {}
         with _consola():
-            with ui.row().classes("w-full items-center justify-between gap-4 flex-wrap"):
+            with ui.row().classes("w-full items-start justify-between gap-4 flex-wrap"):
                 with ui.column().classes("gap-0"):
                     _rotulo("Para hoy · elige uno")
                     falta = ", ".join(para_hoy.nombre_categoria(c) for c in p.faltan())
                     if not p.nivel:
-                        encabezado = "Tres opciones"
+                        encabezado = "Elige un nivel"
                     elif falta:
-                        encabezado = f"{p.nivel}: falta {falta}. Elige otro nivel o escribe uno."
+                        encabezado = f"{p.nivel}: falta {falta}. Pídeselo a la IA o elige otro nivel."
                     else:
                         encabezado = f"Tres del mismo nivel ({p.nivel}), uno por materia."
                     ui.label(encabezado).classes("text-lg font-semibold")
-                with ui.row().classes("gap-2 items-center"):
-                    for nivel, materias in p.niveles.items():
-                        completo = len(materias) == len(para_hoy.CATEGORIAS)
-                        falta = ", ".join(para_hoy.nombre_categoria(c) for c in p.faltan(nivel))
-                        _clic(
-                            ui.label(nivel + ("" if completo else " · incompleto")).classes(
-                                "tpi-hashtag rounded-lg px-3 py-1 text-sm"
-                                + (" tpi-ficha-elegida" if nivel == p.nivel else "")
-                            ),
-                            lambda n=nivel: self._elegir_nivel(n),
-                            "Las tres materias tienen guion de este nivel" if completo else f"Falta {falta}",
-                        )
+                with ui.column().classes("gap-2 items-end"):
+                    for clave, nombre in PUBLICOS.items():
+                        with ui.row().classes("gap-2 items-center justify-end"):
+                            ui.label(nombre).classes("tpi-sobrio text-xs")
+                            for nivel in (n for n in NIVELES if para_hoy.publico(n) == clave):
+                                self._chip(p, nivel)
             if p.hoy:
                 ui.label(f"✓ Hoy ya elegiste «{p.hoy[0]}». Mañana, otro.").classes("tpi-verde text-sm")
-            if not p.niveles:
-                ui.label("No hay guiones por revisar con un nivel claro (ej. «3° medio»).").classes(
-                    "tpi-sobrio"
-                )
+            if not p.nivel:
                 return
             with (
                 ui.element("div")
@@ -178,25 +173,37 @@ class ParaHoy:
                 for categoria in para_hoy.CATEGORIAS:
                     self._columna(categoria, p.opciones.get(categoria, []), p.nivel)
 
+    def _chip(self, p: Any, nivel: str) -> None:
+        from .. import para_hoy
+
+        materias = p.niveles.get(nivel, set())
+        completo = len(materias) == len(para_hoy.CATEGORIAS)
+        falta = ", ".join(para_hoy.nombre_categoria(c) for c in p.faltan(nivel))
+        texto = nivel.replace(" ingeniería", "") + ("" if completo else " · incompleto")
+        _clic(
+            ui.label(texto).classes(
+                "tpi-hashtag rounded-lg px-3 py-1 text-sm"
+                + (" tpi-ficha-elegida" if nivel == p.nivel else "")
+            ),
+            lambda n=nivel: self._elegir_nivel(n),
+            "Las tres materias tienen guion de este nivel" if completo else f"Falta {falta}",
+        )
+
     def _columna(self, categoria: str, opciones: list[Any], nivel: str) -> None:
         from .. import para_hoy
 
+        i = self.indice.get(categoria, 0) % len(opciones) if opciones else 0
+        o = opciones[i] if opciones else None
         with ui.column().classes("tpi-ficha w-full p-4 gap-2"):
-            ui.label(para_hoy.nombre_categoria(categoria)).classes(f"tpi-insignia tpi-insignia-{categoria}")
-            if not opciones:
-                ui.label(f"No hay guion de {para_hoy.nombre_categoria(categoria)} para {nivel}.").classes(
-                    "tpi-sobrio text-sm"
+            with ui.row().classes("gap-2 items-center"):
+                ui.label(para_hoy.nombre_categoria(categoria)).classes(
+                    f"tpi-insignia tpi-insignia-{categoria}"
                 )
-                _clic(
-                    ui.label("Escribir uno (Crear a mano)").classes(
-                        "tpi-ambar text-sm rounded-lg px-2 -mx-2"
-                    ),
-                    lambda: ui.navigate.to("/avanzado"),
-                    "Avanzado → Crear a mano",
-                )
+                if o is not None and o.carrera:
+                    ui.label(CARRERA_CORTA[o.carrera]).classes("tpi-hashtag rounded-lg px-2 text-xs")
+            if o is None:
+                self._pedir(categoria, nivel)
                 return
-            i = self.indice.get(categoria, 0) % len(opciones)
-            o = opciones[i]
             _clic(
                 ui.label(o.titulo).classes("font-semibold leading-snug rounded-lg px-2 -mx-2"),
                 lambda: ui.navigate.to(f"/qc?guion={quote(str(o.ruta))}"),
@@ -220,6 +227,43 @@ class ParaHoy:
                 ui.button(
                     color=None, text="Crear este", icon="movie", on_click=lambda o=o: self._crear(o)
                 ).classes("tpi-aprobar")
+
+    def _pedir(self, categoria: str, nivel: str) -> None:
+        """La materia sin guion en este nivel: la IA escribe uno con un tema de la malla, acá mismo."""
+        from .. import para_hoy
+
+        materia = {"matematicas": "matematica"}.get(categoria, categoria)
+        args = ["completar-niveles", "--nivel", nivel, "--materia", materia, "--maximo", "1"]
+        t = TAREAS.actual
+        if t is not None and t.args == args and not t.terminada:
+            ui.label(f"La IA está escribiendo… {t.detalle or t.texto_etapa}").classes("tpi-ambar text-sm")
+            return
+        ui.label(f"No hay guion de {para_hoy.nombre_categoria(categoria)} para {nivel}.").classes(
+            "tpi-sobrio text-sm"
+        )
+
+        def pedir() -> None:
+            if TAREAS.ocupado():
+                ui.notify("El motor está ocupado: inténtalo cuando termine.", type="warning")
+                return
+            TAREAS.lanzar(f"Escribir {para_hoy.nombre_categoria(categoria)} · {nivel}", args)
+            ui.notify("La IA está escribiendo el guion (1 o 2 minutos). Aparece acá solo.", type="info")
+            self.tarjeta.refresh()
+
+            def mirar() -> None:
+                actual = TAREAS.actual
+                if actual is None or actual.args != args or actual.terminada:
+                    reloj.deactivate()
+                    if actual is not None and actual.error:
+                        ui.notify(f"No se pudo: {actual.error.get('mensaje', '')}", type="negative")
+                    self.tarjeta.refresh()
+
+            with self.ancla:
+                reloj = ui.timer(2.0, mirar)
+
+        ui.button(color=None, text="Pedírselo a la IA", icon="auto_awesome", on_click=pedir).props(
+            "flat dense no-caps"
+        ).classes("tpi-ambar -ml-2")
 
     def _elegir_nivel(self, nivel: str) -> None:
         self.nivel, self.indice = nivel, {}
@@ -705,7 +749,7 @@ class AprobacionDeGuiones:
             return
         f = qc.ficha(self.elegido)
         with _clic(_consola(), lambda: _abrir_editor(f.ruta), "Abrir este guion en el editor"):
-            _rotulo(" · ".join(x for x in (f.materia, f.nivel, qc.NOMBRES[f.estado]) if x))
+            _rotulo(" · ".join(x for x in (f.materia, f.carrera, f.nivel, qc.NOMBRES[f.estado]) if x))
             ui.label(f.titulo).classes("text-2xl font-semibold leading-tight")
             if f.error:
                 ui.label(f"Este guion no pasa la validación: {f.error}").classes("tpi-rojo text-sm")
