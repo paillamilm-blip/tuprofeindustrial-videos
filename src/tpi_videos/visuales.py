@@ -43,11 +43,25 @@ SEGUNDOS_VISUAL = {
     "bloques": 3.0,
     "engranaje": 3.0,
     "mohr": 3.0,
+    "tolva_3d": 3.4,  # dos cuerpos que giran y se separan: se miran más que una lámina
+    "tuberia_3d": 3.2,
+    "eje_3d": 3.2,
+    "gradiente_termico": 3.4,  # el calor entra y se asienta: hay que verlo llegar
+    "perfil_flujo": 3.2,
 }
 
 # Lo que se mueve sobre un gráfico de función, y lo que se puede leer en vivo mientras se mueve.
 MOVIMIENTOS_FUNCION = ("tangente", "area")
 MARCAS_FUNCION = ("pendiente", "area")
+
+# Las piezas industriales en 3D y lo que se puede leer de cada una.
+TIPOS_3D = ("solido_3d", "tolva_3d", "tuberia_3d", "eje_3d")  # los que orbitan y se despiezan
+MARCAS_TOLVA = ("volumen", "chapa")  # chapa: el área de lámina del manto (cilindro + cono truncado)
+MARCAS_TUBERIA = ("seccion", "material")  # sección por donde pasa el fluido y volumen de material
+MARCAS_EJE = ("volumen", "largo")
+FLUJOS = ("couette", "poiseuille")
+MARCAS_PLACA = ("centro", "isotermas")
+MARCAS_FLUJO = ("esfuerzo",)
 
 # Lo que se puede anotar en un polígono regular.
 MARCAS_POLIGONO = ("apotema", "radio", "angulo_central", "angulo_interior")
@@ -171,7 +185,9 @@ CAMPOS: dict[str, CampoVisual] = {
         CampoVisual("lados", "Lados del polígono (de 3 a 8)", "numero", "6"),
         CampoVisual("lado", "Medida de un lado o arista", "texto", "12 cm"),
         CampoVisual("anotar", "Qué anotar en el dibujo", "lista"),
-        CampoVisual("velocidad", "Velocidad de lanzamiento", "texto", "20 m/s"),
+        CampoVisual(
+            "velocidad", "Velocidad (de lanzamiento, de la placa o máxima del flujo)", "texto", "20 m/s"
+        ),
         CampoVisual(
             "figura",
             "El sólido",
@@ -199,6 +215,30 @@ CAMPOS: dict[str, CampoVisual] = {
             "opcion",
             "mitad parte el cuerpo y pinta la cara de corte en rojo (solo cubo)",
             (("sin_corte", "Sin corte"), ("mitad", "Partido por la mitad")),
+        ),
+        CampoVisual("radio_salida", "Radio de la boca de salida", "texto", "0,3 m"),
+        CampoVisual("altura_cono", "Altura del cono", "texto", "1,2 m"),
+        CampoVisual("espesor", "Espesor de la pared", "texto", "5 mm"),
+        CampoVisual("bridas", "Con bridas en los extremos", "booleano"),
+        CampoVisual("radios", "Radio de cada tramo, de izquierda a derecha", "numeros", "20; 30; 25"),
+        CampoVisual("largos", "Largo de cada tramo, en el mismo orden", "numeros", "60; 120; 80"),
+        CampoVisual("temp_izquierda", "Temperatura del borde izquierdo (°C)", "numero", "100"),
+        CampoVisual("temp_derecha", "Temperatura del borde derecho (°C)", "numero", "20"),
+        CampoVisual("temp_arriba", "Temperatura del borde de arriba (°C)", "numero", "20"),
+        CampoVisual("temp_abajo", "Temperatura del borde de abajo (°C)", "numero", "20"),
+        CampoVisual(
+            "flujo",
+            "El flujo",
+            "opcion",
+            "Couette: una placa arrastra el fluido · Poiseuille: lo empuja la presión",
+            (
+                ("couette", "Couette (placa que se mueve)"),
+                ("poiseuille", "Poiseuille (empujado por presión)"),
+            ),
+        ),
+        CampoVisual("separacion", "Separación entre las placas", "texto", "1 cm"),
+        CampoVisual(
+            "viscosidad", "Viscosidad del fluido (vacío = no se calcula el esfuerzo)", "texto", "0,001 Pa·s"
         ),
         CampoVisual("solo_a", "Cuántos sólo en A", "numero", "25"),
         CampoVisual("solo_b", "Cuántos sólo en B", "numero", "13"),
@@ -554,6 +594,63 @@ VISUALES: dict[str, TipoVisual] = {
                 "cortante": "30 MPa",
                 "anotar": ["principales"],
             },
+        ),
+        TipoVisual(
+            "tolva_3d",
+            "Tolva en 3D",
+            "ingenieria",
+            "🔻",
+            ("radio", "altura", "radio_salida", "altura_cono", "vista", "despiece", "anotar"),
+            MARCAS_TOLVA,
+            ejemplo={
+                "radio": "1,5 m",
+                "altura": "2 m",
+                "radio_salida": "0,3 m",
+                "altura_cono": "1,2 m",
+                "anotar": ["volumen"],
+            },
+        ),
+        TipoVisual(
+            "tuberia_3d",
+            "Tubería con bridas (3D)",
+            "ingenieria",
+            "🛢",
+            ("radio", "espesor", "longitud", "bridas", "vista", "despiece", "anotar"),
+            MARCAS_TUBERIA,
+            ejemplo={"radio": "10 cm", "espesor": "1 cm", "longitud": "80 cm", "anotar": ["seccion"]},
+        ),
+        TipoVisual(
+            "eje_3d",
+            "Eje escalonado (3D)",
+            "ingenieria",
+            "🔩",
+            ("radios", "largos", "unidad", "vista", "despiece", "anotar"),
+            MARCAS_EJE,
+            ejemplo={"radios": [20, 30, 25], "largos": [60, 120, 80], "unidad": "mm", "anotar": ["volumen"]},
+        ),
+        TipoVisual(
+            "gradiente_termico",
+            "Calor en una placa",
+            "ingenieria",
+            "🌡",
+            ("temp_izquierda", "temp_derecha", "temp_arriba", "temp_abajo", "base", "altura", "anotar"),
+            MARCAS_PLACA,
+            ejemplo={
+                "temp_izquierda": 100,
+                "temp_derecha": 20,
+                "temp_arriba": 20,
+                "temp_abajo": 20,
+                "anotar": ["centro"],
+            },
+        ),
+        TipoVisual(
+            "perfil_flujo",
+            "Flujo entre placas",
+            "ingenieria",
+            "🌊",
+            ("flujo", "velocidad", "separacion", "viscosidad", "anotar"),
+            MARCAS_FLUJO,
+            ejemplo={"flujo": "poiseuille", "velocidad": "2 m/s", "separacion": "1 cm"},
         ),
     ]
 }
@@ -1709,4 +1806,186 @@ def analizar_pendulo_doble(
     l2 = _a_metros(*_medida_solido(longitud_2, "longitud_2"))
     return simulacion.integrar_pendulo_doble(
         m1, m2, l1, l2, float(angulo_1 or 0.0), float(angulo_2 or 0.0), _duracion_simulada(duracion, 10.0)
+    )
+
+
+# ------------------------------------------------------------------------------------------
+# Piezas industriales en 3D: tolva, tubería con bridas y eje escalonado
+# ------------------------------------------------------------------------------------------
+
+_LONGITUD_EN_METROS = {"mm": 0.001, "cm": 0.01, "dm": 0.1, "m": 1.0, "km": 1000.0}
+
+
+def _unidad_de_longitud(unidad: str) -> str:
+    u = (unidad or "").strip().lower()
+    for clave in ("mm", "cm", "dm", "km", "m"):
+        if u.startswith(clave):
+            return clave
+    return ""
+
+
+def _longitudes(pares: list[tuple[str, str | None]]) -> tuple[list[float], str]:
+    """Las medidas en una misma unidad (la del primero que la diga): «1,5 m» y «30 cm» se pueden mezclar."""
+    leidas = [(nombre, *_medida_solido(texto, nombre)) for nombre, texto in pares]
+    unidad = next((_unidad_de_longitud(u) for _, _, u in leidas if _unidad_de_longitud(u)), "")
+    crudas = next((u.strip() for _, _, u in leidas if _unidad_de_longitud(u)), "")
+    valores = []
+    for nombre, valor, u in leidas:
+        propia = _unidad_de_longitud(u)
+        if propia and unidad and propia != unidad:
+            valor = valor * _LONGITUD_EN_METROS[propia] / _LONGITUD_EN_METROS[unidad]
+        elif u.strip() and not propia:
+            raise ValueError(f"no reconozco la unidad de {nombre} («{u.strip()}»): usa mm, cm o m")
+        valores.append(valor)
+    return valores, crudas
+
+
+@dataclass
+class Tolva:
+    """Cilindro arriba y cono truncado abajo: la tolva de un silo o de una mezcladora."""
+
+    radio: float  # el del cilindro (y de la boca grande del cono)
+    altura: float  # la del cilindro
+    radio_salida: float
+    altura_cono: float
+    unidad: str
+    volumen: float
+    chapa: float  # área de lámina: manto del cilindro + manto del cono truncado (abierta arriba y abajo)
+    generatriz: float
+
+
+def analizar_tolva(radio: str, altura: str, radio_salida: str, altura_cono: str) -> Tolva:
+    (r_, h, r, hc), unidad = _longitudes(
+        [("radio", radio), ("altura", altura), ("radio_salida", radio_salida), ("altura_cono", altura_cono)]
+    )
+    if r >= r_:
+        raise ValueError(
+            "la boca de salida tiene que ser más angosta que el cilindro: radio_salida debe ser menor que radio"
+        )
+    generatriz = math.hypot(hc, r_ - r)
+    volumen = math.pi * r_ * r_ * h + math.pi * hc * (r_ * r_ + r_ * r + r * r) / 3
+    chapa = 2 * math.pi * r_ * h + math.pi * (r_ + r) * generatriz
+    return Tolva(r_, h, r, hc, unidad, volumen, chapa, generatriz)
+
+
+@dataclass
+class Tuberia:
+    """Un tramo de ducto: radio exterior, pared y largo, con una brida en cada extremo."""
+
+    radio: float  # exterior
+    espesor: float
+    longitud: float
+    unidad: str
+    radio_interior: float
+    seccion: float  # área por donde pasa el fluido
+    material: float  # volumen de la pared del tubo (sin las bridas)
+
+
+def analizar_tuberia(radio: str, espesor: str, longitud: str) -> Tuberia:
+    (re_, e, largo), unidad = _longitudes([("radio", radio), ("espesor", espesor), ("longitud", longitud)])
+    if e >= re_:
+        raise ValueError(
+            "el espesor tiene que ser menor que el radio exterior: si no, el tubo no tiene hueco"
+        )
+    ri = re_ - e
+    return Tuberia(re_, e, largo, unidad, ri, math.pi * ri * ri, math.pi * (re_ * re_ - ri * ri) * largo)
+
+
+@dataclass
+class Eje:
+    """Un eje de transmisión escalonado: tramos cilíndricos concéntricos, uno tras otro."""
+
+    radios: list[float]
+    largos: list[float]
+    unidad: str
+    volumen: float
+    largo: float
+
+
+def analizar_eje(radios: list[float], largos: list[float], unidad: str = "") -> Eje:
+    if not 2 <= len(radios) <= 5:
+        raise ValueError(f"el eje va de 2 a 5 tramos, y el guion trae {len(radios)} radios")
+    if len(largos) != len(radios):
+        raise ValueError(
+            f"cada tramo necesita su radio y su largo: hay {len(radios)} radios y {len(largos)} largos"
+        )
+    for nombre, lista in (("radios", radios), ("largos", largos)):
+        for v in lista:
+            if not math.isfinite(float(v)) or float(v) <= 0:
+                raise ValueError(f"los {nombre} del eje tienen que ser números mayores que cero (leí {v})")
+    rs, ls = [float(v) for v in radios], [float(v) for v in largos]
+    volumen = sum(math.pi * r * r * largo for r, largo in zip(rs, ls, strict=True))
+    return Eje(rs, ls, (unidad or "").strip(), volumen, sum(ls))
+
+
+# ------------------------------------------------------------------------------------------
+# Calor en una placa y flujo entre placas
+# ------------------------------------------------------------------------------------------
+
+
+@functools.cache
+def analizar_placa(izquierda: float, derecha: float, arriba: float, abajo: float, aspecto: float = 2.0):
+    """La placa con sus cuatro bordes a temperatura fija, integrada hasta el régimen permanente.
+
+    ``aspecto`` es ancho/alto; la malla mantiene celdas cuadradas para que el calor avance igual
+    en las dos direcciones.
+    """
+    from . import simulacion
+
+    aspecto = min(max(float(aspecto), 0.5), 4.0)
+    ny = 17 if aspecto >= 1 else 33
+    nx = int(round((ny - 1) * aspecto)) + 1
+    if nx > 49:
+        nx = 49
+        ny = int(round((nx - 1) / aspecto)) + 1
+    return simulacion.conducir_placa(izquierda, derecha, arriba, abajo, nx=max(nx, 5), ny=max(ny, 5))
+
+
+def aspecto_placa(base: str | None, altura: str | None) -> float:
+    """Ancho/alto de la placa del guion; sin medidas, una placa el doble de ancha que de alta."""
+    if not (base or "").strip() or not (altura or "").strip():
+        return 2.0
+    (b, h), _ = _longitudes([("base", base), ("altura", altura)])
+    return b / h
+
+
+_VELOCIDAD_EN_MS = {"mm/s": 0.001, "cm/s": 0.01, "m/s": 1.0, "km/h": 1 / 3.6}
+
+
+@dataclass
+class Flujo:
+    flujo: str  # couette | poiseuille
+    velocidad: float  # m/s: la de la placa (Couette) o la máxima del centro (Poiseuille)
+    separacion: float  # m
+    viscosidad: float | None  # Pa·s
+    texto_velocidad: str
+    texto_separacion: str
+    media: float  # velocidad media, m/s
+    esfuerzo_pared: float | None  # Pa, en la placa de abajo
+
+
+def analizar_flujo(flujo: str, velocidad: str, separacion: str, viscosidad: str | None = None) -> Flujo:
+    if flujo not in FLUJOS:
+        raise ValueError(f"el flujo es couette o poiseuille, y el guion dice «{flujo}»")
+    v, uni = _medida_solido(velocidad, "velocidad", hasta_barra=True)
+    clave = uni.replace(" ", "").lower()
+    if clave and clave not in _VELOCIDAD_EN_MS:
+        raise ValueError(f"no reconozco la unidad de la velocidad («{uni}»): usa m/s, cm/s o km/h")
+    v_ms = v * _VELOCIDAD_EN_MS.get(clave, 1.0)
+    h, uni_h = _medida_solido(separacion, "separacion")
+    h_m = _a_metros(h, (uni_h or "m").strip())
+    mu = None
+    if (viscosidad or "").strip():
+        mu = _medida_solido(viscosidad, "viscosidad")[0]
+    media = v_ms / 2 if flujo == "couette" else 2 * v_ms / 3
+    gradiente = v_ms / h_m if flujo == "couette" else 4 * v_ms / h_m
+    return Flujo(
+        flujo,
+        v_ms,
+        h_m,
+        mu,
+        str(velocidad).strip(),
+        str(separacion).strip(),
+        media,
+        mu * gradiente if mu is not None else None,
     )

@@ -1,0 +1,56 @@
+# Ejemplo de guion · Piezas industriales en 3D, calor en una placa y flujo entre placas
+# Crear el borrador:   ./tpi crear guiones/ejemplos/solidos_industriales.yaml --borrador --voz silencio
+# Dibujos nuevos (todos se mueven solos y son opcionales):
+#   · tolva_3d, tuberia_3d, eje_3d: la cámara gira alrededor; «despiece: true» separa sus piezas
+#   · gradiente_termico: el calor entra por los bordes hasta el régimen permanente
+#   · perfil_flujo: el fluido arranca en reposo y llega a su perfil (couette o poiseuille)
+
+titulo: "Cuánto cabe en la tolva y cómo se reparte el calor"
+materia: ingenieria
+nivel: "Técnico profesional"
+
+gancho:
+  texto: "¿Cuánto grano cabe en esta tolva?"
+  voz: "¿Cuánto grano cabe en esta tolva? Ábrela y lo calculas."
+  emoji: "🏗"
+
+enunciado:
+  texto: "Una tolva con cilindro de R = 1,5 m y H = 2 m, y un cono de 1,2 m que baja a una boca de 0,3 m."
+  voz: "Una tolva: arriba un cilindro de metro y medio de radio y dos de alto. Abajo, un cono de un metro veinte con boca de treinta centímetros."
+
+pasos:
+  - nota: "Se separa en dos cuerpos"
+    tex: 'V = V_{\text{cilindro}} + V_{\text{cono truncado}}'
+    voz: "Gira la tolva y se separa: arriba un cilindro, abajo un cono truncado. El volumen es la suma de los dos."
+    visual:
+      tipo: tolva_3d
+      radio: "1,5 m"
+      altura: "2 m"
+      radio_salida: "0,3 m"
+      altura_cono: "1,2 m"
+      despiece: true
+      anotar: [volumen]
+
+  - nota: "El cilindro"
+    tex: 'V_1 = \pi R^2 H = 4{,}5\pi'
+    voz: "El cilindro: pi por radio al cuadrado por altura, cuatro coma cinco pi."
+
+  - nota: "El cono truncado"
+    tex: 'V_2 = \frac{\pi h}{3}(R^2 + Rr + r^2) = 1{,}116\pi'
+    voz: "El cono truncado usa los dos radios: uno coma uno uno seis pi."
+
+  - nota: "El calor que llega por un costado"
+    tex: '\nabla^2 T = 0'
+    voz: "Si una pared toca algo caliente, el calor entra por ese lado. Se reparte hasta quedarse quieto."
+    visual:
+      tipo: gradiente_termico
+      temp_izquierda: 100
+      temp_derecha: 20
+      temp_arriba: 20
+      temp_abajo: 20
+      anotar: [centro, isotermas]
+
+resultado:
+  tex: 'V = 5{,}616\pi \approx 17{,}6\ \text{m}^3'
+  voz: "En total caben unos diecisiete coma seis metros cúbicos."
+  destello: true

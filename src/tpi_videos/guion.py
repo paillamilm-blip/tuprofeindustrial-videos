@@ -21,13 +21,16 @@ from .visuales import (
     MARCAS_BLOQUES,
     MARCAS_CERCHA,
     MARCAS_CIRCULO,
+    MARCAS_EJE,
     MARCAS_ENGRANAJE,
+    MARCAS_FLUJO,
     MARCAS_FUNCION,
     MARCAS_MOHR,
     MARCAS_ONDA,
     MARCAS_OSCILADOR,
     MARCAS_PENDULO,
     MARCAS_PENDULO_DOBLE,
+    MARCAS_PLACA,
     MARCAS_POLEA,
     MARCAS_POLIGONO,
     MARCAS_PROBABILIDAD,
@@ -35,16 +38,21 @@ from .visuales import (
     MARCAS_RESORTE,
     MARCAS_SOLIDO,
     MARCAS_TANQUE,
+    MARCAS_TOLVA,
+    MARCAS_TUBERIA,
     MARCAS_VECTOR_3D,
     MARCAS_VENN,
     MARCAS_VIGA,
     SEGUNDOS_VISUAL,
+    TIPOS_3D,
     analizar_angulo,
     analizar_barras,
     analizar_bloques,
     analizar_cercha,
+    analizar_eje,
     analizar_energia,
     analizar_engranajes,
+    analizar_flujo,
     analizar_funcion,
     analizar_mohr,
     analizar_onda,
@@ -52,6 +60,7 @@ from .visuales import (
     analizar_oscilador,
     analizar_pendulo,
     analizar_pendulo_doble,
+    analizar_placa,
     analizar_polea,
     analizar_poligono,
     analizar_probabilidad,
@@ -60,10 +69,13 @@ from .visuales import (
     analizar_resorte,
     analizar_solido,
     analizar_tanque,
+    analizar_tolva,
     analizar_torta,
+    analizar_tuberia,
     analizar_vector_3d,
     analizar_venn,
     analizar_viga,
+    aspecto_placa,
     normalizar_vectores,
 )
 
@@ -193,6 +205,11 @@ class Visual(_Base):
         "bloques",
         "engranaje",
         "mohr",
+        "tolva_3d",
+        "tuberia_3d",
+        "eje_3d",
+        "gradiente_termico",
+        "perfil_flujo",
     ]
 
     # grafico_funcion
@@ -317,8 +334,35 @@ class Visual(_Base):
     angulo_1: float | None = None  # grados desde la vertical, positivo a la derecha
     angulo_2: float | None = None
 
+    # tolva_3d (reusa radio y altura: los del cilindro), tuberia_3d (reusa radio y longitud), eje_3d
+    radio_salida: str | None = None  # la boca de abajo del cono: '0,3 m'
+    altura_cono: str | None = None  # '1,2 m'
+    espesor: str | None = None  # la pared del tubo: '5 mm'
+    bridas: bool = True  # una brida en cada extremo del tubo
+    radios: list[float] = []  # los del eje, tramo por tramo: [20, 30, 25]
+    largos: list[float] = []  # en el mismo orden y la misma unidad (campo «unidad»)
+
+    # gradiente_termico (reusa base y altura para la forma de la placa)
+    temp_izquierda: float | None = None  # °C de cada borde, fijos
+    temp_derecha: float | None = None
+    temp_arriba: float | None = None
+    temp_abajo: float | None = None
+
+    # perfil_flujo (reusa velocidad: la de la placa en Couette o la máxima en Poiseuille)
+    flujo: Literal["", "couette", "poiseuille"] = ""
+    separacion: str | None = None  # entre las placas: '1 cm'
+    viscosidad: str | None = None  # '0,001 Pa·s'; sin ella no se calcula el esfuerzo cortante
+
     _listas = field_validator(
-        "rango", "marcar", "vectores", "resistencias", "anotar", "categorias", mode="before"
+        "rango",
+        "marcar",
+        "vectores",
+        "resistencias",
+        "anotar",
+        "categorias",
+        "radios",
+        "largos",
+        mode="before",
     )(classmethod(lambda cls, v: None if v is None else _como_lista(v)))
 
     def _validar_movimiento(self) -> None:
@@ -365,19 +409,109 @@ class Visual(_Base):
                 "recorrido: acorta desde/hasta para que no la cruce"
             )
 
+    def _validar_industrial(self) -> None:
+        """Las piezas 3D, la placa y el flujo: medidas completas y marcas del tipo."""
+        marcas = {
+            "tolva_3d": MARCAS_TOLVA,
+            "tuberia_3d": MARCAS_TUBERIA,
+            "eje_3d": MARCAS_EJE,
+            "gradiente_termico": MARCAS_PLACA,
+            "perfil_flujo": MARCAS_FLUJO,
+        }[self.tipo]
+        desconocidas = [m for m in self.anotar if m not in marcas]
+        if desconocidas:
+            raise ValueError(
+                f"«{desconocidas[0]}» no es una marca de {self.tipo}; el motor sabe anotar {', '.join(marcas)}"
+            )
+        if self.tipo == "tolva_3d":
+            faltan = [
+                n
+                for n in ("radio", "altura", "radio_salida", "altura_cono")
+                if not (getattr(self, n) or "").strip()
+            ]
+            if faltan:
+                raise ValueError(
+                    f"la tolva necesita {', '.join(faltan)} con su unidad, ej. radio: '1,5 m', altura: '2 m', "
+                    "radio_salida: '0,3 m', altura_cono: '1,2 m'"
+                )
+            self.tolva()
+        elif self.tipo == "tuberia_3d":
+            faltan = [n for n in ("radio", "espesor", "longitud") if not (getattr(self, n) or "").strip()]
+            if faltan:
+                raise ValueError(
+                    f"la tubería necesita {', '.join(faltan)} con su unidad, ej. radio: '10 cm', "
+                    "espesor: '1 cm', longitud: '80 cm'"
+                )
+            self.tuberia()
+        elif self.tipo == "eje_3d":
+            self.eje()
+        elif self.tipo == "gradiente_termico":
+            faltan = [
+                n
+                for n in ("temp_izquierda", "temp_derecha", "temp_arriba", "temp_abajo")
+                if getattr(self, n) is None
+            ]
+            if faltan:
+                raise ValueError(
+                    f"la placa necesita la temperatura de cada borde en °C: falta {', '.join(faltan)}"
+                )
+            temps = [self.temp_izquierda, self.temp_derecha, self.temp_arriba, self.temp_abajo]
+            if max(temps) - min(temps) < 1e-9:
+                raise ValueError("con los cuatro bordes a la misma temperatura no hay calor que mostrar")
+            aspecto_placa(self.base, self.altura)
+        else:
+            if not self.flujo:
+                raise ValueError(
+                    "falta decir el flujo: couette (una placa se mueve) o poiseuille (lo empuja la presión)"
+                )
+            if not (self.velocidad or "").strip() or not (self.separacion or "").strip():
+                raise ValueError(
+                    "el flujo necesita la velocidad y la separación, ej. velocidad: '2 m/s', separacion: '1 cm'"
+                )
+            figura = self.flujo_analizado()
+            if "esfuerzo" in self.anotar and figura.viscosidad is None:
+                raise ValueError(
+                    "para anotar el esfuerzo cortante el guion necesita la viscosidad, ej. '0,001 Pa·s'"
+                )
+
+    def tolva(self):
+        return analizar_tolva(
+            self.radio or "", self.altura or "", self.radio_salida or "", self.altura_cono or ""
+        )
+
+    def tuberia(self):
+        return analizar_tuberia(self.radio or "", self.espesor or "", self.longitud or "")
+
+    def eje(self):
+        return analizar_eje(self.radios, self.largos, self.unidad or "")
+
+    def placa(self):
+        return analizar_placa(
+            float(self.temp_izquierda or 0.0),
+            float(self.temp_derecha or 0.0),
+            float(self.temp_arriba or 0.0),
+            float(self.temp_abajo or 0.0),
+            aspecto_placa(self.base, self.altura),
+        )
+
+    def flujo_analizado(self):
+        return analizar_flujo(self.flujo, self.velocidad or "", self.separacion or "", self.viscosidad)
+
     @model_validator(mode="after")
     def _campos_del_tipo(self) -> Visual:
         if self.movimiento and self.tipo != "grafico_funcion":
             raise ValueError("movimiento (tangente o área) solo va en un grafico_funcion")
         if self.despiece:
-            if self.tipo != "solido_3d":
-                raise ValueError("el despiece solo va en un solido_3d")
+            if self.tipo not in TIPOS_3D:
+                raise ValueError(f"el despiece solo va en un cuerpo 3D ({', '.join(TIPOS_3D)})")
             if self.figura == "esfera":
                 raise ValueError(
                     "la esfera es una sola pieza y no tiene qué separar: quita despiece o usa cubo, "
                     "cilindro o cono"
                 )
-        if self.tipo == "grafico_funcion":
+        if self.tipo in ("tolva_3d", "tuberia_3d", "eje_3d", "gradiente_termico", "perfil_flujo"):
+            self._validar_industrial()
+        elif self.tipo == "grafico_funcion":
             if not (self.funcion or "").strip():
                 raise ValueError("un gráfico de función necesita la fórmula, ej. funcion: '-x^2 + 4x'")
             if self.rango is not None and len(self.rango) != 2:
@@ -1303,6 +1437,43 @@ def _visual_yaml(v: dict[str, Any], sangria: str = "      ") -> list[str]:
                 campos.append((clave, _numero(v[clave])))
         if v.get("duracion") is not None:
             campos.append(("duracion", _numero(v["duracion"])))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo in ("tolva_3d", "tuberia_3d", "eje_3d"):
+        claves = {
+            "tolva_3d": ("radio", "altura", "radio_salida", "altura_cono"),
+            "tuberia_3d": ("radio", "espesor", "longitud"),
+            "eje_3d": (),
+        }[tipo]
+        for clave in claves:
+            campos.append((clave, _simples(v.get(clave) or "")))
+        if tipo == "tuberia_3d" and v.get("bridas") is False:
+            campos.append(("bridas", "false"))
+        if tipo == "eje_3d":
+            campos.append(("radios", _numeros(v.get("radios") or [])))
+            campos.append(("largos", _numeros(v.get("largos") or [])))
+            if v.get("unidad"):
+                campos.append(("unidad", _simples(v["unidad"])))
+        if v.get("vista") not in (None, "", "axonometrica"):
+            campos.append(("vista", v["vista"]))
+        if v.get("despiece"):
+            campos.append(("despiece", "true"))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "gradiente_termico":
+        for clave in ("temp_izquierda", "temp_derecha", "temp_arriba", "temp_abajo"):
+            campos.append((clave, _numero(v.get(clave) or 0)))
+        for clave in ("base", "altura"):
+            if v.get(clave):
+                campos.append((clave, _simples(v[clave])))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "perfil_flujo":
+        campos.append(("flujo", v.get("flujo") or ""))
+        for clave in ("velocidad", "separacion"):
+            campos.append((clave, _simples(v.get(clave) or "")))
+        if v.get("viscosidad"):
+            campos.append(("viscosidad", _simples(v["viscosidad"])))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     else:
