@@ -143,9 +143,14 @@ class ParaHoy:
             with ui.row().classes("w-full items-center justify-between gap-4 flex-wrap"):
                 with ui.column().classes("gap-0"):
                     _rotulo("Para hoy · elige uno")
-                    ui.label(
-                        f"Tres del mismo nivel ({p.nivel}), uno por materia." if p.nivel else "Tres opciones"
-                    ).classes("text-lg font-semibold")
+                    falta = ", ".join(para_hoy.nombre_categoria(c) for c in p.faltan())
+                    if not p.nivel:
+                        encabezado = "Tres opciones"
+                    elif falta:
+                        encabezado = f"{p.nivel}: falta {falta}. Elige otro nivel o escribe uno."
+                    else:
+                        encabezado = f"Tres del mismo nivel ({p.nivel}), uno por materia."
+                    ui.label(encabezado).classes("text-lg font-semibold")
                 with ui.row().classes("gap-2 items-center"):
                     for nivel, materias in p.niveles.items():
                         completo = len(materias) == len(para_hoy.CATEGORIAS)

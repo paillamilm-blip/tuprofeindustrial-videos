@@ -26,7 +26,8 @@ from ..temas import NOMBRE_CATEGORIA, EstiloSugerido, estilo_del_guion
 from . import qc
 
 CATEGORIAS = ("matematicas", "fisica", "ingenieria")
-_NIVEL = re.compile(r"([1-4])\s*[°º]?\s*(?:ano\s+)?(?:de\s+)?medio")
+# «º» (ordinal) sale como «o» después de sin_tildes: «2º medio» → «2o medio».
+_NIVEL = re.compile(r"\b([1-4])\s*[°ºo]?\s*(?:ano\s+)?(?:de\s+)?medio")
 
 
 def nivel_de(texto: str | None) -> str | None:
