@@ -1,0 +1,69 @@
+name: Redactar con un Gemini de mentira
+
+# Temporal: corre `tpi redactar` (CLI, LaTeX, revisión y YAML) contra un servidor local que imita a
+# Gemini, valida el YAML con el motor, lo renderiza sin voz y mide que la pausa quede en el audio.
+
+on:
+  pull_request:
+
+jobs:
+  redactar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GOOGLE_GEMINI_BASE_URL: http://127.0.0.1:8765
+      GEMINI_API_KEY: clave-de-mentira
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: TeX, FFmpeg y las librerías de Manim
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended dvisvgm \
+            ffmpeg pkg-config libcairo2-dev libpango1.0-dev
+      - name: Instalar el motor
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: tpi redactar
+        run: |
+          python scripts/gemini_falso.py 8765 > /tmp/gemini.log 2>&1 &
+          sleep 2
+          mkdir -p redactado
+          tpi redactar "Explicación del flujo turbulento en una Tuberia3D con despiece" 2>&1 | tee redactado/registro.txt
+          cp $(ls -t guiones/*.yaml | head -1) redactado/
+          echo "=====" ; cat redactado/*.yaml
+      - name: El motor aprueba el YAML y trae metadatos y pausas
+        run: |
+          python - <<'EOF'
+          import glob
+          from tpi_videos.guion import cargar_guion
+          ruta = glob.glob("redactado/*.yaml")[0]
+          g = cargar_guion(__import__("pathlib").Path(ruta))
+          print("metadatos:", g.metadatos)
+          pausas = [p.voz for p in g.pasos if "<break" in p.voz]
+          print("voces con pausa:", pausas)
+          v = next(p.visual for p in g.pasos if p.visual)
+          print("visual:", v.tipo, "despiece =", v.despiece, "· destello =", g.resultado.destello)
+          assert g.metadatos and pausas and v.despiece and g.resultado.destello
+          EOF
+      - name: Render en borrador sin voz
+        run: |
+          cp redactado/*.yaml guiones/
+          tpi crear guiones/$(basename redactado/*.yaml) --borrador --voz silencio 2>&1 | tr '\r' '\n' | grep -vE "it/s\]" | tee redactado/render.txt | tail -15
+          python - <<'EOF'
+          import glob, json
+          linea = json.load(open(glob.glob("salida/*/linea_de_tiempo.json")[0]))
+          for b in linea["bloques"]:
+              if b["seccion"].startswith("paso"):
+                  print(f'{b["seccion"]}: {b["duracion"]:.2f} s · «{b["texto"]}»')
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: redactado
+          path: redactado
+          retention-days: 7

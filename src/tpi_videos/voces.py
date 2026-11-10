@@ -20,6 +20,7 @@ from manim_voiceover.helper import remove_bookmarks
 from manim_voiceover.services.base import SpeechService, initialize_speech_service, path_to_string
 
 from .errores import ErrorMotor
+from .pausas import tiene_pausas, trozos
 from .revision import estimar_segundos
 
 PROVEEDORES = ("edge", "gtts", "silencio")
@@ -173,15 +174,72 @@ class SilencioService(SpeechService):
         }
 
 
+class ServicioConPausas(SpeechService):
+    """Envuelve a cualquier voz y resuelve las pausas ``<break time="1.5s"/>`` con silencio de verdad.
+
+    Cada trozo entre pausas se sintetiza (y se guarda en caché) con la voz de siempre; después se
+    unen con el silencio pedido en un WAV y las marcas de cada palabra se corren lo que corresponde.
+    Una voz sin pausas pasa directo a la voz de siempre: el audio y la caché quedan como antes.
+    """
+
+    def __init__(self, base: SpeechService, nombre: str, **kwargs: Any) -> None:
+        initialize_speech_service(self, kwargs)
+        self.base = base
+        self.nombre = nombre  # "edge-tts", "gtts" o "silencio": así sigue llamándose en la línea de tiempo
+
+    def generate_from_text(self, text: str, cache_dir=None, path=None, **kwargs: Any) -> dict[str, Any]:
+        cache_dir = cache_dir or self.cache_dir
+        if not tiene_pausas(text):
+            return self.base.generate_from_text(text, cache_dir=cache_dir, path=path, **kwargs)
+        from pydub import AudioSegment
+
+        partes = trozos(remove_bookmarks(text))
+        limpio = " ".join(t for t, _ in partes if t)
+        config = {k: getattr(self.base, k) for k in ("voz", "velocidad", "tono") if hasattr(self.base, k)}
+        input_data = {"input_text": text, "service": self.nombre, "config": config, "pausas": True}
+        en_cache = self.get_cached_result(input_data, cache_dir)
+        if en_cache is not None:
+            return en_cache
+
+        audio = AudioSegment.silent(duration=0, frame_rate=24_000)
+        marcas: list[dict[str, Any]] = []
+        cursor_texto = 0
+        for texto, pausa in partes:
+            if texto:
+                trozo = self.base.generate_from_text(texto, cache_dir=cache_dir, **kwargs)
+                sonido = AudioSegment.from_file(str(Path(cache_dir) / trozo["original_audio"]))
+                desplazamiento = int(len(audio) * RESOLUCION / 1000)  # ms → unidades de 100 ns
+                for m in trozo.get("word_boundaries") or []:
+                    marcas.append(
+                        {
+                            **m,
+                            "audio_offset": m["audio_offset"] + desplazamiento,
+                            "text_offset": m.get("text_offset", 0) + cursor_texto,
+                        }
+                    )
+                audio += sonido.set_frame_rate(audio.frame_rate).set_channels(1)
+                cursor_texto += len(texto) + 1
+            if pausa:
+                audio += AudioSegment.silent(duration=int(round(pausa * 1000)), frame_rate=audio.frame_rate)
+        audio_path = self.get_audio_basename(input_data) + ".wav" if path is None else path_to_string(path)
+        audio.export(str(Path(cache_dir) / audio_path), format="wav")
+        return {
+            "input_text": limpio,
+            "input_data": input_data,
+            "original_audio": audio_path,
+            "word_boundaries": marcas,
+        }
+
+
 def crear_servicio(proveedor: str, voz: str, velocidad: str) -> SpeechService:
     if proveedor == "edge":
-        return EdgeTTSService(voz=voz, velocidad=velocidad)
+        return ServicioConPausas(EdgeTTSService(voz=voz, velocidad=velocidad), "edge-tts")
     if proveedor == "gtts":
         from manim_voiceover.services.gtts import GTTSService
 
-        return GTTSService(lang="es", tld="com.mx")  # acento latinoamericano
+        return ServicioConPausas(GTTSService(lang="es", tld="com.mx"), "gtts")  # acento latinoamericano
     if proveedor == "silencio":
-        return SilencioService()
+        return ServicioConPausas(SilencioService(), "silencio")
     raise ErrorMotor(
         f"No conozco el proveedor de voz «{proveedor}».", ayuda=f"Opciones: {', '.join(PROVEEDORES)}"
     )

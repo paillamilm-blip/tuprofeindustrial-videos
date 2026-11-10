@@ -129,6 +129,22 @@ def textos_de_plantilla(guion: Guion) -> TextosPublicacion:
     )
 
 
+def textos_de_metadatos(guion: Guion) -> TextosPublicacion | None:
+    """Los textos que ya trae el guion (bloque ``metadatos``): no hace falta volver a pedirlos."""
+    m = guion.metadatos
+    if m is None:
+        return None
+    reto = f"\n\n✍️ Ahora tú: {guion.reto.texto}" if guion.reto else ""
+    primera = m.descripcion.split("\n")[0].strip()
+    return TextosPublicacion(
+        titulo_youtube=m.titulo,
+        descripcion_youtube=f"{m.descripcion}\n\nSuscríbete para más ejercicios resueltos.",
+        texto_tiktok=(primera if len(primera) <= 150 else m.titulo)[:150],
+        texto_instagram=f"{m.descripcion}{reto}\n\n¿Lo resolviste igual? 👇",
+        hashtags=list(m.hashtags),
+    )
+
+
 def textos_con_ia(guion: Guion, modelo: str | None = None) -> TextosPublicacion:
     from . import ia
     from .redactor import pedir_json
@@ -207,12 +223,14 @@ def crear_kit(
             "La portada salió del borrador (más pequeña): crea el video final y vuelve a crear el kit."
         )
     usar_ia = con_ia and ia.obtener_clave() is not None
-    if con_ia and not usar_ia:
+    if con_ia and not usar_ia and guion.metadatos is None:
         avisos.append(
             "Sin clave de Gemini: los textos se armaron con una plantilla (./tpi clave para usar IA)."
         )
-    textos = None
-    if usar_ia:
+    textos = textos_de_metadatos(guion)
+    if textos is not None:
+        avisar("El guion ya trae título, descripción y hashtags: uso esos.")
+    elif usar_ia:
         avisar("Gemini está escribiendo el título, la descripción y los hashtags…")
         try:
             textos = textos_con_ia(guion, modelo)
@@ -221,7 +239,7 @@ def crear_kit(
         except Exception as e:  # una caída rara de la IA no debe botar un video ya hecho
             avisos.append(f"No se pudo usar la IA ({e}); los textos se armaron con una plantilla.")
     aviso = " ".join(avisos) or None
-    con_ia_real = textos is not None
+    con_ia_real = textos is not None and guion.metadatos is None
     textos = _limpiar(textos or textos_de_plantilla(guion))
 
     archivo = carpeta / "publicacion.md"

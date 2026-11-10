@@ -12,10 +12,19 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from .errores import ErrorMotor
 from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
+from .pausas import validar_pausas
 from .tex import llaves_balanceadas
 from .visuales import (
     MARCAS_BLOQUES,
@@ -104,6 +113,10 @@ def _validar_tex(valor: str | None) -> str | None:
     return valor
 
 
+# Los espacios de LaTeX no cuentan al comparar términos (igual que en componentes.coincidencias).
+_ESPACIOS_TEX = re.compile(r"\\[,;:!]|\\quad|\\qquad|\\ |\s+")
+
+
 def _como_lista(valor: Any) -> Any:
     if valor is None:
         return []
@@ -131,6 +144,8 @@ class _ConTexto(_Base):
 
     texto: str = Field(min_length=1)
     voz: str | None = None
+
+    _pausas = field_validator("voz")(classmethod(lambda cls, v: validar_pausas(v)))
 
     @model_validator(mode="before")
     @classmethod
@@ -168,6 +183,7 @@ class Dato(_Base):
     voz: str = Field(min_length=1)
 
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
+    _pausas = field_validator("voz")(classmethod(lambda cls, v: validar_pausas(v)))
 
 
 class Visual(_Base):
@@ -251,7 +267,7 @@ class Visual(_Base):
     # solido_3d (además de figura / lado / radio / altura / anotar)
     vista: Literal["frente", "piso", "ala", "axonometrica"] = "axonometrica"
     corte: Literal["sin_corte", "mitad"] = "sin_corte"  # mitad solo en cubo: ver el validador
-    despiece: bool = False  # las piezas se separan al final de la órbita (caras, tapas o mitades)
+    despiece: StrictBool = False  # las piezas se separan al final de la órbita (caras, tapas o mitades)
 
     # vector_3d
     componentes: list[float] | None = None  # las tres: [3, 4, 12]
@@ -364,6 +380,19 @@ class Visual(_Base):
         "largos",
         mode="before",
     )(classmethod(lambda cls, v: None if v is None else _como_lista(v)))
+
+    @field_validator("movimiento", mode="before")
+    @classmethod
+    def _movimiento_no_es_un_si(cls, valor: Any) -> Any:
+        """Un LLM tiende a escribir «movimiento: true»: el motor necesita saber QUÉ se mueve."""
+        if valor is None or valor is False:
+            return ""
+        if valor is True:
+            raise ValueError(
+                'movimiento no es verdadero/falso: di qué se mueve sobre la curva, "tangente" o "area" '
+                "(los dibujos de física ya se mueven solos, sin este campo)"
+            )
+        return valor
 
     def _validar_movimiento(self) -> None:
         """La tangente o el área: un tramo que exista entero y lo que se lee en vivo, coherente."""
@@ -501,6 +530,10 @@ class Visual(_Base):
     def _campos_del_tipo(self) -> Visual:
         if self.movimiento and self.tipo != "grafico_funcion":
             raise ValueError("movimiento (tangente o área) solo va en un grafico_funcion")
+        if (self.desde is not None or self.hasta is not None) and not self.movimiento:
+            raise ValueError(
+                'desde y hasta marcan un recorrido: van con movimiento: "tangente" o "area", en un grafico_funcion'
+            )
         if self.despiece:
             if self.tipo not in TIPOS_3D:
                 raise ValueError(f"el despiece solo va en un cuerpo 3D ({', '.join(TIPOS_3D)})")
@@ -1033,10 +1066,11 @@ class Paso(_Base):
     # Álgebra viva (opcional): un resplandor sobre términos que se siguen paso a paso, y el cambio
     # de la transformación a la vista (lo que se va se tacha, lo que llega se ilumina)
     halo: list[str] = []
-    resaltar_cambio: bool = False
+    resaltar_cambio: StrictBool = False
 
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
     _lista = field_validator("destacar", "halo", mode="before")(classmethod(lambda cls, v: _como_lista(v)))
+    _pausas = field_validator("voz")(classmethod(lambda cls, v: validar_pausas(v)))
 
     @model_validator(mode="after")
     def _error_con_formula(self) -> Paso:
@@ -1044,14 +1078,69 @@ class Paso(_Base):
             raise ValueError("un paso con «error: true» necesita la fórmula equivocada en «tex»")
         return self
 
+    @model_validator(mode="after")
+    def _algebra_coherente(self) -> Paso:
+        """El halo y el cambio solo valen sobre una fórmula que exista: nada de términos inventados."""
+        if (self.halo or self.resaltar_cambio) and not self.tex:
+            raise ValueError("halo y resaltar_cambio iluminan la fórmula: este paso necesita «tex»")
+        if self.resaltar_cambio and self.error:
+            raise ValueError(
+                "resaltar_cambio no va en un paso con «error: true»: el error se tacha entero, no se transforma"
+            )
+        formula = _ESPACIOS_TEX.sub("", self.tex or "")
+        for termino in self.halo:
+            if _ESPACIOS_TEX.sub("", termino) not in formula:
+                raise ValueError(
+                    f"el halo «{termino}» no aparece en la fórmula del paso ({self.tex}): copia el término tal cual"
+                )
+        return self
+
 
 class Resultado(_Base):
     tex: str = Field(min_length=1)
     voz: str = Field(min_length=1)
     emoji: str | None = None
-    destello: bool = False  # un destello de confirmación sale del recuadro al cerrar la respuesta
+    destello: StrictBool = False  # un destello de confirmación sale del recuadro al cerrar la respuesta
 
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
+    _pausas = field_validator("voz")(classmethod(lambda cls, v: validar_pausas(v)))
+
+
+class Metadatos(_Base):
+    """Lo que acompaña al video al publicarlo: título con gancho, descripción y hashtags.
+
+    Opcional. Si viene en el guion, el kit de publicación lo usa tal cual sin llamar a la IA.
+    """
+
+    titulo: str = Field(min_length=1, max_length=100)  # YouTube corta a los 100 caracteres
+    descripcion: str = Field(min_length=1, max_length=2200)  # el máximo de Instagram y TikTok
+    hashtags: list[str] = Field(min_length=3, max_length=15)
+
+    @field_validator("hashtags", mode="before")
+    @classmethod
+    def _hashtags_limpios(cls, valor: Any) -> Any:
+        """«#Física», «fisica» y «# fisica» quedan como «#fisica»; repetidos, una vez."""
+        if isinstance(valor, str):
+            valor = valor.replace(",", " ").split()
+        if not isinstance(valor, list):
+            return valor
+        limpios: list[str] = []
+        for crudo in valor:
+            etiqueta = sin_tildes(str(crudo)).lower().replace(" ", "").lstrip("#")
+            if not re.fullmatch(r"[a-z0-9_ñ]+", etiqueta):
+                raise ValueError(
+                    f"«{crudo}» no sirve como hashtag: solo letras y números, sin espacios ni signos (ej. #fisica)"
+                )
+            if f"#{etiqueta}" not in limpios:
+                limpios.append(f"#{etiqueta}")
+        return limpios
+
+    @field_validator("titulo", "descripcion")
+    @classmethod
+    def _sin_hashtags_en_el_texto(cls, valor: str) -> str:
+        if re.search(r"(^|\s)#\w", valor):
+            raise ValueError("los hashtags van en «hashtags», no dentro del título ni de la descripción")
+        return valor
 
 
 class Guion(_Base):
@@ -1072,6 +1161,7 @@ class Guion(_Base):
     verificacion: Bloque | None = None
     reto: Bloque | None = None
     cierre: Bloque | None = None
+    metadatos: Metadatos | None = None  # título, descripción y hashtags para publicar (opcional)
 
     @field_validator("materia", mode="before")
     @classmethod
@@ -1564,6 +1654,15 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
     for nombre in ("verificacion", "reto", "cierre"):
         if guion.get(nombre):
             bloque(nombre, guion[nombre])
+    if guion.get("metadatos"):
+        m = guion["metadatos"]
+        lineas += [
+            "",
+            "metadatos:",
+            f"  titulo: {_dobles(m['titulo'])}",
+            f"  descripcion: {_dobles(m['descripcion']).replace(chr(10), chr(92) + 'n')}",
+        ]
+        lineas.append(f"  hashtags: [{', '.join(_dobles(h) for h in m.get('hashtags') or [])}]")
     return "\n".join(lineas) + "\n"
 
 

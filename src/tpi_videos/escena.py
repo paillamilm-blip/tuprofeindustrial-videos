@@ -73,6 +73,7 @@ from . import dibujos as d
 from .config import Marca
 from .errores import ErrorMotor
 from .guion import Bloque, Guion
+from .pausas import sin_pausas
 from .rodaje import rodaje_de_guion
 from .revision import PISO_LECTURA, espera_de_lectura
 from .voces import RESOLUCION, crear_servicio
@@ -546,7 +547,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 "seccion": seccion,
                 "inicio": round(float(tracker.start_t), 3),
                 "duracion": round(float(tracker.duration), 3),
-                "texto": " ".join(remove_bookmarks(datos["input_text"]).split()),
+                "texto": sin_pausas(" ".join(remove_bookmarks(datos["input_text"]).split())),
                 "audio": str(Path(self.speech_service.cache_dir) / datos["final_audio"]),
                 "servicio": servicio,
                 # "exactas": vienen del sintetizador; "estimadas": reparto proporcional (sin voz)

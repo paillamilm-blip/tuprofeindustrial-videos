@@ -350,3 +350,33 @@ Con `./tpi ganchos GUION.yaml` sale un clip por variante en `salida/ganchos/`; c
 gancho 2 pasa a ser el del guion y los otros quedan como alternativas. Sin estos campos el guion
 funciona igual que antes. Ejemplo completo: `guiones/ejemplos/moldes_virales.yaml`.
 
+
+## 9. Pausas en la voz y metadatos para redes (opcional)
+
+**Pausas.** Cuando un paso tiene algo que se mueve (despiece, tangente, área, un péndulo), dale tiempo
+con una pausa dentro de la voz:
+
+```yaml
+    voz: 'Mira cómo la tolva se abre en dos piezas. <break time="1.5s"/> Su volumen es la suma de las dos.'
+```
+
+- Va entre comillas simples (la etiqueta lleva comillas dobles), de 0,2 a 3 segundos (`1.5s` o `1500ms`).
+- Como mucho 3 pausas por voz y 5 segundos en total. Cualquier otra etiqueta (`<prosody>`, `<emphasis>`) se rechaza.
+- El motor la convierte en silencio de verdad con cualquier voz (edge, gtts o silencio) y los subtítulos no
+  muestran la etiqueta. La animación del paso se estira con la voz, así que la pausa es tiempo para mirarla.
+
+**Metadatos.** Al final del guion puede ir el texto para publicar. Si está, `./tpi publicar` lo usa tal cual
+y no le pide nada a Gemini:
+
+```yaml
+metadatos:
+  titulo: "¿En cuántas horas se llena esta tolva? ⏱️"     # máximo 100 caracteres
+  descripcion: "Balance de masa paso a paso. ¿Cuánto te dio?"  # sin hashtags
+  hashtags: ["#tuprofeindustrial", "#ingenieria", "#balancedemasa"]  # de 3 a 15
+```
+
+Los hashtags se escriben en minúscula y sin tildes solos (`#Física` queda `#fisica`); uno con espacios
+dentro del título o con signos se rechaza. `./tpi redactar` ya escribe este bloque siempre.
+
+**Campos que solo aceptan `true` o `false`:** `despiece`, `resaltar_cambio` y `destello` (un `si` o un `1`
+se rechaza). `movimiento` no es verdadero/falso: es `tangente` o `area`, y `desde`/`hasta` solo van con él.
