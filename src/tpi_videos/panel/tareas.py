@@ -24,6 +24,7 @@ ETAPAS = {
     "animacion": "Animando",
     "subtitulos": "Subtítulos",
     "video final": "Uniendo el video",
+    "portada": "Sacando la portada",
     "listo": "Listo",
     "redactando": "La IA está escribiendo",
     "esperando_ia": "Esperando conexión",

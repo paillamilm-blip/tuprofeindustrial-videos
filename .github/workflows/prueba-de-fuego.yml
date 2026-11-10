@@ -1,0 +1,131 @@
+name: Prueba de fuego
+
+# Temporal: los 3 pasos (pruebas → redactar → render con portada) y un recorrido del panel.
+
+on:
+  pull_request:
+
+jobs:
+  fuego:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: TeX, FFmpeg y el motor en .venv (como en el Mac)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended dvisvgm \
+            ffmpeg pkg-config libcairo2-dev libpango1.0-dev
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -e . playwright
+          .venv/bin/python -m playwright install --with-deps chromium
+
+      - name: "Paso 1 · pruebas unitarias"
+        run: .venv/bin/python -m unittest discover -s pruebas -t . 2>&1 | tail -5
+
+      - name: "Paso 2 · redactar (Gemini de mentira: sin clave en CI)"
+        run: |
+          .venv/bin/python scripts/gemini_falso.py 8766 > /tmp/gemini.log 2>&1 &
+          sleep 2
+          ls guiones > /tmp/antes.txt
+          GOOGLE_GEMINI_BASE_URL=http://127.0.0.1:8766 GEMINI_API_KEY=falsa \
+            ./tpi redactar "Cómo calcular el caudal en una tubería industrial usando Bernoulli"
+          nuevo=$(comm -13 /tmp/antes.txt <(ls guiones) | grep yaml | head -1)
+          test -n "$nuevo" || { echo "❌ redactar no dejó un guion nuevo"; exit 1; }
+          echo "GUION=guiones/$nuevo" >> "$GITHUB_ENV"
+          echo "===== guiones/$nuevo ====="; cat "guiones/$nuevo"
+          grep -q "^categoria: ingenieria" "guiones/$nuevo" && echo "✅ categoria: ingenieria"
+          grep -q "tipo: tuberia_3d" "guiones/$nuevo" && echo "✅ usa tuberia_3d"
+          grep -q '<break time=' "guiones/$nuevo" && echo "✅ trae pausas <break>"
+          tail -n 12 "guiones/$nuevo" | grep -q "^metadatos:" || grep -q "^metadatos:" "guiones/$nuevo"
+          awk '/^metadatos:/{m=1} m' "guiones/$nuevo" | head -12
+          grep -q "^metadatos:" "guiones/$nuevo" && echo "✅ metadatos al final"
+
+      - name: "Paso 3 · render borrador (voz edge-tts real; si Microsoft no responde, silencio)"
+        run: |
+          if ./tpi crear "$GUION" --borrador; then echo "VOZ=edge" >> "$GITHUB_ENV"; else
+            echo "⚠️ edge-tts falló en CI: repito con --voz silencio"; ./tpi crear "$GUION" --borrador --voz silencio
+            echo "VOZ=silencio" >> "$GITHUB_ENV"; fi
+          nombre=$(.venv/bin/python -c "import sys; from pathlib import Path; from tpi_videos.render import slug; print(slug(Path(sys.argv[1]).stem))" "$GUION")
+          carpeta=salida/$nombre
+          echo "CARPETA=$carpeta" >> "$GITHUB_ENV"
+          ls -la "$carpeta"
+          grep '"tema_clave"' "$carpeta/linea_de_tiempo.json"
+          grep -q '"tema_clave": "plano_noche"' "$carpeta/linea_de_tiempo.json" && echo "✅ tema plano_noche"
+          test -f "$carpeta/${nombre}_borrador.mp4" && echo "✅ video"
+          test -f "$carpeta/portada.jpg" || { echo "❌ falta portada.jpg"; exit 1; }
+          .venv/bin/python - "$carpeta" <<'EOF'
+          import json, sys
+          from pathlib import Path
+          from PIL import Image
+          from tpi_videos.render import momento_de_portada
+          from tpi_videos.postproduccion import duracion
+          c = Path(sys.argv[1])
+          linea = json.loads((c / "linea_de_tiempo.json").read_text())
+          video = next(c.glob("*_borrador.mp4"))
+          with Image.open(c / "portada.jpg") as im:
+              print("✅ portada.jpg:", im.format, im.size, "· segundo", momento_de_portada(linea, duracion(video)))
+          print("voz en la línea de tiempo:", {b.get("servicio") or linea.get("servicio") for b in linea["bloques"]} - {None},
+                linea.get("proveedor"), linea.get("servicio"))
+          # Pausas: los audios con «pausas: true» y el silencio de verdad dentro de ellos
+          from pydub import AudioSegment, silence
+          vistos = 0
+          for cache in c.rglob("cache.json"):
+              for e in json.loads(cache.read_text()):
+                  datos = e.get("input_data", {})
+                  if datos.get("pausas"):
+                      vistos += 1
+                      audio = AudioSegment.from_file(cache.parent / e["original_audio"])
+                      huecos = [(b - a) / 1000 for a, b in silence.detect_silence(audio, min_silence_len=900, silence_thresh=-45)]
+                      print(f"pausa · servicio={datos['service']} · huecos ≥0.9 s: {huecos} · «{e['input_text'][:60]}»")
+          print("✅ voces con pausa resueltas por ServicioConPausas:" if vistos else "❌ ninguna voz con pausa", vistos)
+          EOF
+
+      - name: Panel NiceGUI (no se rompió)
+        run: |
+          mkdir -p capturas
+          cp "$CARPETA/portada.jpg" capturas/portada.jpg
+          ./tpi panel --no-abrir --puerto 8765 > /tmp/panel.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8765/ > /dev/null && break; sleep 1; done
+          .venv/bin/python - <<'EOF'
+          import time
+          from playwright.sync_api import sync_playwright
+          URL = "http://127.0.0.1:8765"
+          with sync_playwright() as p:
+              b = p.chromium.launch()
+              pag = b.new_page(viewport={"width": 1440, "height": 1000})
+              errores = []
+              pag.on("pageerror", lambda e: errores.append(str(e)))
+              pag.goto(URL + "/")
+              pag.wait_for_selector("text=Lanzar Renderización en Lote")
+              pag.get_by_text("Guiones por aprobar").click()
+              ficha = pag.locator(".tpi-ficha", has_text="tubería").first
+              ficha.wait_for(timeout=15000)
+              print("ficha:", ficha.inner_text().replace("\n", " | "))
+              ficha.locator("video").wait_for(timeout=15000)  # el borrador ya hecho se muestra solo
+              print("✅ la tarjeta muestra el borrador hecho por la CLI")
+              time.sleep(1)
+              pag.screenshot(path="capturas/qc.png")
+              for ruta in ("/crear", "/avanzado", "/motor", "/estilos", "/videos"):
+                  r = pag.goto(URL + ruta)
+                  time.sleep(2)
+                  print("página", ruta, "→", r.status if r else None)
+              pag.screenshot(path="capturas/videos.png")
+              print("errores de la página:", errores or "ninguno")
+              b.close()
+          EOF
+          grep -i "traceback\|error" /tmp/panel.log | head -20 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prueba-de-fuego
+          path: |
+            capturas
+            guiones/*.yaml
+          retention-days: 7
