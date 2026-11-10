@@ -898,6 +898,44 @@ def _idea_de_guion(guion) -> Any:
     )
 
 
+def _registrar_guiones(guiones: list[tuple[Path, Any]], ajustes: dict, tema: str) -> str:
+    """Crea el lote de guiones ya escritos, con su hito de guion: así nunca se le pide nada a la IA."""
+    from . import cola
+
+    ideas = [_idea_de_guion(guion) for _, guion in guiones]
+    lote_id = cola.nuevo_lote(tema, ajustes, ideas=ideas)
+    for (ruta, _), video in zip(guiones, cola.videos_del_lote(lote_id), strict=True):
+        cola.hito(
+            video["id"],
+            "guion",
+            {
+                "ruta": str(ruta.resolve()),
+                "pendientes": [],
+                "supuestos": [],
+                "rondas": 0,
+                "modelo": "",
+                "revisado_por_ia": False,
+            },
+        )
+    return lote_id
+
+
+def encolar_guion(ruta: Path, tema: str | None = None) -> str:
+    """Deja un guion aprobado en la cola, con los ajustes de siempre, sin producirlo todavía.
+
+    Lo usa el tablero del panel («Aprobar y enviar a cola»); se lanza después con
+    ``tpi lote --reanudar --cola-id <id>``. Devuelve el id del lote.
+    """
+    from .guion import cargar_guion
+    from .ia import MODELO_POR_DEFECTO
+
+    guion = cargar_guion(ruta)
+    args = construir_parser().parse_args(["lote", str(ruta)])
+    # Sin --voz: la voz por defecto de la marca. No se carga el módulo de voces (ni Manim) en el panel.
+    ajustes = _ajustes_lote(args, MODELO_POR_DEFECTO, None, None)
+    return _registrar_guiones([(ruta, guion)], ajustes, tema or guion.titulo)
+
+
 def _cmd_lote_de_guiones(args: argparse.Namespace, rutas: list[Path], json_activo: bool, avisar) -> int:
     """Produce guiones ya escritos (de una carpeta o un archivo) sin pedirle nada a la IA."""
     from . import cola
@@ -920,6 +958,16 @@ def _cmd_lote_de_guiones(args: argparse.Namespace, rutas: list[Path], json_activ
     proveedor, voz = _dividir_voz(args.voz)
     ajustes = _ajustes_lote(args, args.modelo or MODELO_POR_DEFECTO, proveedor, voz)
     tema = f"Guiones de {guiones[0][0].parent.name}"
+    if args.solo_encolar:
+        lote_id = _registrar_guiones(guiones, ajustes, tema)
+        if json_activo:
+            _emitir(etapa="resultado", avance=1.0, lote=[], pendiente=True, cola_id=lote_id, tema=tema)
+        else:
+            consola.print(
+                f"📥 {len(guiones)} guion{'es' if len(guiones) > 1 else ''} en la cola (lote {lote_id}). "
+                f"Para producirlos: ./tpi lote --reanudar --cola-id {lote_id}"
+            )
+        return 0
     if not cola.tomar_candado():
         raise ErrorMotor(
             "Ya hay un lote en curso.",
@@ -929,20 +977,7 @@ def _cmd_lote_de_guiones(args: argparse.Namespace, rutas: list[Path], json_activ
         if cola.cargar().get("roto"):
             avisar("La cola anterior estaba dañada y se apartó: esos videos no se pudieron reanudar.")
         ideas = [_idea_de_guion(guion) for _, guion in guiones]
-        lote_id = cola.nuevo_lote(tema, ajustes, ideas=ideas)
-        for (ruta, _), video in zip(guiones, cola.videos_del_lote(lote_id), strict=True):
-            cola.hito(
-                video["id"],
-                "guion",
-                {
-                    "ruta": str(ruta.resolve()),
-                    "pendientes": [],
-                    "supuestos": [],
-                    "rondas": 0,
-                    "modelo": "",
-                    "revisado_por_ia": False,
-                },
-            )
+        lote_id = _registrar_guiones(guiones, ajustes, tema)
         if not json_activo:
             como = "en paralelo" if args.workers > 1 else "de a uno"
             consola.print(
@@ -991,6 +1026,11 @@ def cmd_lote(args: argparse.Namespace) -> int:
 
     if (args.solo_pendientes or args.cola_id) and not args.reanudar:
         raise ErrorMotor("--solo-pendientes y --cola-id van con --reanudar.")
+    if args.solo_encolar and (args.reanudar or not (tema and _rutas_de_guiones(tema))):
+        raise ErrorMotor(
+            "--solo-encolar es para guiones ya escritos.",
+            ayuda="Ej. ./tpi lote guiones/mi_guion.yaml --solo-encolar",
+        )
     if args.reanudar:
         if tema:
             raise ErrorMotor(
@@ -1491,6 +1531,11 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--sin-revision", action="store_true", help="no pedir la segunda revisión a la IA")
     s.add_argument("--sin-kit", action="store_true", help="no armar el kit de publicación")
     s.add_argument("--abrir", action="store_true", help="abre los videos al terminar")
+    s.add_argument(
+        "--solo-encolar",
+        action="store_true",
+        help="con guiones .yaml: los deja en la cola sin producirlos (se lanzan después con --reanudar)",
+    )
     s.add_argument("--ideas-json", help=argparse.SUPPRESS)  # el panel ya tiene las 3 ideas en pantalla
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_lote)
