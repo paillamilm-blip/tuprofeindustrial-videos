@@ -45,6 +45,10 @@ SEGUNDOS_VISUAL = {
     "mohr": 3.0,
 }
 
+# Lo que se mueve sobre un gráfico de función, y lo que se puede leer en vivo mientras se mueve.
+MOVIMIENTOS_FUNCION = ("tangente", "area")
+MARCAS_FUNCION = ("pendiente", "area")
+
 # Lo que se puede anotar en un polígono regular.
 MARCAS_POLIGONO = ("apotema", "radio", "angulo_central", "angulo_interior")
 
@@ -141,6 +145,20 @@ CAMPOS: dict[str, CampoVisual] = {
         CampoVisual("eje_y", "Eje vertical", "texto", "altura (m)"),
         CampoVisual("rango", "Rango del eje horizontal", "numeros", "0 a 2,5"),
         CampoVisual("marcar", "Puntos con su valor escrito", "numeros", "0; 2,45"),
+        CampoVisual(
+            "movimiento",
+            "Lo que se mueve sobre la curva",
+            "opcion",
+            "la tangente recorre la curva; el área se llena bajo ella",
+            (
+                ("", "Nada (gráfico quieto)"),
+                ("tangente", "Tangente que recorre"),
+                ("area", "Área que se llena"),
+            ),
+        ),
+        CampoVisual("desde", "Desde x =", "numero", "0"),
+        CampoVisual("hasta", "Hasta x =", "numero", "3"),
+        CampoVisual("despiece", "Despiece: separar las piezas del cuerpo", "booleano"),
         CampoVisual("cuerpo", "El cuerpo", "opcion", "", (("bloque", "Bloque (una caja)"), ("bola", "Bola"))),
         CampoVisual("componentes", "Las tres componentes (x, y, z)", "numeros", "3; 4; 12"),
         CampoVisual("unidad", "La unidad de las tres", "texto", "cm"),
@@ -242,7 +260,19 @@ VISUALES: dict[str, TipoVisual] = {
             "Gráfico de la función",
             "matematica",
             "📈",
-            ("funcion", "variable", "eje_x", "eje_y", "rango", "marcar"),
+            (
+                "funcion",
+                "variable",
+                "eje_x",
+                "eje_y",
+                "rango",
+                "marcar",
+                "movimiento",
+                "desde",
+                "hasta",
+                "anotar",
+            ),
+            MARCAS_FUNCION,
             ejemplo={"funcion": "-x^2 + 4x", "eje_x": "x", "eje_y": "y"},
         ),
         TipoVisual(
@@ -277,7 +307,7 @@ VISUALES: dict[str, TipoVisual] = {
             "Sólido en 3D",
             "ingenieria",
             "🔷",
-            ("figura", "lado", "radio", "altura", "vista", "corte", "anotar"),
+            ("figura", "lado", "radio", "altura", "vista", "corte", "despiece", "anotar"),
             MARCAS_SOLIDO,
             ejemplo={
                 "figura": "cilindro",
@@ -581,6 +611,43 @@ class Funcion:
         (x0, x1) = self.rango_x
         paso = (x1 - x0) / (_MUESTREO - 1)
         return [x0 + i * paso for i in range(_MUESTREO)]
+
+    def derivada(self, x: float) -> float | None:
+        """La pendiente de la curva en ``x`` (diferencia central), o None si ahí no existe."""
+        h = 1e-5 * max(1.0, abs(x))
+        antes, despues = self.y(x - h), self.y(x + h)
+        if antes is None or despues is None:
+            return None
+        valor = (despues - antes) / (2 * h)
+        return valor if math.isfinite(valor) else None
+
+    def area(self, a: float, b: float, tramos: int = 400) -> float:
+        """El área con signo entre la curva y el eje, de ``a`` a ``b`` (regla del trapecio).
+
+        Es el mismo número que se ve llenarse en el dibujo: no se integra otra cosa que la curva trazada.
+        """
+        if b == a:
+            return 0.0
+        paso = (b - a) / tramos
+        total = 0.0
+        previo = self.y(a)
+        if previo is None:
+            raise ValueError(f"la función no tiene valor en x = {a:g}")
+        for i in range(1, tramos + 1):
+            actual = self.y(a + i * paso)
+            if actual is None:
+                raise ValueError(f"la función no tiene valor en x = {a + i * paso:g}")
+            total += (previo + actual) * paso / 2
+            previo = actual
+        return total
+
+    def tramo_sin_huecos(self, a: float, b: float, muestras: int = 200) -> float | None:
+        """El primer x de [a, b] donde la función no existe (asíntota, raíz negativa…), o None."""
+        for i in range(muestras + 1):
+            x = a + (b - a) * i / muestras
+            if self.y(x) is None:
+                return x
+        return None
 
 
 @dataclass

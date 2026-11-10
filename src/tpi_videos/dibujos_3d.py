@@ -1,4 +1,8 @@
-"""Un sólido con relieve, renderizado fuera de línea a un PNG que la escena 2D usa como imagen.
+"""Los cuerpos en 3D: el sólido vivo (malla proyectada con órbita, luz y despiece) y las láminas PNG.
+
+El sólido (``dibujar_solido_3d``) se proyecta cuadro a cuadro: ver la sección «El sólido vivo». El vector
+3D y la lámina quieta del sólido siguen siendo un PNG renderizado fuera de línea que la escena usa como
+imagen; lo que sigue explica por qué esa receta es como es.
 
 Manim 0.22 no tiene z-buffer: pinta cara por cara en el orden que le entregan, y para ordenar usa el
 centroide proyectado de cada cara. Cada rareza de abajo (pintar por profundidad, reset_rotation_matrix(),
@@ -26,10 +30,13 @@ from manim import (
     Group,
     ImageMobject,
     Line,
+    ManimColor,
+    Mobject,
     Prism,
     Sphere,
     ThreeDCamera,
     VGroup,
+    VMobject,
 )
 from PIL import Image
 
@@ -283,8 +290,361 @@ def _encuadrar(camara, grupo, marco_ancho, marco_alto) -> tuple[np.ndarray, floa
     return centro, factor
 
 
+# ------------------------------------------------------------------------------------------
+# El sólido vivo: malla proyectada cuadro a cuadro, con órbita, luz y despiece
+# ------------------------------------------------------------------------------------------
+#
+# La escena es 2D (MovingCameraScene: la cámara de los pasos, los subtítulos y la franja del dibujo
+# viven ahí), así que el 3D no pasa por ThreeDScene: el cuerpo es una malla real que se proyecta con
+# una cámara propia en cada cuadro. Cada cara se sombrea con su normal (Lambert + brillo especular),
+# las caras de espalda se descartan y el resto se pinta de atrás hacia adelante. En cuerpos convexos
+# eso basta para que la oclusión sea exacta, sin el z-buffer que Cairo no tiene.
+
+GIRO_ORBITA = 75.0  # grados que la cámara recorre antes de asentarse en la vista pedida
+CABECEO_ORBITA = 25.0  # cuánto cambia la altura de la cámara durante la órbita
+PARTE_ORBITA = 0.6  # con despiece, la órbita usa el 60 % del recorrido y la separación el resto
+
+
+@dataclass
+class _Cara:
+    puntos: np.ndarray  # (k, 3)
+    normal: np.ndarray  # hacia afuera del cuerpo
+    clase: str  # "cuerpo" | "tapa" | "corte"
+
+
+@dataclass
+class _Pieza:
+    caras: list[_Cara]
+    salida: np.ndarray  # hacia dónde se va en el despiece (ya con su largo)
+    cerrada: bool  # True: las caras de espalda nunca se ven
+    lisa: bool  # True: se le dibuja la silueta (cilindro, cono, esfera); el cubo ya tiene aristas
+
+
+def _unitario(v: np.ndarray) -> np.ndarray:
+    n = float(np.linalg.norm(v))
+    return v / n if n > 1e-12 else v
+
+
+def _caja(
+    x0: float, x1: float, y0: float, y1: float, z0: float, z1: float, corte: str | None = None
+) -> list[_Cara]:
+    """Las seis caras de una caja; ``corte`` dice qué cara es la del corte ("arriba" o "abajo")."""
+    v = {
+        (i, j, k): np.array([(x0, x1)[i], (y0, y1)[j], (z0, z1)[k]])
+        for i in (0, 1)
+        for j in (0, 1)
+        for k in (0, 1)
+    }
+    caras = [
+        ([v[0, 0, 0], v[1, 0, 0], v[1, 0, 1], v[0, 0, 1]], [0, -1, 0], "frente"),
+        ([v[1, 1, 0], v[0, 1, 0], v[0, 1, 1], v[1, 1, 1]], [0, 1, 0], "fondo"),
+        ([v[0, 1, 0], v[0, 0, 0], v[0, 0, 1], v[0, 1, 1]], [-1, 0, 0], "izquierda"),
+        ([v[1, 0, 0], v[1, 1, 0], v[1, 1, 1], v[1, 0, 1]], [1, 0, 0], "derecha"),
+        ([v[0, 0, 1], v[1, 0, 1], v[1, 1, 1], v[0, 1, 1]], [0, 0, 1], "arriba"),
+        ([v[0, 1, 0], v[1, 1, 0], v[1, 0, 0], v[0, 0, 0]], [0, 0, -1], "abajo"),
+    ]
+    return [
+        _Cara(np.array(pts, dtype=float), np.array(n, dtype=float), "corte" if nombre == corte else "cuerpo")
+        for pts, n, nombre in caras
+    ]
+
+
+def _anillo(radio: float, z: float, lados: int) -> np.ndarray:
+    angulos = np.linspace(0.0, 2 * np.pi, lados, endpoint=False)
+    return np.stack([radio * np.cos(angulos), radio * np.sin(angulos), np.full(lados, z)], axis=1)
+
+
+def _piezas_vivas(figura: str, corte: str, despiece: bool, r: float, h: float, a: float) -> list[_Pieza]:
+    """La malla del cuerpo, centrada en el origen y partida en las piezas que se separan."""
+    lados = 48
+    if figura == "cubo":
+        s = a / 2
+        if corte == "mitad":
+            # Las dos mitades: la de arriba se levanta y deja ver la cara nueva que destapó el corte.
+            return [
+                _Pieza(_caja(-s, s, -s, s, -s, 0.0, corte="arriba"), np.zeros(3), True, False),
+                _Pieza(
+                    _caja(-s, s, -s, s, 0.0, s, corte="abajo"), np.array([0.0, 0.0, 0.85 * a]), True, False
+                ),
+            ]
+        caras = _caja(-s, s, -s, s, -s, s)
+        if not despiece:
+            return [_Pieza(caras, np.zeros(3), True, False)]
+        # Las seis caras se apartan cada una por su normal: el área son seis cuadrados, y se ven.
+        return [_Pieza([cara], cara.normal * 0.45 * a, False, False) for cara in caras]
+    if figura == "esfera":
+        meridianos, paralelos = 28, 16
+        caras = []
+        for i in range(paralelos):
+            t0, t1 = np.pi * i / paralelos, np.pi * (i + 1) / paralelos
+            for j in range(meridianos):
+                f0, f1 = 2 * np.pi * j / meridianos, 2 * np.pi * (j + 1) / meridianos
+
+                def punto(t: float, f: float) -> np.ndarray:
+                    return r * np.array([np.sin(t) * np.cos(f), np.sin(t) * np.sin(f), np.cos(t)])
+
+                pts = np.array([punto(t0, f0), punto(t1, f0), punto(t1, f1), punto(t0, f1)])
+                centro = pts.mean(axis=0)
+                caras.append(_Cara(pts, _unitario(centro), "cuerpo"))
+        return [_Pieza(caras, np.zeros(3), True, True)]
+    abajo = _anillo(r, -h / 2, lados)
+    base = _Cara(abajo[::-1].copy(), np.array([0.0, 0.0, -1.0]), "tapa")
+    manto: list[_Cara] = []
+    if figura == "cilindro":
+        arriba = _anillo(r, h / 2, lados)
+        for i in range(lados):
+            j = (i + 1) % lados
+            pts = np.array([abajo[i], abajo[j], arriba[j], arriba[i]])
+            manto.append(_Cara(pts, _unitario(np.array([*pts.mean(axis=0)[:2], 0.0])), "cuerpo"))
+        tapa = _Cara(arriba.copy(), np.array([0.0, 0.0, 1.0]), "tapa")
+        if not despiece:
+            return [_Pieza([base, *manto, tapa], np.zeros(3), True, True)]
+        # El área del cilindro son dos círculos y un manto: las tapas se van por su eje y se ven solas.
+        return [
+            _Pieza([base], np.array([0.0, 0.0, -0.45 * h]), False, False),
+            _Pieza(manto, np.zeros(3), False, True),
+            _Pieza([tapa], np.array([0.0, 0.0, 0.45 * h]), False, False),
+        ]
+    punta = np.array([0.0, 0.0, h / 2])
+    pendiente = r / h  # la normal del manto sube tanto como se abre el cono
+    for i in range(lados):
+        j = (i + 1) % lados
+        pts = np.array([abajo[i], abajo[j], punta])
+        medio = (abajo[i] + abajo[j]) / 2
+        manto.append(_Cara(pts, _unitario(np.array([medio[0], medio[1], pendiente * r])), "cuerpo"))
+    if not despiece:
+        return [_Pieza([base, *manto], np.zeros(3), True, True)]
+    return [
+        _Pieza([base], np.array([0.0, 0.0, -0.5 * h]), False, False),
+        _Pieza(manto, np.zeros(3), False, True),
+    ]
+
+
+def _ejes_de_camara(phi: float, theta: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """(derecha, arriba, hacia la cámara) para phi desde el cenit y theta como en VISTAS."""
+    p, t = np.radians(phi), np.radians(theta)
+    hacia = np.array([np.sin(p) * np.cos(t), np.sin(p) * np.sin(t), np.cos(p)])
+    derecha = np.array([-np.sin(t), np.cos(t), 0.0])
+    arriba = np.cross(hacia, derecha)
+    return derecha, arriba, hacia
+
+
+def _tono(base: Any, hacia: str, cuanto: float) -> ManimColor:
+    return ManimColor(base).interpolate(ManimColor(hacia), float(min(max(cuanto, 0.0), 1.0)))
+
+
 def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: str = "#FFFFFF") -> d.Dibujo:
-    """El cuerpo en relieve como imagen, con su medida y su V y A escritos al lado."""
+    """El cuerpo en 3D de verdad: la cámara orbita hasta la vista pedida y, si toca, se despieza.
+
+    La pose final (``vivo(1)``) es la vista que pidió el guion: la miniatura y el último cuadro del
+    paso muestran lo mismo que mostraba la lámina. Los rótulos de medida viajan pegados a su arista.
+    """
+    cuerpo = visual.solido()
+    r, h, a = _medidas(visual)
+    corte = visual.corte if cuerpo.figura == "cubo" else "sin_corte"
+    despiece = bool(getattr(visual, "despiece", False)) and cuerpo.figura != "esfera"
+    piezas = _piezas_vivas(cuerpo.figura, corte, despiece, r, h, a)
+    separa = corte == "mitad" or despiece
+    phi_f, theta_f = VISTAS[visual.vista]
+    cabeceo = CABECEO_ORBITA if phi_f <= 60 else -CABECEO_ORBITA
+
+    def momento(t: float) -> tuple[float, float, float]:
+        """(phi, theta, separación 0..1) del instante t del recorrido."""
+        orbita = d._suave(t / PARTE_ORBITA if separa else t)
+        separacion = d._suave((t - PARTE_ORBITA) / (1 - PARTE_ORBITA)) if separa else 0.0
+        return phi_f + cabeceo * (1 - orbita), theta_f + GIRO_ORBITA * (1 - orbita), separacion
+
+    # La luz es del estudio, no de la cámara: al orbitar el brillo resbala por el cuerpo y se lee el
+    # volumen. Se fija con la vista final para que el último cuadro quede bien iluminado.
+    der_f, arr_f, hacia_f = _ejes_de_camara(phi_f, theta_f)
+    luz = _unitario(-0.45 * der_f + 0.7 * arr_f + 0.55 * hacia_f)
+
+    # Una sola escala para todo el recorrido: el cuerpo no puede crecer ni encogerse al girar.
+    vistos = []
+    for t in np.linspace(0.0, 1.0, 17):
+        phi, theta, sep = momento(float(t))
+        der, arr, _ = _ejes_de_camara(phi, theta)
+        for pieza in piezas:
+            for cara in pieza.caras:
+                pts = cara.puntos + pieza.salida * sep
+                vistos.append(np.stack([pts @ der, pts @ arr], axis=1))
+    plano = np.vstack(vistos)
+    bajo, alto_ = plano.min(axis=0), plano.max(axis=0)
+    centro_2d = (bajo + alto_) / 2
+    k = min(0.80 * alto / max(alto_[1] - bajo[1], 1e-6), 0.50 * ancho / max(alto_[0] - bajo[0], 1e-6))
+
+    oscuro = _tono(col.tenue, "#000000", 0.5)
+    claro = _tono(col.tenue, "#FFFFFF", 0.6)
+    poligonos = [[VMobject() for _ in pieza.caras] for pieza in piezas]
+    siluetas = [VMobject().set_stroke(col.formulas, 3.5) if pieza.lisa else None for pieza in piezas]
+    cuerpo_mob = VGroup(*[m for fila in poligonos for m in fila], *[s for s in siluetas if s is not None])
+    aristas = [_aristas(pieza) if pieza.lisa else [] for pieza in piezas]
+
+    def color_de(cara: _Cara, normal: np.ndarray, hacia: np.ndarray, de_espalda: bool) -> ManimColor:
+        if cara.clase == "corte":
+            return ManimColor(col.acento)  # la cara nueva se ve plana y en acento: es lo que se mira
+        if de_espalda:
+            return _tono(oscuro, "#000000", 0.25)  # el interior de una pieza abierta
+        lambert = max(float(normal @ luz), 0.0)
+        brillo = max(float(normal @ _unitario(luz + hacia)), 0.0) ** 28
+        base = oscuro.interpolate(claro, 0.15 + 0.85 * lambert)
+        return _tono(base, "#FFFFFF", 0.7 * brillo)
+
+    def pose(t: float, llevar: Any) -> None:
+        phi, theta, sep = momento(t)
+        der, arr, hacia = _ejes_de_camara(phi, theta)
+
+        def pantalla(p3: np.ndarray) -> np.ndarray:
+            x, y = (p3 @ der - centro_2d[0]) * k, (p3 @ arr - centro_2d[1]) * k
+            return llevar(np.array([x, y, 0.0]))
+
+        orden = sorted(range(len(piezas)), key=lambda i: float((piezas[i].salida * sep) @ hacia))
+        nuevos: list[Mobject] = []
+        for i in orden:
+            pieza, salida = piezas[i], piezas[i].salida * sep
+            filas = []
+            visibles = []
+            for cara, mob in zip(pieza.caras, poligonos[i], strict=True):
+                de_frente = float(cara.normal @ hacia) > 1e-4
+                visibles.append(de_frente)
+                pts = cara.puntos + salida
+                if not de_frente and pieza.cerrada:
+                    mob.set_fill(opacity=0.0).set_stroke(width=0.0, opacity=0.0)
+                    filas.append((-1e9, mob))
+                    continue
+                mob.set_points_as_corners([pantalla(q) for q in [*pts, pts[0]]])
+                tinte = color_de(cara, cara.normal, hacia, not de_frente)
+                if pieza.lisa and cara.clase == "cuerpo":
+                    mob.set_fill(tinte, 1.0).set_stroke(tinte, 1.2, 1.0)  # borde del mismo tono: sin rendijas
+                else:
+                    mob.set_fill(tinte, 1.0).set_stroke(col.formulas, 3.0, 1.0)
+                filas.append((float(pts.mean(axis=0) @ hacia), mob))
+            nuevos += [mob for _, mob in sorted(filas, key=lambda par: par[0])]
+            silueta = siluetas[i]
+            if silueta is not None:
+                silueta.clear_points()
+                for cara_i, q0, q1, vecina in aristas[i]:
+                    # Silueta: la arista separa una cara que se ve de una que da la espalda (o es el
+                    # borde abierto de una pieza suelta). Es el contorno que dibujaría un lápiz.
+                    if visibles[cara_i] and (vecina is None or not visibles[vecina]):
+                        silueta.start_new_path(pantalla(q0 + salida))
+                        silueta.add_line_to(pantalla(q1 + salida))
+                nuevos.append(silueta)
+        cuerpo_mob.submobjects = nuevos
+
+    pose(1.0, lambda q: q)
+
+    # —— Rótulos: las medidas pegadas al cuerpo; V y A a un costado, quietos ——————————————
+    unidad = cuerpo.unidad or ""
+    parches, rótulos = VGroup(), VGroup()
+    viajeros: list[tuple[Mobject, Mobject, np.ndarray, int | None, np.ndarray]] = []
+
+    def etiqueta(texto: str, donde: np.ndarray, tam: int = 26) -> tuple[Mobject, Mobject]:
+        rotulo = c.texto(texto, tam, c.SEMIBOLD, col.texto).move_to(donde)
+        fondo, rotulo = d._parche(rotulo, papel, 0.16)
+        parches.add(fondo)
+        rótulos.add(rotulo)
+        return fondo, rotulo
+
+    def mide(clave: str, valor: float, punto: list[float], pieza: int | None, dx: float, dy: float) -> None:
+        fondo, rotulo = etiqueta(f"{clave} = {d._numero_latex(valor)} {unidad}".strip(), np.zeros(3))
+        viajeros.append((fondo, rotulo, np.array(punto, dtype=float), pieza, np.array([dx, dy, 0.0])))
+
+    if cuerpo.figura == "cubo":
+        mide("a", cuerpo.lado or a, [0, -a / 2, -a / 2], 0, 0.0, -0.42)
+    elif cuerpo.figura == "cilindro":
+        mide("r", cuerpo.radio or 0.0, [r / 2, 0, h / 2], 2 if despiece else 0, 0.0, 0.34)
+        mide("h", cuerpo.altura or 0.0, [-r, 0, 0], 1 if despiece else 0, -0.85, 0.0)
+    elif cuerpo.figura == "cono":
+        mide("r", cuerpo.radio or 0.0, [r / 2, 0, -h / 2], 0, 0.0, -0.34)
+        mide("h", cuerpo.altura or 0.0, [0, 0, 0], 1 if despiece else 0, -0.95, 0.0)
+    else:
+        mide("r", cuerpo.radio or 0.0, [r / 2, 0, 0], 0, 0.0, 0.30)
+
+    def mover_rotulos(t: float, llevar: Any) -> None:
+        phi, theta, sep = momento(t)
+        der, arr, _ = _ejes_de_camara(phi, theta)
+        for fondo, rotulo, punto, pieza, corrimiento in viajeros:
+            p3 = punto + (piezas[pieza].salida * sep if pieza is not None else 0.0)
+            sitio = (
+                np.array([(p3 @ der - centro_2d[0]) * k, (p3 @ arr - centro_2d[1]) * k, 0.0]) + corrimiento
+            )
+            fondo.move_to(llevar(sitio))
+            rotulo.move_to(llevar(sitio))
+
+    mover_rotulos(1.0, lambda q: q)
+    pie = 0
+    for marca in visual.anotar[:2]:
+        valor = cuerpo.volumen if marca == "volumen" else cuerpo.area
+        sufijo = "³" if marca == "volumen" else "²"
+        etiqueta(
+            f"{'V' if marca == 'volumen' else 'A'} = {d._numero_latex(valor)} {unidad}{sufijo}".strip(),
+            np.array([ancho * 0.30, 0.42 - pie * 0.62, 0.0]),
+            28,
+        )
+        pie += 1
+
+    todo = VGroup(cuerpo_mob, parches, rótulos)
+    corrido = -todo.get_center()
+    todo.shift(corrido)
+    fijo, desplazamiento = d._encaje(todo, ancho * 0.94, alto * 0.94)
+
+    def llevar(q: np.ndarray) -> np.ndarray:
+        return fijo(q + corrido)
+
+    def vivo(t: float) -> None:
+        pose(t, llevar)
+        mover_rotulos(t, llevar)
+
+    vivo(1.0)
+    return d.Dibujo(
+        mobs=todo,
+        trazo=[],
+        aparece=[cuerpo_mob, *rótulos],
+        vivo=vivo,
+        duracion=d.SEGUNDOS_RECORRIDO,
+        fisico=False,
+        desplazamiento=desplazamiento,
+    )
+
+
+def _aristas(pieza: _Pieza) -> list[tuple[int, np.ndarray, np.ndarray, int | None]]:
+    """Cada arista de las caras del manto (o de la esfera) con la cara vecina que la comparte.
+
+    Las vecinas se encuentran por coordenadas redondeadas: el anillo del manto y el de la tapa salen
+    del mismo cálculo, así que la arista de abajo del manto reconoce a la base como vecina.
+    """
+
+    def clave(q: np.ndarray) -> tuple[float, ...]:
+        return tuple(np.round(q, 5).tolist())
+
+    duenos: dict[tuple, list[int]] = {}
+    for i, cara in enumerate(pieza.caras):
+        pts = cara.puntos
+        for q0, q1 in zip(pts, np.roll(pts, -1, axis=0), strict=True):
+            if float(np.linalg.norm(q1 - q0)) < 1e-9:
+                continue  # el polo de la esfera: una arista sin largo
+            duenos.setdefault(tuple(sorted((clave(q0), clave(q1)))), []).append(i)
+    salida = []
+    for i, cara in enumerate(pieza.caras):
+        if cara.clase != "cuerpo":
+            continue
+        pts = cara.puntos
+        for q0, q1 in zip(pts, np.roll(pts, -1, axis=0), strict=True):
+            if float(np.linalg.norm(q1 - q0)) < 1e-9:
+                continue
+            otras = [j for j in duenos[tuple(sorted((clave(q0), clave(q1))))] if j != i]
+            salida.append((i, q0, q1, otras[0] if otras else None))
+    return salida
+
+
+def dibujar_solido_3d_lamina(
+    visual: Any, col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> d.Dibujo:
+    """El cuerpo en relieve como imagen (PNG renderizado fuera de línea), con su medida y su V y A.
+
+    Es la lámina quieta de antes: queda para quien la pida explícitamente (y la usa el vector 3D).
+    """
     ruta, cuadro = _render(visual, col, ancho, alto, papel)
     imagen = ImageMobject(str(ruta))
     imagen.scale(OBJETIVO * min(alto / imagen.height, ancho / imagen.width))

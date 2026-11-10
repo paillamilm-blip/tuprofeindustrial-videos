@@ -588,6 +588,52 @@ def coincidencias(origen: MathTex, destino: MathTex) -> dict[str, str] | None:
     }
 
 
+def terminos_nuevos(origen: Mobject | None, destino: MathTex) -> list[Mobject]:
+    """Las partes de ``destino`` que no estaban en ``origen``: lo que la transformación trae nuevo.
+
+    Se compara el texto sin espacios de LaTeX y se ignoran los signos sueltos («=», «+»…): que
+    aparezca otro «=» no es un cambio que valga la pena iluminar.
+    """
+    if origen is None:
+        return []
+
+    def normal(t: str) -> str:
+        return _ESPACIOS_TEX.sub("", t)
+
+    antes = {normal(p.tex_string) for p in origen.submobjects if hasattr(p, "tex_string")}
+    return [
+        p
+        for p in destino.submobjects
+        if hasattr(p, "tex_string")
+        and normal(p.tex_string)
+        and normal(p.tex_string) not in antes
+        and normal(p.tex_string) not in _TRIVIALES
+    ]
+
+
+def halo_de(parte: Mobject, color: str) -> VGroup:
+    """Un resplandor suave detrás de un término: tres capas redondeadas que se apagan hacia afuera."""
+    capas = VGroup()
+    for holgura, opacidad in ((0.26, 0.07), (0.16, 0.13), (0.08, 0.24)):
+        capa = RoundedRectangle(
+            corner_radius=0.12 + holgura / 2,
+            width=parte.width + 2 * holgura,
+            height=parte.height + 2 * holgura,
+        )
+        capa.set_fill(color, opacidad).set_stroke(width=0).move_to(parte.get_center())
+        capas.add(capa)
+    return capas.set_z_index(0)
+
+
+def tacha_de(parte: Mobject, color: str) -> Line:
+    """Una raya en diagonal sobre un término que se cancela o se va al otro lado."""
+    return (
+        Line(parte.get_corner(DL) + LEFT * 0.04, parte.get_corner(UR) + RIGHT * 0.04)
+        .set_stroke(color, 6)
+        .set_z_index(3)
+    )
+
+
 def partes_por_tex(eq: MathTex, buscado: str) -> list[Mobject]:
     """Partes de la fórmula que coinciden con ``buscado``: exacta, contenida en una parte o, si no,
     varias partes seguidas (ej. '5x + 5x', que la fórmula divide en '5x', '+', '5x')."""

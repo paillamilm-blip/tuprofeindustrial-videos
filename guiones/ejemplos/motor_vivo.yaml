@@ -1,0 +1,75 @@
+# Ejemplo de guion · El motor visual vivo
+# Crear el video:   ./tpi crear guiones/ejemplos/motor_vivo.yaml
+# Todo lo de aquí es opcional y se agrega a un guion normal:
+#   · visual grafico_funcion con «movimiento: tangente» o «movimiento: area» (+ anotar: [pendiente] / [area])
+#   · solido_3d: la cámara orbita sola hasta la vista; «despiece: true» separa sus piezas
+#   · en un paso, «resaltar_cambio: true» tacha lo que se va e ilumina lo que llega; «halo» sigue un término
+#   · en el resultado, «destello: true»
+
+titulo: "La pendiente, el área y el cilindro abierto"
+materia: matematica
+nivel: "4° medio"
+
+gancho:
+  texto: "¿Dónde la curva deja de bajar?"
+  voz: "¿En qué punto exacto una parábola deja de bajar y empieza a subir? Míralo moverse."
+  emoji: "🎯"
+
+enunciado:
+  texto: "Para f(x) = x² − 2x: la pendiente, el área entre 0 y 3, y el área de un cilindro de r = 3 cm y h = 5 cm."
+  voz: "Tomamos f de x igual a x al cuadrado menos dos x. Vemos su pendiente, su área, y de paso abrimos un cilindro."
+
+pasos:
+  - nota: "La tangente recorre la curva"
+    tex: 'f''(x) = 2x - 2'
+    voz: "La recta tangente baja, se aplana justo en x igual a uno y después sube. Ahí la pendiente vale cero."
+    halo: ["2x"]
+    visual:
+      tipo: grafico_funcion
+      funcion: 'x^2 - 2x'
+      rango: [-1, 3]
+      movimiento: tangente
+      anotar: [pendiente]
+
+  - nota: "Pendiente cero: se despeja x"
+    tex: '2x - 2 = 0'
+    voz: "Igualamos la pendiente a cero."
+    halo: ["2x"]
+
+  - tex: '2x = 2'
+    voz: "El menos dos pasa al otro lado sumando."
+    resaltar_cambio: true
+    halo: ["2x"]
+
+  - tex: 'x = 1'
+    voz: "Y el dos que multiplica pasa dividiendo: x igual a uno."
+    resaltar_cambio: true
+
+  - nota: "El área se llena por tramos"
+    tex: '\int_0^3 (x^2 - 2x)\,dx = 0'
+    voz: "Bajo el eje el área resta, sobre el eje suma. Entre cero y tres se compensan justo: da cero."
+    visual:
+      tipo: grafico_funcion
+      funcion: 'x^2 - 2x'
+      rango: [-1, 3]
+      movimiento: area
+      desde: 0
+      hasta: 3
+      anotar: [area]
+
+  - nota: "El cilindro, abierto en sus piezas"
+    tex: 'A = 2\pi r^2 + 2\pi r h'
+    voz: "Gira el cilindro y se abre: dos tapas circulares y un manto. Esas tres piezas son su área."
+    visual:
+      tipo: solido_3d
+      figura: cilindro
+      radio: "3 cm"
+      altura: "5 cm"
+      vista: axonometrica
+      despiece: true
+      anotar: [area]
+
+resultado:
+  tex: 'x = 1'
+  voz: "La parábola deja de bajar en x igual a uno: ahí está su vértice."
+  destello: true
