@@ -29,6 +29,41 @@ class ResultadoVideo:
     fuentes_tiempo: set[str] = field(default_factory=set)
     tema: str = ""  # nombre visible del estilo usado
     lectura: float = 0.0  # s que el piso de lectura esperó: silencio pedido, no contenido de más
+    portada: Path | None = None  # portada.jpg junto al video (None si no se pudo sacar el fotograma)
+
+
+# La portada automática se toma entre estos segundos: ahí el gancho ya está escrito y su dibujo, armado.
+PORTADA_DESDE, PORTADA_HASTA = 2.0, 4.0
+NOMBRE_PORTADA = "portada.jpg"
+
+
+def momento_de_portada(linea: dict, duracion_video: float) -> float:
+    """El segundo del fotograma de portada: el final del gancho, acotado a 2–4 s y dentro del video."""
+    bloques = linea.get("bloques") or []
+    gancho = next((b for b in bloques if b.get("seccion") == "gancho"), bloques[0] if bloques else None)
+    fin_gancho = float(gancho["inicio"]) + float(gancho["duracion"]) - 0.15 if gancho else PORTADA_HASTA
+    momento = min(max(fin_gancho, PORTADA_DESDE), PORTADA_HASTA)
+    if duracion_video > 0:  # un video más corto que 2 s (no debería pasar): su último cuadro útil
+        momento = min(momento, max(0.0, duracion_video - 0.1))
+    return round(momento, 2)
+
+
+def crear_miniatura(carpeta: Path, linea: dict, duracion_video: float) -> Path | None:
+    """Saca ``portada.jpg`` (resolución completa, sin subtítulos encima) en la carpeta del video.
+
+    Nunca hace fallar el render: si el fotograma no se puede leer, avisa y devuelve None.
+    """
+    from .postproduccion import extraer_cuadro
+    from .publicar import _video_sin_subtitulos
+
+    try:
+        fuente = _video_sin_subtitulos(carpeta, linea)
+        return extraer_cuadro(fuente, momento_de_portada(linea, duracion_video), carpeta / NOMBRE_PORTADA)
+    except (ErrorMotor, OSError, KeyError, TypeError, ValueError) as e:
+        import sys
+
+        print(f"⚠️  No pude sacar la portada del video: {e}", file=sys.stderr)
+        return None
 
 
 def slug(texto: str) -> str:
@@ -206,6 +241,8 @@ def crear_video(
         recodificar(video_manim, final, CALIDADES[calidad], estilo_video.resplandor)
 
     resultado.duracion = duracion(final)
+    avisar("portada", 0.97, NOMBRE_PORTADA)
+    resultado.portada = crear_miniatura(carpeta, linea, resultado.duracion)
     # Lo que el piso de lectura esperó, medido en la escena (0 en renders antiguos sin la clave).
     resultado.lectura = float(linea.get("silencio_de_lectura") or 0.0)
     resultado.segundos_proceso = time.time() - inicio

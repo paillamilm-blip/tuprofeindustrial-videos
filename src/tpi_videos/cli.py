@@ -214,7 +214,7 @@ def cmd_crear(args: argparse.Namespace) -> int:
     )
     if json_activo:
         _emitir(etapa="resultado", avance=1.0, video=resultado.video, srt=resultado.srt, tema=resultado.tema,
-                duracion=round(resultado.duracion, 1), lectura=round(resultado.lectura, 1),
+                portada=resultado.portada, duracion=round(resultado.duracion, 1), lectura=round(resultado.lectura, 1),
                 segundos=round(resultado.segundos_proceso))  # fmt: skip
     nombres = {"voz": "marcas exactas de la voz", "whisper": "Whisper", "estimado": "tiempos estimados"}
     fuentes = ", ".join(nombres[f] for f in sorted(resultado.fuentes_tiempo)) or "sin subtítulos"
@@ -226,6 +226,8 @@ def cmd_crear(args: argparse.Namespace) -> int:
     )
     if resultado.srt:
         consola.print(f"   Subtítulos para YouTube: {_ruta_amigable(resultado.srt)}")
+    if resultado.portada:
+        consola.print(f"   Portada: {_ruta_amigable(resultado.portada)}")
     consola.print(f'   Para verlo: [bold]open "{ruta}"[/]')
     if args.abrir:
         _abrir(resultado.video)

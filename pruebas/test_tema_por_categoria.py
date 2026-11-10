@@ -3,9 +3,12 @@
 import unittest
 from types import SimpleNamespace
 
+import yaml
+from pydantic import ValidationError
+
 from tpi_videos.config import cargar_marca
 from tpi_videos.entorno import PLANTILLAS_DIR
-from tpi_videos.guion import Guion
+from tpi_videos.guion import Guion, a_yaml
 from tpi_videos.temas import TEMA_POR_CATEGORIA, cargar_tema, resolver_tema
 
 
@@ -39,6 +42,22 @@ class MapaTest(unittest.TestCase):
         self.assertEqual(_guion("Matemáticas").categoria, "matematicas")
         self.assertEqual(_guion("fisica").categoria, "fisica")
         self.assertEqual(_guion("ingenieria").categoria, "ingenieria")
+
+    def test_categoria_escrita_en_el_yaml_es_opcional_y_debe_calzar(self):
+        self.assertEqual(_guion("ingenieria", categoria="ingenieria").categoria, "ingenieria")
+        self.assertEqual(_guion("matematica", categoria="Matemáticas").categoria, "matematicas")
+        with self.assertRaisesRegex(ValidationError, "no calza"):
+            _guion("fisica", categoria="ingenieria")
+        with self.assertRaisesRegex(ValidationError, "no existe"):
+            _guion("fisica", categoria="quimica")
+        # no queda guardada aparte: cambiar la materia cambia la categoría (editor, model_copy)
+        self.assertNotIn("categoria", _guion("fisica", categoria="fisica").model_dump())
+
+    def test_a_yaml_escribe_la_categoria_y_se_vuelve_a_leer(self):
+        g = _guion("ingenieria")
+        texto = a_yaml(g.model_dump(exclude_none=True))
+        self.assertEqual(yaml.safe_load(texto)["categoria"], "ingenieria")
+        self.assertEqual(Guion.model_validate(yaml.safe_load(texto)).categoria, "ingenieria")
 
 
 class CascadaTest(unittest.TestCase):

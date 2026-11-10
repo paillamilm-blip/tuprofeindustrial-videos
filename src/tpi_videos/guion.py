@@ -1202,9 +1202,36 @@ class Guion(_Base):
     def etiqueta_materia(self) -> str:
         return MATERIAS[self.materia]
 
+    @model_validator(mode="before")
+    @classmethod
+    def _revisar_categoria(cls, datos: Any) -> Any:
+        """``categoria:`` es opcional en el YAML: si viene, debe calzar con ``materia`` y luego se descarta.
+
+        Así nunca se desincroniza (el editor, ``model_copy`` y la IA solo cambian la materia).
+        """
+        if not isinstance(datos, dict) or "categoria" not in datos:
+            return datos
+        datos = dict(datos)
+        escrita = datos.pop("categoria")
+        if escrita in (None, ""):
+            return datos
+        materia = sin_tildes(str(datos.get("materia") or "")).strip().lower()
+        materia = materia[:-1] if materia.endswith("s") else materia
+        esperada = CATEGORIA_DE_MATERIA.get(materia)
+        limpia = sin_tildes(str(escrita)).strip().lower()
+        limpia = {"matematica": "matematicas"}.get(limpia, limpia)
+        if limpia not in CATEGORIA_DE_MATERIA.values():
+            raise ValueError(f"categoria «{escrita}» no existe; usa matematicas, fisica o ingenieria")
+        if esperada is not None and limpia != esperada:
+            raise ValueError(
+                f"categoria «{escrita}» no calza con materia «{datos.get('materia')}» "
+                f"(le toca «{esperada}»): cambia la materia o quita la línea categoria"
+            )
+        return datos
+
     @property
     def categoria(self) -> Categoria:
-        """La categoría del guion (decide su estilo visual). Sale de ``materia``: no se escribe aparte."""
+        """La categoría del guion (decide su estilo visual). Sale siempre de ``materia``."""
         return CATEGORIA_DE_MATERIA[self.materia]
 
     def textos_de_voz(self, cierre_por_defecto: str) -> list[tuple[str, str]]:
@@ -1596,6 +1623,9 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
     lineas = [f"# {c}" if c else "#" for c in cabecera] + ([""] if cabecera else [])
     lineas.append(f"titulo: {_dobles(guion['titulo'])}")
     lineas.append(f"materia: {guion['materia']}")
+    materia = sin_tildes(str(guion["materia"])).strip().lower()
+    if categoria := CATEGORIA_DE_MATERIA.get(materia[:-1] if materia.endswith("s") else materia):
+        lineas.append(f"categoria: {categoria}  # sale de la materia; elige el estilo si no hay «tema»")
     if guion.get("nivel"):
         lineas.append(f"nivel: {_dobles(guion['nivel'])}")
     if guion.get("molde"):
