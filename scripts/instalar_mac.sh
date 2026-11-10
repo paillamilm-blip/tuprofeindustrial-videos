@@ -96,12 +96,14 @@ export PKG_CONFIG_PATH
 if [ ! -x ".venv/bin/python" ]; then
   uv venv --python 3.12 .venv || { rojo "No se pudo crear el entorno de Python"; exit 1; }
 fi
-# --only-binary av: usar siempre versiones precompiladas de PyAV (compatibles con tu macOS)
-if uv pip install --python .venv/bin/python --only-binary av -e ".[whisper]"; then
+# --frozen: instala exactamente lo que dice uv.lock (las versiones que se probaron), sin re-resolver.
+# El CI comprueba con `uv lock --check` que el lock siga al día cuando cambia pyproject.toml.
+# Si Whisper no se puede instalar en este Mac, se cae al motor sin él: los subtítulos igual funcionan.
+if uv sync --frozen --extra whisper; then
   verde "Motor instalado con Whisper"
 else
   amarillo "Whisper no se pudo instalar en este Mac; instalo el motor sin él (los subtítulos igual funcionan)."
-  uv pip install --python .venv/bin/python --only-binary av -e . || {
+  uv sync --frozen || {
     rojo "Falló la instalación de las librerías. Copia el mensaje de arriba y pídeme ayuda."; exit 1; }
   verde "Motor instalado (sin Whisper)"
 fi

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from ..formatos import (
     FORMATO_POR_DEFECTO,
@@ -18,7 +19,11 @@ from ..formatos import (
     palabra_que_delata,
     puntuar_idea,
 )
+from ..guion import MATERIAS
+from ..ideas import DIFICULTADES
 from ..moldes import MOLDES, nombre_molde, normalizar_molde
+from ..redactor import TECHO_DE_LECTURA
+from ..revision import PISO_LECTURA, coma
 from ..rodaje import QUE_HACE, RECETA_LIBRE, Receta, rodaje_para
 from ..temas import listar_temas
 
@@ -26,31 +31,62 @@ from ..temas import listar_temas
 ETIQUETAS = {
     "familia": "Familia",
     "molde": "Molde",
+    "materia": "Materia",
+    "nivel": "Nivel",
+    "dificultad": "Dificultad",
     "tema": "Estilo",
     "voz": "Voz",
     "segundos": "Duración",
+    "lectura": "Lectura",
     "gancho": "Gancho",
     "rodaje": "Rodaje",
 }
 BANDERAS = {  # cada pieza con la bandera real de `tpi producir`
     "molde": "--molde",
+    "materia": "--materia",
+    "nivel": "--nivel",
+    "dificultad": "--dificultad",
     "tema": "--estilo",
     "voz": "--voz",
     "segundos": "--segundos",
+    "lectura": "--piso-lectura",
     "gancho": "--gancho",
 }
 LIBRE = RECETA_LIBRE  # la receta de los videos que no llevan molde
 # Los cuatro mandos que se ven en la pantalla; los otros cuatro sólo cambian una letra del guion.
 MANDOS_VISTOS = (("gancho", "La apertura"), ("pasos", "Los pasos"), ("deriva", "El cuadro"), ("partida", "El tablero"))
 
+# El molde también decide cómo se ve el video: cada uno tiene su tema. Coincide con el estilo que ya
+# traían las familias, así que la recomendación funciona incluso cuando la frase no delató ninguna.
+TEMA_POR_MOLDE = {
+    "reto": "neon_reja",
+    "mito_realidad": "vineta_cine",
+    "tres_errores": "rotulador",
+    "pov": "kraft_tiza",
+    "nadie_te_enseno": "plano_azul",
+}
+MOTIVO_POR_MOLDE = {
+    "reto": "Un reto pide neón: se lee como desafío.",
+    "mito_realidad": "El contraste mito/realidad funciona en cine.",
+    "tres_errores": "Tres errores seguidos se siguen mejor en papel.",
+    "pov": "Un POV se siente en cuaderno, no en pantalla.",
+    "nadie_te_enseno": "El dato sorpresa va en plano azul.",
+}
+
+# El motor nombra las materias en mayúsculas (son rótulos del video); la tarjeta las muestra normales.
+NOMBRE_MATERIA = {clave: nombre.capitalize() for clave, nombre in MATERIAS.items()}
+
 
 @dataclass(frozen=True)
 class Preferencias:
-    """Lo que ya está guardado en Ajustes: el estilo y la voz de siempre, con sus nombres para mostrar."""
+    """Lo que ya está guardado en Ajustes: el estilo y la voz de siempre, y su público de siempre."""
 
     tema: str = "hoja_de_desarrollo"
     voz: str = "es-CL-LorenzoNeural"
     voces: dict[str, str] = field(default_factory=dict)
+    materia: str | None = None
+    nivel: str | None = None
+    dificultad: str | None = None
 
 
 @dataclass(frozen=True)
@@ -95,10 +131,16 @@ def opciones(clave: str) -> dict[str, str]:
         return {c: f.nombre for c, f in cargar_formatos().items()}
     if clave == "molde":
         return {c: m.nombre for c, m in MOLDES.items()}
+    if clave == "materia":
+        return dict(NOMBRE_MATERIA)
+    if clave == "dificultad":
+        return dict(DIFICULTADES)
     if clave == "tema":
         return {ident: tema.nombre for ident, tema, _propio in listar_temas()}
     if clave == "segundos":
         return {str(n): f"≈{n} s" for n in (30, 40, 50, 60, 70)}
+    if clave == "lectura":
+        return {"0": "Como hoy (sin piso)", "2": "2 s", "2.5": "2,5 s", "3": "3 s"}
     return {}
 
 
@@ -121,9 +163,13 @@ def armar(
     piezas = (
         _una_familia(la_familia, toco_familia, idea),
         el_molde,
-        _una_tema(la_familia, cambios, preferencias),
+        _una_materia(cambios, preferencias, propuesta),
+        _un_nivel(cambios, preferencias, propuesta),
+        _una_dificultad(cambios, preferencias, propuesta),
+        _una_tema(la_familia, cambios, preferencias, el_molde.codigo),
         _una_voz(cambios, preferencias),
         _una_duracion(cambios, propuesta),
+        _una_lectura(cambios),
         _un_gancho(cambios, propuesta),
         _un_rodaje(el_molde.codigo),
     )
@@ -184,9 +230,69 @@ def _una_molde(la_familia, cambios: dict[str, str], propuesta: dict) -> Pieza:
     return Pieza("molde", ETIQUETAS["molde"], nombre_molde(codigo), codigo, razon, tocada)
 
 
-def _una_tema(la_familia, cambios: dict[str, str], pref: Preferencias) -> Pieza:
+def _una_materia(cambios: dict[str, str], pref: Preferencias, propuesta: dict) -> Pieza:
+    if "materia" in cambios:
+        codigo, razon, tocada = (cambios["materia"] or None), "Cambiado por ti.", True
+    elif propuesta.get("materia"):
+        codigo, razon, tocada = str(propuesta["materia"]), "Lo trajo la idea que elegiste.", False
+    elif pref.materia:
+        codigo, razon, tocada = pref.materia, "Tu predeterminado (Ajustes).", False
+    else:
+        codigo, razon, tocada = None, "La IA la deduce de la frase.", False
+    return Pieza(
+        clave="materia",
+        etiqueta=ETIQUETAS["materia"],
+        valor=NOMBRE_MATERIA.get(codigo, codigo) if codigo else "lo deduce la IA",
+        codigo=codigo,
+        razon=razon,
+        tocada=tocada,
+    )
+
+
+def _un_nivel(cambios: dict[str, str], pref: Preferencias, propuesta: dict) -> Pieza:
+    """El nivel es texto libre —el motor lo manda tal cual al guion—, por eso no tiene lista."""
+    if "nivel" in cambios:
+        codigo, razon, tocada = (cambios["nivel"].strip() or None), "Cambiado por ti.", True
+    elif str(propuesta.get("nivel") or "").strip():
+        codigo, razon, tocada = str(propuesta["nivel"]).strip(), "Lo trajo la idea que elegiste.", False
+    elif (pref.nivel or "").strip():
+        codigo, razon, tocada = pref.nivel.strip(), "Tu predeterminado (Ajustes).", False
+    else:
+        codigo, razon, tocada = None, "La IA lo deduce; si nada lo dice, es enseñanza media.", False
+    return Pieza(
+        clave="nivel",
+        etiqueta=ETIQUETAS["nivel"],
+        valor=codigo or "lo deduce la IA",
+        codigo=codigo,
+        razon=razon,
+        tocada=tocada,
+    )
+
+
+def _una_dificultad(cambios: dict[str, str], pref: Preferencias, propuesta: dict) -> Pieza:
+    if "dificultad" in cambios:
+        codigo, razon, tocada = (cambios["dificultad"] or None), "Cambiado por ti.", True
+    elif propuesta.get("dificultad"):
+        codigo, razon, tocada = str(propuesta["dificultad"]), "Lo trajo la idea que elegiste.", False
+    elif pref.dificultad:
+        codigo, razon, tocada = pref.dificultad, "Tu predeterminado (Ajustes).", False
+    else:
+        codigo, razon, tocada = None, "La IA reparte las 3 dificultades del lote.", False
+    return Pieza(
+        clave="dificultad",
+        etiqueta=ETIQUETAS["dificultad"],
+        valor=DIFICULTADES.get(codigo, codigo) if codigo else "la decide la IA",
+        codigo=codigo,
+        razon=razon,
+        tocada=tocada,
+    )
+
+
+def _una_tema(la_familia, cambios: dict[str, str], pref: Preferencias, molde: str | None = None) -> Pieza:
     if "tema" in cambios:
         codigo, razon, tocada = (cambios["tema"] or pref.tema), "Cambiado por ti.", True
+    elif molde and molde in TEMA_POR_MOLDE:
+        codigo, razon, tocada = TEMA_POR_MOLDE[molde], MOTIVO_POR_MOLDE[molde], False
     elif la_familia:
         codigo, razon, tocada = la_familia.tema, f"El estilo de {la_familia.nombre}.", False
     else:
@@ -208,17 +314,46 @@ def _una_voz(cambios: dict[str, str], pref: Preferencias) -> Pieza:
 
 def _una_duracion(cambios: dict[str, str], propuesta: dict) -> Pieza:
     if "segundos" in cambios:
-        codigo, razon, tocada = (cambios["segundos"] or None), "Cambiado por ti.", True
+        codigo, razon, tocada = (
+            cambios["segundos"] or None,
+            "Cambiado por ti. Las fórmulas suman su lectura aparte.",
+            True,
+        )
     elif propuesta.get("segundos"):
-        codigo, razon, tocada = str(propuesta["segundos"]), "Lo prometió la idea.", False
+        codigo = str(propuesta["segundos"])
+        razon = f"Lo prometió la idea: las fórmulas suman hasta {TECHO_DE_LECTURA:g} s de lectura aparte."
+        tocada = False
     else:
-        codigo, razon, tocada = None, "La IA decide el largo (entre 30 y 75 s).", False
+        codigo, razon, tocada = None, "La IA decide el largo (entre 30 y 75 s); la lectura va aparte.", False
     return Pieza(
         clave="segundos",
         etiqueta=ETIQUETAS["segundos"],
         valor=f"≈{codigo} s" if codigo else "lo decide la IA",
         codigo=codigo,
         razon=razon,
+        tocada=tocada,
+    )
+
+
+def _una_lectura(cambios: dict[str, str]) -> Pieza:
+    """El piso de lectura: los segundos que toda fórmula queda quieta en pantalla. Es elegible, no una orden."""
+    tocada = "lectura" in cambios
+    codigo = cambios.get("lectura") or f"{PISO_LECTURA:g}"
+    valor = (
+        "sin piso: el ritmo de hoy"
+        if float(codigo) <= 0
+        else f"{float(codigo):.1f} s quietos por fórmula".replace(".", ",")
+    )
+    return Pieza(
+        clave="lectura",
+        etiqueta=ETIQUETAS["lectura"],
+        valor=valor,
+        codigo=codigo,
+        razon=(
+            "Cambiado por ti."
+            if tocada
+            else "El render lo calcula con el guion: ninguna fórmula se va antes de poder leerse."
+        ),
         tocada=tocada,
     )
 
@@ -252,6 +387,15 @@ def _un_rodaje(molde: str | None) -> Pieza:
     )
 
 
+def clause_lectura(lectura: float) -> str:
+    """El pedazo de frase que dice cuántos segundos del video fueron de lectura, no de contenido.
+
+    Se muestra al lado de la promesa para que el «se pasó de lo prometido» no le cargue al motor el
+    silencio que él mismo garantizó. Con el piso en 0 (o sin fórmulas que esperar) no sale nada.
+    """
+    return f" · {coma(lectura)} s fueron de lectura" if lectura > 0.05 else ""
+
+
 def anotaciones(receta: Receta) -> tuple[str, ...]:
     """Lo que se ve moverse, en frases cortas, para escribirlas encima de la portada."""
     return tuple(QUE_HACE[clave][getattr(receta, clave)] for clave, _nombre in MANDOS_VISTOS)
@@ -267,9 +411,10 @@ def _nombre_tema(codigo: str | None) -> str:
 def _args(idea: str, piezas: tuple[Pieza, ...], propuesta: dict, kit: bool) -> tuple[str, ...]:
     """El comando exacto. Las variantes de gancho de la IA viajan en JSON, como en Fábrica."""
     args = ["producir"]
-    for clave in ("materia", "nivel", "titulo"):
-        if propuesta.get(clave):
-            args += [f"--{clave}", str(propuesta[clave])]
+    # La materia, el nivel y la dificultad ya viajan como piezas: desde acá sólo se repite lo que
+    # ninguna tarjeta muestra (el título), o la bandera llegaría dos veces.
+    if propuesta.get("titulo"):
+        args += ["--titulo", str(propuesta["titulo"])]
     for pieza in piezas:
         bandera = BANDERAS.get(pieza.clave)
         if bandera and pieza.codigo and bandera != "--gancho":
@@ -297,6 +442,31 @@ def variantes_seleccionadas(ideas: list[dict], marcas: list[bool]) -> list[dict]
 def args_compilacion(ideas: list[dict]) -> list[str]:
     """El comando que produce varias variantes de una: el mismo `tpi lote --ideas-json` de Fábrica."""
     return ["lote", "--ideas-json", _json(ideas)]
+
+
+def nombre_compilacion(cantidad: int) -> str:
+    """El nombre del trabajo, con su singular: «Compilar 1 variantes» se lee mal en el encabezado."""
+    return f"Compilar {cantidad} variante{'s' if cantidad != 1 else ''}"
+
+
+def dividir_variantes(items: list[dict]) -> dict[str, list[dict]]:
+    """Las variantes de un lote, separadas por lo que hay de verdad en el disco.
+
+    ``listas`` sólo pide el MP4 existente: un ítem «ok» sin archivo no es algo que se pueda reproducir.
+    ``esperando`` son las que quedaron a la espera de la IA (el motor las retoma solo), no un fallo.
+    """
+    listas: list[dict] = []
+    esperando: list[dict] = []
+    fallas: list[dict] = []
+    for item in items:
+        video = str(item.get("video") or "")
+        if item.get("ok") and video and Path(video).exists():
+            listas.append(item)
+        elif item.get("pendiente"):
+            esperando.append(item)
+        else:
+            fallas.append(item)
+    return {"listas": listas, "esperando": esperando, "fallas": fallas}
 
 
 def _json(datos) -> str:

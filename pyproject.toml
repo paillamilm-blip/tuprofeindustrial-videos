@@ -10,6 +10,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "manim>=0.22.0,<0.23",
+    "av>=11.0.0",  # PyAV: duración y resolución del video (postproduccion.py); antes llegaba escondido dentro de manim, que ya exige av>=15
+    "numpy>=1.26",  # arreglos de las simulaciones de SciPy y del dibujo; manim 0.22 ya exige numpy>=2.1
     "pillow<13",  # manim 0.22 choca con Pillow 13 al dibujar cualquier imagen («Invalid mode for data type»)
     "manim-voiceover[gtts]>=0.4.0,<0.5",
     "edge-tts>=7.3.1,<8",

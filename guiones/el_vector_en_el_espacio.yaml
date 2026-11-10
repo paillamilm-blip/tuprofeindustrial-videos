@@ -1,0 +1,67 @@
+# Guion escrito a mano para estrenar el dibujo "vector_3d" (vector sobre sus tres ejes).
+# El motor calcula solo: piso = 5 y norma = 13 del vector (3, 4, 12).
+# Las cuentas de cada paso viven en el tex; el dibujo pone las letras x, y, z y las medidas.
+
+titulo: "El vector en el espacio"
+materia: matematica
+nivel: "3° medio"
+
+gancho:
+  texto: "3 + 4 + 12 = 19: ese no es el largo del vector"
+  voz: "Tres más cuatro más doce son diecinueve. Pero un vector que avanza tres, cuatro y doce no mide diecinueve."
+  visual:
+    tipo: vector_3d
+    componentes: [3, 4, 12]
+    unidad: "cm"
+    anotar: [ejes]
+
+enunciado:
+  texto: "Un vector avanza 3 cm, 4 cm y 12 cm. ¿Cuánto mide de punta a punta?"
+  voz: "Este vector avanza tres centímetros en x, cuatro en y doce en z. La pregunta es qué tan largo es de punta a punta."
+  destacar: ["3", "4", "12"]
+
+pasos:
+  - nota: "Cada número va por su propio eje"
+    tex: '\vec v = (3,\ 4,\ 12)'
+    voz: "Cada número va por su propio eje: ninguno llega recto al punto final."
+    visual:
+      tipo: vector_3d
+      componentes: [3, 4, 12]
+      unidad: "cm"
+      anotar: [ejes]
+  - nota: "Error típico"
+    tex: 'L = 3 + 4 + 12 = 19\ \text{cm}'
+    voz: "Sumarlas da diecinueve, y ese número no es un largo: es una vuelta por tres caminos."
+    destacar: ['+']
+    emoji: "❌"
+    error: true
+  - nota: "Primero pisas el piso"
+    tex: 'p = \sqrt{3^2 + 4^2} = \sqrt{25} = 5\ \text{cm}'
+    voz: "En el piso, tres y cuatro forman una esquina: su diagonal mide cinco."
+    visual:
+      tipo: vector_3d
+      componentes: [3, 4, 12]
+      unidad: "cm"
+      anotar: [ejes, piso]
+  - nota: "Y con esa diagonal subes recto"
+    tex: 'v = \sqrt{5^2 + 12^2} = \sqrt{169} = 13\ \text{cm}'
+    voz: "Esa diagonal de cinco y el doce que sube recto son otra esquina. Su hipotenusa es el vector: trece."
+    visual:
+      tipo: vector_3d
+      componentes: [3, 4, 12]
+      unidad: "cm"
+      anotar: [ejes, piso, norma]
+
+resultado:
+  tex: 'v = 13\ \text{cm} \neq 19'
+  voz: "El vector mide trece centímetros. Dos Pitágoras seguidas, no una suma."
+  emoji: "✅"
+
+verificacion:
+  texto: "Dos tercias pitagóricas encadenadas: 3-4-5 en el piso y 5-12-13 en el aire. Y 13² = 169 = 25 + 144."
+  voz: "Revisa con las tercias de siempre: tres, cuatro y cinco abajo. Cinco, doce y trece arriba."
+
+reto:
+  texto: "Si las componentes fueran 6, 8 y 24 cm, ¿cuánto mide el piso y cuánto el vector?"
+  voz: "Con seis, ocho y veinticuatro: ¿cuánto pisa el piso y cuánto vale el vector?"
+  emoji: "✍️"

@@ -10,6 +10,8 @@ import json
 import os
 import time
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -36,6 +38,60 @@ FASES = {
 
 def _ruta() -> Path:
     return raiz_proyecto() / "salida" / ".cola" / "trabajos.json"
+
+
+def _bloquear(archivo: Any) -> None:
+    try:
+        import fcntl
+    except ImportError:  # Windows
+        import msvcrt
+
+        archivo.seek(0)
+        msvcrt.locking(archivo.fileno(), msvcrt.LK_LOCK, 1)
+        return
+    fcntl.flock(archivo.fileno(), fcntl.LOCK_EX)
+
+
+def _desbloquear(archivo: Any) -> None:
+    try:
+        import fcntl
+    except ImportError:
+        import msvcrt
+
+        archivo.seek(0)
+        msvcrt.locking(archivo.fileno(), msvcrt.LK_UNLCK, 1)
+        return
+    fcntl.flock(archivo.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def _cerrojo() -> Iterator[None]:
+    """Exclusión entre procesos para leer-modificar-guardar la cola.
+
+    ``guardar`` reemplaza el archivo de forma atómica; este cerrojo evita que dos workers lean la
+    misma copia y el último en guardar borre lo que escribió el otro.
+    """
+    ruta = _ruta().parent / "trabajos.json.lock"
+    try:
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        archivo = open(ruta, "a+b")
+    except OSError:
+        yield  # sin poder crear el cerrojo igual se trabaja: es una cortesía
+        return
+    try:
+        _bloquear(archivo)
+        bloqueado = True
+    except OSError:
+        bloqueado = False
+    try:
+        yield
+    finally:
+        if bloqueado:
+            try:
+                _desbloquear(archivo)
+            except OSError:
+                pass
+        archivo.close()
 
 
 def _ahora() -> str:
@@ -86,7 +142,7 @@ def guardar(datos: dict[str, Any]) -> None:
     datos = {clave: valor for clave, valor in datos.items() if clave != "roto"}
     ruta = _ruta()
     ruta.parent.mkdir(parents=True, exist_ok=True)
-    temporal = ruta.with_name(f"{ruta.name}.tmp")
+    temporal = ruta.with_name(f"{ruta.name}.tmp-{os.getpid()}-{uuid.uuid4().hex[:6]}")
     try:
         temporal.write_text(json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(temporal, ruta)
@@ -127,74 +183,79 @@ def _ficha_video(lote_id: str, posicion: int, idea: Any) -> dict[str, Any]:
 
 def nuevo_lote(tema: str, ajustes: dict[str, Any], ideas: Any = None) -> str:
     """Crea la ficha del lote antes de pedirle nada a la IA (así se puede reanudar si se cae)."""
-    datos = cargar()
-    ahora = _ahora()
-    lote_id = _nuevo_id()
-    lote: dict[str, Any] = {
-        "id": lote_id,
-        "tema": tema,
-        "creado": ahora,
-        "actualizado": ahora,
-        "estado": "pensando_ideas" if ideas is None else "en_curso",
-        "fase": "pensando_ideas" if ideas is None else "en_curso",
-        "error": None,
-        "ayuda": None,
-        "intentos": 0,
-        "proximo_intento": None,
-        "ajustes": dict(ajustes),
-        "videos": [],
-    }
-    if ideas is not None:
-        lote["videos"] = [_ficha_video(lote_id, n, idea) for n, idea in enumerate(ideas, start=1)]
-    datos["lotes"].append(lote)
-    guardar(datos)
-    return lote_id
+    with _cerrojo():
+        datos = cargar()
+        ahora = _ahora()
+        lote_id = _nuevo_id()
+        lote: dict[str, Any] = {
+            "id": lote_id,
+            "tema": tema,
+            "creado": ahora,
+            "actualizado": ahora,
+            "estado": "pensando_ideas" if ideas is None else "en_curso",
+            "fase": "pensando_ideas" if ideas is None else "en_curso",
+            "error": None,
+            "ayuda": None,
+            "intentos": 0,
+            "proximo_intento": None,
+            "ajustes": dict(ajustes),
+            "videos": [],
+        }
+        if ideas is not None:
+            lote["videos"] = [_ficha_video(lote_id, n, idea) for n, idea in enumerate(ideas, start=1)]
+        datos["lotes"].append(lote)
+        guardar(datos)
+        return lote_id
 
 
 def agregar_videos(lote_id: str, ideas: Any) -> list[str]:
-    datos = cargar()
-    lote = _lote(datos, lote_id)
-    if lote is None:
-        raise ErrorMotor(
-            "No encuentro ese lote en la cola.",
-            ayuda='Vuelve a lanzarlo desde Fábrica o con ./tpi lote "Tema".',
-        )
-    lote["videos"] = [_ficha_video(lote_id, n, idea) for n, idea in enumerate(ideas, start=1)]
-    lote["estado"], lote["fase"] = "en_curso", "en_curso"
-    lote["actualizado"] = _ahora()
-    guardar(datos)
-    return [video["id"] for video in lote["videos"]]
+    with _cerrojo():
+        datos = cargar()
+        lote = _lote(datos, lote_id)
+        if lote is None:
+            raise ErrorMotor(
+                "No encuentro ese lote en la cola.",
+                ayuda='Vuelve a lanzarlo desde Fábrica o con ./tpi lote "Tema".',
+            )
+        lote["videos"] = [_ficha_video(lote_id, n, idea) for n, idea in enumerate(ideas, start=1)]
+        lote["estado"], lote["fase"] = "en_curso", "en_curso"
+        lote["actualizado"] = _ahora()
+        guardar(datos)
+        return [video["id"] for video in lote["videos"]]
 
 
 def actualizar_lote(lote_id: str, **campos: Any) -> None:
-    datos = cargar()
-    lote = _lote(datos, lote_id)
-    if lote is None:
-        return
-    lote.update(campos)
-    lote["actualizado"] = _ahora()
-    guardar(datos)
+    with _cerrojo():
+        datos = cargar()
+        lote = _lote(datos, lote_id)
+        if lote is None:
+            return
+        lote.update(campos)
+        lote["actualizado"] = _ahora()
+        guardar(datos)
 
 
 def actualizar_video(video_id: str, **campos: Any) -> None:
-    datos = cargar()
-    video = _video(datos, video_id)
-    if video is None:
-        return
-    video.update(campos)
-    video["actualizado"] = _ahora()
-    guardar(datos)
+    with _cerrojo():
+        datos = cargar()
+        video = _video(datos, video_id)
+        if video is None:
+            return
+        video.update(campos)
+        video["actualizado"] = _ahora()
+        guardar(datos)
 
 
 def hito(video_id: str, nombre: str, datos_hito: dict[str, Any]) -> None:
     """Lo ya producido (guion, video, kit): es lo que permite no repetir una etapa."""
-    datos = cargar()
-    video = _video(datos, video_id)
-    if video is None:
-        return
-    video.setdefault("hitos", {})[nombre] = datos_hito
-    video["actualizado"] = _ahora()
-    guardar(datos)
+    with _cerrojo():
+        datos = cargar()
+        video = _video(datos, video_id)
+        if video is None:
+            return
+        video.setdefault("hitos", {})[nombre] = datos_hito
+        video["actualizado"] = _ahora()
+        guardar(datos)
 
 
 def videos_del_lote(lote_id: str) -> list[dict[str, Any]]:
@@ -206,29 +267,30 @@ def podar() -> int:
     """Conserva lo pendiente y los últimos 20 videos terminados; los archivos no se tocan."""
     if candado_tomado() and not _candado_es_mio():
         return 0  # hay un lote trabajando: no se reescribe la cola bajo sus pies
-    datos = cargar()
-    if datos.get("version") != VERSION:
-        return 0
-    conservar: list[dict[str, Any]] = []
-    terminados = 0
-    for lote in reversed(datos["lotes"]):
-        if lote.get("estado") == "descartado":
-            continue
-        pendiente = lote.get("estado") != "listo" or any(
-            video.get("estado") in ESTADOS_PENDIENTES or video.get("estado") == "fallo"
-            for video in lote.get("videos", [])
-        )
-        if pendiente:
-            conservar.append(lote)
-            continue
-        if terminados < 20:
-            conservar.append(lote)
-            terminados += sum(1 for video in lote.get("videos", []) if video.get("estado") == "listo")
-    quitados = len(datos["lotes"]) - len(conservar)
-    if quitados:
-        datos["lotes"] = list(reversed(conservar))
-        guardar(datos)
-    return quitados
+    with _cerrojo():
+        datos = cargar()
+        if datos.get("version") != VERSION:
+            return 0
+        conservar: list[dict[str, Any]] = []
+        terminados = 0
+        for lote in reversed(datos["lotes"]):
+            if lote.get("estado") == "descartado":
+                continue
+            pendiente = lote.get("estado") != "listo" or any(
+                video.get("estado") in ESTADOS_PENDIENTES or video.get("estado") == "fallo"
+                for video in lote.get("videos", [])
+            )
+            if pendiente:
+                conservar.append(lote)
+                continue
+            if terminados < 20:
+                conservar.append(lote)
+                terminados += sum(1 for video in lote.get("videos", []) if video.get("estado") == "listo")
+        quitados = len(datos["lotes"]) - len(conservar)
+        if quitados:
+            datos["lotes"] = list(reversed(conservar))
+            guardar(datos)
+        return quitados
 
 
 def _ruta_candado() -> Path:
@@ -375,43 +437,45 @@ def estado_derivado(lote: dict[str, Any]) -> str:
 
 
 def recalcular_lote(lote_id: str) -> None:
-    datos = cargar()
-    lote = _lote(datos, lote_id)
-    if lote is None or lote.get("estado") == "descartado":
-        return
-    lote["estado"] = estado_derivado(lote)
-    lote["fase"] = lote["estado"]
-    lote["actualizado"] = _ahora()
-    guardar(datos)
+    with _cerrojo():
+        datos = cargar()
+        lote = _lote(datos, lote_id)
+        if lote is None or lote.get("estado") == "descartado":
+            return
+        lote["estado"] = estado_derivado(lote)
+        lote["fase"] = lote["estado"]
+        lote["actualizado"] = _ahora()
+        guardar(datos)
 
 
 def normalizar_interrumpidos() -> int:
     """Al abrir el panel: lo que quedó a medio hacer pasa a «interrumpido». Respeta el candado."""
     if candado_tomado():
         return 0  # hay un tpi lote vivo: la cola es suya
-    datos = cargar()
-    if datos.get("version") != VERSION:
-        return 0
-    cambiados, tocados = 0, 0
-    for lote in datos["lotes"]:
-        if lote.get("estado") in ("listo", "fallo", "descartado"):
-            continue
-        for video in lote.get("videos", []):
-            if video.get("estado") in ESTADOS_ACTIVOS:
-                fase = FASES.get(video.get("fase", ""), "el video")
-                porcentaje = round(float(video.get("avance") or 0.0) * 100)
-                video["estado"] = "interrumpido"
-                video["detalle"] = f"Se interrumpió {fase.lower()} ({porcentaje} %)"
-                cambiados += 1
-        nuevo = estado_derivado(lote)
-        if nuevo != lote.get("estado"):
-            tocados += 1
-        lote["estado"] = nuevo
-        lote["fase"] = nuevo
-        lote["actualizado"] = _ahora()
-    if cambiados or tocados:  # un lote que solo cambió de estado (sin ideas) igual se guarda
-        guardar(datos)
-    return cambiados
+    with _cerrojo():
+        datos = cargar()
+        if datos.get("version") != VERSION:
+            return 0
+        cambiados, tocados = 0, 0
+        for lote in datos["lotes"]:
+            if lote.get("estado") in ("listo", "fallo", "descartado"):
+                continue
+            for video in lote.get("videos", []):
+                if video.get("estado") in ESTADOS_ACTIVOS:
+                    fase = FASES.get(video.get("fase", ""), "el video")
+                    porcentaje = round(float(video.get("avance") or 0.0) * 100)
+                    video["estado"] = "interrumpido"
+                    video["detalle"] = f"Se interrumpió {fase.lower()} ({porcentaje} %)"
+                    cambiados += 1
+            nuevo = estado_derivado(lote)
+            if nuevo != lote.get("estado"):
+                tocados += 1
+            lote["estado"] = nuevo
+            lote["fase"] = nuevo
+            lote["actualizado"] = _ahora()
+        if cambiados or tocados:  # un lote que solo cambió de estado (sin ideas) igual se guarda
+            guardar(datos)
+        return cambiados
 
 
 def elegir_lote(solo_pendientes: bool = False, cola_id: str | None = None) -> dict[str, Any] | None:
@@ -451,19 +515,20 @@ def lotes_visibles() -> list[dict[str, Any]]:
 
 
 def descartar_lote(lote_id: str) -> None:
-    datos = cargar()
-    lote = _lote(datos, lote_id)
-    if lote is None:
-        raise ErrorMotor("No encuentro ese lote en la cola.")
-    if candado_tomado():
-        # Con un lote trabajando, escribir la cola acá pisaría lo que ese proceso está guardando.
-        raise ErrorMotor(
-            "Hay un lote trabajando ahora.",
-            ayuda="Espera a que termine o cancela el trabajo antes de sacar este de la cola.",
-        )
-    lote["estado"], lote["fase"] = "descartado", "descartado"
-    lote["actualizado"] = _ahora()
-    for video in lote.get("videos", []):
-        if video.get("estado") != "listo":
-            video["estado"] = "descartado"
-    guardar(datos)
+    with _cerrojo():
+        datos = cargar()
+        lote = _lote(datos, lote_id)
+        if lote is None:
+            raise ErrorMotor("No encuentro ese lote en la cola.")
+        if candado_tomado():
+            # Con un lote trabajando, escribir la cola acá pisaría lo que ese proceso está guardando.
+            raise ErrorMotor(
+                "Hay un lote trabajando ahora.",
+                ayuda="Espera a que termine o cancela el trabajo antes de sacar este de la cola.",
+            )
+        lote["estado"], lote["fase"] = "descartado", "descartado"
+        lote["actualizado"] = _ahora()
+        for video in lote.get("videos", []):
+            if video.get("estado") != "listo":
+                video["estado"] = "descartado"
+        guardar(datos)

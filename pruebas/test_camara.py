@@ -258,8 +258,8 @@ class DerivaEnLaEscenaTest(unittest.TestCase):
     class _Trampa(escena.VideoEjercicio):
         """Lo mínimo que necesitan ``wait`` y ``_mover_camara`` para ejercitarse de verdad.
 
-        Hereda de la escena para que el ``super().wait`` de la receta quieta llegue al ``Wait``
-        de siempre; no pasa por ``__init__`` porque aquí solo interesa la aritmética de la cámara.
+        Hereda de la escena para que la cámara «quieta» llegue al ``Wait`` de siempre; no pasa por
+        ``__init__`` porque aquí solo interesa la aritmética de la cámara.
         """
 
         def __init__(self, deriva="en_mano", modo="suave"):
@@ -294,14 +294,24 @@ class DerivaEnLaEscenaTest(unittest.TestCase):
         self.assertEqual(run_time, 1.2)  # la pausa no cuesta ni un décimo más
         self.assertAlmostEqual(trampa._deriva_t, 1.2)
 
-    def test_sin_deriva_la_pausa_sigue_siendo_una_espera(self):
+    def test_con_deriva_fija_la_pausa_respira_y_no_panea(self):
+        """La receta quieta no tiene paneo, pero la pausa tampoco puede ser una foto trabada."""
         from manim import Wait
 
+        reposo = 0.86
         trampa = self._Trampa(deriva="fija")
-        trampa.wait(1.2)
-        (animaciones, _), = trampa.jugadas
-        self.assertIsInstance(animaciones[0], Wait)
-        self.assertEqual(trampa._deriva_t, 0.0)
+        anchos = []
+        for _ in range(24):
+            trampa.wait(1.0)
+            ultima = trampa.jugadas[-1][0][0]
+            if isinstance(ultima, Wait):
+                continue
+            anchos.append(trampa._camara_ancho)
+            self.assertEqual(tuple(trampa._cuadro.destino), (0.0, 1.0, 0))  # no se mueve de lado
+        self.assertGreaterEqual(len(anchos), 15, "casi ninguna pausa debería quedar congelada")
+        self.assertLess(min(anchos), reposo - 0.005, "la pausa se mete de verdad en el cuadro")
+        self.assertGreaterEqual(min(anchos), reposo * (1.0 - escena.RESPIRO_DERIVA) - 1e-9)
+        self.assertLessEqual(max(anchos), reposo + 1e-9, "y nunca descubre más fondo del reposo")
 
     def test_con_la_camara_quieta_tampoco_se_mueve(self):
         from manim import Wait

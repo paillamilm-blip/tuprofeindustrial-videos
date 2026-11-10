@@ -1,0 +1,63 @@
+# Guion redactado con IA (gemini-3.8-flash) el 01-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se buscan las soluciones en el conjunto de los números reales.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "El error al despejar x al cuadrado"
+materia: matematica
+nivel: "2° medio"
+molde: mito_realidad
+
+gancho:
+  texto: "¿Por qué tachar la equis está mal?"
+  voz: "Por qué tachar la equis está mal"
+  tex: 'x^2 = 5x'
+  emoji: "❌"
+
+gancho_variantes:
+  - texto: "Casi todos pierden una solución aquí"
+    voz: "Casi todos pierden una solución aquí"
+    emoji: "⚠️"
+    tex: 'x^2 - 5x = 0'
+  - texto: "¿Esta ecuación tiene una o dos respuestas?"
+    voz: "Esta ecuación tiene una o dos respuestas"
+    emoji: "🤔"
+    tex: 'x^2 = 5x'
+
+enunciado:
+  texto: "Resuelve la ecuación cuadrática x² = 5x encontrando todas sus soluciones reales."
+  voz: "Resolvamos la ecuación equis al cuadrado igual a cinco equis."
+  destacar: ["x² = 5x"]
+
+pasos:
+  - nota: "Error típico"
+    tex: 'x = 5'
+    voz: "Muchos simplifican dividiendo por equis, pero eliminas el cero."
+    destacar: ['x = 5']
+    emoji: "⚠️"
+    error: true   # error típico: se muestra tachado
+  - nota: "Restamos 5x"
+    tex: 'x^2 - 5x = 0'
+    voz: "Lo correcto es restar cinco equis para igualar a cero."
+    destacar: ['x^2 - 5x = 0']
+    emoji: "💡"
+  - nota: "Factorizamos"
+    tex: 'x (x - 5) = 0'
+    voz: "Factorizamos por equis para obtener dos factores."
+    destacar: ['x (x - 5)']
+  - nota: "Dos soluciones"
+    tex: 'x = 0 \quad \text{o} \quad x = 5'
+    voz: "Para que el producto dé cero, cada factor puede ser cero."
+
+resultado:
+  tex: 'x_1 = 0, \quad x_2 = 5'
+  voz: "Las dos soluciones reales son cero y cinco."
+  emoji: "✅"
+
+reto:
+  texto: "¿Cuáles son las soluciones de x² = 3x?"
+  voz: "¿Cuáles son las soluciones si fuera tres equis?"
+  emoji: "✍️"

@@ -297,5 +297,64 @@ class ColaLifecycleTest(BaseCola):
             self.assertEqual(cola.podar(), 0)
 
 
+class ColaBloqueoTest(BaseCola):
+    """Dos procesos a la vez (dos workers del lote) no pueden pisarse la cola."""
+
+    def _entorno(self) -> dict[str, str]:
+        return dict(
+            os.environ,
+            TPI_RAIZ=str(self.raiz),
+            PYTHONPATH=str(Path(__file__).resolve().parents[1] / "src"),
+        )
+
+    def test_el_cerrojo_espera_a_que_lo_suelte_el_otro_proceso(self) -> None:
+        codigo = (
+            "import time\n"
+            "from tpi_videos import cola\n"
+            "inicio = time.time()\n"
+            "with cola._cerrojo():\n"
+            "    print(round(time.time() - inicio, 2))\n"
+        )
+        with cola._cerrojo():
+            proceso = subprocess.Popen(
+                [sys.executable, "-c", codigo],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=self._entorno(),
+            )
+            time.sleep(0.6)
+        salida, error = proceso.communicate(timeout=15)
+        self.assertEqual(proceso.returncode, 0, error)
+        self.assertGreaterEqual(float(salida.strip()), 0.3)
+
+    def test_cuatro_procesos_escriben_hitos_sin_perder_ninguno(self) -> None:
+        lote_id = self._lote_con_video()
+        video_id = cola.videos_del_lote(lote_id)[0]["id"]
+        codigo = (
+            "import sys\n"
+            "from tpi_videos import cola\n"
+            "video, proceso = sys.argv[1], sys.argv[2]\n"
+            "for n in range(10):\n"
+            "    cola.hito(video, f'p{proceso}-{n}', {'n': n})\n"
+        )
+        procesos = [
+            subprocess.Popen(
+                [sys.executable, "-c", codigo, video_id, str(n)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=self._entorno(),
+            )
+            for n in range(4)
+        ]
+        for proceso in procesos:
+            _, error = proceso.communicate(timeout=30)
+            self.assertEqual(proceso.returncode, 0, error)
+
+        hitos = cola.videos_del_lote(lote_id)[0]["hitos"]
+        self.assertEqual(sorted(hitos), sorted(f"p{n}-{i}" for n in range(4) for i in range(10)))
+
+
 if __name__ == "__main__":
     unittest.main()

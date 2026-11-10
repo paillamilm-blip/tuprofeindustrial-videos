@@ -69,6 +69,70 @@ class StickerEnTemasSobriosTest(unittest.TestCase):
         self.assertFalse(escena.dibuja_el_sticker(None, de_la_marca=True, tema_emojis=True))
 
 
+@unittest.skipUnless(escena is not None, "manim no está instalado")
+class LogoEnCabeceraTest(unittest.TestCase):
+    """La franja de arriba lleva tu logo, no el engranaje dibujado, cuando la marca tiene uno.
+
+    El defecto que cierra: la cabecera llamaba siempre a ``engranaje`` con el color de acento del
+    estilo, así que el logo subido en Ajustes sólo aparecía al cierre.
+    """
+
+    class _Trampa(escena.VideoEjercicio):
+        """Lo mínimo que pide ``_cabecera``: marca, tema, colores y materia, sin armar la escena."""
+
+        def __init__(self, emoji_marca: str, marco: str = "pizarra") -> None:
+            self.marca = Marca.model_validate({"cierre": {"emoji": emoji_marca}})
+            self.tema = SimpleNamespace(marco=marco, emojis=False)
+            self.col = SimpleNamespace(acento="#FB923C", fondo="#0B1220", titulos="#F8FAFC")
+            self.color_materia = "#FB923C"
+            self.guion = SimpleNamespace(etiqueta_materia="FÍSICA")
+
+    def _icono(self, emoji_marca: str):
+        return self._Trampa(emoji_marca)._cabecera()[0][0]
+
+    def test_con_logo_de_la_marca_va_la_imagen(self):
+        """«💡» es un PNG real del catálogo: prueba que la cabecera mira el sticker de la marca."""
+        from manim import ImageMobject
+
+        self.assertIsInstance(self._icono("💡"), ImageMobject)
+
+    def test_sin_logo_de_la_marca_sigue_el_engranaje_dibujado(self):
+        from manim import ImageMobject
+
+        self.assertNotIsInstance(self._icono(""), ImageMobject)
+
+    def test_el_logo_se_apaga_junto_con_la_cabecera(self):
+        """Al acercarse la cámara la cabecera se disuelve; el logo no puede quedarse solo flotando."""
+        trampa = self._Trampa("💡")
+        trampa.fondo = SimpleNamespace()
+        trampa.cabecera = trampa._cabecera()
+        trampa._cabecera_opacidades, trampa._cabecera_imagenes = [], []
+        trampa._fijar_cabecera()
+        self.assertIn(trampa.cabecera[0][0], trampa._cabecera_imagenes)
+
+    def test_en_la_hoja_el_logo_va_arriba_y_se_apaga_con_la_cinta(self):
+        """En la hoja la cabecera propia está vacía: el logo tiene que sumarse a «Notas»/«Fecha:»."""
+        from manim import ImageMobject, Text, VGroup
+
+        from tpi_videos import componentes as c
+
+        trampa = self._Trampa("💡", marco="hoja")
+        # la cinta de `marco_hoja` vive a la altura 6,5, fuera de la hoja
+        trampa.fondo = SimpleNamespace(cinta=VGroup(Text("Notas").move_to([0, 6.5, 0])))
+        trampa.cabecera = trampa._cabecera()
+        trampa._cabecera_opacidades, trampa._cabecera_imagenes = [], []
+        trampa._fijar_cabecera()
+        logo = trampa.cabecera[0]
+        self.assertIsInstance(logo, ImageMobject)
+        self.assertIn(logo, trampa._cabecera_imagenes)  # viaja con la cinta al disolverse
+        self.assertAlmostEqual(logo.get_center()[1], 6.5, delta=0.15)  # a la altura de la cinta
+        self.assertGreater(logo.get_center()[1], c.HOJA_CENTRO_Y)  # arriba, no dentro de la hoja
+
+    def test_sin_logo_la_hoja_queda_como_estaba(self):
+        trampa = self._Trampa("", marco="hoja")
+        self.assertEqual(len(trampa._cabecera()), 0)
+
+
 class StickersDelPanelTest(unittest.TestCase):
     def test_el_panel_ofrece_los_png_subidos_por_su_nombre(self):
         """Lo que se sube en Ajustes aparece en la lista del selector del cierre."""

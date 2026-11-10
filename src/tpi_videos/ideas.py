@@ -25,7 +25,7 @@ from . import ia
 from .emojis import lista_para_ia, normalizar_para_ia, quitar_emojis
 from .entorno import PLANTILLAS_DIR
 from .errores import ErrorMotor
-from .guion import Gancho, Guion, sin_tildes
+from .guion import Gancho, Guion, Visual, sin_tildes
 from .moldes import moldes_para_ia, normalizar_molde
 from .redactor import ResultadoRedaccion, pedir_json, redactar
 
@@ -69,6 +69,7 @@ class GanchoIdea(BaseModel):
     emoji: str = ""
     tex: str = ""  # fórmula corta bajo el gancho
     voz: str = ""  # si falta, se usa texto
+    visual: Visual | None = None  # el dibujo del gancho, para que el laboratorio muestre lo mismo
 
 
 def _estilo(valor: str) -> str:
@@ -277,6 +278,7 @@ class ResultadoProduccion:
     tema: str
     srt: Path | None
     fuentes_tiempo: set[str]
+    lectura: float = 0.0  # s que el piso de lectura esperó (se perdonan de la promesa)
     portada: Path | None = None
     publicacion: Path | None = None  # publicacion.md del kit
     texto_kit: str | None = None
@@ -302,6 +304,7 @@ def producir(
     gancho: str | None = None,
     titulo: str | None = None,
     segundos: int | None = None,
+    piso: float | None = None,
     dificultad: str | None = None,
     molde: str | None = None,
     gancho_variante: dict[str, Any] | None = None,
@@ -392,6 +395,7 @@ def producir(
             video=ruta_video,
             carpeta=Path(datos_video.get("carpeta") or ruta_video.parent),
             duracion=float(datos_video.get("duracion") or 0.0),
+            lectura=float(datos_video.get("lectura") or 0.0),
             segundos_proceso=float(datos_video.get("segundos_proceso") or 0.0),
             srt=Path(datos_video["srt"]) if datos_video.get("srt") else None,
             fuentes_tiempo=set(datos_video.get("fuentes_tiempo") or []),
@@ -413,6 +417,7 @@ def producir(
             carpeta_salida=None,
             tema=tema,
             progreso=progreso,
+            piso=piso,
         )
         if hito:
             hito(
@@ -421,6 +426,7 @@ def producir(
                     "video": str(video.video),
                     "carpeta": str(video.carpeta),
                     "duracion": video.duracion,
+                    "lectura": video.lectura,
                     "segundos_proceso": video.segundos_proceso,
                     "srt": str(video.srt) if video.srt else None,
                     "fuentes_tiempo": sorted(video.fuentes_tiempo),
@@ -437,6 +443,7 @@ def producir(
         tema=video.tema,
         srt=video.srt,
         fuentes_tiempo=video.fuentes_tiempo,
+        lectura=video.lectura,
     )
 
     if con_kit:

@@ -34,6 +34,7 @@ from .visuales import (
     MARCAS_RESORTE,
     MARCAS_SOLIDO,
     MARCAS_TANQUE,
+    MARCAS_VECTOR_3D,
     MARCAS_VENN,
     MARCAS_VIGA,
     SEGUNDOS_VISUAL,
@@ -59,6 +60,7 @@ from .visuales import (
     analizar_solido,
     analizar_tanque,
     analizar_torta,
+    analizar_vector_3d,
     analizar_venn,
     analizar_viga,
     normalizar_vectores,
@@ -131,6 +133,7 @@ class Gancho(_ConTexto):
     destacar: list[str] = []
     tex: str | None = None  # fórmula bajo la pregunta, ej. '(x+5)^2 = x^2 + 25'
     emoji: str | None = None  # ej. "🤯", "alerta" o un sticker propio
+    visual: Visual | None = None  # el dibujo que acompaña la promesa, para no hablar de lo que no se ve
 
     _lista = field_validator("destacar", mode="before")(classmethod(lambda cls, v: _como_lista(v)))
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
@@ -169,6 +172,7 @@ class Visual(_Base):
         "circulo_trig",
         "solido",
         "solido_3d",
+        "vector_3d",
         "venn",
         "recta",
         "probabilidad",
@@ -225,6 +229,10 @@ class Visual(_Base):
     # solido_3d (además de figura / lado / radio / altura / anotar)
     vista: Literal["frente", "piso", "ala", "axonometrica"] = "axonometrica"
     corte: Literal["sin_corte", "mitad"] = "sin_corte"  # mitad solo en cubo: ver el validador
+
+    # vector_3d
+    componentes: list[float] | None = None  # las tres: [3, 4, 12]
+    unidad: str | None = None  # la misma para las tres: 'cm'
 
     # venn
     solo_a: int | None = None  # cuántos viven sólo en A
@@ -371,6 +379,14 @@ class Visual(_Base):
                 raise ValueError(
                     f"«{desconocidas[0]}» no es una marca de un sólido; "
                     f"el motor sabe anotar {', '.join(MARCAS_SOLIDO)}"
+                )
+        elif self.tipo == "vector_3d":
+            analizar_vector_3d(self.componentes or [], self.unidad or "")
+            desconocidas = [m for m in self.anotar if m not in MARCAS_VECTOR_3D]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de un vector en el espacio; "
+                    f"el motor sabe anotar {', '.join(MARCAS_VECTOR_3D)}"
                 )
         elif self.tipo == "venn":
             if self.solo_a is None or self.solo_b is None or self.ambos is None:
@@ -665,6 +681,12 @@ class Visual(_Base):
         if self.tipo not in ("solido", "solido_3d"):
             raise ValueError(f"«{self.tipo}» no es un sólido")
         return analizar_solido(self.figura or "", self.lado, self.radio, self.altura)
+
+    def vector_3d(self):
+        """El vector del espacio ya resuelto (su sombra en el piso y su largo). Sólo en vector_3d."""
+        if self.tipo != "vector_3d":
+            raise ValueError(f"«{self.tipo}» no es un vector en el espacio")
+        return analizar_vector_3d(self.componentes or [], self.unidad or "")
 
     def venn(self):
         """Las cuatro regiones del diagrama ya sumadas. Sólo en los venn."""
@@ -1051,8 +1073,8 @@ def _numeros(vals: list[Any]) -> str:
     return "[" + ", ".join(_numero(v) for v in vals) + "]"
 
 
-def _visual_yaml(v: dict[str, Any]) -> list[str]:
-    """Los campos del visual que corresponden a su tipo, con la sangría de un paso."""
+def _visual_yaml(v: dict[str, Any], sangria: str = "      ") -> list[str]:
+    """Los campos del visual que corresponden a su tipo, con la sangría del bloque que lo lleva."""
     tipo = v["tipo"]
     campos: list[tuple[str, str]] = [("tipo", tipo)]
     if tipo == "grafico_funcion":
@@ -1092,6 +1114,12 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
             campos.append(("vista", v.get("vista") or "axonometrica"))
             if v.get("corte") not in (None, "", "sin_corte"):
                 campos.append(("corte", v["corte"]))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "vector_3d":
+        campos.append(("componentes", _numeros(v.get("componentes") or [])))
+        if v.get("unidad"):
+            campos.append(("unidad", _simples(v["unidad"])))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     elif tipo == "venn":
@@ -1209,7 +1237,7 @@ def _visual_yaml(v: dict[str, Any]) -> list[str]:
         campos.append(
             ("resistencias", "[" + ", ".join(_simples(r) for r in v.get("resistencias") or []) + "]")
         )
-    return [f"      {clave}: {valor}" for clave, valor in campos]
+    return [f"{sangria}{clave}: {valor}" for clave, valor in campos]
 
 
 def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
@@ -1237,6 +1265,9 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
             lineas.append(f"  tex: {_simples(b['tex'])}")
         if b.get("emoji"):
             lineas.append(f"  emoji: {_dobles(b['emoji'])}")
+        if b.get("visual"):
+            lineas.append("  visual:")
+            lineas.extend(_visual_yaml(b["visual"], "    "))
 
     bloque("gancho", guion["gancho"])
     if guion.get("gancho_variantes"):

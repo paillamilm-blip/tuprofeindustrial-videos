@@ -19,6 +19,7 @@ def _video_falso(raiz: Path) -> SimpleNamespace:
         video=video,
         carpeta=carpeta,
         duracion=42.0,
+        lectura=4.0,
         segundos_proceso=1.0,
         srt=None,
         fuentes_tiempo=set(),
@@ -109,6 +110,44 @@ class ProducirReanudarTest(unittest.TestCase):
         crear_video.assert_not_called()
         crear_kit.assert_called_once()
         self.assertEqual(nombres, ["kit"])
+
+    def test_el_hito_video_guarda_los_segundos_de_lectura(self) -> None:
+        """Al retomar el lote, el ⚠️ de la promesa necesita saber cuánto fue silencio y cuánto contenido."""
+        guardado: dict[str, dict] = {}
+        with (
+            patch("tpi_videos.ideas.redactar") as redactar,
+            patch("tpi_videos.render.crear_video") as crear_video,
+            patch("tpi_videos.publicar.crear_kit") as crear_kit,
+        ):
+            crear_video.return_value = _video_falso(self.raiz)
+            crear_kit.return_value = _kit_falso(self.raiz)
+            producir("x", reanudar={"guion": _hito_guion()}, hito=guardado.__setitem__)
+
+        redactar.assert_not_called()
+        self.assertEqual(guardado["video"]["lectura"], 4.0)
+
+    def test_al_reanudar_desde_el_hito_video_se_recupera_la_lectura(self) -> None:
+        video = _video_falso(self.raiz)
+        hito_video = {
+            "video": str(video.video),
+            "carpeta": str(video.carpeta),
+            "duracion": 42.0,
+            "lectura": 4.0,
+            "segundos_proceso": 1.0,
+            "srt": None,
+            "fuentes_tiempo": [],
+            "tema": "Hoja de desarrollo",
+        }
+        with (
+            patch("tpi_videos.ideas.redactar") as redactar,
+            patch("tpi_videos.render.crear_video") as crear_video,
+            patch("tpi_videos.publicar.crear_kit") as crear_kit,
+        ):
+            crear_kit.return_value = _kit_falso(self.raiz)
+            resultado = producir("x", reanudar={"guion": _hito_guion(), "video": hito_video})
+
+        crear_video.assert_not_called()
+        self.assertEqual(resultado.lectura, 4.0, "sin este número el reinicio avisa con un ⚠️ falso")
 
     def test_con_hito_kit_no_llama_a_nadie(self) -> None:
         video = _video_falso(self.raiz)

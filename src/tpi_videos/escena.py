@@ -46,6 +46,7 @@ from manim import (
     FadeIn,
     FadeOut,
     Group,
+    ImageMobject,
     Indicate,
     LaggedStart,
     Mobject,
@@ -56,6 +57,7 @@ from manim import (
     SurroundingRectangle,
     TransformMatchingTex,
     UpdateFromAlphaFunc,
+    ValueTracker,
     VGroup,
     VMobject,
     Wiggle,
@@ -70,8 +72,9 @@ from . import componentes as c
 from . import dibujos as d
 from .config import Marca
 from .errores import ErrorMotor
-from .guion import Bloque, Guion, sin_tildes
+from .guion import Bloque, Guion
 from .rodaje import rodaje_de_guion
+from .revision import PISO_LECTURA, espera_de_lectura
 from .voces import RESOLUCION, crear_servicio
 
 
@@ -133,6 +136,29 @@ def deriva_desplazamiento(segundos: float) -> tuple[float, float, float]:
     )
 
 
+def avance_de_movimiento(duracion: float, ventana: float) -> tuple[float, bool]:
+    """Cuánto de la simulación cabe en la voz, y si hubo que cortarla.
+
+    La física manda: el reloj de la simulación corre a su ritmo real y la escena no lo estira
+    ni lo apura. Si la voz se queda corta, se ve el principio y se avisa en la revisión.
+    """
+    if duracion <= 0 or ventana >= duracion:
+        return 1.0, False
+    return max(ventana / duracion, 0.0), True
+
+
+def plan_de_movimiento(duracion: float, restante: float) -> tuple[float, float, float, bool]:
+    """Reparte lo que queda de voz: un cuarto para que el dibujo entre y el resto para la física.
+
+    Devuelve ``(entrada, ventana, avance, se_corta)``. ``entrada + ventana == restante``, así el
+    paso nunca se pasa de la voz; cuando la física no cabe, ``avance`` dice dónde se corta.
+    """
+    entrada = max(restante * 0.25, 0.35)
+    ventana = max(restante - entrada, 0.35)
+    avance, se_corta = avance_de_movimiento(duracion, ventana)
+    return entrada, ventana, avance, se_corta
+
+
 # El tablero partido (``partida: mitades``): arriba el error con su rótulo MITO, abajo la forma
 # correcta con REALIDAD. Ninguna de las dos se achica ni sube de sitio; cada línea se escribe en su
 # casillero y la cámara se inclina hacia la que está hablando. El casillero es más angosto que la
@@ -144,24 +170,53 @@ AIRE_CASILLERO = 0.5
 # Los subtítulos se queman después, centrados en el 72 % del alto (y ≈ -1,76). Lo que se escribe
 # en pantalla tiene que quedar por encima de esa banda o el subtítulo le pasa por encima.
 Y_SOBRE_SUBTITULOS = -1.22
-BANDA_SUBTITULO = 0.34  # el tramo del cuadro, midiendo desde abajo, que se lleva el subtítulo quemado
-AIRE_DIBUJO = 0.28  # el respiro entre el techo del dibujo y la línea más baja de los pasos
+
+
+def banda_subtitulo() -> float:
+    """El tramo de abajo que se lleva el subtítulo quemado, según el tema activo."""
+    return c.estilo_activo().banda_subtitulo
+
+
+def aire_dibujo() -> float:
+    """El respiro entre el techo del dibujo y la línea más baja de los pasos, según el tema activo."""
+    return c.estilo_activo().aire_dibujo
+
+
+def __getattr__(nombre: str) -> float:
+    # Los nombres de siempre (los tests los importan así) resuelven contra el tema activo.
+    if nombre == "BANDA_SUBTITULO":
+        return banda_subtitulo()
+    if nombre == "AIRE_DIBUJO":
+        return aire_dibujo()
+    raise AttributeError(f"module {__name__!r} has no attribute {nombre!r}")
 
 
 def franja_del_dibujo(
-    paisaje: Paisaje, alto_cuadro: float, escala_reposo: float, fondo_papel: float, tope: float
+    paisaje: Paisaje,
+    alto_cuadro: float,
+    escala_reposo: float,
+    fondo_papel: float,
+    tope: float,
+    techo: float | None = None,
+    borde_papel: float | None = None,
 ) -> tuple[float, float, float]:
     """(piso de los pasos, centro del dibujo, alto del dibujo) en el plano de reposo.
 
-    El dibujo se apoya en el filo de abajo que le deja el subtítulo quemado, no en el borde del
-    papel: en la hoja cuadriculada ese filo queda bastante más arriba, porque el cuadro ya es más
-    alto que la hoja y la cámara no tiene a dónde bajar. Si ahí no entra entero, se achica él; los
-    pasos se detienen en la reserva de siempre, que es lo que mantiene grande la letra.
+    El dibujo se apoya en el filo de abajo que le deja el subtítulo quemado y llena la banda que
+    le queda por arriba: sin tope de catálogo, porque recortaba el dibujo aunque sobrase hueco.
+    Los pasos se detienen en la reserva de siempre, que es lo que mantiene grande la letra.
+
+    ``techo`` es ese filo de arriba puesto a mano: en el gancho no hay pizarra de pasos que
+    respetar, así que la banda sube hasta el piso de la pregunta en vez de hasta la reserva.
+    ``borde_papel`` es el fondo real del papel (no la reserva de la zona): en la hoja cuadriculada
+    la grilla sigue bajando bajo la zona de pasos, y ahí el dibujo también puede bajar.
     """
-    fondo = fondo_papel + d.ALTO_DIBUJO + AIRE_DIBUJO
-    piso = max(fondo_papel, paisaje.centro_y - (0.5 - BANDA_SUBTITULO) * alto_cuadro * escala_reposo)
-    alto = min(d.ALTO_DIBUJO, min(fondo, tope) - AIRE_DIBUJO - piso)
-    return fondo, piso + alto / 2, alto  # fmt: skip
+    aire = aire_dibujo()
+    fondo = fondo_papel + d.ALTO_DIBUJO + aire
+    filo = borde_papel if borde_papel is not None else fondo_papel
+    piso = max(filo, paisaje.centro_y - (0.5 - banda_subtitulo()) * alto_cuadro * escala_reposo)
+    arriba = min(tope, fondo if techo is None else techo)
+    return fondo, piso + (arriba - aire - piso) / 2, arriba - aire - piso  # fmt: skip
 
 
 @dataclass(frozen=True)
@@ -318,13 +373,14 @@ def encuadre_de_casillero(
     e = min(1.0, max(MINIMA_PRIMER_PLANO, (base + HOLGURA_ANCHO) / ancho_cuadro))
     fondo = objetivo_y - alto / 2
     borde_papel = paisaje.centro_y - paisaje.medio_alto
-    e = min(e, max(MINIMA_PRIMER_PLANO, (fondo - borde_papel) / (BANDA_SUBTITULO * alto_cuadro)))
-    objetivo_y = min(objetivo_y, fondo + (0.5 - BANDA_SUBTITULO) * alto_cuadro * e)
+    banda = banda_subtitulo()
+    e = min(e, max(MINIMA_PRIMER_PLANO, (fondo - borde_papel) / (banda * alto_cuadro)))
+    objetivo_y = min(objetivo_y, fondo + (0.5 - banda) * alto_cuadro * e)
     return e, _centro_x(0.0, e, ancho_cuadro, paisaje), _centro_y(objetivo_y, e, alto_cuadro, paisaje)
 
 
 def casilleros_de_mitades(tope: float, fondo: float) -> dict[str, tuple[float, float, float]]:
-    """ ``(etiqueta, línea, alto máximo)`` de cada una de las dos mitades del tablero partido.
+    """``(etiqueta, línea, alto máximo)`` de cada una de las dos mitades del tablero partido.
 
     El casillero de abajo no se corre a mitad de video: si algún paso trae dibujo, su franja ya está
     reservada en ``fondo``, así que las dos mitades quedan fijadas desde el primer paso.
@@ -383,6 +439,8 @@ class OpcionesEscena:
     # progreso(bloque_actual, total_bloques, seccion): para barras de progreso (panel)
     progreso: Callable[[int, int, str], None] | None = None
     solo_gancho: bool = False  # laboratorio de ganchos: cabecera + gancho, nada más
+    # Segundos que toda fórmula debe llevar completa y quieta antes de que entre el paso siguiente.
+    piso_lectura: float = PISO_LECTURA
 
 
 @dataclass
@@ -415,6 +473,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self.plumon = tema.animacion.titulos == "plumon"
         self.mayus = tema.tipografia.titulos.mayusculas
         self.bloques_voz: list[dict[str, Any]] = []
+        # Cuántos segundos esperó el piso de lectura en total: lo que el panel perdona de la promesa.
+        self.silencio_de_lectura = 0.0
         self._pendientes: list[Animation] = []  # transiciones para el próximo bloque de voz
         self._total_bloques = len(guion.textos_de_voz(marca.cierre.voz))
         # El molde decide las palabras; la receta de rodaje, cómo se filman esos pasos.
@@ -436,6 +496,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self._camara_cerca = 1.0  # lo más cerca que estuvo la cámara: la cabecera no vuelve hasta el plano
         self._cabecera_fija: Mobject | None = None
         self._cabecera_opacidades: list[tuple[VMobject, float, float]] = []
+        self._cabecera_imagenes: list[Mobject] = []
         self._cabecera_visible = True
         super().__init__(**kwargs)
 
@@ -479,6 +540,24 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             }
         )
 
+    def _da_lectura(self, tracker: Any, completa_desde: float, sale_a: float | None = None) -> None:
+        """Estira el bloque hasta que la fórmula lleve su piso de segundos completa y a la vista.
+
+        El reloj llega hasta el fin del audio, no hasta el último movimiento: los énfasis dibujados
+        sobre la fórmula ya escrita y los segundos que la voz todavía tarda en terminarse también
+        son lectura. Esperar de más congelaba el cuadro encima de la narración. Con el piso en 0 el
+        video sale exactamente como salía antes, que es lo que muestra el «cambiar» cuando se baja.
+        """
+        fin = tracker.start_t + tracker.duration
+        if sale_a is not None:
+            fin = min(fin, sale_a)
+        espera = espera_de_lectura(
+            self.op.piso_lectura, completa_desde=completa_desde, fin_de_bloque=max(fin, self.renderer.time)
+        )
+        if espera > 1 / config.frame_rate:
+            self.silencio_de_lectura += espera
+            self.wait(espera)
+
     def hasta(self, tracker: Any, segundos: float) -> None:
         """Espera hasta ``segundos`` contados desde que empezó a hablar el bloque."""
         restante = tracker.start_t + segundos - self.renderer.time
@@ -491,15 +570,15 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         stop_condition: Callable[[], bool] | None = None,
         frozen_frame: bool | None = None,
     ) -> None:
-        """Con la receta «en_mano» la pausa no congela el cuadro: lo desliza mientras espera.
+        """La espera no congela el cuadro: con la receta «en_mano» se desliza, y con la quieta respira.
 
         El deslizamiento dura lo mismo que duraba la pausa, así la cadena de tiempos de la voz queda
-        intacta; solo cuesta el redondeo al cuadro siguiente (un frame por pausa). Con la receta quieta
-        no hay a dónde moverse y se espera como siempre.
+        intacta; solo cuesta el redondeo al cuadro siguiente (un frame por pausa). Con la cámara en
+        «quieta» no hay cuadro que mover y se espera como siempre.
         """
         if stop_condition is None and frozen_frame is None and duration >= PAUSA_MINIMA_DERIVA:
             desliza = self._mover_camara(
-                self._camara_escala, self._deriva_base_x, self._deriva_base_y, duration
+                self._camara_escala, self._deriva_base_x, self._deriva_base_y, duration, pausa=True
             )
             if desliza:
                 self.play(*desliza, run_time=self.validate_run_time(duration, self.wait, "duration"))
@@ -507,9 +586,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         super().wait(duration, stop_condition, frozen_frame)
 
     def momento(self, tracker: Any, frase: str) -> float | None:
-        """Segundo (dentro del bloque) en que la voz dice ``frase``."""
+        """Segundo (dentro del bloque) en que la voz dice ``frase``, dicha en letras o en dígitos."""
         texto = " ".join(remove_bookmarks(tracker.data["input_text"]).split())
-        idx = sin_tildes(texto.lower()).find(sin_tildes(frase.lower()))
+        idx = c.busca_en_la_voz(texto, frase)
         if idx < 0:
             return None
         marcas = tracker.data.get("word_boundaries") or []
@@ -536,6 +615,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         """La fila de arriba (marca o "Notas/Fecha"): se disuelve cuando la cámara se acerca."""
         cinta = getattr(self.fondo, "cinta", None)  # en la hoja, "Notas" y "Fecha" viven en el fondo
         cabeza = cinta if cinta is not None and len(cinta) else self.cabecera
+        if cinta is not None and len(cinta) and len(self.cabecera):
+            cabeza = Group(cinta, self.cabecera)  # el logo de la hoja se disuelve junto con la cinta
         if len(cabeza):
             self._cabecera_fija = cabeza
             # Opacidad de cada pieza: al volver de un golpe hay que devolver la suya (el chip
@@ -545,16 +626,21 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 for m in cabeza.get_family()
                 if isinstance(m, VMobject)
             ]
+            # El logo es imagen: no tiene relleno ni borde, se apaga con su propia opacidad.
+            self._cabecera_imagenes = [m for m in cabeza.get_family() if isinstance(m, ImageMobject)]
 
     def _disolver_cabecera(self, visible: bool, run_time: float) -> Animation:
         """Muestra u oculta la cabecera respetando la opacidad propia de cada pieza."""
         registros = self._cabecera_opacidades
+        imagenes = self._cabecera_imagenes
 
         def paso(_mob: Mobject, alpha: float) -> None:
             k = alpha if visible else 1.0 - alpha
             for pieza, relleno, borde in registros:
                 pieza.set_fill(opacity=relleno * k)
                 pieza.set_stroke(opacity=borde * k)
+            for imagen in imagenes:
+                imagen.set_opacity(k)
 
         return UpdateFromAlphaFunc(self._cabecera_fija, paso, run_time=run_time)
 
@@ -606,6 +692,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         centro_y: float,
         run_time: float,
         pico: float | None = None,
+        pausa: bool = False,
     ) -> list[Animation]:
         """Lleva el cuadro al destino ya calculado; es el único sitio que mueve la cámara.
 
@@ -613,20 +700,27 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         corrida y un poco más adentro del encuadre que pidió el golpe, que es lo que hace una cámara
         sostenida en la mano. El reposo (``_deriva_base`` y la escala pedida) no se arrastra de una toma
         a la siguiente: si no, el corrimiento se acumularía hasta chocar con el borde del fondo.
+
+        En la receta quieta, ``pausa`` agrega el respiradero sin paneo: esperar no tiene por qué verse
+        como una foto trabada.
         """
         self._deriva_base_x, self._deriva_base_y = centro_x, centro_y
         ancho = escala
-        if self.receta.deriva == "en_mano" and self.modo_camara != "quieta":
+        en_mano = self.receta.deriva == "en_mano" and self.modo_camara != "quieta"
+        if en_mano or (pausa and self.modo_camara != "quieta"):
             self._deriva_t += run_time
-            ancho, centro_x, centro_y = encuadre_con_deriva(
-                centro_x,
-                centro_y,
-                escala,
-                self._deriva_t,
-                self.paisaje,
-                self.alto_cuadro,
-                self.ancho_cuadro,
-            )
+            if en_mano:
+                ancho, centro_x, centro_y = encuadre_con_deriva(
+                    centro_x,
+                    centro_y,
+                    escala,
+                    self._deriva_t,
+                    self.paisaje,
+                    self.alto_cuadro,
+                    self.ancho_cuadro,
+                )
+            else:
+                ancho = escala * (1.0 - deriva_desplazamiento(self._deriva_t)[2])
         if (
             abs(ancho - self._camara_ancho) < 0.004
             and abs(centro_y - self._camara_centro) < 0.05
@@ -641,9 +735,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             # El pico también arrastra el encuadre hacia el objetivo: no puede irse de lo dibujado.
             salto = abs(centro_y - self._camara_centro)
             if salto > 1e-6:
-                colchon = max(
-                    0.0, self.paisaje.medio_alto - self.alto_cuadro * cercano / 2 - abs(centro_y)
-                )
+                colchon = max(0.0, self.paisaje.medio_alto - self.alto_cuadro * cercano / 2 - abs(centro_y))
                 sobrepaso = min(sobrepaso, 1.0 + colchon / salto)
             sobrepaso = min(sobrepaso, SOBREPASO_MAX)
             if sobrepaso > 1.02:
@@ -765,16 +857,21 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self._cierre()
         self._guardar_linea_de_tiempo()
 
-    def _cabecera(self) -> VGroup:
+    def _cabecera(self) -> Group:
         if self.tema.marco == "hoja":
-            return VGroup()  # "Notas" y "Fecha:" ya están en el marco de la hoja
-        icono = c.engranaje(0.17, self.col.acento, self.col.fondo)
+            # "Notas" y "Fecha:" ya están en el marco de la hoja; arriba solo suma el logo, al centro.
+            logo = self._emoji(self.marca.cierre.emoji, 0.7, forzar=True)
+            return VGroup() if logo is None else Group(logo.move_to([0, c.Y_CABECERA, 0]))
+        # El logo subido en Ajustes manda también arriba; el engranaje dibujado queda de respaldo.
+        logo = self._emoji(self.marca.cierre.emoji, 0.36, forzar=True)
+        icono = logo if logo is not None else c.engranaje(0.17, self.col.acento, self.col.fondo)
         nombre = c.texto(self.marca.nombre.upper(), 19, ULTRABOLD, self.col.titulos)
-        izquierda = VGroup(icono, nombre).arrange(RIGHT, buff=0.16)
+        # Group, no VGroup: el logo es una imagen y un VGroup solo admite trazos.
+        izquierda = Group(icono, nombre).arrange(RIGHT, buff=0.16)
         izquierda.move_to([0, c.Y_CABECERA, 0]).to_edge(LEFT, buff=0.6)
         materia = c.chip(self.guion.etiqueta_materia, self.color_materia)
         materia.move_to([0, c.Y_CABECERA, 0]).to_edge(RIGHT, buff=0.6)
-        return VGroup(izquierda, materia)
+        return Group(izquierda, materia)
 
     def _gancho(self) -> None:
         g = self.guion.gancho
@@ -792,10 +889,10 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             max_lineas=4,
             mayus=self.mayus,
         )
-        emoji = self._emoji(g.emoji, 1.7 * k)
+        emoji = None if g.visual is not None else self._emoji(g.emoji, 1.7 * k)
         formula = c.ecuacion(g.tex, c.TAM_ECUACION, self.col.formulas).set_z_index(1) if g.tex else None
         suelto = emoji is None and formula is None
-        y = (Y_GANCHO_LLENO if lleno else c.CENTRO_ZONA + (0.9 if suelto else 0.6))
+        y = Y_GANCHO_LLENO if lleno else c.CENTRO_ZONA + (0.9 if suelto else 0.6)
         if suelto:
             bloque = p
             p.move_to([0, y, 0])
@@ -806,6 +903,15 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             # Una pregunta larga con emoji y fórmula no puede bajar de la banda de los subtítulos:
             # si no entra, cede la letra, nunca el encuadre.
             bloque.scale_to_fit_height(ALTO_GANCHO_LLENO)
+        if g.visual is not None:
+            # El dibujo manda: la pregunta se sube al techo de la zona y la banda de abajo queda libre.
+            bloque.move_to([0, c.Y_ZONA_SUPERIOR - bloque.height / 2 - 0.15, 0])
+            piso_pregunta = bloque.get_bottom()[1]
+            _, centro_dibujo, alto_dibujo = self._franja_del_dibujo(g, piso_pregunta, techo=piso_pregunta)
+        else:
+            piso_pregunta = bloque.get_bottom()[1]
+            _, centro_dibujo, alto_dibujo = self._franja_del_dibujo(g, piso_pregunta)
+        dibujo = None
         self.cabecera = self._cabecera()
         self._fijar_cabecera()
         with self.hablar(g.voz_final, "gancho") as tr:
@@ -828,15 +934,22 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 self.play(self._rebote(emoji))
             if formula is not None:
                 self.play(Write(formula), run_time=0.8)
+                completa_desde = self.renderer.time
             for frase in destacar:
                 letras = c.frase_en_parrafo(p, frase)
                 t = self.momento(tr, frase)
                 if len(letras) and t is not None:
                     self.hasta(tr, t)
                     self.play(Indicate(letras, color=self.col.acento, scale_factor=1.18), run_time=0.5)
+            if g.visual is not None and alto_dibujo > 0:
+                dibujo = self._trazar_dibujo(g, centro_dibujo, alto_dibujo, tr, mover_camara=False)
             if emoji is not None and self._restante(tr) > 1.0:
                 self.play(Wiggle(emoji, scale_value=1.08, rotation_angle=0.05 * TAU), run_time=0.8)
+            if formula is not None:
+                self._da_lectura(tr, completa_desde)
         salen = [m for m in (p, emoji, formula) if m is not None]
+        if dibujo is not None:
+            salen.append(dibujo.mobs)
         self._pendientes.append(FadeOut(salen[0] if len(salen) == 1 else Group(*salen), shift=UP * 0.5))
 
     def _enunciado(self) -> None:
@@ -970,19 +1083,60 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self._chip_vivo = chip
         self.play(*([FadeOut(sale)] if sale is not None else []), FadeIn(chip, shift=DOWN * 0.1))
 
-    def _franja_del_dibujo(self, paso: Any, tope: float) -> tuple[float, float, float]:
+    def _franja_del_dibujo(
+        self, paso: Any, tope: float, techo: float | None = None
+    ) -> tuple[float, float, float]:
         """Hasta dónde baja la pizarra de pasos, y el centro y el alto con los que entra el dibujo."""
         if paso.visual is None:
             return c.Y_ZONA_INFERIOR, 0.0, 0.0
-        return franja_del_dibujo(
+        fondo, centro, alto = franja_del_dibujo(
             self.paisaje,
             self.alto_cuadro,
             escala_base(self.modo_camara),
             c.Y_ZONA_INFERIOR,
             tope,
+            techo=techo,
+            borde_papel=self.paisaje.centro_y - self.paisaje.medio_alto,
         )
+        # Una pregunta larga con dibujo puede dejar la banda al revés: sin banda no se dibuja
+        # (más abajo el dibujo se salta), en vez de achatar la imagen por debajo de cero.
+        return fondo, centro, max(alto, 0.0)
 
-    def _trazar_dibujo(self, paso: Any, centro_y: float, alto: float, tr: Any) -> d.Dibujo:
+    def _mover_dibujo(
+        self, dibujo: d.Dibujo, duracion: float, restante: float, camara: list[Animation]
+    ) -> None:
+        """Entra el dibujo con lo justo y después corre su física en el tiempo real.
+
+        El reloj avanza lineal: la simulación dura lo que dura en el papel. Si la voz se queda
+        corta, se recorre sólo el trozo que cabe y la revisión ya avisó del corte.
+        """
+        entrada, ventana, avance, _ = plan_de_movimiento(duracion, restante)
+        animaciones: list[Animation] = [Create(m) for m in dibujo.trazo]
+        if dibujo.aparece:
+            animaciones.append(
+                LaggedStart(*[FadeIn(m, shift=UP * 0.1) for m in dibujo.aparece], lag_ratio=0.12)
+            )
+        if animaciones:
+            self.play(*animaciones, *camara, run_time=entrada)
+        elif camara:
+            self.play(*camara, run_time=entrada)
+        if dibujo.estela is not None:
+            self.add(dibujo.estela)
+        reloj = ValueTracker(0.0)
+        reloj.add_updater(lambda tracker: dibujo.vivo(tracker.get_value() * avance))
+        self.add(reloj)
+        self.play(
+            reloj.animate.set_value(1.0),
+            run_time=min(ventana, duracion),
+            rate_func=rate_functions.linear,
+        )
+        reloj.clear_updaters()
+        self.remove(reloj)
+        dibujo.vivo(avance)
+
+    def _trazar_dibujo(
+        self, paso: Any, centro_y: float, alto: float, tr: Any, mover_camara: bool = True
+    ) -> d.Dibujo:
         """Dibuja el visual del paso con lo que queda de su voz: primero el trazo, luego lo escrito."""
         hoja = self.tema.marco == "hoja"
         # El color del papel es el de la hoja cuadriculada, o el de la tarjeta en la pizarra oscura.
@@ -1004,8 +1158,13 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         restante = max(self._restante(tr) - 0.5, 1.0)
         if self.receta.partida == "mitades":
             camara = self._toma_de_casillero(dibujo.mobs, aire=0.0)
-        else:
+        elif mover_camara:
             camara = self._animaciones_camara(centro_y, self._camara_escala, run_time=0.55)
+        else:
+            camara = []  # el gancho se mira entero desde el reposo: acá la cámara no se mueve
+        if dibujo.vivo is not None and dibujo.duracion:
+            self._mover_dibujo(dibujo, dibujo.duracion, restante, camara)
+            return dibujo
         # El dibujo termina antes que la voz: lo que queda es el rato que se mira ya completo.
         if dibujo.trazo:
             self.play(
@@ -1041,7 +1200,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         tope = getattr(self, "y_inicio_pasos", c.Y_ZONA_SUPERIOR - 0.2)
         self.tope_pasos = tope
         mitades = receta.partida == "mitades"
-        reserva = d.ALTO_DIBUJO + AIRE_DIBUJO if any(p.visual is not None for p in self.guion.pasos) else 0.0
+        con_dibujo = any(p.visual is not None for p in self.guion.pasos)
+        reserva = d.ALTO_DIBUJO + aire_dibujo() if con_dibujo else 0.0
         casilleros = casilleros_de_mitades(tope, c.Y_ZONA_INFERIOR + (reserva if mitades else 0.0))
         vivos: dict[str, Linea | None] = {"arriba": None, "abajo": None}
         rotulos: dict[str, Mobject] = {}
@@ -1061,7 +1221,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 if paso.tex is None:  # paso solo hablado
                     self._con_pendientes(*[FadeOut(x) for x in extras_vivos], *sale_dibujo, run_time=0.5)
                     extras_vivos = []
-                    if paso.visual is not None:
+                    if paso.visual is not None and alto_dibujo > 0:
                         dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
                     elif ultima is not None:
                         self.play(Indicate(ultima, color=self.col.acento, scale_factor=1.04), run_time=0.6)
@@ -1176,7 +1336,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 else:
                     aparecer += self._acercar_al_paso(eq)  # el golpe de cámara entra con la fórmula
                 self.play(*aparecer, run_time=float(np.clip(tr.duration * 0.45, 0.8, 1.6)))
-                if paso.visual is not None:
+                completa_desde = self.renderer.time  # desde acá la fórmula ya está completa en pantalla
+                if paso.visual is not None and alto_dibujo > 0:
                     dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
 
                 linea_nueva = Linea(mobs=list(nueva), eq=eq)
@@ -1225,7 +1386,13 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     if emoji is not None:
                         self.play(self._rebote(emoji))
 
-                if paso.error and receta.error == "sale" and not mitades:
+                error_sale = bool(paso.error and receta.error == "sale" and not mitades)
+                # El recuadro, la ✗ y el temblor se dibujan sobre la fórmula ya escrita: no reinician
+                # la lectura. Si además la línea tachada sale antes de que termine la voz, leer termina ahí.
+                sale_antes = tr.start_t + max(0.0, tr.duration - 0.7) if error_sale else None
+                if paso.tex:
+                    self._da_lectura(tr, completa_desde, sale_antes)
+                if error_sale:
                     # Un error ya mostrado y tachado no tiene por qué seguir estorbando el video. En
                     # las dos mitades el mito se queda: sin él a la vista no hay con qué comparar.
                     self.hasta(tr, max(0.0, tr.duration - 0.7))
@@ -1263,11 +1430,15 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         filo = tono_de_tapa(cuerpo, "#000000", PROPORCION_PLIEGUE)
         nota = RoundedRectangle(corner_radius=0.12, width=ancho, height=alto)
         nota.set_fill(cuerpo, 1.0).set_stroke(filo, 2)
-        plegue = Polygon(
-            [ancho / 2 - ALTO_PLEGUE, -alto / 2 + 0.07, 0],
-            [ancho / 2 - 0.07, -alto / 2 + ALTO_PLEGUE, 0],
-            [ancho / 2 - ALTO_PLEGUE, -alto / 2 + ALTO_PLEGUE, 0],
-        ).set_fill(filo, 1.0).set_stroke(filo, 0)
+        plegue = (
+            Polygon(
+                [ancho / 2 - ALTO_PLEGUE, -alto / 2 + 0.07, 0],
+                [ancho / 2 - 0.07, -alto / 2 + ALTO_PLEGUE, 0],
+                [ancho / 2 - ALTO_PLEGUE, -alto / 2 + ALTO_PLEGUE, 0],
+            )
+            .set_fill(filo, 1.0)
+            .set_stroke(filo, 0)
+        )
         return VGroup(nota, plegue).move_to(centro).set_z_index(2)
 
     def _resultado(self) -> None:
@@ -1326,12 +1497,14 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             if barra is not None:
                 self.hasta(tr, momento_del_destape(tr.duration))
                 self.play(FadeOut(barra, shift=UP * 0.55), run_time=0.45)
+            completa_desde = self.renderer.time  # destapado y sin movimiento: acá empieza a leerse
             self.play(
                 Circumscribe(VGroup(caja, eq), color=self.col.acento, fade_out=True, time_width=0.5),
                 run_time=1.0,
             )
             if emoji is not None:
                 self.play(self._rebote(emoji))
+            self._da_lectura(tr, completa_desde)
         # Sin emoji, el mismo grupo vectorial de siempre (idéntico al estilo original)
         self.bloque_resultado = VGroup(cabeza, caja, eq) if emoji is None else Group(cabeza, caja, eq, emoji)
 
@@ -1442,6 +1615,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             "alto": config.pixel_height,
             "fps": config.frame_rate,
             "bloques": self.bloques_voz,
+            "silencio_de_lectura": round(float(self.silencio_de_lectura), 2),
         }
         self.op.linea_de_tiempo.parent.mkdir(parents=True, exist_ok=True)
         self.op.linea_de_tiempo.write_text(json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8")

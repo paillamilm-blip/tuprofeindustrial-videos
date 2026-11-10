@@ -1,4 +1,4 @@
-"""Ajustes: clave de Gemini, marca, voz, estilo de siempre, rodaje de cada molde, stickers y diagnóstico.
+"""Ajustes: clave de Gemini, marca, público, voz, estilo, rodaje de cada molde, stickers y diagnóstico.
 
 Todo se guarda en ``mis_ajustes/`` (``marca.yaml``, ``rodaje.yaml``; la clave en ``.env``): los
 ``.yaml`` que viajan con el motor no se tocan, así actualizar nunca borra lo tuyo.
@@ -20,6 +20,7 @@ from ...moldes import MOLDES
 from ...rodaje import NOMBRE_MANDO, QUE_HACE, RECETA_LIBRE, campos_de_receta, guardar_receta
 from ...temas import listar_temas
 from ..comun import PIEL, confirmar, url_medio
+from ..sugerencia import DIFICULTADES, NOMBRE_MATERIA
 from ..tareas import consultar
 
 VOCES = {
@@ -124,12 +125,12 @@ def _seccion_marca() -> None:
         ui.input("Frase de cierre (se escucha)").props("outlined dense").classes("w-full").bind_value(
             datos, "voz"
         )
-        ui.select(stickers, label="Sticker del cierre").props("outlined dense").classes("w-full").bind_value(
+        ui.select(stickers, label="Tu logo").props("outlined dense").classes("w-full").bind_value(
             datos, "sticker"
         )
-        ui.label("Tu logo va al final de cada video. Súbelo abajo, en Tus stickers.").classes(
-            "tpi-ayuda -mt-2"
-        )
+        ui.label(
+            "Va arriba, en la franja de la cabecera, y al final de cada video. Súbelo en Tus stickers."
+        ).classes("tpi-ayuda -mt-2")
 
         def guardar() -> None:
             try:
@@ -142,6 +143,48 @@ def _seccion_marca() -> None:
             ui.notify("Marca guardada.", type="positive")
 
         ui.button("Guardar marca", icon="save", on_click=guardar).props("outline")
+
+
+@ui.refreshable
+def _seccion_publico() -> None:
+    """Su público de siempre: la tarjeta de cada video lo ofrece como punto de partida, no como orden."""
+    marca = cargar_marca()
+    datos = {
+        "materia": marca.publico.materia,
+        "nivel": marca.publico.nivel,
+        "dificultad": marca.publico.dificultad,
+    }
+    with _tarjeta("Tu público", "La materia, el nivel y la dificultad con que trabajas siempre."):
+        ui.select(
+            {"": "Que lo decida la IA", **NOMBRE_MATERIA}, label="Materia"
+        ).props("outlined dense").classes("w-full").bind_value(datos, "materia")
+        ui.input("Nivel", placeholder="Ej. 2° medio o técnico en electricidad").props(
+            "outlined dense"
+        ).classes("w-full").bind_value(datos, "nivel")
+        ui.select(
+            {"": "Que la IA reparta las 3", **DIFICULTADES}, label="Dificultad"
+        ).props("outlined dense").classes("w-full").bind_value(datos, "dificultad")
+        ui.label("Si lo dejas vacío, la IA lo deduce de tu frase. En cada video lo puedes cambiar.").classes(
+            "tpi-ayuda -mt-2"
+        )
+
+        def guardar() -> None:
+            try:
+                guardar_ajustes_marca(
+                    {
+                        "publico": {
+                            "materia": datos["materia"] or "",
+                            "nivel": (datos["nivel"] or "").strip(),
+                            "dificultad": datos["dificultad"] or "",
+                        }
+                    }
+                )
+            except ErrorMotor as e:
+                ui.notify(e.mensaje, type="negative", multi_line=True)
+                return
+            ui.notify("Público guardado.", type="positive")
+
+        ui.button("Guardar público", icon="save", on_click=guardar).props("outline")
 
 
 def _seccion_voz() -> None:
@@ -355,6 +398,7 @@ def cuerpo() -> None:
             _seccion_tema()
         with ui.column().classes("flex-1 gap-6"):
             _seccion_marca()
+            _seccion_publico()
             _seccion_stickers(_seccion_marca.refresh)
             _seccion_diagnostico()
     _seccion_rodaje()

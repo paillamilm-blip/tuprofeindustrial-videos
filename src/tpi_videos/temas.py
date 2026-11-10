@@ -103,6 +103,20 @@ class Animacion(_Base):
     titulos: Literal["aparecer", "plumon"] = "aparecer"
 
 
+class Layout(_Base):
+    """Diagramación vertical del cuadro.
+
+    Los ``y_...`` vacíos (``None``) son las zonas del marco (pizarra u hoja), que es lo que usa hoy
+    cada tema: así un YAML que no menciona ``layout`` se ve exactamente igual que antes.
+    """
+
+    y_cabecera: float | None = None  # la línea de la marca y la materia
+    y_zona_enunciado: float | None = None  # techo de la zona de trabajo (donde arranca el enunciado)
+    y_zona_pasos: float | None = None  # piso de la zona de trabajo (donde se detiene la pila de pasos)
+    banda_subtitulo: float = 0.28  # el tramo de abajo que se lleva el subtítulo quemado
+    aire_dibujo: float = 0.28  # el respiro entre el techo del dibujo y la línea más baja de los pasos
+
+
 class Tema(_Base):
     nombre: str
     descripcion: str = ""
@@ -118,6 +132,7 @@ class Tema(_Base):
     hoja: Hoja = Hoja()
     subtitulos: EstiloSubtitulos = EstiloSubtitulos()
     animacion: Animacion = Animacion()
+    layout: Layout = Layout()
     emojis: bool = True
     # El halo de los trazos brillantes que pone postproduccion.py al armar el video final
     resplandor: bool = False

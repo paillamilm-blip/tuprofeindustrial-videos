@@ -7,6 +7,7 @@ La matemática ya viene analizada en ``visuales.py``; aquí sólo se dibuja.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,6 +19,7 @@ from manim import (
     PI,
     RIGHT,
     SEMIBOLD,
+    TAU,
     UP,
     Arc,
     Arrow,
@@ -29,10 +31,12 @@ from manim import (
     Dot,
     Ellipse,
     Line,
+    ManimColor,
     Mobject,
     Polygon,
     Rectangle,
     Sector,
+    TracedPath,
     VGroup,
     VMobject,
 )
@@ -41,6 +45,7 @@ from . import componentes as c
 from .errores import ErrorMotor
 from .simulacion import Oscilador, PenduloDoble
 from .visuales import (
+    DURACION_RESORTE,
     AnguloTrig,
     Barras,
     Bloques,
@@ -84,14 +89,21 @@ _DIRECCIONES = {
 
 @dataclass
 class Dibujo:
-    """Un dibujo listo para la escena: su grupo, y cómo sale cada parte."""
+    """Un dibujo listo para la escena: su grupo, cómo sale cada parte y, si se mueve, su pose."""
 
     mobs: VGroup
     trazo: list[Mobject] = field(default_factory=list)  # se dibujan con Create
     aparece: list[Mobject] = field(default_factory=list)  # aparecen con FadeIn
+    vivo: Callable[[float], None] | None = None  # pinta la pose p ∈ [0, 1]
+    duracion: float | None = None  # segundos de física que pide la pose
+    estela: Mobject | None = None  # la traza que crece; la escena la agrega sola
+    # Lo que ``place`` corre el dibujo: la pose lo consulta para no volver al origen.
+    desplazamiento: list[np.ndarray] = field(default_factory=lambda: [np.zeros(3)], repr=False)
 
     def place(self, x: float, y: float) -> Dibujo:
-        self.mobs.move_to(np.array([x, y, 0]))
+        delta = np.array([x, y, 0.0]) - self.mobs.get_center()
+        self.mobs.shift(delta)
+        self.desplazamiento[0] = self.desplazamiento[0] + delta
         return self
 
 
@@ -125,6 +137,52 @@ def _encajar(todo: VGroup, ancho: float, alto: float) -> VGroup:
     """Si el dibujo se sale de la franja del pie, se encoge entero. Agrandarlo no sirve de nada."""
     excedido = max(todo.width / ancho, todo.height / alto)
     return todo if excedido <= 1.0 else todo.scale(1.0 / excedido)
+
+
+def _encaje(
+    todo: VGroup, ancho: float, alto: float
+) -> tuple[Callable[[np.ndarray], np.ndarray], list[np.ndarray]]:
+    """Encaja el grupo y devuelve cómo llevar un punto suyo al encuadre final.
+
+    ``fijo`` deja un punto de la figura donde quedó dibujado: incluye el encogido y lo que después
+    lo mueva ``place``. La caja de desplazamiento es la misma que guarda el ``Dibujo``, así la pose
+    nunca vuelve al origen cuando el dibujo ya cambió de sitio.
+    """
+    centro = todo.get_center().copy()
+    excedido = max(todo.width / ancho, todo.height / alto)
+    _encajar(todo, ancho, alto)
+    factor = 1.0 / excedido if excedido > 1.0 else 1.0
+    desplazamiento = [np.zeros(3)]
+
+    def fijo(p: np.ndarray) -> np.ndarray:
+        return centro + (np.asarray(p, dtype=float) - centro) * factor + desplazamiento[0]
+
+    return fijo, desplazamiento
+
+
+def _color_de_magnitud(col: Any, fraccion: float) -> ManimColor:
+    """Del tenue al acento y, sólo al tope, al error: la magnitud también se lee en el color."""
+    f = min(max(fraccion, 0.0), 1.0)
+    if f <= 0.5:
+        return ManimColor(col.tenue).interpolate(ManimColor(col.acento), f * 2.0)
+    return ManimColor(col.acento).interpolate(ManimColor(col.error), (f - 0.5) * 2.0)
+
+
+def _apuntar(
+    vector: Arrow, origen: np.ndarray, direccion: np.ndarray, largo: float, color: ManimColor
+) -> None:
+    """Reapunta una flecha en su sitio: la punta queda a ``largo`` del origen y el relleno sigue al color."""
+    norma = float(np.linalg.norm(direccion))
+    unitaria = direccion / norma if norma > 1e-9 else np.array([1.0, 0.0, 0.0])
+    vector.put_start_and_end_on(origen, origen + unitaria * max(largo, 0.04))
+    vector.set_color(color)
+
+
+def _estela(punto: Mobject, color: str, grosor: float) -> TracedPath:
+    """La traza que crece con el punto; se siembra en su posición para no nacer en el origen."""
+    traza = TracedPath(punto.get_center, stroke_color=color, stroke_width=grosor)
+    traza.set_points_as_corners([punto.get_center(), punto.get_center()])
+    return traza
 
 
 def _parche(m: Mobject, papel: str, holgura: float = 0.14) -> VGroup:
@@ -617,30 +675,39 @@ def poligono_regular(
 # ------------------------------------------------------------------------------------------
 
 
+LARGO_COMPONENTE = 0.7  # el largo máximo de vx y vy dentro del dibujo
+
+
 def proyectil(
     figura: Proyectil, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
 ) -> Dibujo:
-    """La parábola del vuelo apoyada en el suelo, con la flecha del lanzamiento y las marcas del guion.
+    """El vuelo completo: la bola recorre la parábola en el tiempo real y la estela queda.
 
-    Se escala con el alcance y la altura que calculó ``visuales.py``: la forma de la curva es la
-    verdadera, así una rampa de 45° se ve distinta de una de 30° sin que nadie escriba un número.
+    La guía tenue deja ver hacia dónde va; las componentes de la velocidad crecen y cambian de color
+    con la bola: ``vx`` no cambia nunca y ``vy`` se apaga hasta invertirse en la bajada.
     """
-    escala = min(ancho * 0.9 / figura.alcance, alto * 0.7 / figura.altura)
+    # El 0,55 deja aire bajo el suelo para que la flecha de vy quepa cuando apunta hacia abajo.
+    escala = min(ancho * 0.9 / figura.alcance, alto * 0.55 / figura.altura)
     gravedad = 2 * figura.vertical / figura.tiempo
-    paso = figura.tiempo / 48
     mitad = figura.alcance * escala / 2
-    puntos = []
-    for i in range(49):
-        t = paso * i
-        x = figura.horizontal * t * escala - mitad
-        y = (figura.vertical * t - gravedad * t * t / 2) * escala
-        puntos.append(np.array([x, y, 0.0]))
-    izquierda, derecha = puntos[0], puntos[-1]
+
+    def posicion(t: float) -> np.ndarray:
+        return np.array(
+            [
+                figura.horizontal * t * escala - mitad,
+                (figura.vertical * t - gravedad * t * t / 2) * escala,
+                0.0,
+            ]
+        )
+
+    izquierda, derecha = posicion(0.0), posicion(figura.tiempo)
+    cima = posicion(figura.tiempo / 2)
 
     suelo = Line(izquierda + LEFT * 0.3, derecha + RIGHT * 0.3, buff=0).set_stroke(col.tenue, 5)
-    curva = VMobject().set_points_smoothly(puntos).set_stroke(col.formulas, 6)
+    curva = VMobject().set_points_smoothly([posicion(figura.tiempo * i / 48) for i in range(49)])
+    curva.set_stroke(col.tenue, 3)
     rayas: list = [suelo, curva]
-    parches, rótulos, puntos_vivos = VGroup(), VGroup(), []
+    parches, rótulos = VGroup(), VGroup()
 
     def medida(texto: str, donde: np.ndarray, tam: float = 22) -> None:
         rotulo = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
@@ -661,37 +728,85 @@ def proyectil(
     medida(f"{_numero_latex(figura.angulo)}°", izquierda + np.array([0.95, 0.16, 0.0]))
     if "alcance" in marcas:
         medida(f"d ≈ {_numero_latex(figura.alcance)}{_sufijo_proyectil(figura)}", derecha + DOWN * 0.36, 24)
-    cima = puntos[24]
     if "altura_maxima" in marcas:
         bajada = DashedLine(cima, cima * np.array([1.0, 0.0, 1.0]), buff=0).set_stroke(col.acento, 4)
         rayas.append(bajada)
-        puntos_vivos.append(Dot(cima, radius=0.05, color=col.acento))
         medida(
             f"h ≈ {_numero_latex(figura.altura)}{_sufijo_proyectil(figura)}",
             cima + np.array([0.95, -0.3, 0.0]),
             24,
         )
-    if "componentes" in marcas:
-        t = figura.tiempo / 4
-        origen = np.array(
-            [
-                figura.horizontal * t * escala - mitad,
-                (figura.vertical * t - gravedad * t * t / 2) * escala,
-                0.0,
-            ]
-        )
-        puntos_vivos.append(Dot(origen, radius=0.05, color=col.formulas))
-        vx = Arrow(origen, origen + RIGHT * 0.9, buff=0, stroke_width=5, max_tip_length_to_length_ratio=0.22)
-        vx.set_stroke(col.tenue, 5).set_fill(col.tenue, 1)
-        vy = Arrow(origen, origen + UP * 0.9, buff=0, stroke_width=5, max_tip_length_to_length_ratio=0.22)
-        vy.set_stroke(col.tenue, 5).set_fill(col.tenue, 1)
-        rayas.extend([vx, vy])
-        medida("vx", origen + RIGHT * 1.15 + DOWN * 0.15, 20)
-        medida("vy", origen + UP * 1.1 + RIGHT * 0.2, 20)
 
-    todo = VGroup(suelo, curva, *rayas[2:], parches, *puntos_vivos, rótulos)
-    _encajar(todo, ancho, alto)
-    return Dibujo(mobs=todo, trazo=rayas, aparece=[*puntos_vivos, *rótulos])
+    bola = Dot(radius=0.075).set_fill(col.acento, 1).set_stroke(width=0)
+    aparece: list[Mobject] = [bola]
+    vectores: list[Arrow] = []
+    etiquetas = VGroup()
+    if "componentes" in marcas:
+        vx = Arrow(
+            izquierda,
+            izquierda + RIGHT * LARGO_COMPONENTE,
+            buff=0,
+            stroke_width=5,
+            max_tip_length_to_length_ratio=0.22,
+        )
+        vy = Arrow(
+            izquierda,
+            izquierda + UP * LARGO_COMPONENTE,
+            buff=0,
+            stroke_width=5,
+            max_tip_length_to_length_ratio=0.22,
+        )
+        vectores = [vx, vy]
+        etiquetas = VGroup(
+            c.texto("vx", 20, SEMIBOLD, col.texto),
+            c.texto("vy", 20, SEMIBOLD, col.texto),
+        )
+        aparece.extend([*vectores, etiquetas])
+    aparece.extend(rótulos)
+
+    todo = VGroup(suelo, curva, *rayas[2:], *vectores, parches, rótulos, etiquetas, bola)
+    fijo, desplazamiento = _encaje(todo, ancho, alto)
+
+    def vivo(p: float) -> None:
+        t = p * figura.tiempo
+        centro = fijo(posicion(t))
+        bola.move_to(centro)
+        if not vectores:
+            return
+        vx, vy = vectores
+        vy_actual = figura.vertical - gravedad * t
+        rapidez_x = abs(figura.horizontal) / figura.velocidad
+        rapidez_y = abs(vy_actual) / figura.velocidad
+        _apuntar(
+            vx,
+            centro,
+            RIGHT * figura.horizontal,
+            LARGO_COMPONENTE * rapidez_x,
+            _color_de_magnitud(col, rapidez_x),
+        )
+        _apuntar(
+            vy,
+            centro,
+            UP * (vy_actual if abs(vy_actual) > 1e-9 else 1.0),
+            LARGO_COMPONENTE * rapidez_y,
+            _color_de_magnitud(col, rapidez_y),
+        )
+        rotulo_vx, rotulo_vy = etiquetas
+        rotulo_vx.move_to(centro + RIGHT * (LARGO_COMPONENTE * rapidez_x + 0.18))
+        rotulo_vy.move_to(centro + UP * np.sign(vy_actual or 1.0) * (LARGO_COMPONENTE * rapidez_y + 0.18))
+
+    vivo(0.0)
+    estela = _estela(bola, col.acento, 5)
+    todo.add(estela)
+    return Dibujo(
+        mobs=todo,
+        trazo=rayas,
+        aparece=aparece,
+        vivo=vivo,
+        duracion=figura.tiempo,
+        estela=estela,
+        desplazamiento=desplazamiento,
+    )
 
 
 # ------------------------------------------------------------------------------------------
@@ -1252,22 +1367,26 @@ def optica(
 def pendulo(
     figura: Pendulo, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
 ) -> Dibujo:
-    """El hilo con su peso apartado de la vertical: el largo manda en el tiempo de una vuelta."""
+    """El hilo que va y vuelve en su período real; la estela queda y, si se pide, la velocidad.
+
+    La posición sale de ``θ(t) = θ₀·cos(2πt/T)``: el ángulo de la oscilación armónica, no una
+    interpolación a ojo. La velocidad es tangente al arco y se apaga en los extremos, donde vale cero.
+    """
     s = alto * 0.52
     uni = f" {figura.unidad}" if figura.unidad else ""
-    t = np.radians(figura.angulo)
+    t0 = np.radians(figura.angulo)
     pivote = np.array([0.0, s / 2, 0.0])
-    peso = pivote + np.array([-s * np.sin(t), -s * np.cos(t), 0.0])
 
     apoyo = Line(pivote + [-0.4, 0, 0], pivote + [0.4, 0, 0]).set_stroke(col.formulas, 5)
     vertical = DashedLine(pivote, pivote + [0.0, -s, 0.0]).set_stroke(col.tenue, 3)
-    vuelo = Arc(radius=s, start_angle=-PI / 2 - t, angle=2 * t, arc_center=pivote)
+    vuelo = Arc(radius=s, start_angle=-PI / 2 - t0, angle=2 * t0, arc_center=pivote)
     vuelo.set_stroke(col.formulas, 2)
-    hilo = Line(pivote, peso).set_stroke(col.formulas, 4)
-    angulo = Arc(radius=s * 0.30, start_angle=-PI / 2, angle=-t, arc_center=pivote)
+    hilo = Line(pivote, pivote + np.array([-s * np.sin(t0), -s * np.cos(t0), 0.0])).set_stroke(
+        col.formulas, 4
+    )
+    angulo = Arc(radius=s * 0.30, start_angle=-PI / 2, angle=-t0, arc_center=pivote)
     angulo.set_stroke(col.acento, 3)
-    bola = Circle(radius=0.16).move_to(peso)
-    bola.set_fill(col.acento, 0.9).set_stroke(col.acento, 3)
+    bola = Dot(radius=0.15).set_fill(col.acento, 0.95).set_stroke(col.acento, 2)
 
     parches, rótulos = VGroup(), VGroup()
     _cartela(
@@ -1278,7 +1397,7 @@ def pendulo(
         f"{_numero_latex(figura.angulo)}°",
         pivote
         + np.array(
-            [(s * 0.30 + 0.38) * np.cos(-PI / 2 - t / 2), (s * 0.30 + 0.38) * np.sin(-PI / 2 - t / 2), 0.0]
+            [(s * 0.30 + 0.38) * np.cos(-PI / 2 - t0 / 2), (s * 0.30 + 0.38) * np.sin(-PI / 2 - t0 / 2), 0.0]
         ),
     )
     _cartela(
@@ -1302,20 +1421,70 @@ def pendulo(
             18,
         )
 
-    rayas = [apoyo, vertical, vuelo, hilo, angulo]
+    velocidad = None
+    if "velocidad" in marcas:
+        velocidad = Arrow(
+            pivote, pivote + RIGHT * 0.4, buff=0, stroke_width=5, max_tip_length_to_length_ratio=0.25
+        )
+
+    rayas = [apoyo, vertical, vuelo, hilo, angulo, *([velocidad] if velocidad else [])]
     todo = VGroup(*rayas, bola, parches, rótulos)
-    _encajar(todo, ancho, alto)
-    return Dibujo(mobs=todo, trazo=rayas, aparece=[bola, *rótulos])
+    fijo, desplazamiento = _encaje(todo, ancho, alto)
+
+    def vivo(p: float) -> None:
+        # Una vuelta completa: θ pasa de θ₀ a -θ₀ y vuelve. La pausa nunca congela la física.
+        t = t0 * np.cos(TAU * p)
+        centro = fijo(pivote + np.array([-s * np.sin(t), -s * np.cos(t), 0.0]))
+        bola.move_to(centro)
+        hilo.put_start_and_end_on(fijo(pivote), centro)
+        if velocidad is None:
+            return
+        rapidez = abs(np.sin(TAU * p))
+        sentido = 1.0 if np.sin(TAU * p) >= 0 else -1.0
+        direccion = np.array([np.cos(t), -np.sin(t), 0.0]) * sentido
+        _apuntar(velocidad, centro, direccion, s * 0.30 * rapidez, _color_de_magnitud(col, rapidez))
+        velocidad.set_opacity(min(1.0, rapidez / 0.20))
+
+    vivo(0.0)
+    estela = _estela(bola, col.acento, 4)
+    todo.add(estela)
+    return Dibujo(
+        mobs=todo,
+        trazo=rayas,
+        aparece=[bola, *rótulos],
+        vivo=vivo,
+        duracion=figura.periodo,
+        estela=estela,
+        desplazamiento=desplazamiento,
+    )
+
+
+def _puntos_espira(x_pared: float, x_fin: float, n: int) -> list[np.ndarray]:
+    """La espira entre la pared y el extremo libre, con siempre las mismas vueltas."""
+    largo = x_fin - x_pared
+    paso = (largo - 0.30) / n
+    pts = [np.array([x_pared, 0.0, 0.0]), np.array([x_pared + 0.15, 0.0, 0.0])]
+    for i in range(n):
+        x0 = x_pared + 0.15 + paso * i
+        pts.append(np.array([x0 + paso / 2, 0.24 if i % 2 == 0 else -0.24, 0.0]))
+        pts.append(np.array([x0 + paso, 0.0, 0.0]))
+    pts.append(np.array([x_fin, 0.0, 0.0]))
+    return pts
 
 
 def resorte(
     figura: Resorte, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
 ) -> Dibujo:
-    """La ley de Hooke: la pared, el resorte estirado y la fuerza que cuesta dejarlo así."""
+    """La ley de Hooke en movimiento: la espira se estira y la fuerza crece con ella.
+
+    La cota mide la extensión final que pide el guion y no se mueve; lo que se mueve es el extremo
+    libre, el bloque y la flecha de la fuerza. El estiramiento es suave, como el de una mano.
+    """
     x_pared = -ancho * 0.32
     largo = ancho * 0.38
     lado = min(alto * 0.30, ancho * 0.13)
     x_fin = x_pared + largo
+    x_reposo = x_fin - min(largo * 0.26, 0.65)
 
     pared = Line([x_pared, -alto * 0.28, 0], [x_pared, alto * 0.28, 0]).set_stroke(col.formulas, 5)
     rayado = VGroup(
@@ -1325,20 +1494,13 @@ def resorte(
         ]
     ).set_stroke(col.tenue, 3)
 
-    n = 7
-    paso = (largo - 0.30) / n
-    pts = [np.array([x_pared, 0.0, 0.0]), np.array([x_pared + 0.15, 0.0, 0.0])]
-    for i in range(n):
-        x0 = x_pared + 0.15 + paso * i
-        pts.append(np.array([x0 + paso / 2, 0.24 if i % 2 == 0 else -0.24, 0.0]))
-        pts.append(np.array([x0 + paso, 0.0, 0.0]))
-    pts.append(np.array([x_fin, 0.0, 0.0]))
-    espira = VMobject().set_points_as_corners(pts)
+    espira = VMobject().set_points_as_corners(_puntos_espira(x_pared, x_reposo, 7))
     espira.set_stroke(col.acento, 5)
 
-    bloque = Rectangle(width=lado, height=lado).move_to([x_fin + lado / 2, 0.0, 0.0])
+    bloque = Rectangle(width=lado, height=lado).move_to([x_reposo + lado / 2, 0.0, 0.0])
     bloque.set_fill(col.acento, 0.22).set_stroke(col.formulas, 4)
 
+    # La flecha arranca con su largo final: así entra en la caja del dibujo y después sólo se acorta.
     estira = Arrow(
         [x_fin + lado, 0.0, 0.0],
         [x_fin + lado + ancho * 0.12, 0.0, 0.0],
@@ -1348,7 +1510,6 @@ def resorte(
     )
     estira.set_stroke(col.error, 5).set_fill(col.error, 1)
 
-    x_reposo = x_fin - min(largo * 0.26, 0.65)
     guias = VGroup(
         DashedLine([x_reposo, 0.30, 0], [x_reposo, 0.60, 0]),
         DashedLine([x_fin, 0.30, 0], [x_fin, 0.60, 0]),
@@ -1390,8 +1551,32 @@ def resorte(
 
     rayas = [pared, rayado, espira, guias, bloque]
     todo = VGroup(*rayas, cota, estira, parches, rótulos)
-    _encajar(todo, ancho, alto)
-    return Dibujo(mobs=todo, trazo=rayas, aparece=[cota, estira, *rótulos])
+    fijo, desplazamiento = _encaje(todo, ancho, alto)
+
+    def vivo(p: float) -> None:
+        suave = p * p * (3.0 - 2.0 * p)  # la mano no arranca ni frena de golpe
+        x_t = x_reposo + (x_fin - x_reposo) * suave
+        espira.set_points_as_corners([fijo(q) for q in _puntos_espira(x_pared, x_t, 7)])
+        bloque.move_to(fijo(np.array([x_t + lado / 2, 0.0, 0.0])))
+        largo_fuerza = max(ancho * 0.12 * suave, 0.04)
+        estira.put_start_and_end_on(
+            fijo(np.array([x_t + lado, 0.0, 0.0])),
+            fijo(np.array([x_t + lado + largo_fuerza, 0.0, 0.0])),
+        )
+        estira.set_color(_color_de_magnitud(col, suave))
+
+    vivo(0.0)
+    estela = _estela(bloque, col.acento, 4)
+    todo.add(estela)
+    return Dibujo(
+        mobs=todo,
+        trazo=rayas,
+        aparece=[cota, estira, *rótulos],
+        vivo=vivo,
+        duracion=DURACION_RESORTE,
+        estela=estela,
+        desplazamiento=desplazamiento,
+    )
 
 
 def polea(
@@ -2166,8 +2351,10 @@ def oscilador(
     def py(x: float) -> float:
         return x * (e_y / (2.0 * x_tope))
 
-    curva = VMobject().set_points_smoothly([np.array([px(t), py(x), 0.0]) for t, x in zip(figura.t, figura.x)])
-    curva.set_stroke(col.acento, 5)
+    curva = VMobject().set_points_smoothly(
+        [np.array([px(t), py(x), 0.0]) for t, x in zip(figura.t, figura.x)]
+    )
+    curva.set_stroke(col.tenue, 3)  # la guía completa: se ve adónde va antes de llegar
 
     eje_t = Arrow([px(0.0), 0.0, 0], [px(t_fin) + 0.32, 0.0, 0], buff=0, stroke_width=4)
     eje_x = Arrow([px(0.0), -e_y / 2 - 0.12, 0], [px(0.0), e_y / 2 + 0.22, 0], buff=0, stroke_width=4)
@@ -2179,10 +2366,7 @@ def oscilador(
         alfa = 1.0 / figura.decaimiento
         for signo in (1.0, -1.0):
             borde = VMobject().set_points_smoothly(
-                [
-                    np.array([px(t), py(signo * figura.amplitud * np.exp(-alfa * t)), 0.0])
-                    for t in figura.t
-                ]
+                [np.array([px(t), py(signo * figura.amplitud * np.exp(-alfa * t)), 0.0]) for t in figura.t]
             )
             sobre = DashedVMobject(borde, num_dashes=48)
             sobre.set_stroke(col.tenue, 3)
@@ -2190,14 +2374,23 @@ def oscilador(
 
     parches, rótulos = VGroup(), VGroup()
     _cartela(
-        col, papel, parches, rótulos, f"x ({figura.unidad or 'm'})", np.array([px(0.0) - 0.14, e_y / 2 + 0.34, 0.0]), 15, LEFT
+        col,
+        papel,
+        parches,
+        rótulos,
+        f"x ({figura.unidad or 'm'})",
+        np.array([px(0.0) - 0.14, e_y / 2 + 0.34, 0.0]),
+        15,
+        LEFT,
     )
     _cartela(col, papel, parches, rótulos, "t (s)", np.array([px(t_fin) + 0.32, -0.26, 0.0]), 15, RIGHT)
 
     # Los datos van en una sola banda bajo la curva, de izquierda a derecha, para que no se pisen.
     banda = -e_y / 2 - 0.40
     if "regimen" in marcas:
-        regimen = figura.regimen if figura.zeta == 0 else f"ζ = {_numero_latex(figura.zeta)} ({figura.regimen})"
+        regimen = (
+            figura.regimen if figura.zeta == 0 else f"ζ = {_numero_latex(figura.zeta)} ({figura.regimen})"
+        )
         _cartela(col, papel, parches, rótulos, regimen, np.array([px(0.0), banda, 0.0]), 15, RIGHT)
     if "decaimiento" in marcas and figura.decaimiento is not None:
         _cartela(
@@ -2221,28 +2414,43 @@ def oscilador(
             LEFT,
         )
 
-    todo = VGroup(eje_t, eje_x, curva, *sobres, parches, rótulos)
-    _encajar(todo, ancho, alto)
-    return Dibujo(mobs=todo, trazo=[eje_t, eje_x, curva], aparece=[*sobres, *rótulos])
+    punto = Dot(radius=0.09).set_fill(col.acento, 1).set_stroke(width=0)
+    todo = VGroup(eje_t, eje_x, curva, punto, *sobres, parches, rótulos)
+    fijo, desplazamiento = _encaje(todo, ancho, alto)
+
+    def vivo(p: float) -> None:
+        t = figura.hasta * p
+        punto.move_to(fijo(np.array([px(t), py(figura.sobre(t)), 0.0])))
+
+    vivo(0.0)
+    estela = _estela(punto, col.acento, 5)
+    todo.add(estela)
+    return Dibujo(
+        mobs=todo,
+        trazo=[eje_t, eje_x, curva],
+        aparece=[punto, *sobres, *rótulos],
+        vivo=vivo,
+        duracion=figura.hasta,
+        estela=estela,
+        desplazamiento=desplazamiento,
+    )
 
 
 def pendulo_doble(
     figura: PenduloDoble, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
 ) -> Dibujo:
-    """Los dos brazos en la pose más abierta, el camino de la masa de abajo y sus datos al costado."""
-    # El instante con los brazos más abiertos: con la pose del final el dibujo no se lee de un vistazo.
-    # Los ángulos vienen sin envolver (dan muchas vueltas), así que la diferencia se toma en módulo 360.
-    i = max(
-        range(len(figura.t)),
-        key=lambda k: abs((figura.angulo_1[k] - figura.angulo_2[k] + 180.0) % 360.0 - 180.0),
-    )
-    anclaje, masa_1, masa_2 = figura.brazos(i)
+    """Los dos brazos recorriendo el camino integrado, con la traza de la masa de abajo creciendo.
 
-    # La escala sale de la caja que de verdad ocupan la traza y los brazos: un péndulo que casi no se
-    # mueve se agranda hasta llenar la franja, en vez de quedar del tamaño de un sello.
-    crudos = [*figura.traza, anclaje, masa_1, masa_2]
-    xs = [p[0] for p in crudos]
-    ys = [p[1] for p in crudos]
+    La escala sale de la caja que ocupan **todas** las poses y la traza completa: así ningún
+    instante del caos se sale de la franja, aunque el dibujo se vea en movimiento.
+    """
+    xs, ys = [], []
+    for i in range(len(figura.t)):
+        for x, y in figura.brazos(i):
+            xs.append(x)
+            ys.append(y)
+    xs.extend(p[0] for p in figura.traza)
+    ys.extend(p[1] for p in figura.traza)
     caja_x = max(max(xs) - min(xs), 0.2)
     caja_y = max(max(ys) - min(ys), 0.2)
     escala = min(alto * 0.86 / caja_y, ancho * 0.46 / caja_x)
@@ -2256,6 +2464,7 @@ def pendulo_doble(
     camino = VMobject().set_points_as_corners([punto(p) for p in figura.traza[::paso]])
     camino.set_stroke(col.tenue, 3)
 
+    anclaje, masa_1, masa_2 = figura.brazos(0)
     brazo_1 = Line(punto(anclaje), punto(masa_1)).set_stroke(col.formulas, 4)
     brazo_2 = Line(punto(masa_1), punto(masa_2)).set_stroke(col.formulas, 4)
     pivote = Dot(punto(anclaje), radius=0.06).set_fill(col.formulas, 1).set_stroke(width=0)
@@ -2265,8 +2474,13 @@ def pendulo_doble(
     piezas = VGroup(camino, brazo_1, brazo_2, pivote, bola_1, bola_2)
     # La figura se pega al borde izquierdo y los datos arrancan a su derecha: así ningún rótulo cae
     # encima de la traza, que es lo único que el chico tiene que mirar.
-    piezas.shift(np.array([-ancho / 2.0 + piezas.width / 2.0 + 0.10, 0.0, 0.0]))
-    x_datos = -ancho / 2.0 + piezas.width + 0.50
+    ancho_figura = caja_x * escala
+    corrimiento = np.array([-ancho / 2.0 + ancho_figura / 2.0 + 0.10, 0.0, 0.0])
+    piezas.shift(corrimiento)
+    x_datos = -ancho / 2.0 + ancho_figura + 0.50
+
+    def punto_final(p: tuple[float, float]) -> np.ndarray:
+        return punto(p) + corrimiento
 
     parches, rótulos = VGroup(), VGroup()
     if "energia" in marcas:
@@ -2293,8 +2507,29 @@ def pendulo_doble(
         )
 
     todo = VGroup(piezas, parches, rótulos)
-    _encajar(todo, ancho, alto)
-    return Dibujo(mobs=todo, trazo=[camino], aparece=[brazo_1, brazo_2, pivote, bola_1, bola_2, *rótulos])
+    fijo, desplazamiento = _encaje(todo, ancho, alto)
+    ultimo = len(figura.t) - 1
+
+    def vivo(p: float) -> None:
+        i = min(int(round(p * ultimo)), ultimo)
+        a, m1, m2 = figura.brazos(i)
+        brazo_1.put_start_and_end_on(fijo(punto_final(a)), fijo(punto_final(m1)))
+        brazo_2.put_start_and_end_on(fijo(punto_final(m1)), fijo(punto_final(m2)))
+        bola_1.move_to(fijo(punto_final(m1)))
+        bola_2.move_to(fijo(punto_final(m2)))
+
+    vivo(0.0)
+    estela = _estela(bola_2, col.acento, 5)
+    todo.add(estela)
+    return Dibujo(
+        mobs=todo,
+        trazo=[camino],
+        aparece=[brazo_1, brazo_2, pivote, bola_1, bola_2, *rótulos],
+        vivo=vivo,
+        duracion=figura.t[-1] - figura.t[0],
+        estela=estela,
+        desplazamiento=desplazamiento,
+    )
 
 
 # ------------------------------------------------------------------------------------------
@@ -2321,7 +2556,7 @@ def _dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str
         )
     if visual.tipo == "diagrama_fuerzas":
         return diagrama_fuerzas(
-            visual.vectores, col, ancho, alto, visual.cuerpo, visual.angulo, visual.descomponer
+            visual.vectores, col, ancho, alto, visual.cuerpo, visual.angulo, visual.descomponer, papel
         )
     if visual.tipo == "poligono_regular":
         return poligono_regular(visual.poligono(), visual.anotar, col, ancho, alto, papel)
@@ -2335,6 +2570,10 @@ def _dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str
         from .dibujos_3d import dibujar_solido_3d  # adentro: manim 3D no debe pesar en los dibujos 2D
 
         return dibujar_solido_3d(visual, col, ancho, alto, papel)
+    if visual.tipo == "vector_3d":
+        from .dibujos_3d import dibujar_vector_3d  # misma cámara 3D, con sus líneas y su flecha
+
+        return dibujar_vector_3d(visual, col, ancho, alto, papel)
     if visual.tipo == "venn":
         return venn(visual.venn(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "recta":

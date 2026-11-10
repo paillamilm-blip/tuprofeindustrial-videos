@@ -12,7 +12,7 @@
 #   gancho        tarjeta = la pregunta en su tamaño de siempre, con la marca arriba (como venía).
 #                 lleno   = la pregunta sola, enorme, ocupando todo el cuadro; la marca llega
 #                           recién con el enunciado. Para los moldes que abren con un dato.
-#   deriva        fija     = en las pausas el cuadro no se mueve.
+#   deriva        fija     = en las pausas el cuadro no se mueve de lado; sólo respira (se mete un dedo).
 #                 en_mano  = en las pausas el cuadro se desliza y respira despacio, como sostenido en
 #                           la mano. Usa la pausa que ya existía: no agrega segundos de contenido,
 #                           solo el redondeo al cuadro siguiente (≈0,03 s por pausa).

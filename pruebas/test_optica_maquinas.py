@@ -94,6 +94,10 @@ class GuionOpticaMaquinasTest(unittest.TestCase):
         visual = Visual(tipo="pendulo", longitud="1 m", angulo=20, anotar=["periodo"])
         self.assertAlmostEqual(visual.pendulo().periodo, 2.006, places=2)
 
+    def test_la_velocidad_es_una_marca_opcional_del_pendulo(self):
+        visual = Visual(tipo="pendulo", longitud="1 m", angulo=20, anotar=["velocidad"])
+        self.assertEqual(visual.anotar, ["velocidad"])
+
     def test_el_resorte_pide_constante_y_extension(self):
         visual = Visual(tipo="resorte", constante="200 N/m", extension="10 cm")
         self.assertAlmostEqual(visual.resorte().fuerza, 20.0, places=6)

@@ -32,6 +32,7 @@ from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 
 RONDAS_DE_CORRECCION = 2
 MARGEN_DE_DURACION = 8.0  # s: «≈45 s» puede llegar a 53 s y sigue siendo lo prometido
+TECHO_DE_LECTURA = 12.0  # s de lectura que se perdonan: 6 fórmulas pidieron 12,8 s en un render real
 MAX_BYTES_ARCHIVO = 18 * 1024 * 1024  # límite práctico para enviar un archivo dentro de la petición
 TIPOS_ARCHIVO = {
     ".png": "image/png",
@@ -866,13 +867,18 @@ def errores_latex(guion: Guion) -> list[str]:
     return problemas
 
 
-def promesa_incumplida(duracion: float, segundos_prometidos: int | None) -> bool:
+def promesa_incumplida(duracion: float, segundos_prometidos: int | None, lectura: float = 0.0) -> bool:
     """Si lo que duró el video pasa de lo que anunció la tarjeta de la idea.
 
     Es el único lugar donde vive ese umbral: lo usa el aviso del guion antes de renderizar y lo usan
     el comando y el panel después, para que nunca se contradigan con dos márgenes distintos.
+    ``lectura`` son los segundos que el piso de lectura esperó para que la fórmula se pudiera leer:
+    no son contenido de más, así que no cuentan como exceso. Se perdonan hasta TECHO_DE_LECTURA: un
+    guion con doce fórmulas necesita otra promesa, no un ⚠️ que nunca salga.
     """
-    return bool(segundos_prometidos) and duracion > segundos_prometidos + MARGEN_DE_DURACION
+    if not segundos_prometidos:
+        return False
+    return duracion > segundos_prometidos + MARGEN_DE_DURACION + min(lectura, TECHO_DE_LECTURA)
 
 
 def problemas_de_formato(guion: Guion, segundos_prometidos: int | None = None) -> list[str]:
@@ -883,16 +889,26 @@ def problemas_de_formato(guion: Guion, segundos_prometidos: int | None = None) -
     número que la persona vio al elegir es la única señal que tiene de cuánto va a durar el video.
     """
     from .config import cargar_marca
-    from .revision import revisar
+    from .revision import coma, revisar
 
     rev = revisar(guion, cargar_marca().cierre.voz)
     problemas = [f"{a.donde}: {a.mensaje}" for a in rev.avisos if a.nivel == "advertencia"]
     if promesa_incumplida(rev.segundos, segundos_prometidos):
+        # La estimación es solo voz: el render todavía va a sumar el silencio que pide cada fórmula.
+        # Decirlo acá evita que Gemini recorte pasos para compensar segundos que aún no existen.
+        lectura = sum(f for _, f in rev.estirados)
+        aparte = (
+            ""
+            if lectura <= 0.05
+            else f" Los {coma(lectura)} s que las fórmulas necesitan para leerse quietas cuentan aparte:"
+            " no los achiques borrando pasos."
+        )
         problemas.append(
             f"duración: la idea se anunció en ≈{segundos_prometidos} s y este guion se estima en "
-            f"~{rev.segundos:.0f} s. Achícalo a ~{segundos_prometidos} s: quédate con los 3 o 4 pasos "
-            "imprescindibles, quita la verificación o el reto y acorta las frases. No cambies los "
-            "resultados ni los números del ejercicio."
+            f"~{rev.segundos:.0f} s de voz. Achícalo a ~{segundos_prometidos} s: quédate con los 3 o 4 "
+            "pasos imprescindibles, quita la verificación o el reto y acorta las frases."
+            + aparte
+            + " No cambies los resultados ni los números del ejercicio."
         )
     return problemas
 
