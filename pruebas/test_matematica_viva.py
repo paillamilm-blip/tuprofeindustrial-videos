@@ -101,7 +101,9 @@ class ValidacionDelMovimientoTest(unittest.TestCase):
         base = {"tipo": "solido_3d", "figura": "cilindro", "radio": "3 cm", "altura": "5 cm"}
         self.assertTrue(Visual.model_validate({**base, "despiece": True}).despiece)
         with self.assertRaises(ValueError):
-            Visual.model_validate({"tipo": "solido_3d", "figura": "esfera", "radio": "3 cm", "despiece": True})
+            Visual.model_validate(
+                {"tipo": "solido_3d", "figura": "esfera", "radio": "3 cm", "despiece": True}
+            )
         with self.assertRaises(ValueError):
             Visual.model_validate({"tipo": "solido", "figura": "cubo", "lado": "4 cm", "despiece": True})
 

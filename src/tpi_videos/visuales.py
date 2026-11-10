@@ -616,7 +616,8 @@ class Funcion:
         """La pendiente de la curva en ``x`` (diferencia central), o None si ahí no existe."""
         h = 1e-5 * max(1.0, abs(x))
         antes, despues = self.y(x - h), self.y(x + h)
-        if antes is None or despues is None:
+        # En una asintota los dos vecinos existen y la cuenta da un numero enorme: sin f(x) no hay pendiente.
+        if self.y(x) is None or antes is None or despues is None:
             return None
         valor = (despues - antes) / (2 * h)
         return valor if math.isfinite(valor) else None

@@ -473,8 +473,10 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     centro_2d = (bajo + alto_) / 2
     k = min(0.80 * alto / max(alto_[1] - bajo[1], 1e-6), 0.50 * ancho / max(alto_[0] - bajo[0], 1e-6))
 
-    oscuro = _tono(col.tenue, "#000000", 0.5)
-    claro = _tono(col.tenue, "#FFFFFF", 0.6)
+    # Metal satinado en la paleta del tema: la sombra no llega al negro y la luz casi al blanco.
+    oscuro = _tono(col.tenue, "#000000", 0.22)
+    claro = _tono(col.tenue, "#FFFFFF", 0.78)
+    limites = [np.zeros(4)]  # x mín, x máx, y mín, y máx del cuerpo en la pose actual
     poligonos = [[VMobject() for _ in pieza.caras] for pieza in piezas]
     siluetas = [VMobject().set_stroke(col.formulas, 3.5) if pieza.lisa else None for pieza in piezas]
     cuerpo_mob = VGroup(*[m for fila in poligonos for m in fila], *[s for s in siluetas if s is not None])
@@ -487,7 +489,7 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
             return _tono(oscuro, "#000000", 0.25)  # el interior de una pieza abierta
         lambert = max(float(normal @ luz), 0.0)
         brillo = max(float(normal @ _unitario(luz + hacia)), 0.0) ** 28
-        base = oscuro.interpolate(claro, 0.15 + 0.85 * lambert)
+        base = oscuro.interpolate(claro, 0.2 + 0.8 * lambert)
         return _tono(base, "#FFFFFF", 0.7 * brillo)
 
     def pose(t: float, llevar: Any) -> None:
@@ -499,6 +501,9 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
             return llevar(np.array([x, y, 0.0]))
 
         orden = sorted(range(len(piezas)), key=lambda i: float((piezas[i].salida * sep) @ hacia))
+        todos = np.vstack([cara.puntos + pieza.salida * sep for pieza in piezas for cara in pieza.caras])
+        xs, ys = (todos @ der - centro_2d[0]) * k, (todos @ arr - centro_2d[1]) * k
+        limites[0] = np.array([xs.min(), xs.max(), ys.min(), ys.max()])
         nuevos: list[Mobject] = []
         for i in orden:
             pieza, salida = piezas[i], piezas[i].salida * sep
@@ -537,7 +542,8 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     # —— Rótulos: las medidas pegadas al cuerpo; V y A a un costado, quietos ——————————————
     unidad = cuerpo.unidad or ""
     parches, rótulos = VGroup(), VGroup()
-    viajeros: list[tuple[Mobject, Mobject, np.ndarray, int | None, np.ndarray]] = []
+    # (cartón, rótulo, punto 3D, pieza a la que va pegado, lado del cuerpo donde se apoya)
+    viajeros: list[tuple[Mobject, Mobject, np.ndarray, int | None, str]] = []
 
     def etiqueta(texto: str, donde: np.ndarray, tam: int = 26) -> tuple[Mobject, Mobject]:
         rotulo = c.texto(texto, tam, c.SEMIBOLD, col.texto).move_to(donde)
@@ -546,29 +552,41 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
         rótulos.add(rotulo)
         return fondo, rotulo
 
-    def mide(clave: str, valor: float, punto: list[float], pieza: int | None, dx: float, dy: float) -> None:
+    def mide(clave: str, valor: float, punto: list[float], pieza: int | None, lado: str) -> None:
         fondo, rotulo = etiqueta(f"{clave} = {d._numero_latex(valor)} {unidad}".strip(), np.zeros(3))
-        viajeros.append((fondo, rotulo, np.array(punto, dtype=float), pieza, np.array([dx, dy, 0.0])))
+        viajeros.append((fondo, rotulo, np.array(punto, dtype=float), pieza, lado))
 
     if cuerpo.figura == "cubo":
-        mide("a", cuerpo.lado or a, [0, -a / 2, -a / 2], 0, 0.0, -0.42)
+        mide("a", cuerpo.lado or a, [0, -a / 2, -a / 2], 0, "abajo")
     elif cuerpo.figura == "cilindro":
-        mide("r", cuerpo.radio or 0.0, [r / 2, 0, h / 2], 2 if despiece else 0, 0.0, 0.34)
-        mide("h", cuerpo.altura or 0.0, [-r, 0, 0], 1 if despiece else 0, -0.85, 0.0)
+        mide("r", cuerpo.radio or 0.0, [r / 2, 0, h / 2], 2 if despiece else 0, "arriba")
+        mide("h", cuerpo.altura or 0.0, [-r, 0, 0], 1 if despiece else 0, "izquierda")
     elif cuerpo.figura == "cono":
-        mide("r", cuerpo.radio or 0.0, [r / 2, 0, -h / 2], 0, 0.0, -0.34)
-        mide("h", cuerpo.altura or 0.0, [0, 0, 0], 1 if despiece else 0, -0.95, 0.0)
+        mide("r", cuerpo.radio or 0.0, [r / 2, 0, -h / 2], 0, "abajo")
+        mide("h", cuerpo.altura or 0.0, [0, 0, 0], 1 if despiece else 0, "izquierda")
     else:
-        mide("r", cuerpo.radio or 0.0, [r / 2, 0, 0], 0, 0.0, 0.30)
+        mide("r", cuerpo.radio or 0.0, [r / 2, 0, 0], 0, "arriba")
 
     def mover_rotulos(t: float, llevar: Any) -> None:
+        """Cada medida sigue a su arista, pero apoyada por fuera del cuerpo: nunca encima de él.
+
+        El borde se mide en la pose del instante (``limites``), así un rótulo no queda atrapado
+        sobre el manto cuando la cámara gira y el cuerpo se ensancha.
+        """
         phi, theta, sep = momento(t)
         der, arr, _ = _ejes_de_camara(phi, theta)
-        for fondo, rotulo, punto, pieza, corrimiento in viajeros:
+        x0, x1, y0, y1 = limites[0]
+        factor = float(np.linalg.norm(llevar(np.array([1.0, 0.0, 0.0])) - llevar(np.zeros(3)))) or 1.0
+        for fondo, rotulo, punto, pieza, lado in viajeros:
             p3 = punto + (piezas[pieza].salida * sep if pieza is not None else 0.0)
-            sitio = (
-                np.array([(p3 @ der - centro_2d[0]) * k, (p3 @ arr - centro_2d[1]) * k, 0.0]) + corrimiento
-            )
+            x, y = (p3 @ der - centro_2d[0]) * k, (p3 @ arr - centro_2d[1]) * k
+            medio_ancho, medio_alto = fondo.width / factor / 2, fondo.height / factor / 2
+            if lado == "izquierda":
+                sitio = np.array([x0 - 0.12 - medio_ancho, y, 0.0])
+            elif lado == "arriba":
+                sitio = np.array([x, y1 + 0.1 + medio_alto, 0.0])
+            else:
+                sitio = np.array([x, y0 - 0.1 - medio_alto, 0.0])
             fondo.move_to(llevar(sitio))
             rotulo.move_to(llevar(sitio))
 

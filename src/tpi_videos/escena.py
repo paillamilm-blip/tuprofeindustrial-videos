@@ -58,7 +58,6 @@ from manim import (
     SurroundingRectangle,
     TransformMatchingTex,
     UpdateFromAlphaFunc,
-    ValueTracker,
     VGroup,
     VMobject,
     Wiggle,
@@ -146,6 +145,14 @@ def avance_de_movimiento(duracion: float, ventana: float) -> tuple[float, bool]:
     if duracion <= 0 or ventana >= duracion:
         return 1.0, False
     return max(ventana / duracion, 0.0), True
+
+
+def movimiento_de(dibujo: d.Dibujo, avance: float) -> Animation:
+    """La animación que recorre la pose del dibujo de 0 a ``avance`` sobre su propio grupo.
+
+    El grupo del dibujo tiene que ser el objeto animado: así Manim lo vuelve a pintar en cada cuadro.
+    """
+    return UpdateFromAlphaFunc(dibujo.mobs, lambda _m, alfa: dibujo.vivo(alfa * avance))
 
 
 def recorrido_sin_fisica(ventana: float) -> tuple[float, float]:
@@ -1168,16 +1175,16 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             self.play(*camara, run_time=entrada)
         if dibujo.estela is not None:
             self.add(dibujo.estela)
-        reloj = ValueTracker(0.0)
-        reloj.add_updater(lambda tracker: dibujo.vivo(tracker.get_value() * avance))
-        self.add(reloj)
+        # El dibujo entero es el que se anima: Manim congela en una imagen fija todo lo que no sea
+        # el objeto de la animación (ni tenga updater), así que un reloj aparte movía la pose sin
+        # que se volviera a pintar. Agregarlo también trae las piezas que nacen invisibles (halos,
+        # relleno del área) y que no pasan por la entrada.
+        self.add(dibujo.mobs)
         self.play(
-            reloj.animate.set_value(1.0),
+            movimiento_de(dibujo, avance),
             run_time=recorrido,
             rate_func=rate_functions.linear,
         )
-        reloj.clear_updaters()
-        self.remove(reloj)
         dibujo.vivo(avance)
 
     def _trazar_dibujo(
