@@ -108,6 +108,10 @@ body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
 .tpi-tablero .q-linear-progress {{ color: {PIEL["ambar"]}; }}
 .tpi-tablero .q-toggle__inner--truthy {{ color: {PIEL["ambar"]}; }}
 .tpi-tablero .q-btn {{ text-transform: none; }}
+.tpi-clic {{ transition: background-color .15s ease, box-shadow .15s ease; }}
+.tpi-clic:hover {{ background-color: {PIEL["linea_sala"]}; }}
+.tpi-ficha.tpi-clic:hover {{ box-shadow: 0 0 0 1px {PIEL["ambar"]}; background-color: {PIEL["consola_alta"]}; }}
+.tpi-consola.tpi-clic:hover {{ box-shadow: 0 0 0 1px {PIEL["linea_sala"]}; background-color: {PIEL["consola"]}; }}
 .tpi-codigo {{ background: {PIEL["consola_alta"]} !important; border-radius: 12px; }}
 .tpi-hoja {{ color: {PIEL["tinta"]}; }}
 .tpi-marca {{ font-family: 'Comic Neue', sans-serif; font-weight: 700; letter-spacing: .03em; }}
@@ -196,13 +200,17 @@ def piel_de_la_pagina() -> None:
 def cabecera(con_menu: bool = True) -> None:
     """La barra de arriba, oscura y sin ruido: la marca, el estado del motor y (si toca) volver."""
     with ui.header().classes("tpi-cabecera items-center justify-between px-8 py-3"):
-        with ui.row().classes("items-center gap-3"):
+        with ui.row().classes("items-center gap-3 cursor-pointer").on("click", lambda: ui.navigate.to("/")):
             ui.image("/marca/panel.png").classes("w-9 h-9").props('alt="" no-spinner no-transition')
             with ui.column().classes("gap-0"):
                 ui.label("TU PROFE INDUSTRIAL").classes("tpi-marca text-base leading-tight")
                 ui.label("Sala de producción").classes("tpi-sobrio text-xs")
         with ui.row().classes("items-center gap-4"):
-            chip = ui.chip("", color=None).props("outline").classes("tpi-ambar")
+            chip = (
+                ui.chip("", color=None, on_click=lambda: ui.navigate.to("/"))
+                .props("outline clickable")
+                .classes("tpi-ambar")
+            )
             chip.set_visibility(False)
             ui.timer(0.7, lambda: _estado_tarea(chip))
             if con_menu:

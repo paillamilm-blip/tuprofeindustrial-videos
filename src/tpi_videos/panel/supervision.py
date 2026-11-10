@@ -40,6 +40,7 @@ class Ficha:
     error: str | None
     video: Path | None  # el .mp4 terminado
     actualizado: str
+    guion: Path | None = None  # el .yaml de donde sale, si ya está escrito
 
     @property
     def fallo(self) -> bool:
@@ -76,6 +77,8 @@ def columnas(
                 continue
             ruta = ((video.get("hitos") or {}).get("video") or {}).get("video")
             archivo = Path(str(ruta)) if ruta else None
+            crudo = ((video.get("hitos") or {}).get("guion") or {}).get("ruta")
+            guion = Path(str(crudo)) if crudo else None
             salida[columna].append(
                 Ficha(
                     video_id=str(video.get("id")),
@@ -91,6 +94,7 @@ def columnas(
                     error=video.get("error"),
                     video=archivo if archivo and archivo.exists() else None,
                     actualizado=str(video.get("actualizado") or lote.get("actualizado") or ""),
+                    guion=guion if guion and guion.exists() else None,
                 )
             )
     for clave in salida:
