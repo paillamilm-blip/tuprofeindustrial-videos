@@ -96,20 +96,55 @@ class PasoIA(BaseModel):
         "mohr",
         "oscilador",
         "pendulo_doble",
+        "tolva",
+        "tuberia",
+        "eje",
+        "calor",
+        "flujo",
     ] = Field(
         default="",
         description=(
             'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
-            '"circulo", "solido", "venn", "recta", "probabilidad", "torta", "barras", "onda", "energia", '
+            '"circulo", "solido", "solido3d", "venn", "recta", "probabilidad", "torta", "barras", "onda", '
             '"energia", "optica", "pendulo", "resorte", "polea", "tanque", "viga", "cercha", "bloques", '
-            '"engranaje", "mohr", "oscilador" o "pendulo_doble" (máximo 1 en el guion)'
+            '"engranaje", "mohr", "oscilador", "pendulo_doble", "tolva", "tuberia", "eje", "calor" o '
+            '"flujo" (máximo 1 en el guion)'
         ),
+    )
+    # Álgebra viva: lo que se ilumina en este paso.
+    halo: list[str] = Field(
+        default_factory=list,
+        description='0 a 2 términos copiados EXACTAMENTE del tex que se siguen con un resplandor, ej. ["x^2"]',
+    )
+    resaltar_cambio: bool = Field(
+        default=False,
+        description="true si este paso despeja, cancela o agrupa: se tacha lo que se va y se ilumina lo nuevo",
     )
     funcion: str = Field(
         default="", description='Con dibujo="grafico": la fórmula en texto plano, ej. "-4.9t^2 + 20"'
     )
     eje_x: str = Field(default="", description='Nombre del eje horizontal con unidades, ej. "tiempo (s)"')
     eje_y: str = Field(default="", description='Nombre del eje vertical con unidades, ej. "altura (m)"')
+    variable: str = Field(
+        default="", description='Con dibujo="grafico": la variable, ej. "t" (vacío = la única)'
+    )
+    rango: list[float] = Field(
+        default_factory=list,
+        description='Con dibujo="grafico": [mínimo, máximo] del eje horizontal, ej. [0, 5]',
+    )
+    movimiento: Literal["", "tangente", "area"] = Field(
+        default="",
+        description=(
+            'Con dibujo="grafico": "tangente" (una recta recorre la curva y muestra la pendiente) o '
+            '"area" (el área bajo la curva se llena por tramos); vacío = gráfico quieto'
+        ),
+    )
+    desde: float | None = Field(
+        default=None, description="Con movimiento: el x donde empieza el recorrido (dentro del rango)"
+    )
+    hasta: float | None = Field(
+        default=None, description="Con movimiento: el x donde termina el recorrido (dentro del rango)"
+    )
     vectores: list[str] = Field(
         default_factory=list, description='Con dibujo="fuerzas": flechas entre "P", "N", "f", "v", "a", "T"'
     )
@@ -155,6 +190,46 @@ class PasoIA(BaseModel):
     corte: Literal["", "sin_corte", "mitad"] = Field(
         default="",
         description='Con dibujo="solido3d": "mitad" parte el cuerpo; solo vale con figura="cubo"',
+    )
+    despiece: bool = Field(
+        default=False,
+        description=(
+            'Con "solido3d", "tolva", "tuberia" o "eje": true para que el cuerpo se separe en sus piezas '
+            "al final del giro (no vale con la esfera)"
+        ),
+    )
+    radio_salida: str = Field(
+        default="", description='Con dibujo="tolva": el radio de la boca de abajo, ej. "0,3 m"'
+    )
+    altura_cono: str = Field(default="", description='Con dibujo="tolva": la altura del cono, ej. "1,2 m"')
+    espesor: str = Field(default="", description='Con dibujo="tuberia": el espesor de la pared, ej. "1 cm"')
+    bridas: bool = Field(
+        default=True, description='Con dibujo="tuberia": false para dibujar el tubo sin bridas'
+    )
+    radios: list[float] = Field(
+        default_factory=list,
+        description='Con dibujo="eje": el radio de cada tramo, de 2 a 5, ej. [20, 30, 25]',
+    )
+    largos: list[float] = Field(
+        default_factory=list,
+        description='Con dibujo="eje": el largo de cada tramo en el mismo orden, ej. [60, 120, 80]',
+    )
+    unidad: str = Field(default="", description='Con dibujo="eje": la unidad de radios y largos, ej. "mm"')
+    temp_izquierda: float | None = Field(
+        default=None, description='Con dibujo="calor": °C del borde izquierdo'
+    )
+    temp_derecha: float | None = Field(default=None, description='Con dibujo="calor": °C del borde derecho')
+    temp_arriba: float | None = Field(default=None, description='Con dibujo="calor": °C del borde de arriba')
+    temp_abajo: float | None = Field(default=None, description='Con dibujo="calor": °C del borde de abajo')
+    flujo: Literal["", "couette", "poiseuille"] = Field(
+        default="",
+        description='Con dibujo="flujo": "couette" (la placa de arriba arrastra) o "poiseuille" (empuja la presión)',
+    )
+    separacion: str = Field(
+        default="", description='Con dibujo="flujo": la distancia entre placas, ej. "1 cm"'
+    )
+    viscosidad: str = Field(
+        default="", description='Con dibujo="flujo": ej. "0,001 Pa·s"; hace falta para anotar "esfuerzo"'
     )
     solo_a: int | None = Field(
         default=None, description='Con dibujo="venn": cuántos viven sólo en el conjunto A'
@@ -301,6 +376,9 @@ class PasoIA(BaseModel):
             'con "engranaje", "velocidad" o "relacion"; con "mohr", "principales" o "cortante"; '
             'con "oscilador", "regimen", "periodo" o "decaimiento"; '
             'con "pendulo_doble", "energia" o "angulos"; '
+            'con "grafico" y movimiento="tangente", "pendiente"; con movimiento="area", "area"; '
+            'con "tolva", "volumen" o "chapa"; con "tuberia", "seccion" o "material"; '
+            'con "eje", "volumen" o "largo"; con "calor", "centro" o "isotermas"; con "flujo", "esfuerzo"; '
             'con "recta", "torta", "barras", "energia" u "optica" va vacío'
         ),
     )
@@ -324,6 +402,9 @@ class GuionIA(BaseModel):
     resultado_tex: str
     resultado_voz: str
     resultado_emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida")
+    resultado_destello: bool = Field(
+        default=False, description="true para cerrar la respuesta final con un destello de confirmación"
+    )
     verificacion_texto: str
     verificacion_voz: str
     reto_texto: str
@@ -394,6 +475,207 @@ EJEMPLO = GuionIA(
     reto_emoji="✍️",
     supuestos=[],
 )
+
+
+# Los tres ejemplos del motor vivo, uno por materia. Son guiones completos y válidos (las pruebas los
+# pasan por el motor y por ``tpi revisar``); al modelo se le muestran solo los campos que no van por
+# defecto de cada paso y del resultado, que es donde están los dibujos que se mueven.
+EJEMPLOS_DINAMICOS: dict[str, GuionIA] = {
+    "Ingeniería · tolva con despiece": GuionIA(
+        es_ejercicio=True,
+        titulo="Balance de masa en la tolva",
+        materia="ingenieria",
+        nivel="Técnico profesional",
+        gancho_texto="¿En cuántas horas se llena esta tolva?",
+        gancho_voz="¿En cuántas horas se llena esta tolva si sale menos de lo que entra?",
+        gancho_emoji="⏱️",
+        enunciado_texto=(
+            "Una tolva de inyección tiene un cilindro de R = 0,5 m y H = 0,8 m, y un cono de 0,6 m que baja "
+            "a una boca de 0,1 m. Entran 150 kg/h de pellets (600 kg/m³) y salen 30 kg/h. ¿Cuánto tarda en llenarse?"
+        ),
+        enunciado_voz=(
+            "Una tolva de inyección: un cilindro y un cono que termina en una boca chica. "
+            "Entran ciento cincuenta kilos por hora y salen treinta. ¿Cuándo se llena?"
+        ),
+        enunciado_destacar=["150 kg/h", "30 kg/h"],
+        datos=[
+            DatoIA(
+                tex=r"\rho = 600\ \text{kg/m}^3", voz="Los pellets pesan seiscientos kilos por metro cúbico."
+            ),
+            DatoIA(tex="t = ?", voz="Y buscamos el tiempo de llenado."),
+        ],
+        pasos=[
+            PasoIA(
+                nota="Dos cuerpos",
+                tex=r"V = V_{cil} + V_{cono}",
+                voz="La tolva se abre en dos piezas. Su volumen es el del cilindro más el del cono.",
+                dibujo="tolva",
+                radio="0,5 m",
+                altura="0,8 m",
+                radio_salida="0,1 m",
+                altura_cono="0,6 m",
+                vista="axonometrica",
+                despiece=True,
+                anotar=["volumen"],
+            ),
+            PasoIA(
+                nota="Sumamos volúmenes",
+                tex=r"V = 0,628 + 0,195 = 0,823\ \text{m}^3",
+                voz="El cilindro aporta casi todo y el cono suma el resto.",
+                halo=["0,823"],
+            ),
+            PasoIA(
+                nota="Masa que cabe",
+                tex=r"m = \rho V = 600 \cdot 0,823 \approx 494\ \text{kg}",
+                voz="La masa es la densidad por el volumen.",
+            ),
+            PasoIA(
+                nota="Balance de masa",
+                tex=r"\frac{dm}{dt} = 150 - 30 = 120\ \text{kg/h}",
+                voz="Lo que se acumula es lo que entra menos lo que sale.",
+                resaltar_cambio=True,
+            ),
+        ],
+        resultado_tex=r"t = \frac{494}{120} \approx 4,1\ \text{h}",
+        resultado_voz="Dividimos la masa por la acumulación: se llena en un poco más de cuatro horas.",
+        resultado_emoji="✅",
+        resultado_destello=True,
+        verificacion_texto="Si no saliera nada, tardaría 494/150 ≈ 3,3 h: menos, como debe ser.",
+        verificacion_voz="Si no saliera nada, tardaría unas tres horas. Tiene sentido que ahora tarde más.",
+        reto_texto="¿Y si salen 60 kg/h?",
+        reto_voz="Ahora tú. ¿Cuánto tarda si salen sesenta kilos por hora?",
+        reto_emoji="✍️",
+        supuestos=["Se usa la densidad aparente de los pellets, no la del plástico macizo."],
+    ),
+    "Física · tiro parabólico con la tangente en movimiento": GuionIA(
+        es_ejercicio=True,
+        titulo="Tiro parabólico: la altura máxima",
+        materia="fisica",
+        nivel="3° medio",
+        gancho_texto="¿Qué tan alto sube una pelota lanzada a 49 m/s?",
+        gancho_voz="¿Qué tan alto sube una pelota lanzada a cuarenta y nueve metros por segundo?",
+        gancho_emoji="🚀",
+        enunciado_texto="Se lanza una pelota a 49 m/s con 30° sobre el suelo. ¿Cuál es su altura máxima? Usa g = 9,8 m/s².",
+        enunciado_voz="Lanzamos una pelota a cuarenta y nueve metros por segundo, con treinta grados. ¿Cuánto sube?",
+        enunciado_destacar=["49 m/s", "30°"],
+        datos=[
+            DatoIA(
+                tex=r"v_0 = 49\ \text{m/s}", voz="La rapidez inicial es cuarenta y nueve metros por segundo."
+            ),
+            DatoIA(tex=r"\theta = 30^{\circ}", voz="El ángulo es de treinta grados."),
+        ],
+        pasos=[
+            PasoIA(
+                nota="La parte vertical",
+                tex=r"v_{0y} = v_0 \sin\theta = 49 \cdot 0,5 = 24,5\ \text{m/s}",
+                voz="Solo la parte vertical de la velocidad hace subir la pelota.",
+            ),
+            PasoIA(
+                nota="Arriba no sube",
+                tex=r"v_y = 0 \Rightarrow t = \frac{v_{0y}}{g} = 2,5\ \text{s}",
+                voz="Mira la tangente: se aplana justo arriba. Ahí la velocidad vertical vale cero.",
+                dibujo="grafico",
+                funcion="24.5t - 4.9t^2",
+                variable="t",
+                rango=[0, 5],
+                eje_x="tiempo (s)",
+                eje_y="altura (m)",
+                movimiento="tangente",
+                desde=0,
+                hasta=5,
+                anotar=["pendiente"],
+            ),
+            PasoIA(
+                nota="Altura máxima",
+                tex=r"h_{max} = \frac{v_{0y}^2}{2g}",
+                voz="Con ese dato usamos la altura máxima, sin necesitar el tiempo.",
+                halo=[r"v_{0y}^2"],
+            ),
+            PasoIA(
+                nota="Reemplazamos",
+                tex=r"h_{max} = \frac{24,5^2}{2 \cdot 9,8} = \frac{600,25}{19,6}",
+                voz="Reemplazamos la velocidad vertical y la gravedad.",
+                resaltar_cambio=True,
+            ),
+        ],
+        resultado_tex=r"h_{max} \approx 30,6\ \text{m}",
+        resultado_voz="La pelota sube unos treinta metros.",
+        resultado_emoji="🎯",
+        resultado_destello=True,
+        verificacion_texto="Sube 2,5 s y baja 2,5 s: el vuelo dura 5 s, lo que muestra el gráfico.",
+        verificacion_voz="Sube dos segundos y medio y baja lo mismo. Justo lo que dibuja el gráfico.",
+        reto_texto="¿Y si la lanzas a 60°?",
+        reto_voz="Ahora tú. ¿Cuánto sube si la lanzas a sesenta grados?",
+        reto_emoji="✍️",
+        supuestos=[],
+    ),
+    "Matemática · despeje con halo": GuionIA(
+        es_ejercicio=True,
+        titulo="Despejar x al cuadrado sin perder una raíz",
+        materia="matematica",
+        nivel="1° medio",
+        gancho_texto="x² − 9 = 16 tiene dos respuestas",
+        gancho_voz="Esta ecuación tiene dos respuestas, y casi todos encuentran una sola.",
+        gancho_emoji="🤯",
+        enunciado_texto="Resuelve x² − 9 = 16.",
+        enunciado_voz="Resolvamos x al cuadrado menos nueve igual a dieciséis.",
+        enunciado_destacar=["x² − 9 = 16"],
+        datos=[],
+        pasos=[
+            PasoIA(
+                nota="La ecuación",
+                tex="x^2 - 9 = 16",
+                voz="Seguimos a x al cuadrado, que es lo que queremos dejar solo.",
+                halo=["x^2"],
+            ),
+            PasoIA(
+                nota="El nueve cruza",
+                tex="x^2 = 16 + 9",
+                voz="El menos nueve pasa al otro lado sumando.",
+                halo=["x^2"],
+                resaltar_cambio=True,
+            ),
+            PasoIA(
+                nota="Sumamos",
+                tex="x^2 = 25",
+                voz="Dieciséis más nueve es veinticinco.",
+                halo=["x^2"],
+                resaltar_cambio=True,
+            ),
+            PasoIA(
+                nota="Raíz con signo",
+                tex=r"x = \pm \sqrt{25}",
+                voz="Al sacar la raíz van los dos signos: positivo y negativo.",
+                emoji="⚠️",
+                resaltar_cambio=True,
+            ),
+        ],
+        resultado_tex=r"x = 5 \quad \text{o} \quad x = -5",
+        resultado_voz="Las soluciones son cinco y menos cinco.",
+        resultado_emoji="✅",
+        resultado_destello=True,
+        verificacion_texto="(−5)² − 9 = 25 − 9 = 16: el negativo también sirve.",
+        verificacion_voz="Prueba con menos cinco: al cuadrado da veinticinco. También funciona.",
+        reto_texto="Resuelve x² + 4 = 40.",
+        reto_voz="Ahora tú. Resuelve x al cuadrado más cuatro igual a cuarenta.",
+        reto_emoji="✍️",
+        supuestos=[],
+    ),
+}
+
+
+def _ejemplos_dinamicos() -> str:
+    """Los ejemplos como los ve el modelo: solo los campos con valor en pasos y resultado."""
+    bloques = []
+    for titulo, g in EJEMPLOS_DINAMICOS.items():
+        compacto = {
+            "enunciado_texto": g.enunciado_texto,
+            "pasos": [p.model_dump(exclude_defaults=True) for p in g.pasos],
+            "resultado_tex": g.resultado_tex,
+            "resultado_destello": g.resultado_destello,
+        }
+        bloques.append(f"### {titulo}\n{json.dumps(compacto, ensure_ascii=False, indent=1)}")
+    return "\n\n".join(bloques)
 
 
 # ------------------------------------------------------------------------------------------
@@ -517,6 +799,11 @@ _DIBUJOS = {
     "mohr": "mohr",
     "oscilador": "oscilador",
     "pendulo_doble": "pendulo_doble",
+    "tolva": "tolva_3d",
+    "tuberia": "tuberia_3d",
+    "eje": "eje_3d",
+    "calor": "gradiente_termico",
+    "flujo": "perfil_flujo",
 }
 
 
@@ -530,9 +817,21 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
     if not tipo:
         return None
     visual: dict[str, Any] = {"tipo": tipo}
+    marcas = [a.strip() for a in p.anotar if a.strip()]
     if tipo == "grafico_funcion":
         visual["funcion"] = _texto(p.funcion)
         visual |= {k: v for k, v in (("eje_x", _texto(p.eje_x)), ("eje_y", _texto(p.eje_y))) if v}
+        if p.variable.strip():
+            visual["variable"] = p.variable.strip()
+        if len(p.rango) == 2:
+            visual["rango"] = [float(v) for v in p.rango]
+        if p.movimiento:
+            visual["movimiento"] = p.movimiento
+            for clave in ("desde", "hasta"):
+                if getattr(p, clave) is not None:
+                    visual[clave] = float(getattr(p, clave))
+            if marcas:
+                visual["anotar"] = marcas
     elif tipo == "diagrama_fuerzas":
         visual["vectores"] = [v.strip() for v in p.vectores if v.strip()]
         if p.cuerpo:
@@ -565,6 +864,8 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
                 visual["vista"] = p.vista
             if p.corte:
                 visual["corte"] = p.corte
+            if p.despiece:
+                visual["despiece"] = True
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
     elif tipo == "venn":
@@ -706,6 +1007,43 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["duracion"] = float(p.duracion)
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo in ("tolva_3d", "tuberia_3d", "eje_3d"):
+        claves = {
+            "tolva_3d": ("radio", "altura", "radio_salida", "altura_cono"),
+            "tuberia_3d": ("radio", "espesor", "longitud"),
+            "eje_3d": ("unidad",),
+        }[tipo]
+        for clave in claves:
+            if valor := _texto(getattr(p, clave)):
+                visual[clave] = valor
+        if tipo == "eje_3d":
+            visual["radios"] = [float(v) for v in p.radios]
+            visual["largos"] = [float(v) for v in p.largos]
+        if tipo == "tuberia_3d" and not p.bridas:
+            visual["bridas"] = False
+        if p.vista:
+            visual["vista"] = p.vista
+        if p.despiece:
+            visual["despiece"] = True
+        if marcas:
+            visual["anotar"] = marcas
+    elif tipo == "gradiente_termico":
+        for clave in ("temp_izquierda", "temp_derecha", "temp_arriba", "temp_abajo"):
+            if getattr(p, clave) is not None:
+                visual[clave] = float(getattr(p, clave))
+        for clave in ("base", "altura"):
+            if valor := _texto(getattr(p, clave)):
+                visual[clave] = valor
+        if marcas:
+            visual["anotar"] = marcas
+    elif tipo == "perfil_flujo":
+        if p.flujo:
+            visual["flujo"] = p.flujo
+        for clave in ("velocidad", "separacion", "viscosidad"):
+            if valor := _texto(getattr(p, clave)):
+                visual[clave] = valor
+        if marcas:
+            visual["anotar"] = marcas
     else:
         visual["fuente"] = _texto(p.fuente)
         visual["resistencias"] = [r.strip() for r in p.resistencias if r.strip()]
@@ -727,6 +1065,12 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
         paso |= _emoji(p.emoji)
         if p.error and tex:
             paso["error"] = True
+        # El halo solo vale con términos que de verdad están en la fórmula (como destacar).
+        halo = [h.strip() for h in p.halo if h.strip() and limpiar_tex(h) in tex][:2]
+        if halo and tex:
+            paso["halo"] = [limpiar_tex(h) for h in halo]
+        if p.resaltar_cambio and tex and not p.error:
+            paso["resaltar_cambio"] = True
         if (visual := _visual(p)) is not None:
             paso["visual"] = visual
         pasos.append(paso)
@@ -747,7 +1091,8 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
         "datos": [{"tex": limpiar_tex(d.tex), "voz": _texto(d.voz)} for d in g.datos],
         "pasos": pasos,
         "resultado": {"tex": limpiar_tex(g.resultado_tex), "voz": _texto(g.resultado_voz)}
-        | _emoji(g.resultado_emoji),
+        | _emoji(g.resultado_emoji)
+        | ({"destello": True} if g.resultado_destello else {}),
     }
     if _texto(g.verificacion_texto):
         guion["verificacion"] = {
@@ -921,7 +1266,11 @@ def problemas_de_formato(guion: Guion, segundos_prometidos: int | None = None) -
 def _sistema() -> str:
     plantilla = (PLANTILLAS_DIR / "ia" / "sistema.md").read_text(encoding="utf-8")
     ejemplo = json.dumps(EJEMPLO.model_dump(), ensure_ascii=False, indent=1)
-    return plantilla.replace("{{EJEMPLO}}", ejemplo).replace("{{EMOJIS}}", lista_para_ia())
+    return (
+        plantilla.replace("{{EJEMPLO}}", ejemplo)
+        .replace("{{EJEMPLOS_DINAMICOS}}", _ejemplos_dinamicos())
+        .replace("{{EMOJIS}}", lista_para_ia())
+    )
 
 
 def pedir_json(

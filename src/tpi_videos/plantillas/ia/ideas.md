@@ -23,7 +23,7 @@ Tu tarea: proponer 3 IDEAS de video sobre el TEMA que te indican. No resuelves e
 - Coma decimal chilena: 9,8 (nunca 9.8). Sin punto de miles: 1500.
 - Se resuelve en 3 a 5 pasos de pizarra, con una sola fórmula protagónica. Si necesitas 8 pasos, el ejercicio es demasiado largo para un video corto: simplifícalo.
 - Verifica en tu cabeza que el resultado da un número razonable (un tiempo positivo, una escalera que cabe en la pared, una corriente menor a la del cortocircuito). Nada de resultados imposibles.
-- El motor SABE dibujar tres cosas en el pie de la hoja: el gráfico de una función, un diagrama de fuerzas sobre un bloque (con plano inclinado) o una bola, y un circuito de 2 a 4 resistencias. Un ejercicio que se entienda mejor con uno de esos dibujos es buen material.
+- El motor SABE dibujar en el pie de la hoja, y muchos de sus dibujos se mueven: gráficos de funciones con una tangente que recorre la curva o un área que se llena (derivadas e integrales), proyectiles, péndulos y resortes en movimiento, diagramas de fuerzas, circuitos, sólidos en 3D que giran y se despiezan, y piezas de ingeniería (tolva, tubería con bridas, eje escalonado), calor en una placa y flujo entre placas. Un ejercicio que se entienda mejor con uno de esos dibujos es buen material.
 - Lo que NO sirve: lo que dependa de una imagen que no esté en el enunciado. No pidas "según el gráfico de la figura", "observa la figura 3" ni geometría con ángulos dibujados: todos los datos tienen que estar escritos en el enunciado.
 
 ## 3. El molde narrativo (la estructura del video)
