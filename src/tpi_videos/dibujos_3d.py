@@ -481,15 +481,21 @@ def dibujar_vector_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     imagen.move_to(ORIGIN)
 
     parches, columna = VGroup(), VGroup()
+    # El hueco y el cartón salen del presupuesto, no del gusto: el dibujo anotado tiene que caber en
+    # 0,75 de la franja y en una aguja (3, 4, 12) el cuerpo es angosto, así que lo que manda es el
+    # texto. Con el cuerpo y las dos columnas ya adentro sólo quedan ~0,34 para los dos lados juntos,
+    # y subir cualquiera de estos dos números a ojo saca el dibujo del presupuesto.
+    hueco_columna = 0.10
+    carton = 0.08
     for rotulo, (_, _, izquierda, y) in zip(rótulos, filas):
         # Las columnas pegan al cuerpo, no al borde de la franja: en una aguja (3, 4, 12) el hueco de
         # tres unidades entre la caja y su propia medida se lee como si fueran dos dibujos distintos.
         # Se miden contra la franja de dibujo, no contra el frame de manim: la miniatura y el video
         # usan cuadros distintos y to_edge() correría las columnas según dónde se llame.
-        hueco = imagen.width / 2 + 0.24
+        hueco = imagen.width / 2 + hueco_columna
         centro = -(hueco + rotulo.width / 2) if izquierda else hueco + rotulo.width / 2
         rotulo.move_to([centro, y * alto, 0.0])
-        fondo, rotulo = d._parche(rotulo, papel, 0.16)  # el mismo cartón que usa la lámina 2D
+        fondo, rotulo = d._parche(rotulo, papel, carton)  # el mismo cartón que usa la lámina 2D
         parches.add(fondo)
         columna.add(rotulo)
 
