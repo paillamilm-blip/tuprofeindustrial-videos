@@ -126,6 +126,30 @@ class ParaHoyTest(unittest.TestCase):
         self.assertEqual([o.titulo for o in p.opciones["fisica"]], ["otro"])
         self.assertEqual(p.hoy, ["elegido"])
 
+    def test_la_universidad_tambien_arma_su_trio(self):
+        from tpi_videos.panel.para_hoy import proponer
+
+        self._guion("m3", "matematica", "3° medio")
+        self._guion("cal", "matematica", "2° año de ingeniería")
+        self._guion("gauss", "fisica", "segundo año ingeniería")
+        self._guion("estatica", "ingenieria", "2° año ingeniería", extra="carrera: obras_civiles\n")
+        p = proponer()
+        self.assertEqual(p.nivel, "2° año ingeniería")  # el único completo
+        self.assertEqual(list(p.niveles), ["3° medio", "2° año ingeniería"])  # media primero
+        self.assertEqual(p.opciones["ingenieria"][0].carrera, "obras_civiles")
+
+    def test_prefiere_otra_carrera_que_la_del_ultimo_video(self):
+        from unittest import mock
+
+        from tpi_videos.panel import para_hoy
+
+        self._guion("costos", "ingenieria", "3° año ingeniería", extra="carrera: industrial\n", dias=5)
+        self._guion("thevenin", "ingenieria", "3° año ingeniería", extra="carrera: electrica\n", dias=1)
+        with mock.patch.object(para_hoy, "_ultimo_video", return_value=(None, "industrial")):
+            opciones = para_hoy.proponer("3° año ingeniería").opciones["ingenieria"]
+        self.assertEqual([o.titulo for o in opciones], ["thevenin", "costos"])
+        self.assertIn("cambia de carrera (Eléctrica)", opciones[0].razones)
+
     def test_un_guion_que_no_valida_no_se_ofrece(self):
         from tpi_videos.panel.para_hoy import proponer
 

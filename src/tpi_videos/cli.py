@@ -297,6 +297,43 @@ def cmd_cuota(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_completar_niveles(args: argparse.Namespace) -> int:
+    """Escribe con la IA los guiones que faltan para que cada nivel tenga las tres materias."""
+    from .completar import completar, huecos
+
+    json_activo = _modo_json(args)
+    lista = huecos(args.publico, args.nivel, args.materia)
+    if not lista:
+        consola.print("[green bold]✅ Todos los niveles pedidos ya tienen las tres materias.[/]")
+        if json_activo:
+            _emitir(etapa="resultado", avance=1.0, escritos=[], faltan=0)
+        return 0
+    elegidos = lista[: max(1, args.maximo)]
+    consola.print(
+        f"[bold]Faltan {len(lista)} guion(es).[/] " + ("Escribiría:" if args.simular else "Escribo:")
+    )
+    for h in elegidos:
+        consola.print(f"   • {h.texto}")
+    if args.simular:
+        return 0
+
+    def avisar(mensaje: str) -> None:
+        if json_activo:
+            _emitir(etapa="redactando", avance=0.0, detalle=mensaje)
+        consola.print(f"   [dim]{mensaje}[/]")
+
+    escritos, fallidos = completar(elegidos, avisar=avisar)
+    for h, ruta in escritos:
+        consola.print(f"[green]✅ {h.nivel} · {h.materia}:[/] {_ruta_amigable(ruta)}")
+    for h, motivo in fallidos:
+        consola.print(f"[yellow]⚠  {h.texto}: {motivo}[/]")
+    faltan = len(lista) - len(escritos)
+    consola.print(f"\nEscribí {len(escritos)}; faltan {faltan}. Revísalos en Aprobación de Guiones (QC).")
+    if json_activo:
+        _emitir(etapa="resultado", avance=1.0, escritos=[str(r) for _h, r in escritos], faltan=faltan)
+    return 0 if escritos or not fallidos else 1
+
+
 def cmd_redactar(args: argparse.Namespace) -> int:
     from .ia import MODELO_POR_DEFECTO
     from .redactor import redactar
@@ -314,6 +351,7 @@ def cmd_redactar(args: argparse.Namespace) -> int:
             " ".join(args.enunciado),  # sin comillas, la terminal lo separa en palabras
             materia=args.materia,
             nivel=args.nivel,
+            carrera=getattr(args, "carrera", None),
             modelo=args.modelo or MODELO_POR_DEFECTO,
             nombre=args.nombre,
             forzar=args.forzar,
@@ -1368,7 +1406,12 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument(
         "--materia", choices=["matematica", "fisica", "ingenieria"], help="opcional: la IA la deduce"
     )
-    s.add_argument("--nivel", help='opcional, ej. "1° medio" o "técnico en electricidad"')
+    s.add_argument("--nivel", help='opcional, ej. "1° medio" o "2° año ingeniería"')
+    s.add_argument(
+        "--carrera",
+        choices=["industrial", "electrica", "obras_civiles"],
+        help="opcional, para la universidad: la carrera de la malla",
+    )
     s.add_argument("--nombre", help="nombre del archivo del guion (por defecto, a partir del título)")
     s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
     s.add_argument("--forzar", action="store_true", help="reemplaza el guion si ya existe")
@@ -1541,6 +1584,18 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--ideas-json", help=argparse.SUPPRESS)  # el panel ya tiene las 3 ideas en pantalla
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_lote)
+
+    s = sub.add_parser(
+        "completar-niveles",
+        help="escribe con IA los guiones que faltan para que cada nivel tenga las 3 materias",
+    )
+    s.add_argument("--publico", choices=["media", "universidad", "todos"], default="todos")
+    s.add_argument("--nivel", help='solo este nivel, ej. "2° año ingeniería"')
+    s.add_argument("--materia", choices=["matematica", "fisica", "ingenieria"], help="solo esta materia")
+    s.add_argument("--maximo", type=int, default=3, help="cuántos escribir de una vez (cada uno usa Gemini)")
+    s.add_argument("--simular", action="store_true", help="solo muestra lo que escribiría")
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
+    s.set_defaults(func=cmd_completar_niveles)
 
     s = sub.add_parser("clave", help="guarda tu clave de Gemini (para redactar con IA)")
     s.add_argument("--sin-probar", action="store_true", help="guardar sin probarla por internet")

@@ -1,0 +1,90 @@
+name: Dos públicos
+
+# Temporal: completar niveles con el Gemini falso y «Para hoy» con media y universidad, en el navegador.
+
+on:
+  pull_request:
+
+jobs:
+  revisar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GOOGLE_GEMINI_BASE_URL: http://127.0.0.1:8766
+      GEMINI_API_KEY: falsa
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: El motor y Playwright
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libcairo2-dev libpango1.0-dev
+          python -m pip install --upgrade pip
+          pip install -e . playwright
+          python -m playwright install --with-deps chromium
+      - name: Lo que falta (simular)
+        run: tpi completar-niveles --simular --maximo 20
+      - name: Completar 3° año con el Gemini falso
+        run: |
+          python scripts/gemini_falso.py 8766 > /tmp/gemini.log 2>&1 &
+          sleep 2
+          ls guiones > /tmp/antes.txt
+          tpi completar-niveles --publico universidad --nivel "3° año ingeniería" --maximo 3
+          for g in $(comm -13 /tmp/antes.txt <(ls guiones)); do
+            echo "== $g"; grep -E "^(titulo|materia|categoria|nivel|carrera|molde):" "guiones/$g"
+          done
+          grep -c "PÚBLICO UNIVERSITARIO" /tmp/gemini.log || true
+      - name: Para hoy en el navegador
+        run: |
+          python scripts/gemini_falso.py 8766 >> /tmp/gemini.log 2>&1 &
+          tpi panel --no-abrir --puerto 8765 > /tmp/panel.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8765/ > /dev/null && break; sleep 1; done
+          mkdir -p capturas
+          python - <<'EOF'
+          import time
+          from playwright.sync_api import sync_playwright
+          URL = "http://127.0.0.1:8765"
+
+          def tarjeta(pag):
+              return pag.locator(".tpi-consola", has_text="Para hoy").first
+
+          with sync_playwright() as p:
+              b = p.chromium.launch(); pag = b.new_page(viewport={"width": 1440, "height": 1200})
+              errores = []; pag.on("pageerror", lambda e: errores.append(str(e)))
+              pag.goto(URL + "/")
+              tarjeta(pag).wait_for(timeout=20000)
+              print("inicio:", tarjeta(pag).inner_text().replace("\n", " | ")[:700])
+              time.sleep(1); pag.screenshot(path="capturas/01_dos_publicos.png")
+
+              tarjeta(pag).get_by_text("3° año", exact=True).first.click(); time.sleep(1.5)
+              print("3° año:", tarjeta(pag).inner_text().replace("\n", " | ")[:700])
+              pag.screenshot(path="capturas/02_tercer_ano.png")
+
+              tarjeta(pag).get_by_text("1° año · incompleto").first.click(); time.sleep(1.5)
+              print("1° año:", tarjeta(pag).inner_text().replace("\n", " | ")[:400])
+              fisica = tarjeta(pag).locator(".tpi-ficha", has_text="FÍSICA").first
+              fisica.get_by_role("button", name="Pedírselo a la IA").click()
+              pag.wait_for_function(
+                  "() => [...document.querySelectorAll('.tpi-ficha')].some(e => e.innerText.includes('FÍSICA') && e.innerText.includes('Crear este'))",
+                  timeout=180000,
+              )
+              time.sleep(1)
+              print("tras pedirlo:", tarjeta(pag).locator(".tpi-ficha", has_text="FÍSICA").first.inner_text().replace("\n", " | "))
+              pag.screenshot(path="capturas/03_pedido_a_la_ia.png")
+
+              pag.goto(URL + "/ajustes")
+              pag.locator(".q-card", has_text="Tu público").first.locator("label", has_text="Nivel").first.click()
+              time.sleep(1)
+              print("opciones de nivel:", [o.inner_text() for o in pag.locator(".q-menu .q-item").all()])
+              pag.screenshot(path="capturas/04_ajustes_nivel.png")
+              print("errores de la página:", errores or "ninguno")
+              b.close()
+          EOF
+          grep -i "traceback" -A12 /tmp/panel.log | head -30 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dos-publicos
+          path: capturas
+          retention-days: 7

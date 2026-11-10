@@ -1,10 +1,12 @@
 """«Para hoy»: un video al día, elegido entre tres. Uno por materia, los tres del mismo nivel.
 
+Sirve para los dos públicos (ver ``niveles.py``): enseñanza media y universidad de ingeniería.
+
 Sin NiceGUI: acá solo se decide qué proponer y por qué, para probarlo sin navegador. Las opciones
 salen de los guiones que esperan revisión en QC; nada se inventa ni se escribe.
 
 Cómo se ordena cada materia (el primero es el propuesto; «Otra» pasa al siguiente):
-1° que no repita el molde del último video que salió (variedad en tu muro),
+1° que no repita la carrera ni el molde del último video que salió (variedad en tu muro),
 2° que ya traiga título y hashtags para redes, 3° que ya tenga vista previa al día,
 4° el que lleva más tiempo esperando.
 """
@@ -12,7 +14,6 @@ Cómo se ordena cada materia (el primero es el propuesto; «Otra» pasa al sigui
 from __future__ import annotations
 
 import datetime as dt
-import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,24 +21,26 @@ from pathlib import Path
 from ..config import cargar_marca
 from ..entorno import raiz_proyecto
 from ..errores import ErrorMotor
-from ..guion import CATEGORIA_DE_MATERIA, Guion, cargar_guion, sin_tildes
+from ..guion import CATEGORIA_DE_MATERIA, Guion, cargar_guion
 from ..moldes import nombre_molde
+from ..niveles import CARRERA_CORTA, NIVELES, normalizar, publico_de
 from ..temas import NOMBRE_CATEGORIA, EstiloSugerido, estilo_del_guion
 from . import qc
 
 CATEGORIAS = ("matematicas", "fisica", "ingenieria")
-# «º» (ordinal) sale como «o» después de sin_tildes: «2º medio» → «2o medio».
-_NIVEL = re.compile(r"\b([1-4])\s*[°ºo]?\s*(?:ano\s+)?(?:de\s+)?medio")
 
 
 def nivel_de(texto: str | None) -> str | None:
-    """«3° medio», «3 medio», «4° medio · PAES» → «3° medio» / «4° medio». Lo demás no es un nivel claro."""
-    m = _NIVEL.search(sin_tildes(str(texto or "")).lower())
-    return f"{m.group(1)}° medio" if m else None
+    """El nivel del guion en su forma de catálogo (ver ``niveles.normalizar``)."""
+    return normalizar(texto)
 
 
 def _orden_nivel(nivel: str) -> int:
-    return int(nivel[0]) if nivel[:1].isdigit() else 9
+    return NIVELES.index(nivel) if nivel in NIVELES else len(NIVELES)
+
+
+def publico(nivel: str) -> str:
+    return publico_de(nivel) or "media"
 
 
 @dataclass(frozen=True)
@@ -47,6 +50,7 @@ class Opcion:
     categoria: str
     nivel: str
     molde: str  # nombre visible ("" si no tiene)
+    carrera: str | None  # la clave de la carrera (universidad), o None
     estilo: EstiloSugerido
     razones: tuple[str, ...]
 
@@ -77,12 +81,20 @@ def _borrador_al_dia(ruta: Path) -> bool:
     return video.exists() and video.stat().st_mtime >= ruta.stat().st_mtime
 
 
-def _ultimo_molde() -> str | None:
-    """El molde del último video que salió (para no repetirlo dos días seguidos)."""
+def _ultimo_video() -> tuple[str | None, str | None]:
+    """El molde y la carrera del último video que salió (para no repetirlos dos días seguidos)."""
     from .biblioteca import videos
 
     hechos = sorted(videos(), key=lambda v: v.fecha, reverse=True)
-    return (hechos[0].molde or None) if hechos else None
+    if not hechos:
+        return None, None
+    carrera = None
+    if hechos[0].guion is not None:
+        try:
+            carrera = cargar_guion(hechos[0].guion).carrera
+        except ErrorMotor:
+            carrera = None
+    return hechos[0].molde or None, carrera
 
 
 def _dias(segundos: float) -> str:
@@ -95,17 +107,21 @@ def _dias(segundos: float) -> str:
 
 
 def _opcion(
-    ruta: Path, guion: Guion, nivel: str, ultimo: str | None, ahora: float, marca
+    ruta: Path, guion: Guion, nivel: str, ultimo: tuple[str | None, str | None], ahora: float, marca
 ) -> tuple[tuple, Opcion]:
     listo_redes = guion.metadatos is not None
     con_vista = _borrador_al_dia(ruta)
-    repite = bool(ultimo) and guion.molde == ultimo
+    ultimo_molde, ultima_carrera = ultimo
+    repite = bool(ultimo_molde) and guion.molde == ultimo_molde
+    repite_carrera = bool(ultima_carrera) and guion.carrera == ultima_carrera
     razones = [_dias(ahora - ruta.stat().st_mtime)]
+    if guion.carrera and ultima_carrera and not repite_carrera:
+        razones.append(f"cambia de carrera ({CARRERA_CORTA[guion.carrera]})")
     if listo_redes:
         razones.append("trae título y hashtags")
     if con_vista:
         razones.append("ya tiene vista previa")
-    if guion.molde and not repite and ultimo:
+    if guion.molde and not repite and ultimo_molde:
         razones.append(f"cambia de formato ({nombre_molde(guion.molde)})")
     elif repite:
         razones.append("repite el formato del último video")
@@ -115,10 +131,11 @@ def _opcion(
         categoria=guion.categoria,
         nivel=nivel,
         molde=nombre_molde(guion.molde) if guion.molde else "",
+        carrera=guion.carrera,
         estilo=estilo_del_guion(guion, marca),
         razones=tuple(razones),
     )
-    return (repite, not listo_redes, not con_vista, ruta.stat().st_mtime), opcion
+    return (repite_carrera, repite, not listo_redes, not con_vista, ruta.stat().st_mtime), opcion
 
 
 def elegidos_hoy(hoy: dt.date | None = None) -> list[str]:
@@ -142,7 +159,7 @@ def proponer(nivel: str | None = None, preferido: str | None = None) -> Propuest
     guiones; si ninguno está completo, el que tenga más materias.
     """
     marca = cargar_marca()
-    ultimo = _ultimo_molde()
+    ultimo = _ultimo_video()
     ahora = time.time()
     candidatos: dict[str, dict[str, list[tuple[tuple, Opcion]]]] = {}
     for ruta in qc.guiones():  # solo los que esperan revisión

@@ -171,10 +171,48 @@ def _ejemplo(clave: str) -> GuionIA:
     return next(g for titulo, g in EJEMPLOS_DINAMICOS.items() if titulo.startswith(clave))
 
 
+def _ideas(texto: str) -> str:
+    """Tres ideas válidas sobre el TEMA pedido (para ``proponer_ideas`` y ``tpi completar-niveles``)."""
+    linea = next((x for x in texto.splitlines() if x.startswith("TEMA:")), "TEMA: un ejercicio")
+    tema = linea.removeprefix("TEMA:").split(".")[0].strip() or "un ejercicio"
+    materia = next(
+        (m for m in ("matematica", "fisica", "ingenieria") if f"Materia obligatoria: {m}" in texto),
+        "matematica",
+    )
+    ideas = []
+    for angulo, molde, estilos in (
+        ("error_tipico", "mito_realidad", ("error", "curiosidad", "dato")),
+        ("aplicacion_real", "pov", ("dolor", "curiosidad", "reto")),
+        ("reto", "reto", ("reto", "dato", "curiosidad")),
+    ):
+        ideas.append(
+            {
+                "angulo": angulo,
+                "titulo": f"{tema[:30]} ({angulo})",
+                "gancho": "",
+                "ganchos": [
+                    {"texto": f"¿Te atreves con este ejercicio {i + 1}?", "estilo": e}
+                    for i, e in enumerate(estilos)
+                ],
+                "molde": molde,
+                "enunciado": f"Ejercicio de {tema}: con datos concretos, calcula el resultado paso a paso y verifícalo.",
+                "materia": materia,
+                "nivel": "",
+                "dificultad": "media",
+                "emoji": "",
+                "porque": "Es un tema que cuesta y se ve rápido.",
+                "segundos": 45,
+            }
+        )
+    return json.dumps({"ideas": ideas}, ensure_ascii=False)
+
+
 def respuesta(sistema: str, texto: str) -> str:
     """El JSON que devolvería Gemini para esta petición."""
     if sistema.startswith("Eres un profesor revisor"):
         return json.dumps({"aprobado": True, "problemas": []})
+    if sistema.startswith("Eres el productor"):
+        return _ideas(texto)
     bajo = texto.lower()
     if "tuber" in bajo or "turbul" in bajo:
         guion = TUBERIA
