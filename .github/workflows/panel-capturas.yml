@@ -89,7 +89,7 @@ jobs:
               pag.get_by_text("La pendiente, el área y el cilindro abierto").first.click()
               time.sleep(1)
               toma("06_qc")
-              pag.get_by_text("#derivadas").click()
+              pag.get_by_text("#derivadas", exact=True).first.click()
               time.sleep(0.5)
               print("portapapeles tras el hashtag:", pag.evaluate("navigator.clipboard.readText()"))
               toma("07_copiado")

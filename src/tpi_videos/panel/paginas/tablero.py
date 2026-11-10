@@ -256,7 +256,7 @@ class ColaDeProduccion:
             ui.label(f.texto_estado + (f" · {round(f.avance * 100)} %" if activo else "")).classes(color)
             if activo:
                 ui.linear_progress(value=f.avance, show_value=False, color=None).props("rounded size=6px")
-            if f.detalle:
+            if activo and f.detalle and f.detalle != f.texto_estado:
                 ui.label(f.detalle).classes("tpi-sobrio text-sm")
             if f.error:
                 ui.label(str(f.error)).classes("tpi-rojo text-sm")
