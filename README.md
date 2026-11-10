@@ -324,8 +324,8 @@ Agrega `--abrir` a `crear` o `subtitular` para que el video se abra solo al term
   voz). Cada estilo muestra una vista previa de 3 cuadros antes de crear un video.
 - **Estilo de cada video (un solo lugar):** en el panel, **Aprobación de Guiones (QC)** → la ficha del guion →
   **Estilo del video**. El motor sugiere uno según el video y su materia, en este orden: 1° el molde (reto →
-  Neón sobre reja, mito/realidad → Pizarra de cine, 3 errores → Rotulador, POV → Kraft y tiza, Nadie te enseñó →
-  Plano azul); 2° los dibujos (circuito → Plano azul, piezas industriales → Plano nocturno); 3° si corrige un
+  Neón sobre reja, mito/realidad → Pizarra de cine, 3 errores → Rotulador, POV → Kraft y tiza; «Nadie te enseñó esto»
+  luce su materia); 2° los dibujos (circuito → Plano azul, piezas industriales → Plano nocturno); 3° si corrige un
   error (Cuaderno con sello); 4° la materia (Matemáticas → Pizarra nocturna, Física → Neón cian, Ingeniería →
   Plano nocturno). Elegir otro escribe `tema:` en el guion; volver al sugerido lo borra.
 - **En la Terminal:** `--tema` al crear le gana a todo. El `tema:` de `marca.yaml` solo se usa si no hay nada más.

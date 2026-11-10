@@ -40,19 +40,18 @@ TEMA_POR_CATEGORIA: dict[str, str] = {
 NOMBRE_CATEGORIA = {"matematicas": "Matemáticas", "fisica": "Física", "ingenieria": "Ingeniería"}
 
 # 1° El molde: la forma del video manda sobre la materia (un reto se ve como reto en cualquier ramo).
+# «Nadie te enseñó esto» no está: es el dato sorpresa de cualquier ramo y debe lucir su materia.
 TEMA_POR_MOLDE: dict[str, str] = {
     "reto": "neon_reja",
     "mito_realidad": "vineta_cine",
     "tres_errores": "rotulador",
     "pov": "kraft_tiza",
-    "nadie_te_enseno": "plano_azul",
 }
 MOTIVO_POR_MOLDE = {
     "reto": "Un reto pide neón: se lee como desafío.",
     "mito_realidad": "El contraste mito/realidad funciona en cine.",
     "tres_errores": "Tres errores seguidos se siguen mejor en papel.",
     "pov": "Un POV se siente en cuaderno, no en pantalla.",
-    "nadie_te_enseno": "El dato sorpresa va en plano azul.",
 }
 
 # 2° Lo que se dibuja: cuando el dibujo pide su propio papel.

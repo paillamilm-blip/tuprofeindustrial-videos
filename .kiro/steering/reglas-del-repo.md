@@ -26,7 +26,7 @@ inclusion: always
   antiguos deben salir idénticos cuadro a cuadro a los de `main`. Comparar con `PYTHONHASHSEED=0` en ambos
   lados (`TransformMatchingTex` recorre conjuntos y el orden de dibujo cambia entre procesos).
 - **Estilo de cada video: una regla y un lugar.** La regla vive solo en `temas.py` (`sugerir_tema`): 1° el
-  molde → 2° los dibujos (circuito→`plano_azul`, piezas industriales→`plano_noche`) → 3° si corrige un error
+  molde (salvo «Nadie te enseñó esto», que luce su materia) → 2° los dibujos (circuito→`plano_azul`, piezas industriales→`plano_noche`) → 3° si corrige un error
   (`cuaderno_con_sello`) → 4° la materia (matemáticas→`pizarra_nocturna`, física→`neon_cian`,
   ingeniería→`plano_noche`) → 5° el `tema` de `marca.yaml`. El `tema:` del guion (lo que se eligió) le gana a la
   sugerencia, y `--tema` en la Terminal le gana a todo (`resolver_tema`). En el panel el estilo se elige **solo**

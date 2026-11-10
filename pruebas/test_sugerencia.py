@@ -162,9 +162,10 @@ class PiezasTest(unittest.TestCase):
             set(BANDERAS),
             {
                 "molde", "materia", "nivel", "dificultad",
-                "tema", "voz", "segundos", "lectura", "gancho",
+                "voz", "segundos", "lectura", "gancho",
             },
         )  # fmt: skip
+        self.assertNotIn("tema", BANDERAS)  # el estilo se elige en QC, no viaja desde la tarjeta
 
     def test_el_piso_de_lectura_viaja_aunque_no_se_toque(self):
         """Lo que muestra la tarjeta y lo que recibe el motor tienen que ser el mismo comando."""
@@ -209,13 +210,21 @@ class EstiloPorMoldeTest(unittest.TestCase):
         self.assertFalse(estilo.tocada)
         self.assertIn("reto", estilo.razon.lower())
 
-    def test_los_cinco_moldes_tienen_estilo_y_ninguno_se_repite(self) -> None:
-        """Las 3 ideas de un lote traen moldes distintos: los estilos salen distintos solos."""
+    def test_los_moldes_con_estilo_propio_no_se_repiten(self) -> None:
+        """Las 3 ideas de un lote traen moldes distintos: los estilos salen distintos solos.
+
+        «Nadie te enseñó esto» es el dato sorpresa de cualquier ramo: luce el estilo de su materia.
+        """
+        from tpi_videos.temas import TEMA_POR_MOLDE
+
+        self.assertEqual(set(TEMA_POR_MOLDE), set(MOLDES) - {"nadie_te_enseno"})
         codigos = {
             armar("porcentajes", {}, PREF, {"molde": clave, "titulo": "La idea"}).pieza("tema").codigo
-            for clave in MOLDES
+            for clave in TEMA_POR_MOLDE
         }
-        self.assertEqual(len(codigos), len(MOLDES))
+        self.assertEqual(len(codigos), len(TEMA_POR_MOLDE))
+        dato = armar("porcentajes", {"materia": "fisica"}, PREF, {"molde": "nadie_te_enseno", "titulo": "D"})
+        self.assertEqual(dato.pieza("tema").codigo, "neon_cian")
         from tpi_videos.temas import listar_temas
 
         validos = {ident for ident, _tema, _propio in listar_temas()}

@@ -108,8 +108,9 @@ jobs:
               print("YAML tras volver al sugerido:", [l for l in MOHR.read_text().splitlines() if l.startswith("tema:")])
 
               # 5 · en las otras pantallas ya no se elige: se informa y se manda a QC
-              pag.goto(URL + "/")
-              pag.wait_for_selector("text=Así está armado", timeout=20000)
+              pag.goto(URL + "/avanzado")
+              pag.get_by_text("Crear a mano").first.click()
+              pag.wait_for_selector("text=Así está armado", timeout=30000)
               fila = pag.locator("div.border-t", has_text="Estilo").first
               print("tarjeta Un video:", fila.inner_text().replace("\n", " | "))
               print("enlace cambiar →", fila.locator("a").first.get_attribute("href"))
