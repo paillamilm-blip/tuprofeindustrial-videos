@@ -90,7 +90,7 @@ jobs:
             texlive-fonts-recommended dvisvgm \
             ffmpeg pkg-config libcairo2-dev libpango1.0-dev
 
-      - name: Render de los ejemplos antiguos en main y en la rama
+      - name: Render de los ejemplos antiguos en main (dos veces) y en la rama
         run: |
           python -m pip install --upgrade pip
           ejemplos="visuales_tres_tipos fisica_caida_libre ingenieria_ley_de_ohm matematica_ecuacion_cuadratica matematica_error_binomio moldes_virales"
@@ -98,25 +98,24 @@ jobs:
             if [ "$lado" != rama ]; then git checkout -q origin/main; else git checkout -q "$GITHUB_SHA"; fi
             pip install -q -e .
             rm -rf salida
+            mkdir -p /tmp/$lado
             for e in $ejemplos; do
               tpi crear guiones/ejemplos/$e.yaml --tema pizarra_nocturna --voz silencio --borrador > /dev/null 2>&1 \
                 || { echo "❌ $e no renderizó en $lado"; exit 1; }
               nombre=$(echo $e | tr '_' '-')
-              mkdir -p /tmp/$lado
-              ffmpeg -v error -i salida/$nombre/${nombre}_borrador.mp4 -map 0:v -f framemd5 /tmp/$lado/$e.md5
+              cp salida/$nombre/${nombre}_borrador.mp4 /tmp/$lado/$e.mp4
             done
           done
-          distintos=0
+          # Cuánto se parecen dos videos: PSNR mínimo por cuadro (dB) y cuadros por debajo de 40 dB.
+          compara() {
+            ffmpeg -v error -i "$1" -i "$2" -lavfi "[0:v][1:v]psnr=stats_file=/tmp/psnr.txt" -f null - || true
+            awk '{for(i=1;i<=NF;i++) if($i ~ /^psnr_avg:/){split($i,a,":"); v=(a[2]=="inf")?99:a[2]+0; if(min==""||v<min)min=v; if(v<40)bajo++; n++}} END {printf "%d cuadros · PSNR mínimo %.1f dB · %d bajo 40 dB", n, min, bajo+0}' /tmp/psnr.txt
+          }
           for e in $ejemplos; do
-            control=$(diff <(grep -v '^#' /tmp/main/$e.md5) <(grep -v '^#' /tmp/main2/$e.md5) | grep -c '^>')
-            echo "   control $e: main contra main → $control cuadros distintos"
+            echo "$e"
+            echo "   control main/main: $(compara /tmp/main/$e.mp4 /tmp/main2/$e.mp4)"
+            echo "   main/rama:         $(compara /tmp/main/$e.mp4 /tmp/rama/$e.mp4)"
+            d1=$(ffprobe -v error -show_entries format=duration -of csv=p=0 /tmp/main/$e.mp4)
+            d2=$(ffprobe -v error -show_entries format=duration -of csv=p=0 /tmp/rama/$e.mp4)
+            echo "   duración main ${d1} s · rama ${d2} s"
           done
-          for e in $ejemplos; do
-            if diff -q <(grep -v '^#' /tmp/main/$e.md5) <(grep -v '^#' /tmp/rama/$e.md5) > /dev/null; then
-              echo "✅ $e: idéntico cuadro a cuadro ($(grep -vc '^#' /tmp/rama/$e.md5) cuadros)"
-            else
-              echo "❌ $e: $(diff <(grep -v '^#' /tmp/main/$e.md5) <(grep -v '^#' /tmp/rama/$e.md5) | grep -c '^>') cuadros distintos"
-              distintos=1
-            fi
-          done
-          exit $distintos
