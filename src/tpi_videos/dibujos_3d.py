@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -309,7 +309,7 @@ PARTE_ORBITA = 0.6  # con despiece, la órbita usa el 60 % del recorrido y la se
 class _Cara:
     puntos: np.ndarray  # (k, 3)
     normal: np.ndarray  # hacia afuera del cuerpo
-    clase: str  # "cuerpo" | "tapa" | "corte"
+    clase: str  # "cuerpo" | "tapa" | "corte" | "anillo" (canto de un tubo) | "interior" (su hueco)
 
 
 @dataclass
@@ -318,6 +318,9 @@ class _Pieza:
     salida: np.ndarray  # hacia dónde se va en el despiece (ya con su largo)
     cerrada: bool  # True: las caras de espalda nunca se ven
     lisa: bool  # True: se le dibuja la silueta (cilindro, cono, esfera); el cubo ya tiene aristas
+    # El centro de la pieza, para ordenar el pintado entre piezas. En las de siempre queda en cero y
+    # el orden es solo por cuánto se apartaron en el despiece.
+    centro: np.ndarray = field(default_factory=lambda: np.zeros(3))
 
 
 def _unitario(v: np.ndarray) -> np.ndarray:
@@ -444,8 +447,57 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     corte = visual.corte if cuerpo.figura == "cubo" else "sin_corte"
     despiece = bool(getattr(visual, "despiece", False)) and cuerpo.figura != "esfera"
     piezas = _piezas_vivas(cuerpo.figura, corte, despiece, r, h, a)
-    separa = corte == "mitad" or despiece
-    phi_f, theta_f = VISTAS[visual.vista]
+    unidad = cuerpo.unidad or ""
+
+    def mide(clave: str, valor: float) -> str:
+        return f"{clave} = {d._numero_latex(valor)} {unidad}".strip()
+
+    if cuerpo.figura == "cubo":
+        medidas = [(mide("a", cuerpo.lado or a), [0, -a / 2, -a / 2], 0, "abajo")]
+    elif cuerpo.figura == "cilindro":
+        medidas = [
+            (mide("r", cuerpo.radio or 0.0), [r / 2, 0, h / 2], 2 if despiece else 0, "arriba"),
+            (mide("h", cuerpo.altura or 0.0), [-r, 0, 0], 1 if despiece else 0, "izquierda"),
+        ]
+    elif cuerpo.figura == "cono":
+        medidas = [
+            (mide("r", cuerpo.radio or 0.0), [r / 2, 0, -h / 2], 0, "abajo"),
+            (mide("h", cuerpo.altura or 0.0), [0, 0, 0], 1 if despiece else 0, "izquierda"),
+        ]
+    else:
+        medidas = [(mide("r", cuerpo.radio or 0.0), [r / 2, 0, 0], 0, "arriba")]
+    notas = []
+    for marca in visual.anotar[:2]:
+        valor = cuerpo.volumen if marca == "volumen" else cuerpo.area
+        sufijo = "³" if marca == "volumen" else "²"
+        notas.append(
+            f"{'V' if marca == 'volumen' else 'A'} = {d._numero_latex(valor)} {unidad}{sufijo}".strip()
+        )
+    return _cuerpo_vivo(
+        piezas, visual.vista, corte == "mitad" or despiece, col, ancho, alto, papel, medidas, notas
+    )
+
+
+def _cuerpo_vivo(
+    piezas: list[_Pieza],
+    vista: str,
+    separa: bool,
+    col: Any,
+    ancho: float,
+    alto: float,
+    papel: str,
+    medidas: list[tuple[str, list[float], int | None, str]],
+    notas: list[str],
+    ancho_cuerpo: float = 0.50,
+) -> d.Dibujo:
+    """El motor común de los cuerpos 3D: órbita, luz, despiece, silueta y rótulos que viajan.
+
+    ``medidas`` son (texto, punto 3D, pieza a la que va pegado, lado donde se apoya: arriba, abajo,
+    izquierda o derecha). ``notas`` se escriben quietas a la derecha del cuerpo (V, A, sección…).
+    Las piezas se pintan de atrás hacia adelante según su centro: en piezas coaxiales apiladas a lo
+    largo del eje (tolva, tubería, eje) ese orden es exacto, porque las separa un plano.
+    """
+    phi_f, theta_f = VISTAS[vista]
     cabeceo = CABECEO_ORBITA if phi_f <= 60 else -CABECEO_ORBITA
 
     def momento(t: float) -> tuple[float, float, float]:
@@ -471,7 +523,7 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     plano = np.vstack(vistos)
     bajo, alto_ = plano.min(axis=0), plano.max(axis=0)
     centro_2d = (bajo + alto_) / 2
-    k = min(0.80 * alto / max(alto_[1] - bajo[1], 1e-6), 0.50 * ancho / max(alto_[0] - bajo[0], 1e-6))
+    k = min(0.80 * alto / max(alto_[1] - bajo[1], 1e-6), ancho_cuerpo * ancho / max(alto_[0] - bajo[0], 1e-6))
 
     # Metal satinado en la paleta del tema: la sombra no llega al negro y la luz casi al blanco.
     oscuro = _tono(col.tenue, "#000000", 0.22)
@@ -490,6 +542,9 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
         lambert = max(float(normal @ luz), 0.0)
         brillo = max(float(normal @ _unitario(luz + hacia)), 0.0) ** 28
         base = oscuro.interpolate(claro, 0.2 + 0.8 * lambert)
+        if cara.clase == "interior":
+            # Por dentro del tubo llega poca luz: el hueco se lee oscuro, como en la pieza real.
+            return _tono(base, "#000000", 0.45)
         return _tono(base, "#FFFFFF", 0.7 * brillo)
 
     def pose(t: float, llevar: Any) -> None:
@@ -500,7 +555,9 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
             x, y = (p3 @ der - centro_2d[0]) * k, (p3 @ arr - centro_2d[1]) * k
             return llevar(np.array([x, y, 0.0]))
 
-        orden = sorted(range(len(piezas)), key=lambda i: float((piezas[i].salida * sep) @ hacia))
+        orden = sorted(
+            range(len(piezas)), key=lambda i: float((piezas[i].centro + piezas[i].salida * sep) @ hacia)
+        )
         todos = np.vstack([cara.puntos + pieza.salida * sep for pieza in piezas for cara in pieza.caras])
         xs, ys = (todos @ der - centro_2d[0]) * k, (todos @ arr - centro_2d[1]) * k
         limites[0] = np.array([xs.min(), xs.max(), ys.min(), ys.max()])
@@ -519,19 +576,25 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
                     continue
                 mob.set_points_as_corners([pantalla(q) for q in [*pts, pts[0]]])
                 tinte = color_de(cara, cara.normal, hacia, not de_frente)
-                if pieza.lisa and cara.clase == "cuerpo":
+                if pieza.lisa and cara.clase in ("cuerpo", "anillo", "interior"):
                     mob.set_fill(tinte, 1.0).set_stroke(tinte, 1.2, 1.0)  # borde del mismo tono: sin rendijas
                 else:
                     mob.set_fill(tinte, 1.0).set_stroke(col.formulas, 3.0, 1.0)
-                filas.append((float(pts.mean(axis=0) @ hacia), mob))
+                # El hueco de un tubo se ve solo por la boca: se pinta antes que la cáscara de afuera.
+                profundidad = float(pts.mean(axis=0) @ hacia) - (1e6 if cara.clase == "interior" else 0.0)
+                filas.append((profundidad, mob))
             nuevos += [mob for _, mob in sorted(filas, key=lambda par: par[0])]
             silueta = siluetas[i]
             if silueta is not None:
                 silueta.clear_points()
                 for cara_i, q0, q1, vecina in aristas[i]:
                     # Silueta: la arista separa una cara que se ve de una que da la espalda (o es el
-                    # borde abierto de una pieza suelta). Es el contorno que dibujaría un lápiz.
-                    if visibles[cara_i] and (vecina is None or not visibles[vecina]):
+                    # borde abierto de una pieza suelta). Es el contorno que dibujaría un lápiz. Entre
+                    # el canto de un anillo y su manto (o su hueco) además va el pliegue.
+                    if not visibles[cara_i]:
+                        continue
+                    pliegue = vecina is not None and _pliegue(pieza.caras[cara_i], pieza.caras[vecina])
+                    if vecina is None or not visibles[vecina] or pliegue:
                         silueta.start_new_path(pantalla(q0 + salida))
                         silueta.add_line_to(pantalla(q1 + salida))
                 nuevos.append(silueta)
@@ -543,8 +606,7 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
 
     pose(1.0, lambda q: q)
 
-    # —— Rótulos: las medidas pegadas al cuerpo; V y A a un costado, quietos ——————————————
-    unidad = cuerpo.unidad or ""
+    # —— Rótulos: las medidas pegadas al cuerpo; las notas a un costado, quietas ——————————————
     parches, rótulos = VGroup(), VGroup()
     # (cartón, rótulo, punto 3D, pieza a la que va pegado, lado del cuerpo donde se apoya)
     viajeros: list[tuple[Mobject, Mobject, np.ndarray, int | None, str]] = []
@@ -556,20 +618,9 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
         rótulos.add(rotulo)
         return fondo, rotulo
 
-    def mide(clave: str, valor: float, punto: list[float], pieza: int | None, lado: str) -> None:
-        fondo, rotulo = etiqueta(f"{clave} = {d._numero_latex(valor)} {unidad}".strip(), np.zeros(3))
+    for texto, punto, pieza, lado in medidas:
+        fondo, rotulo = etiqueta(texto, np.zeros(3))
         viajeros.append((fondo, rotulo, np.array(punto, dtype=float), pieza, lado))
-
-    if cuerpo.figura == "cubo":
-        mide("a", cuerpo.lado or a, [0, -a / 2, -a / 2], 0, "abajo")
-    elif cuerpo.figura == "cilindro":
-        mide("r", cuerpo.radio or 0.0, [r / 2, 0, h / 2], 2 if despiece else 0, "arriba")
-        mide("h", cuerpo.altura or 0.0, [-r, 0, 0], 1 if despiece else 0, "izquierda")
-    elif cuerpo.figura == "cono":
-        mide("r", cuerpo.radio or 0.0, [r / 2, 0, -h / 2], 0, "abajo")
-        mide("h", cuerpo.altura or 0.0, [0, 0, 0], 1 if despiece else 0, "izquierda")
-    else:
-        mide("r", cuerpo.radio or 0.0, [r / 2, 0, 0], 0, "arriba")
 
     def mover_rotulos(t: float, llevar: Any) -> None:
         """Cada medida sigue a su arista, pero apoyada por fuera del cuerpo: nunca encima de él.
@@ -587,6 +638,8 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
             medio_ancho, medio_alto = fondo.width / factor / 2, fondo.height / factor / 2
             if lado == "izquierda":
                 sitio = np.array([x0 - 0.12 - medio_ancho, y, 0.0])
+            elif lado == "derecha":
+                sitio = np.array([x1 + 0.12 + medio_ancho, y, 0.0])
             elif lado == "arriba":
                 sitio = np.array([x, y1 + 0.1 + medio_alto, 0.0])
             else:
@@ -595,16 +648,16 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
             rotulo.move_to(llevar(sitio))
 
     mover_rotulos(1.0, lambda q: q)
-    pie = 0
-    for marca in visual.anotar[:2]:
-        valor = cuerpo.volumen if marca == "volumen" else cuerpo.area
-        sufijo = "³" if marca == "volumen" else "²"
-        etiqueta(
-            f"{'V' if marca == 'volumen' else 'A'} = {d._numero_latex(valor)} {unidad}{sufijo}".strip(),
-            np.array([ancho * 0.30, 0.42 - pie * 0.62, 0.0]),
-            28,
-        )
-        pie += 1
+    # Las notas van a la derecha, donde siempre hubo hueco; si el cuerpo es largo (una tubería, un eje)
+    # se corren lo justo para no pisar su punta en ninguna pose de la órbita.
+    punta_derecha = (alto_[0] - centro_2d[0]) * k
+    for pie, texto in enumerate(notas[:3]):
+        fondo, rotulo = etiqueta(texto, np.array([ancho * 0.30, 0.42 - pie * 0.62, 0.0]), 28)
+        minimo = punta_derecha + 0.3 + fondo.width / 2
+        if fondo.get_x() < minimo:
+            corrimiento = np.array([minimo - fondo.get_x(), 0.0, 0.0])
+            fondo.shift(corrimiento)
+            rotulo.shift(corrimiento)
 
     parches.set_z_index(0.55)
     rótulos.set_z_index(0.56)
@@ -632,6 +685,182 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     )
 
 
+# ------------------------------------------------------------------------------------------
+# Piezas industriales: tolva, tubería con bridas y eje escalonado
+# ------------------------------------------------------------------------------------------
+#
+# Las tres son cuerpos de revolución hechos de tramos coaxiales: cada tramo es convexo (o un tubo
+# hueco) y está separado del vecino por un plano perpendicular al eje, así que el orden de pintado
+# por centro es exacto con o sin despiece.
+
+LADOS_REVOLUCION = 48
+
+
+def _tramo(r0: float, r1: float, z0: float, z1: float, lados: int = LADOS_REVOLUCION) -> list[_Cara]:
+    """Un tronco de cono cerrado (o un cilindro si r0 == r1) entre z0 y z1, con sus dos tapas."""
+    abajo, arriba = _anillo(r0, z0, lados), _anillo(r1, z1, lados)
+    dr, dz = r1 - r0, z1 - z0
+    caras = []
+    for i in range(lados):
+        j = (i + 1) % lados
+        angulo = 2 * np.pi * (i + 0.5) / lados
+        # La normal del manto: hacia afuera y, si el tramo se angosta hacia arriba, también hacia arriba.
+        normal = _unitario(np.array([np.cos(angulo) * dz, np.sin(angulo) * dz, -dr]))
+        caras.append(_Cara(np.array([abajo[i], abajo[j], arriba[j], arriba[i]]), normal, "cuerpo"))
+    caras.append(_Cara(abajo[::-1].copy(), np.array([0.0, 0.0, -1.0]), "tapa"))
+    caras.append(_Cara(arriba.copy(), np.array([0.0, 0.0, 1.0]), "tapa"))
+    return caras
+
+
+def _tubo(ri: float, re: float, z0: float, z1: float, lados: int = LADOS_REVOLUCION) -> list[_Cara]:
+    """Un tubo hueco: cáscara de afuera, hueco de adentro y los dos cantos (anillos) de las bocas."""
+    e0, e1 = _anillo(re, z0, lados), _anillo(re, z1, lados)
+    i0, i1 = _anillo(ri, z0, lados), _anillo(ri, z1, lados)
+    caras = []
+    for i in range(lados):
+        j = (i + 1) % lados
+        angulo = 2 * np.pi * (i + 0.5) / lados
+        radial = np.array([np.cos(angulo), np.sin(angulo), 0.0])
+        caras.append(_Cara(np.array([e0[i], e0[j], e1[j], e1[i]]), radial, "cuerpo"))
+        caras.append(_Cara(np.array([i0[j], i0[i], i1[i], i1[j]]), -radial, "interior"))
+        caras.append(_Cara(np.array([e0[j], e0[i], i0[i], i0[j]]), np.array([0.0, 0.0, -1.0]), "anillo"))
+        caras.append(_Cara(np.array([e1[i], e1[j], i1[j], i1[i]]), np.array([0.0, 0.0, 1.0]), "anillo"))
+    return caras
+
+
+def _a_lo_largo_de_x(p: np.ndarray) -> np.ndarray:
+    """Gira el eje z al eje x (un cuarto de vuelta en torno a y): las tuberías y los ejes van acostados."""
+    p = np.asarray(p, dtype=float)
+    return np.stack([p[..., 2], p[..., 1], -p[..., 0]], axis=-1)
+
+
+def _pieza(caras: list[_Cara], salida: np.ndarray, acostada: bool = False) -> _Pieza:
+    if acostada:
+        caras = [
+            _Cara(_a_lo_largo_de_x(cara.puntos), _a_lo_largo_de_x(cara.normal), cara.clase) for cara in caras
+        ]
+        salida = _a_lo_largo_de_x(salida)
+    centro = np.vstack([cara.puntos for cara in caras]).mean(axis=0)
+    return _Pieza(caras, np.asarray(salida, dtype=float), True, True, centro)
+
+
+def _piezas_tolva(t: Any, despiece: bool) -> list[_Pieza]:
+    """El cilindro arriba (z de 0 a H) y el cono truncado abajo (de la boca r a z = −h)."""
+    cilindro = _tramo(t.radio, t.radio, 0.0, t.altura)
+    cono = _tramo(t.radio_salida, t.radio, -t.altura_cono, 0.0)
+    sube = np.array([0.0, 0.0, 0.4 * t.altura]) if despiece else np.zeros(3)
+    baja = np.array([0.0, 0.0, -0.4 * t.altura_cono]) if despiece else np.zeros(3)
+    return [_pieza(cilindro, sube), _pieza(cono, baja)]
+
+
+def dibujar_tolva_3d(visual: Any, col: Any, ancho: float, alto: float, papel: str = "#FFFFFF") -> d.Dibujo:
+    """La tolva de un silo: cilindro y cono truncado. Con despiece, el cilindro sube y el cono baja."""
+    t = visual.tolva()
+    u = t.unidad
+
+    def m(clave: str, valor: float) -> str:
+        return f"{clave} = {d._numero_latex(valor)} {u}".strip()
+
+    medidas = [
+        (m("R", t.radio), [t.radio / 2, 0.0, t.altura], 0, "arriba"),
+        (m("H", t.altura), [-t.radio, 0.0, t.altura / 2], 0, "izquierda"),
+        (m("h", t.altura_cono), [-(t.radio + t.radio_salida) / 2, 0.0, -t.altura_cono / 2], 1, "izquierda"),
+        (m("r", t.radio_salida), [0.0, 0.0, -t.altura_cono], 1, "abajo"),
+    ]
+    notas = []
+    if "volumen" in visual.anotar:
+        notas.append(f"V = {d._numero_latex(t.volumen)} {u}³".strip())
+    if "chapa" in visual.anotar:
+        notas.append(f"Chapa = {d._numero_latex(t.chapa)} {u}²".strip())
+    piezas = _piezas_tolva(t, visual.despiece)
+    return _cuerpo_vivo(piezas, visual.vista, visual.despiece, col, ancho, alto, papel, medidas, notas)
+
+
+# La brida se dibuja en proporción al tubo: el guion no la mide y no entra en las cuentas.
+RADIO_BRIDA = 1.55
+GRUESO_BRIDA = 0.32
+
+
+def _piezas_tuberia(t: Any, bridas: bool, despiece: bool) -> list[_Pieza]:
+    mitad = t.longitud / 2
+    piezas = [_pieza(_tubo(t.radio_interior, t.radio, -mitad, mitad), np.zeros(3), acostada=True)]
+    if bridas:
+        grueso = min(GRUESO_BRIDA * t.radio, 0.12 * t.longitud)
+        aparte = 0.22 * t.longitud if despiece else 0.0
+        rb = RADIO_BRIDA * t.radio
+        piezas.append(
+            _pieza(_tubo(t.radio_interior, rb, -mitad - grueso, -mitad), np.array([0, 0, -aparte]), True)
+        )
+        piezas.append(
+            _pieza(_tubo(t.radio_interior, rb, mitad, mitad + grueso), np.array([0, 0, aparte]), True)
+        )
+    return piezas
+
+
+def dibujar_tuberia_3d(visual: Any, col: Any, ancho: float, alto: float, papel: str = "#FFFFFF") -> d.Dibujo:
+    """Un tramo de ducto hueco: por la boca se ve el interior. Con despiece, las bridas se apartan."""
+    t = visual.tuberia()
+    u = t.unidad
+
+    def m(clave: str, valor: float) -> str:
+        return f"{clave} = {d._numero_latex(valor)} {u}".strip()
+
+    medidas = [
+        (m("Ø", 2 * t.radio), _a_lo_largo_de_x(np.array([0.0, 0.0, -t.longitud / 4])).tolist(), 0, "arriba"),
+        (m("L", t.longitud), _a_lo_largo_de_x(np.array([0.0, 0.0, 0.0])).tolist(), 0, "abajo"),
+    ]
+    notas = [m("e", t.espesor)]
+    if "seccion" in visual.anotar:
+        notas.append(f"A = {d._numero_latex(t.seccion)} {u}²".strip())
+    if "material" in visual.anotar:
+        notas.append(f"V = {d._numero_latex(t.material)} {u}³".strip())
+    despiece = visual.despiece and visual.bridas
+    piezas = _piezas_tuberia(t, visual.bridas, despiece)
+    return _cuerpo_vivo(piezas, visual.vista, despiece, col, ancho, alto, papel, medidas, notas, 0.56)
+
+
+def _piezas_eje(e: Any, despiece: bool) -> tuple[list[_Pieza], list[float]]:
+    """Los tramos uno tras otro, centrados; devuelve también el centro de cada uno a lo largo del eje."""
+    z = -e.largo / 2
+    piezas, centros = [], []
+    n = len(e.radios)
+    for i, (r, largo) in enumerate(zip(e.radios, e.largos, strict=True)):
+        aparte = (i - (n - 1) / 2) * 0.1 * e.largo if despiece else 0.0
+        piezas.append(_pieza(_tramo(r, r, z, z + largo), np.array([0.0, 0.0, aparte]), acostada=True))
+        centros.append(z + largo / 2)
+        z += largo
+    return piezas, centros
+
+
+def dibujar_eje_3d(visual: Any, col: Any, ancho: float, alto: float, papel: str = "#FFFFFF") -> d.Dibujo:
+    """Un eje de transmisión escalonado. Con despiece, los tramos se separan a lo largo del eje."""
+    e = visual.eje()
+    u = e.unidad
+    piezas, centros = _piezas_eje(e, visual.despiece)
+    medidas = [
+        (
+            f"Ø {d._numero_latex(2 * r)} {u}".strip(),
+            _a_lo_largo_de_x(np.array([0.0, 0.0, zc])).tolist(),
+            i,
+            "arriba" if i % 2 == 0 else "abajo",
+        )
+        for i, (r, zc) in enumerate(zip(e.radios, centros, strict=True))
+    ]
+    notas = []
+    if "largo" in visual.anotar:
+        notas.append(f"L = {d._numero_latex(e.largo)} {u}".strip())
+    if "volumen" in visual.anotar:
+        notas.append(f"V = {d._numero_latex(e.volumen)} {u}³".strip())
+    return _cuerpo_vivo(piezas, visual.vista, visual.despiece, col, ancho, alto, papel, medidas, notas, 0.56)
+
+
+def _pliegue(cara: _Cara, vecina: _Cara) -> bool:
+    """Si la arista entre dos caras visibles es un canto que se dibuja (anillo contra manto o hueco)."""
+    if cara.clase == vecina.clase or "tapa" in (cara.clase, vecina.clase):
+        return False
+    return "anillo" in (cara.clase, vecina.clase)
+
+
 def _aristas(pieza: _Pieza) -> list[tuple[int, np.ndarray, np.ndarray, int | None]]:
     """Cada arista de las caras del manto (o de la esfera) con la cara vecina que la comparte.
 
@@ -651,7 +880,7 @@ def _aristas(pieza: _Pieza) -> list[tuple[int, np.ndarray, np.ndarray, int | Non
             duenos.setdefault(tuple(sorted((clave(q0), clave(q1)))), []).append(i)
     salida = []
     for i, cara in enumerate(pieza.caras):
-        if cara.clase != "cuerpo":
+        if cara.clase not in ("cuerpo", "anillo"):
             continue
         pts = cara.puntos
         for q0, q1 in zip(pts, np.roll(pts, -1, axis=0), strict=True):

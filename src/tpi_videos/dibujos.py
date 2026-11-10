@@ -2759,6 +2759,300 @@ def pendulo_doble(
 # ------------------------------------------------------------------------------------------
 
 
+# ------------------------------------------------------------------------------------------
+# Calor en una placa y flujo entre placas
+# ------------------------------------------------------------------------------------------
+
+# Frío a caliente: azul, celeste, crema, naranjo y rojo. Es un código que se lee igual en cualquier
+# tema (el azul siempre es frío), por eso no sale de la paleta del tema.
+MAPA_TERMICO = ("#2F5BEA", "#5FB6F2", "#F4EBC3", "#F28C38", "#D7263D")
+
+
+def color_termico(fraccion: float) -> ManimColor:
+    """El color de una temperatura, con ``fraccion`` = 0 en la más fría y 1 en la más caliente."""
+    f = min(max(float(fraccion), 0.0), 1.0) * (len(MAPA_TERMICO) - 1)
+    i = min(int(f), len(MAPA_TERMICO) - 2)
+    return ManimColor(MAPA_TERMICO[i]).interpolate(ManimColor(MAPA_TERMICO[i + 1]), f - i)
+
+
+def _isotermas(campo: np.ndarray, niveles: list[float], punto: Callable[[float, float], np.ndarray]):
+    """Los tramos de cada curva de nivel (marching squares): pares de puntos ya en pantalla."""
+    ny, nx = campo.shape
+    tramos = []
+    for nivel in niveles:
+        for j in range(ny - 1):
+            for i in range(nx - 1):
+                esquinas = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)]
+                valores = [campo[b, a] for a, b in esquinas]
+                cortes = []
+                for k in range(4):
+                    (a0, b0), (a1, b1) = esquinas[k], esquinas[(k + 1) % 4]
+                    v0, v1 = valores[k], valores[(k + 1) % 4]
+                    if (v0 - nivel) * (v1 - nivel) < 0:
+                        f = (nivel - v0) / (v1 - v0)
+                        cortes.append(punto(a0 + f * (a1 - a0), b0 + f * (b1 - b0)))
+                for k in range(0, len(cortes) - 1, 2):
+                    tramos.append((cortes[k], cortes[k + 1]))
+    return tramos
+
+
+def _escala(fijo: Callable[[np.ndarray], np.ndarray]) -> float:
+    """Cuánto encogió ``_encaje`` el dibujo: los largos que se recalculan se miden en la escala final."""
+    return float(np.linalg.norm(fijo(np.array([1.0, 0.0, 0.0])) - fijo(np.zeros(3))))
+
+
+def gradiente_termico(
+    placa: Any, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """La placa coloreada por temperatura: el calor entra por los bordes y se asienta.
+
+    Cada celda es un punto de la malla de diferencias finitas y su color sale de la temperatura que
+    calculó ``simulacion.conducir_placa``. La última pose es el régimen permanente.
+    """
+    campo = placa.permanente
+    ny, nx = campo.shape
+    lado = min(0.62 * ancho / nx, 0.70 * alto / ny)
+    ancho_p, alto_p = lado * nx, lado * ny
+    izquierda, abajo = -ancho_p / 2 - 0.35, -alto_p / 2
+
+    def punto(i: float, j: float) -> np.ndarray:
+        return np.array([izquierda + (i + 0.5) * lado, abajo + (j + 0.5) * lado, 0.0])
+
+    rango = max(placa.maxima - placa.minima, 1e-9)
+    celdas = VGroup(
+        *[
+            Rectangle(width=lado, height=lado).move_to(punto(i, j)).set_stroke(width=0)
+            for j in range(ny)
+            for i in range(nx)
+        ]
+    )
+    borde = Rectangle(width=ancho_p, height=alto_p).move_to(punto((nx - 1) / 2, (ny - 1) / 2))
+    borde.set_stroke(col.formulas, 4)
+    centro_x, centro_y = float(borde.get_center()[0]), float(borde.get_center()[1])
+
+    def grados(valor: float) -> str:
+        return f"{_numero_latex(round(valor))} °C"
+
+    parches, rótulos = VGroup(), VGroup()
+
+    def rotulo(texto: str, donde: list[float], tam: float = 20) -> Mobject:
+        r = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(np.array(donde, dtype=float))
+        fondo, r = _parche(r, papel, 0.12)
+        parches.add(fondo)
+        rótulos.add(r)
+        return r
+
+    rotulo(grados(placa.izquierda), [izquierda - 0.55, centro_y, 0])
+    rotulo(grados(placa.arriba), [centro_x, abajo + alto_p + 0.24, 0])
+    rotulo(grados(placa.abajo), [centro_x, abajo - 0.24, 0])
+    derecha = rotulo(grados(placa.derecha), [izquierda + ancho_p + 0.55, centro_y, 0])
+
+    # La escala de colores con sus dos extremos: sin ella el color no dice cuántos grados son.
+    x_barra = float(derecha.get_right()[0]) + 0.45
+    tramos_barra = 20
+    alto_barra = alto_p * 0.9
+    barra = VGroup(
+        *[
+            Rectangle(width=0.22, height=alto_barra / tramos_barra)
+            .set_fill(color_termico((k + 0.5) / tramos_barra), 1)
+            .set_stroke(width=0)
+            .move_to([x_barra, centro_y - alto_barra / 2 + (k + 0.5) * alto_barra / tramos_barra, 0])
+            for k in range(tramos_barra)
+        ]
+    )
+    marco_barra = Rectangle(width=0.22, height=alto_barra).move_to([x_barra, centro_y, 0])
+    marco_barra.set_stroke(col.tenue, 2)
+    rotulo(grados(placa.maxima), [x_barra, centro_y + alto_barra / 2 + 0.2, 0], 17)
+    rotulo(grados(placa.minima), [x_barra, centro_y - alto_barra / 2 - 0.2, 0], 17)
+
+    isotermas = VMobject().set_stroke(col.formulas, 2.5, 0.75)
+    niveles = [placa.minima + rango * f for f in (0.2, 0.4, 0.6, 0.8)]
+    con_isotermas = "isotermas" in marcas
+    con_centro = "centro" in marcas
+    centro = Dot(punto((nx - 1) / 2, (ny - 1) / 2), radius=0.06).set_fill(col.formulas, 1)
+    lectura = VGroup()
+    escrito = [""]
+
+    todo = VGroup(celdas, isotermas, borde, barra, marco_barra, parches, rótulos)
+    if con_centro:
+        todo.add(centro, lectura)
+    fijo, desplazamiento = _encaje(todo, ancho, alto)
+
+    def leer(valor: float) -> None:
+        texto = f"T centro ≈ {grados(valor)}"
+        if texto == escrito[0]:
+            return
+        escrito[0] = texto
+        sitio = fijo(np.array([centro_x, abajo + alto_p + 0.62, 0.0]))
+        nuevo = c.texto(texto, 22, SEMIBOLD, col.texto)
+        nuevo.scale(_escala(fijo)).move_to(sitio)
+        for viejo in lectura.submobjects:  # como en el gráfico vivo: nada de letras fantasma
+            viejo.set_opacity(0.0)
+        lectura.submobjects = list(_parche(nuevo, papel, 0.14).submobjects)
+
+    def vivo(t: float) -> None:
+        valores = placa.en(t)
+        for (j, i), celda in zip(np.ndindex(ny, nx), celdas, strict=True):
+            tono = color_termico((valores[j, i] - placa.minima) / rango)
+            celda.set_fill(tono, 1).set_stroke(tono, 0.6, 1)  # borde del mismo tono: sin rendijas
+        if con_isotermas:
+            isotermas.clear_points()
+            for p0, p1 in _isotermas(valores, niveles, lambda i, j: fijo(punto(i, j))):
+                isotermas.start_new_path(p0)
+                isotermas.add_line_to(p1)
+        if con_centro:
+            leer(placa.centro(valores))
+
+    vivo(1.0)
+    aparece: list[Mobject] = [celdas, barra, marco_barra, rótulos]
+    if con_isotermas:
+        aparece.append(isotermas)
+    if con_centro:
+        aparece += [centro, lectura]
+    return Dibujo(
+        mobs=todo,
+        trazo=[borde],
+        aparece=aparece,
+        vivo=vivo,
+        duracion=SEGUNDOS_RECORRIDO,
+        fisico=False,
+        desplazamiento=desplazamiento,
+    )
+
+
+FLECHAS_FLUJO = 11
+
+
+def perfil_flujo(
+    figura: Any, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """El fluido entre dos placas: una flecha por capa, de largo y color según su velocidad.
+
+    Arranca en reposo y llega al perfil desarrollado (recto en Couette, parábola en Poiseuille)
+    siguiendo la solución exacta de ``simulacion``. Con la marca ``esfuerzo`` se agrega la columna
+    del esfuerzo cortante τ = μ·du/dy, que es máximo en las paredes.
+    """
+    from .simulacion import TIEMPO_FLUJO, perfil_couette, perfil_poiseuille
+
+    perfil = perfil_couette if figura.flujo == "couette" else perfil_poiseuille
+    con_esfuerzo = "esfuerzo" in marcas
+    alto_c = 0.62 * alto
+    largo_max = (0.34 if con_esfuerzo else 0.5) * ancho
+    x0 = -0.42 * ancho + 0.4
+    y0, y1 = -alto_c / 2, alto_c / 2
+
+    def y_de(s: float) -> float:
+        return y0 + s * (y1 - y0)
+
+    largo_placa = largo_max + 0.9 + (1.6 if con_esfuerzo else 0.0)
+    placas = VGroup()
+    for y, afuera in ((y0, -1), (y1, 1)):
+        placas.add(Line([x0 - 0.3, y, 0], [x0 - 0.3 + largo_placa, y, 0]).set_stroke(col.formulas, 6))
+        for k in range(int(largo_placa / 0.28)):
+            x = x0 - 0.16 + k * 0.28
+            placas.add(Line([x, y, 0], [x - 0.14, y + afuera * 0.16, 0]).set_stroke(col.tenue, 2.5))
+    base = DashedLine([x0, y0, 0], [x0, y1, 0], dash_length=0.08).set_stroke(col.tenue, 2.5)
+
+    capas = np.array([(k + 0.5) / FLECHAS_FLUJO for k in range(FLECHAS_FLUJO)])
+    flechas = [
+        Arrow(
+            [x0, y_de(s), 0],
+            [x0 + 0.1, y_de(s), 0],
+            buff=0,
+            stroke_width=5,
+            max_tip_length_to_length_ratio=0.25,
+        )
+        for s in capas
+    ]
+    envolvente = VMobject().set_stroke(col.acento, 4)
+
+    parches, rótulos = VGroup(), VGroup()
+
+    def rotulo(texto: str, donde: list[float], tam: float = 20) -> Mobject:
+        r = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(np.array(donde, dtype=float))
+        fondo, r = _parche(r, papel, 0.12)
+        parches.add(fondo)
+        rótulos.add(r)
+        return r
+
+    rotulo(f"h = {figura.texto_separacion}", [x0 - 0.8, 0, 0], 19)
+    if figura.flujo == "couette":
+        mueve = Arrow([x0 + 0.2, y1 + 0.34, 0], [x0 + 1.3, y1 + 0.34, 0], buff=0, stroke_width=6)
+        mueve.set_color(col.error)
+        placas.add(mueve)
+        rotulo(f"U = {figura.texto_velocidad}", [x0 + 2.25, y1 + 0.34, 0])
+        rotulo("placa quieta", [x0 + 1.0, y0 - 0.34, 0], 17)
+    else:
+        rotulo(f"u máx = {figura.texto_velocidad}", [x0 + largo_max * 0.55, y1 + 0.34, 0])
+        rotulo("la presión empuja →", [x0 + 1.4, y0 - 0.34, 0], 17)
+
+    x_tau = x0 + largo_max + 1.0
+    tau_flechas: list[Arrow] = []
+    tau_base = None
+    largo_tau = 0.65
+    if con_esfuerzo:
+        tau_base = DashedLine([x_tau, y0, 0], [x_tau, y1, 0], dash_length=0.08).set_stroke(col.tenue, 2.5)
+        tau_flechas = [
+            Arrow(
+                [x_tau, y_de(s), 0],
+                [x_tau + 0.1, y_de(s), 0],
+                buff=0,
+                stroke_width=4,
+                max_tip_length_to_length_ratio=0.3,
+            )
+            for s in capas
+        ]
+        rotulo(f"τ pared = {_numero_latex(figura.esfuerzo_pared)} Pa", [x_tau + 0.3, y1 + 0.34, 0], 19)
+
+    todo = VGroup(placas, base, *flechas, envolvente, parches, rótulos)
+    if tau_base is not None:
+        todo.add(tau_base, *tau_flechas)
+    fijo, desplazamiento = _encaje(todo, ancho, alto)
+    muestras = np.linspace(0.0, 1.0, 41)
+    referencia = 1.0 if figura.flujo == "couette" else 4.0  # la pendiente del perfil en la pared
+
+    def vivo(t: float) -> None:
+        tau = TIEMPO_FLUJO * t**1.5 if t < 1.0 else 50.0  # al final, el perfil desarrollado
+        escala = _escala(fijo)
+        u = perfil(capas, tau)
+        for flecha, s, v in zip(flechas, capas, u, strict=True):
+            origen = fijo(np.array([x0, y_de(float(s)), 0.0]))
+            v = max(float(v), 0.0)
+            _apuntar(flecha, origen, RIGHT, largo_max * v * escala, _color_de_magnitud(col, v))
+        envolvente.set_points_as_corners(
+            [
+                fijo(np.array([x0 + largo_max * max(float(v), 0.0), y_de(float(s)), 0.0]))
+                for s, v in zip(muestras, perfil(muestras, tau), strict=True)
+            ]
+        )
+        if con_esfuerzo:
+            h = 1e-3
+            pendiente = (perfil(capas + h, tau) - perfil(capas - h, tau)) / (2 * h)
+            for flecha, s, g in zip(tau_flechas, capas, pendiente, strict=True):
+                origen = fijo(np.array([x_tau, y_de(float(s)), 0.0]))
+                fraccion = min(abs(float(g)) / referencia, 1.0)
+                _apuntar(
+                    flecha,
+                    origen,
+                    RIGHT if g >= 0 else LEFT,
+                    largo_tau * fraccion * escala,
+                    _color_de_magnitud(col, fraccion),
+                )
+
+    vivo(1.0)
+    aparece: list[Mobject] = [*flechas, envolvente, rótulos, *tau_flechas]
+    trazo: list[Mobject] = [placas, base, *([tau_base] if tau_base is not None else [])]
+    return Dibujo(
+        mobs=todo,
+        trazo=trazo,
+        aparece=aparece,
+        vivo=vivo,
+        duracion=SEGUNDOS_RECORRIDO,
+        fisico=False,
+        desplazamiento=desplazamiento,
+    )
+
+
 def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str | None = None) -> Dibujo:
     """El ``visual:`` de un paso convertido en dibujo, centrado en el origen.
 
@@ -2844,6 +3138,19 @@ def _dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str
         return pendulo_doble(visual.pendulo_doble(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "mohr":
         return mohr(visual.mohr(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo in ("tolva_3d", "tuberia_3d", "eje_3d"):
+        from . import dibujos_3d  # adentro, como el sólido: la malla 3D no pesa en los dibujos 2D
+
+        construir = {
+            "tolva_3d": dibujos_3d.dibujar_tolva_3d,
+            "tuberia_3d": dibujos_3d.dibujar_tuberia_3d,
+            "eje_3d": dibujos_3d.dibujar_eje_3d,
+        }[visual.tipo]
+        return construir(visual, col, ancho, alto, papel)
+    if visual.tipo == "gradiente_termico":
+        return gradiente_termico(visual.placa(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "perfil_flujo":
+        return perfil_flujo(visual.flujo_analizado(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "circuito":
         fuente, resistencias = analizar_circuito(visual.fuente, visual.resistencias)
         return circuito(fuente, resistencias, col, ancho, alto, visual.arreglo, papel)

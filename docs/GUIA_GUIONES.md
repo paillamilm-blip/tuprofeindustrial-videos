@@ -174,6 +174,68 @@ En un paso con fórmula:
 ```
 
 Y en el resultado, `destello: true` hace salir un destello del recuadro al confirmar la respuesta.
+
+### Piezas de ingeniería, calor y flujo
+
+Las tres piezas 3D giran solas como el `solido_3d`, aceptan `vista` y, con `despiece: true`, se separan.
+Las medidas pueden ir en unidades distintas (`1,5 m` y `30 cm`): el motor las pasa a la primera.
+
+```yaml
+    visual:
+      tipo: tolva_3d                # cilindro arriba y cono truncado abajo
+      radio: "1,5 m"                # el del cilindro
+      altura: "2 m"                 # la del cilindro
+      radio_salida: "0,3 m"         # la boca de abajo (más chica que el radio)
+      altura_cono: "1,2 m"
+      despiece: true                # el cilindro sube y el cono baja
+      anotar: [volumen]             # volumen · chapa (el área de lámina)
+```
+
+```yaml
+    visual:
+      tipo: tuberia_3d              # tubo hueco: por la boca se ve el interior
+      radio: "10 cm"                # el exterior
+      espesor: "1 cm"
+      longitud: "80 cm"
+      bridas: false                 # opcional: sin bridas en los extremos
+      anotar: [seccion, material]   # sección por donde pasa el fluido · volumen de la pared
+```
+
+```yaml
+    visual:
+      tipo: eje_3d                  # eje escalonado, de 2 a 5 tramos
+      radios: [20, 30, 25]
+      largos: [60, 120, 80]
+      unidad: mm
+      anotar: [volumen, largo]
+```
+
+```yaml
+    visual:
+      tipo: gradiente_termico       # placa con sus cuatro bordes a temperatura fija (°C)
+      temp_izquierda: 100
+      temp_derecha: 20
+      temp_arriba: 20
+      temp_abajo: 20
+      base: "40 cm"                 # opcional: la forma de la placa (por defecto, el doble de ancha)
+      altura: "20 cm"
+      anotar: [centro, isotermas]   # la temperatura del centro en vivo · las curvas de igual temperatura
+```
+
+La placa parte entera a la temperatura del borde más frío. El video muestra cómo entra el calor
+hasta quedarse quieto (el régimen permanente); el tiempo no es real, se reparte en la voz del paso.
+
+```yaml
+    visual:
+      tipo: perfil_flujo
+      flujo: poiseuille             # poiseuille: lo empuja la presión · couette: la placa de arriba lo arrastra
+      velocidad: "2 m/s"            # la máxima (poiseuille) o la de la placa (couette)
+      separacion: "1 cm"
+      viscosidad: "0,001 Pa·s"      # opcional: sin ella no se calcula el esfuerzo
+      anotar: [esfuerzo]            # agrega la columna del esfuerzo cortante y su valor en la pared
+```
+
+Ejemplo: `guiones/ejemplos/solidos_industriales.yaml`.
 Ejemplo con todo: `guiones/ejemplos/motor_vivo.yaml`.
 
 ## 3. Reglas para la voz (lo que se escucha)
