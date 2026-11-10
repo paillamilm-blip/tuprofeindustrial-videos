@@ -90,6 +90,14 @@ from .visuales import (
 
 MATERIAS: dict[str, str] = {"matematica": "MATEMÁTICA", "fisica": "FÍSICA", "ingenieria": "INGENIERÍA"}
 
+# La categoría temática de un guion: la misma materia, con el nombre que usa el catálogo de estilos.
+Categoria = Literal["matematicas", "fisica", "ingenieria"]
+CATEGORIA_DE_MATERIA: dict[str, Categoria] = {
+    "matematica": "matematicas",
+    "fisica": "fisica",
+    "ingenieria": "ingenieria",
+}
+
 # Caracteres que aparecen cuando una fórmula se escribe entre comillas DOBLES en YAML:
 # "\frac" → salto de página + "rac", "\times" → tabulación + "imes", "\vec" → tab vertical…
 _CONTROL_YAML = {"\x07", "\x08", "\t", "\n", "\x0b", "\x0c", "\r", "\x1b", "\x00"}
@@ -1193,6 +1201,11 @@ class Guion(_Base):
     @property
     def etiqueta_materia(self) -> str:
         return MATERIAS[self.materia]
+
+    @property
+    def categoria(self) -> Categoria:
+        """La categoría del guion (decide su estilo visual). Sale de ``materia``: no se escribe aparte."""
+        return CATEGORIA_DE_MATERIA[self.materia]
 
     def textos_de_voz(self, cierre_por_defecto: str) -> list[tuple[str, str]]:
         """Todos los textos que se dirán, en orden, con el nombre de su sección."""

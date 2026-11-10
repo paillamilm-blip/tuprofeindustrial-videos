@@ -52,6 +52,11 @@ PIEL = {
     "verde_sala": "#3FB950",
     "rojo_sala": "#F85149",
     "celeste_sala": "#58A6FF",  # lo que está en espera
+    # La insignia de categoría de cada guion: azul Matemáticas, turquesa Física, naranja Ingeniería.
+    "insignia_matematicas": "#2F6FEB",
+    "insignia_fisica": "#1ABC9C",
+    "insignia_ingenieria": "#E8833A",
+    "tinta_insignia": "#0D1117",  # el texto sobre la insignia clara (turquesa y naranja)
 }
 
 # Tres pestañas: supervisar, aprobar y, solo si hace falta, meter las manos.
@@ -108,6 +113,11 @@ body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
 .tpi-tablero .q-linear-progress {{ color: {PIEL["ambar"]}; }}
 .tpi-tablero .q-toggle__inner--truthy {{ color: {PIEL["ambar"]}; }}
 .tpi-tablero .q-btn {{ text-transform: none; }}
+.tpi-insignia {{ align-self: flex-start; padding: 2px 10px; border-radius: 999px; font-size: .7rem;
+  font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }}
+.tpi-insignia-matematicas {{ background: {PIEL["insignia_matematicas"]}; color: {PIEL["texto_sala"]}; }}
+.tpi-insignia-fisica {{ background: {PIEL["insignia_fisica"]}; color: {PIEL["tinta_insignia"]}; }}
+.tpi-insignia-ingenieria {{ background: {PIEL["insignia_ingenieria"]}; color: {PIEL["tinta_insignia"]}; }}
 .tpi-clic {{ transition: background-color .15s ease, box-shadow .15s ease; }}
 .tpi-clic:hover {{ background-color: {PIEL["linea_sala"]}; }}
 .tpi-ficha.tpi-clic:hover {{ box-shadow: 0 0 0 1px {PIEL["ambar"]}; background-color: {PIEL["consola_alta"]}; }}

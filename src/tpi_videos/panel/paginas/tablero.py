@@ -18,7 +18,7 @@ from nicegui import background_tasks, ui
 from ... import cola
 from ...errores import ErrorMotor
 from .. import qc
-from ..comun import abrir_en_mac, cabecera, confirmar, piel_de_la_pagina
+from ..comun import abrir_en_mac, cabecera, confirmar, piel_de_la_pagina, url_medio
 from ..supervision import (
     COLUMNAS,
     COMPLETADOS,
@@ -522,14 +522,19 @@ class AprobacionDeGuiones:
         for ruta in rutas[:40]:
             estado = qc.estado(ruta)
             elegida = "tpi-ficha-elegida" if ruta == self.elegido else ""
+            titulo, categoria = _resumen_de(ruta)
             with (
                 ui.column()
-                .classes(f"tpi-ficha tpi-clic {elegida} w-full p-4 gap-1 cursor-pointer")
+                .classes(f"tpi-ficha tpi-clic {elegida} w-full p-4 gap-2 cursor-pointer")
                 .on("click", lambda r=ruta: self._elegir(r))
             ):
-                ui.label(_titulo_de(ruta)).classes("font-semibold leading-snug")
+                if categoria:
+                    ui.label(NOMBRES_CATEGORIA[categoria]).classes(f"tpi-insignia tpi-insignia-{categoria}")
+                ui.label(titulo).classes("font-semibold leading-snug")
                 color = {qc.APROBADO: "tpi-verde", qc.RECHAZADO: "tpi-rojo"}.get(estado, "tpi-celeste")
                 ui.label(qc.NOMBRES[estado]).classes(f"{color} text-xs")
+                if estado == qc.POR_REVISAR:
+                    VistaPrevia(ruta).render()
 
     def _cambiar_filtro(self, e: Any) -> None:
         self.todos = bool(e.value)
@@ -667,14 +672,114 @@ class AprobacionDeGuiones:
         dialogo.open()
 
 
-def _titulo_de(ruta: Path) -> str:
+NOMBRES_CATEGORIA = {"matematicas": "Matemáticas", "fisica": "Física", "ingenieria": "Ingeniería"}
+
+
+def _resumen_de(ruta: Path) -> tuple[str, str | None]:
+    """El título y la categoría de un guion, leídos rápido (sin validar el guion entero)."""
     import yaml
 
+    from ...guion import CATEGORIA_DE_MATERIA, sin_tildes
+
+    respaldo = ruta.stem.replace("_", " ")
     try:
         datos = yaml.safe_load(ruta.read_text(encoding="utf-8")) or {}
-        return str(datos.get("titulo") or ruta.stem.replace("_", " "))
     except (OSError, yaml.YAMLError):
-        return ruta.stem.replace("_", " ")
+        return respaldo, None
+    materia = sin_tildes(str(datos.get("materia") or "")).strip().lower()
+    materia = materia[:-1] if materia.endswith("s") else materia  # «matemáticas» → «matematica»
+    return str(datos.get("titulo") or respaldo), CATEGORIA_DE_MATERIA.get(materia)
+
+
+class VistaPrevia:
+    """«Vista Previa Rápida»: el borrador del guion, renderizado y reproducido dentro de su tarjeta.
+
+    Usa la misma fila de trabajos que todo lo demás (uno a la vez): si el motor está ocupado, avisa.
+    El borrador queda en salida/ y se vuelve a mostrar mientras el guion no cambie.
+    """
+
+    def __init__(self, ruta: Path) -> None:
+        self.ruta = ruta
+        self.args = ["crear", str(ruta), "--borrador"]
+        self.vigilando = False
+        self.marca: tuple = ()
+
+    def borrador(self) -> Path | None:
+        """El borrador ya hecho de este guion, si es más nuevo que el guion."""
+        from ...entorno import raiz_proyecto
+        from ...render import slug
+
+        nombre = slug(self.ruta.stem)
+        video = raiz_proyecto() / "salida" / nombre / f"{nombre}_borrador.mp4"
+        if video.exists() and video.stat().st_mtime >= self.ruta.stat().st_mtime:
+            return video
+        return None
+
+    def _mia(self) -> Any:
+        t = TAREAS.actual
+        return t if t is not None and t.args == self.args else None
+
+    def render(self) -> None:
+        self.ancla = ui.element("div").classes("hidden")  # el reloj vive acá: la zona se repinta, esto no
+        self.zona()
+        if self._mia() is not None and not self._mia().terminada:
+            self._vigilar()
+
+    @ui.refreshable_method
+    def zona(self) -> None:
+        t = self._mia()
+        video = self.borrador()
+        with ui.column().classes("w-full gap-2").on("click.stop", lambda _e: None):
+            if t is not None and not t.terminada:
+                ui.linear_progress(value=t.avance, show_value=False, color=None).props("rounded size=4px")
+                ui.label(f"Borrador · {round(t.avance * 100)} % · {t.detalle or t.texto_etapa}").classes(
+                    "tpi-ambar text-xs"
+                )
+                return
+            if t is not None and t.terminada and t.error:
+                ui.label(f"El borrador falló: {t.error.get('mensaje', '')}").classes("tpi-rojo text-xs")
+            if video is not None:
+                ui.video(url_medio(video), autoplay=False, controls=True).classes(
+                    "w-full aspect-[9/16] rounded-lg bg-black"
+                )
+            boton = (
+                ui.button(
+                    color=None,
+                    text="Vista Previa Rápida" if video is None else "Rehacer la vista previa",
+                    icon="slow_motion_video",
+                )
+                .props("flat dense no-caps")
+                .classes("tpi-ambar -ml-2")
+            )
+            boton.on("click.stop", lambda _e: self._lanzar())
+            boton.tooltip("Un borrador rápido y en baja resolución, para mirarlo antes de mandarlo a la cola")
+
+    def _lanzar(self) -> None:
+        if TAREAS.ocupado():
+            ui.notify("El motor está ocupado: la vista previa espera a que termine.", type="warning")
+            return
+        TAREAS.lanzar(f"Vista previa · {_resumen_de(self.ruta)[0]}", self.args)
+        ui.notify("Armando el borrador: aparece acá mismo en un par de minutos.", type="info")
+        self.zona.refresh()
+        self._vigilar()
+
+    def _vigilar(self) -> None:
+        if self.vigilando:
+            return
+        self.vigilando = True
+
+        def mirar() -> None:
+            t = self._mia()
+            marca = (round(t.avance, 2), t.terminada) if t is not None else ("sin tarea",)
+            if marca != self.marca:
+                self.marca = marca
+                self.zona.refresh()
+            if t is None or t.terminada:
+                reloj.deactivate()
+                self.vigilando = False
+
+        with self.ancla:
+            reloj = ui.timer(1.0, mirar)
 
 
 # ------------------------------------------------------------------------------------------

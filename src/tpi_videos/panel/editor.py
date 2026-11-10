@@ -21,7 +21,7 @@ from ..guion import MATERIAS, Guion, Visual, a_yaml, explicar_errores
 from ..moldes import MOLDES
 from ..render import slug
 from ..revision import Revision, revisar
-from ..temas import cargar_tema
+from ..temas import cargar_tema, resolver_tema
 from ..visuales import CAMPOS, VECTORES, VISUALES, opciones_select
 from . import formulas, miniaturas
 from .comun import PIEL, url_medio
@@ -226,7 +226,8 @@ class EditorGuion:
         es_ejemplo = ruta is not None and ruta.parent.name == "ejemplos"
         base = ruta.stem if ruta else (slug(guion.titulo).replace("-", "_") if guion else "mi_guion")
         self.nombre = {"valor": f"{base}_mio" if es_ejemplo else base}
-        tema = cargar_tema((guion.tema if guion else None), cargar_marca())
+        marca = cargar_marca()
+        tema = cargar_tema(resolver_tema(None, guion, marca), marca)
         self.negrita = tema.formulas_negrita
         self.al_cambiar_revision: Callable[[Revision | None, list[str]], None] | None = None
 

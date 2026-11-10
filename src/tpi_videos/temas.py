@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
@@ -24,6 +24,31 @@ from .tipografia import existe
 TEMAS_DIR = PLANTILLAS_DIR / "temas"
 FONDOS_DIR = PAQUETE / "assets" / "fondos"
 TEMA_POR_DEFECTO = "hoja_de_desarrollo"
+
+# El estilo que le toca a cada categoría de guion cuando nadie eligió uno. Solo estilos que ya
+# existen en plantillas/temas/ (una prueba lo exige): este mapa elige, no crea ni modifica nada.
+TEMA_POR_CATEGORIA: dict[str, str] = {
+    "matematicas": "pizarra_nocturna",
+    "fisica": "neon_cian",
+    "ingenieria": "plano_noche",
+}
+
+
+def resolver_tema(manual: str | None, guion: Any | None, marca: Marca) -> str:
+    """Qué estilo lleva un video, en cascada.
+
+    1° Lo que se eligió a mano: ``--tema`` (o el estilo del panel) y, si no, el ``tema:`` escrito en
+       el guion. 2° El estilo de su categoría (``TEMA_POR_CATEGORIA``). 3° El ``tema:`` de marca.yaml.
+    """
+    for elegido in (manual, getattr(guion, "tema", None)):
+        if elegido and str(elegido).strip():
+            return str(elegido).strip()
+    categoria = getattr(guion, "categoria", None)
+    if categoria in TEMA_POR_CATEGORIA:
+        return TEMA_POR_CATEGORIA[categoria]
+    return (marca.tema or TEMA_POR_DEFECTO).strip()
+
+
 _ID_VALIDO = re.compile(r"[A-Za-z0-9_-]{1,80}")
 
 
