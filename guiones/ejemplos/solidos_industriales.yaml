@@ -12,11 +12,11 @@ nivel: "Técnico profesional"
 gancho:
   texto: "¿Cuánto grano cabe en esta tolva?"
   voz: "¿Cuánto grano cabe en esta tolva? Ábrela y lo calculas."
-  emoji: "🌾"
+  emoji: "🏗"
 
 enunciado:
   texto: "Una tolva con cilindro de R = 1,5 m y H = 2 m, y un cono de 1,2 m que baja a una boca de 0,3 m."
-  voz: "Una tolva: un cilindro de un metro y medio de radio y dos de alto, y un cono que baja un metro veinte hasta una boca de treinta centímetros."
+  voz: "Una tolva: arriba un cilindro de metro y medio de radio y dos de alto. Abajo, un cono de un metro veinte con boca de treinta centímetros."
 
 pasos:
   - nota: "Se separa en dos cuerpos"
@@ -41,7 +41,7 @@ pasos:
 
   - nota: "El calor que llega por un costado"
     tex: '\nabla^2 T = 0'
-    voz: "Si la pared de la tolva toca algo caliente por un lado, el calor entra y se reparte hasta quedarse quieto."
+    voz: "Si una pared toca algo caliente, el calor entra por ese lado. Se reparte hasta quedarse quieto."
     visual:
       tipo: gradiente_termico
       temp_izquierda: 100

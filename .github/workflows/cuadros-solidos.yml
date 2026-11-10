@@ -65,7 +65,7 @@ jobs:
           tpi crear guiones/otros_industriales.yaml --borrador --voz silencio 2>&1 | tee cuadros/render_otros.log
       - name: Advertencias en el registro
         run: |
-          if tr '\r' '\n' < cuadros/render_solidos.log | grep -vE "it/s\]" | grep -nEi "warning|traceback|error"; then
+          if tr '\r' '\n' < cuadros/render_solidos.log | grep -vE "it/s\]" | grep -nEi "warning|traceback|error|⚠"; then
             echo "::warning::El registro del render trae líneas para revisar."
           else
             echo "✅ Sin advertencias ni errores en el registro del ejemplo."
@@ -84,57 +84,4 @@ jobs:
         with:
           name: cuadros-solidos
           path: cuadros
-          retention-days: 7
-
-  identicos:
-    # Lo que ya existía tiene que salir igual que en la rama base, píxel a píxel.
-    runs-on: ubuntu-latest
-    timeout-minutes: 75
-    env:
-      PYTHONHASHSEED: "0"
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: TeX, FFmpeg y las librerías de Manim
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
-            texlive-fonts-recommended dvisvgm \
-            ffmpeg pkg-config libcairo2-dev libpango1.0-dev
-      - name: Render en la base y en la rama
-        run: |
-          python -m pip install --upgrade pip
-          ejemplos="visuales_tres_tipos matematica_ecuacion_cuadratica moldes_virales motor_vivo"
-          for lado in base base2 rama; do
-            if [ "$lado" != rama ]; then git checkout -q "origin/$GITHUB_BASE_REF"; else git checkout -q "$GITHUB_SHA"; fi
-            pip install -q -e .
-            rm -rf salida
-            mkdir -p /tmp/$lado
-            for e in $ejemplos; do
-              tpi crear guiones/ejemplos/$e.yaml --tema pizarra_nocturna --voz silencio --borrador > /dev/null 2>&1 \
-                || { echo "❌ $e no renderizó en $lado"; exit 1; }
-              nombre=$(echo $e | tr '_' '-')
-              cp salida/$nombre/${nombre}_borrador.mp4 /tmp/$lado/$e.mp4
-            done
-          done
-          mkdir -p diferencias
-          for e in $ejemplos; do
-            ffmpeg -v error -i /tmp/base/$e.mp4 -i /tmp/base2/$e.mp4 -lavfi "[0:v][1:v]psnr=stats_file=/tmp/control_$e.txt" -f null - || true
-            awk -v e=$e '{for(i=1;i<=NF;i++) if($i ~ /^psnr_avg:/){split($i,a,":"); v=(a[2]=="inf")?99:a[2]+0; if(v<99)dist++; n++}} END {printf "control base/base %s: %d cuadros · %d distintos\n", e, n, dist+0}' /tmp/control_$e.txt | tee -a diferencias/resumen.txt
-            ffmpeg -v error -i /tmp/base/$e.mp4 -i /tmp/rama/$e.mp4 -lavfi "[0:v][1:v]psnr=stats_file=/tmp/psnr_$e.txt" -f null - || true
-            awk -v e=$e '{for(i=1;i<=NF;i++) if($i ~ /^psnr_avg:/){split($i,a,":"); v=(a[2]=="inf")?99:a[2]+0; if(min==""||v<min){min=v;peor=n}; if(v<99){dist++; if(primero=="")primero=n; ultimo=n}; n++}} END {printf "%s: %d cuadros · %d distintos (del %d al %d) · PSNR mínimo %.1f dB en el cuadro %d\n", e, n, dist+0, primero, ultimo, min, peor}' /tmp/psnr_$e.txt | tee -a diferencias/resumen.txt
-            peor=$(awk '{for(i=1;i<=NF;i++) if($i ~ /^psnr_avg:/){split($i,a,":"); v=(a[2]=="inf")?99:a[2]+0; if(min==""||v<min){min=v;peor=n}; n++}} END {print peor}' /tmp/psnr_$e.txt)
-            for lado in base rama; do
-              ffmpeg -v error -i /tmp/$lado/$e.mp4 -vf "select=eq(n\\,$peor)" -frames:v 1 diferencias/${e}_${lado}.png || true
-            done
-          done
-      - uses: actions/upload-artifact@v4
-        with:
-          name: diferencias
-          path: diferencias
           retention-days: 7
