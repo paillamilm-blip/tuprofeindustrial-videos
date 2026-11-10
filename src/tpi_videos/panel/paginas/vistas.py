@@ -20,8 +20,8 @@ def registrar() -> None:
         tablero("cola")
 
     @ui.page("/qc", title=TITULO)
-    def aprobacion() -> None:
-        tablero("qc")
+    def aprobacion(guion: str | None = None) -> None:
+        tablero("qc", guion=guion)
 
     @ui.page("/avanzado", title=TITULO)
     def avanzado() -> None:

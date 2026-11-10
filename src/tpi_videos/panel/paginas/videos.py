@@ -7,9 +7,11 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from nicegui import background_tasks, run, ui
 
+from ...errores import ErrorMotor
 from ...temas import listar_temas
 from .. import biblioteca
 from ..comun import PIEL, abrir_en_mac, confirmar, url_medio
@@ -115,15 +117,24 @@ def ver_video(archivo: Path) -> None:
     dialogo.open()
 
 
-def dialogo_rehacer(
-    guion: Path, titulo: str, al_terminar: Callable[[], Any] | None = None, por_defecto: str | None = None
-) -> None:
-    """Rehacer el mismo guion con otro estilo. Lo usan «Mis videos» y la pantalla Video de Crear."""
+def dialogo_rehacer(guion: Path, titulo: str, al_terminar: Callable[[], Any] | None = None) -> None:
+    """Rehacer el mismo guion con el estilo que tiene hoy. El estilo no se elige acá: se elige en QC."""
+    from ...config import cargar_marca
+    from ...guion import cargar_guion
+    from ...temas import estilo_del_guion
+
     temas = {i: t.nombre for i, t, _ in listar_temas()}
-    inicial = por_defecto if por_defecto in temas else next(iter(temas))
+    try:
+        estilo = estilo_del_guion(cargar_guion(guion), cargar_marca())
+        texto_estilo = f"Sale con {temas.get(estilo.clave, estilo.clave)}. {estilo.razon}"
+    except ErrorMotor as e:
+        texto_estilo = e.mensaje
     with ui.dialog() as dialogo, ui.card().classes("p-6 gap-3 w-[420px]"):
-        ui.label("Rehacer con otro estilo").classes("tpi-titulo text-lg")
-        eleccion = ui.select(temas, label="Estilo", value=inicial).props("outlined").classes("w-full")
+        ui.label("Rehacer el video").classes("tpi-titulo text-lg")
+        ui.label(texto_estilo).classes("tpi-ayuda")
+        ui.link("Cambiar el estilo en Aprobación de Guiones (QC)", f"/qc?guion={quote(str(guion))}").classes(
+            "text-sm"
+        )
         final = ui.switch("Calidad final (si no, borrador rápido)", value=False)
         barra = ui.linear_progress(value=0, show_value=False).classes("w-full")
         estado = ui.label("").classes("tpi-ayuda")
@@ -132,7 +143,7 @@ def dialogo_rehacer(
             if TAREAS.ocupado():
                 ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
                 return
-            args = ["crear", str(guion), "--tema", eleccion.value] + ([] if final.value else ["--borrador"])
+            args = ["crear", str(guion)] + ([] if final.value else ["--borrador"])
 
             def avance(t: Tarea) -> None:
                 barra.value = t.avance
@@ -220,6 +231,12 @@ class PaginaVideos:
         if self.listo:
             self.lista.refresh()
 
+    def _estilo(self, video: biblioteca.Video) -> None:
+        if video.guion is None:
+            ui.notify("No encuentro el guion de este video.", type="warning")
+            return
+        ui.navigate.to(f"/qc?guion={quote(str(video.guion))}")
+
     def _rehacer(self, video: biblioteca.Video) -> None:
         if video.guion is None:
             ui.notify("No encuentro el guion de este video.", type="warning")
@@ -272,7 +289,8 @@ class PaginaVideos:
                         ("play_arrow", "Ver", self._ver),
                         ("inventory_2", "Kit de publicación", self._kit),
                         ("folder_open", "Mostrar en Finder", lambda v: abrir_en_mac(v.principal, True)),
-                        ("palette", "Rehacer con otro estilo", self._rehacer),
+                        ("palette", "Cambiar el estilo (en QC)", self._estilo),
+                        ("refresh", "Rehacer el video", self._rehacer),
                         ("delete", "Borrar", self._borrar),
                     ):
                         color = "grey-7" if icono == "delete" else "primary"

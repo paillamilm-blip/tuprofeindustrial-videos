@@ -74,11 +74,11 @@ cierra esa ventana (o presiona `Control + C`).
 
 | Pestaña | Para qué sirve |
 |---|---|
-| **Un video** (la que se abre primero) | Una sola pantalla: escribes el enunciado o la idea y, al lado, ves cómo va quedando armado el video (familia, molde, estilo, voz, duración, gancho y rodaje). Cada pieza dice **por qué** está así y tiene su **«cambiar»**; nada te tapa el botón. Un clic en **«Crear el video»** y el avance aparece ahí mismo. Abajo se lee el comando exacto que se va a ejecutar. |
+| **Un video** (la que se abre primero) | Una sola pantalla: escribes el enunciado o la idea y, al lado, ves cómo va quedando armado el video (familia, molde, estilo sugerido, voz, duración, gancho y rodaje). Cada pieza dice **por qué** está así y tiene su **«cambiar»**; nada te tapa el botón. Un clic en **«Crear el video»** y el avance aparece ahí mismo. Abajo se lee el comando exacto que se va a ejecutar. |
 | **Lote de 3** | Un campo y un botón: escribes el tema, aprietas **«Crear los 3 videos»** y listo. La IA reparte sola los tres ángulos y las tres dificultades, ves en qué video vamos, y al terminar la misma pantalla te da **«Abrir la carpeta»**, el video y el kit de cada uno. Si uno no sale, tiene su botón **«Intentar solo este»**. |
-| **Paso a paso** | 4 pestañas, para revisar todo a mano: **Ideas** (la IA propone 3 y tú eliges una), **Escribir con IA** (el enunciado, una foto o un PDF → el guion), **Abrir un guion** y **Empezar en blanco**. El guion se edita en tarjetas: lo que se ve, lo que se escucha, emojis y «error típico», con cada fórmula dibujada tal como saldrá en el video. Luego eliges el estilo y creas el borrador o el video final: verás una barra de avance y el video aparece ahí mismo. |
-| **Mis videos** | Ver tus videos, mostrarlos en Finder, rehacerlos con otro estilo, borrarlos y abrir el 📦 **kit de publicación**. |
-| **Estilos** | Ver una vista previa de cada estilo y elegir el que usas siempre. Para cambiar colores, letras, el fondo (¡también con tu foto!), la hoja o los subtítulos, duplica un estilo y edita la copia. |
+| **Paso a paso** | 4 pestañas, para revisar todo a mano: **Ideas** (la IA propone 3 y tú eliges una), **Escribir con IA** (el enunciado, una foto o un PDF → el guion), **Abrir un guion** y **Empezar en blanco**. El guion se edita en tarjetas: lo que se ve, lo que se escucha, emojis y «error típico», con cada fórmula dibujada tal como saldrá en el video. Luego creas el borrador o el video final (con el estilo sugerido; se cambia en QC): verás una barra de avance y el video aparece ahí mismo. |
+| **Mis videos** | Ver tus videos, mostrarlos en Finder, rehacerlos, ir a cambiarles el estilo (en QC), borrarlos y abrir el 📦 **kit de publicación**. |
+| **Estilos** | Ver una vista previa de cada estilo y en qué videos se sugiere. Para cambiar colores, letras, el fondo (¡también con tu foto!), la hoja o los subtítulos, duplica un estilo y edita la copia. |
 | **Ajustes** | Tu clave de Gemini, tu marca, la voz (con muestra ▶), tus stickers y el diagnóstico. |
 
 **📦 Kit de publicación:** la **portada** (el cuadro del gancho, en PNG) y, con IA, el **título, la descripción
@@ -322,9 +322,13 @@ Agrega `--abrir` a `crear` o `subtitular` para que el video se abra solo al term
 
 - **Lo más fácil:** en el panel, pestañas **Estilos** (colores, letras, fondo, subtítulos) y **Ajustes** (marca y
   voz). Cada estilo muestra una vista previa de 3 cuadros antes de crear un video.
-- **Estilo de todos tus videos:** `tema:` en `marca.yaml` (`hoja_de_desarrollo` por defecto, o
-  `pizarra_nocturna`, el estilo original).
-- **Estilo de un solo video:** `tema:` dentro del guion, o `--tema` al crearlo.
+- **Estilo de cada video (un solo lugar):** en el panel, **Aprobación de Guiones (QC)** → la ficha del guion →
+  **Estilo del video**. El motor sugiere uno según el video y su materia, en este orden: 1° el molde (reto →
+  Neón sobre reja, mito/realidad → Pizarra de cine, 3 errores → Rotulador, POV → Kraft y tiza, Nadie te enseñó →
+  Plano azul); 2° los dibujos (circuito → Plano azul, piezas industriales → Plano nocturno); 3° si corrige un
+  error (Cuaderno con sello); 4° la materia (Matemáticas → Pizarra nocturna, Física → Neón cian, Ingeniería →
+  Plano nocturno). Elegir otro escribe `tema:` en el guion; volver al sugerido lo borra.
+- **En la Terminal:** `--tema` al crear le gana a todo. El `tema:` de `marca.yaml` solo se usa si no hay nada más.
 - **`marca.yaml`** también define nombre, usuario (@), voz por defecto y frase de cierre. Sus colores y
   subtítulos son los del estilo «Pizarra nocturna»; «Hoja de desarrollo» trae los suyos.
 - **Tus ajustes van en `mis_ajustes/`** (temas, fondos, stickers y cambios de marca). Git ignora esa carpeta:

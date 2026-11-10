@@ -16,10 +16,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ..config import cargar_marca
 from ..entorno import raiz_proyecto
 from ..errores import ErrorMotor
-from ..guion import Guion, cabecera_de, cargar_guion
+from ..guion import Guion, cabecera_de, cargar_guion, fijar_tema
 from ..pausas import sin_pausas, trozos
+from ..temas import EstiloSugerido, estilo_del_guion, sugerir_tema_de_guion
 
 POR_REVISAR, APROBADO, RECHAZADO = "por_revisar", "aprobado", "rechazado"
 NOMBRES = {POR_REVISAR: "Por revisar", APROBADO: "Aprobado", RECHAZADO: "Rechazado"}
@@ -139,6 +141,8 @@ class Ficha:
     tecnico: list[str]  # una línea por dibujo, fórmula o ajuste visual
     yaml: str
     error: str | None = None  # si el YAML no valida: se puede rechazar, no aprobar
+    estilo: EstiloSugerido | None = None  # con el que saldrá: el elegido acá o, si no, el sugerido
+    sugerido: EstiloSugerido | None = None  # el que el motor le propone a este video
 
     @property
     def aprobable(self) -> bool:
@@ -212,6 +216,7 @@ def ficha(ruta: Path) -> Ficha:
         if not voz:
             continue
         voces.append(Voz(seccion, sin_pausas(voz), [p for _, p in trozos(voz) if p]))
+    marca = cargar_marca()
     return Ficha(
         ruta=ruta,
         titulo=guion.titulo,
@@ -223,4 +228,29 @@ def ficha(ruta: Path) -> Ficha:
         observaciones=_observaciones(ruta),
         tecnico=_tecnico(guion),
         yaml=texto,
+        estilo=estilo_del_guion(guion, marca),
+        sugerido=sugerir_tema_de_guion(guion, marca),
     )
+
+
+# ------------------------------------------------------------------------------------------
+# El estilo del video: el ÚNICO lugar del panel donde se elige
+# ------------------------------------------------------------------------------------------
+
+
+def cambiar_estilo(ruta: Path, clave: str) -> EstiloSugerido:
+    """Deja el guion con ese estilo. Elegir el sugerido borra el ``tema:``: vuelve a lo automático.
+
+    Cambiar el estilo no cambia lo que se dice ni lo que se calcula: si el guion ya estaba aprobado
+    (o rechazado), la decisión se mantiene con la huella nueva. Así no vuelve a «por revisar» ni se
+    puede mandar dos veces a la cola.
+    """
+    marca = cargar_marca()
+    sugerido = sugerir_tema_de_guion(cargar_guion(ruta), marca)  # no mira el «tema:» actual
+    previo = estado(ruta)
+    guion = fijar_tema(ruta, None if clave == sugerido.clave else clave)
+    if previo != POR_REVISAR and guion_revisable(ruta):
+        datos = _leer()
+        datos["guiones"][_clave(ruta)]["huella"] = huella(ruta)
+        _guardar(datos)
+    return estilo_del_guion(guion, marca)

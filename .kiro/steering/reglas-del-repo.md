@@ -25,10 +25,14 @@ inclusion: always
 - **No romper el estilo original:** con `--tema pizarra_nocturna --voz silencio --borrador`, los ejemplos
   antiguos deben salir idénticos cuadro a cuadro a los de `main`. Comparar con `PYTHONHASHSEED=0` en ambos
   lados (`TransformMatchingTex` recorre conjuntos y el orden de dibujo cambia entre procesos).
-- **Estilos y datos del usuario:** el estilo se elige en cascada (`temas.resolver_tema`): 1° `--tema` o el
-  `tema:` del guion → 2° la categoría del guion (matemáticas→`pizarra_nocturna`, física→`neon_cian`,
-  ingeniería→`plano_noche`) → 3° el `tema` de `marca.yaml` (si falta, `hoja_de_desarrollo`). Nunca crear ni
-  modificar los YAML de `plantillas/temas/` para esto. Todo campo nuevo del guion o del tema es opcional. Lo que personaliza el usuario va en `mis_ajustes/` (ignorado por Git), nunca en
+- **Estilo de cada video: una regla y un lugar.** La regla vive solo en `temas.py` (`sugerir_tema`): 1° el
+  molde → 2° los dibujos (circuito→`plano_azul`, piezas industriales→`plano_noche`) → 3° si corrige un error
+  (`cuaderno_con_sello`) → 4° la materia (matemáticas→`pizarra_nocturna`, física→`neon_cian`,
+  ingeniería→`plano_noche`) → 5° el `tema` de `marca.yaml`. El `tema:` del guion (lo que se eligió) le gana a la
+  sugerencia, y `--tema` en la Terminal le gana a todo (`resolver_tema`). En el panel el estilo se elige **solo**
+  en la ficha del guion en Aprobación de Guiones (QC), que escribe o borra la línea `tema:` (`qc.cambiar_estilo`).
+  No agregar otros selectores de estilo. Nunca crear ni modificar los YAML de `plantillas/temas/` para esto. Todo
+  campo nuevo del guion o del tema es opcional. Lo que personaliza el usuario va en `mis_ajustes/` (ignorado por Git), nunca en
   archivos del repo.
 - **Guiones:** `texto`/`tex` es lo que se ve y `voz` lo que se escucha; fórmulas LaTeX entre comillas simples.
   Los emojis van solo en el campo `emoji:` (nunca en `texto` ni `voz`).

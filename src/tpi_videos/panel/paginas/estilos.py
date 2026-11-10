@@ -1,4 +1,4 @@
-"""Estilos: ver los temas, elegir el de siempre, y duplicar uno para personalizar colores, letras,
+"""Estilos: ver los temas, saber cuándo se sugiere cada uno, y duplicar uno para personalizar colores, letras,
 fondo (con tu foto), la hoja, los subtítulos y las animaciones. Todo queda en ``mis_ajustes/``."""
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from ...temas import (
     TEMA_POR_DEFECTO,
     Tema,
     cargar_tema,
+    cuando_se_sugiere,
     fondos_usuario_dir,
     guardar_tema,
     id_tema,
@@ -175,7 +176,6 @@ def lista_de_temas() -> None:
 
     @ui.refreshable
     def lista() -> None:
-        actual = cargar_marca().tema
         pendientes: list[tuple[str, ui.element, ui.label]] = []
         guion = guion_de_la_vista()
         with ui.row().classes("w-full items-center gap-2 no-wrap"):
@@ -197,8 +197,8 @@ def lista_de_temas() -> None:
                 with ui.column().classes("flex-1 gap-2"):
                     with ui.row().classes("items-center gap-2"):
                         ui.label(tema.nombre).classes("tpi-titulo text-lg")
-                        if identificador == actual:
-                            ui.chip("⭐ El de siempre", color="primary", text_color="white").props("dense")
+                        for caso in cuando_se_sugiere(identificador):
+                            ui.chip(f"★ {caso}", color="primary", text_color="white").props("dense")
                         if propio:
                             ui.chip("Tuyo", color="grey-7", text_color="white").props("dense")
                     ui.label(tema.descripcion or "—").classes("tpi-ayuda")
@@ -206,14 +206,6 @@ def lista_de_temas() -> None:
                     if en_cache(identificador, guion) is None:
                         pendientes.append((identificador, cuadros, estado))
                     with ui.row().classes("gap-2"):
-                        if identificador != actual:
-
-                            def usar(i: str = identificador) -> None:
-                                guardar_ajustes_marca({"tema": i})
-                                ui.notify("Listo: tus próximos videos usarán este estilo.", type="positive")
-                                lista.refresh()
-
-                            ui.button("Usar siempre", icon="star", on_click=usar).props("outline")
                         ui.button(
                             "Ver vista previa", icon="visibility",
                             on_click=lambda i=identificador, c=cuadros, e=estado: generar_vista(i, c, e),

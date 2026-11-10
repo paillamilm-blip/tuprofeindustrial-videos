@@ -30,7 +30,7 @@ Plantilla comentada: `./tpi nuevo mi_ejercicio` · Ejemplos completos: `guiones/
 titulo: "Caída libre: ¿cuánto tarda en caer?"   # corto: cabe en 1–2 líneas
 materia: fisica                                  # matematica | fisica | ingenieria
 nivel: "2° medio"                                # opcional
-tema: pizarra_nocturna                           # opcional: otro estilo solo para este video (./tpi temas)
+tema: pizarra_nocturna                           # opcional: si falta, el motor sugiere uno (se elige en QC)
 voz: "es-CL-CatalinaNeural"                      # opcional: otra voz solo para este video
 velocidad: "+10%"                                # opcional
 

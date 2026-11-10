@@ -8,23 +8,23 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 from nicegui import events, ui
 
 from ... import ia
-from ...config import ajustes_dir, cargar_marca
+from ...config import ajustes_dir
 from ...entorno import PLANTILLAS_DIR, raiz_proyecto
 from ...errores import ErrorMotor
 from ...guion import cabecera_de, cargar_guion
 from ...ideas import ANGULOS
 from ...moldes import nombre_molde
 from ...revision import Revision
-from ...temas import listar_temas
 from .. import biblioteca, formatos_ui, sugerencia
 from ..comun import PIEL, abrir_en_mac, titulo_seccion, url_medio
 from ..editor import EditorGuion
 from ..tareas import TAREAS, Tarea
-from .videos import abrir_kit, dialogo_rehacer
+from .videos import abrir_kit
 
 TIPOS_SUBIDA = ".jpg,.jpeg,.png,.heic,.heif,.webp,.pdf,.txt"
 
@@ -95,7 +95,7 @@ class PaginaCrear:
         self.ideas_mostradas: list[dict] = []
         # Lo que él tocó en el muro de familias. Vacío = manda lo que sugiere la máquina; nada de esto
         # bloquea el paso siguiente.
-        self.eleccion: dict[str, str | None] = {"clave": None, "molde": None, "tema": None, "dibujo": None}
+        self.eleccion: dict[str, str | None] = {"clave": None, "molde": None, "dibujo": None}
         self.zona_muro: ui.column | None = None
         self.paso = "idea"
         self.zona_barra: ui.column | None = None
@@ -199,7 +199,8 @@ class PaginaCrear:
         self._pintar_formato()
 
     def _a_la_hoja(self) -> None:
-        """La hoja arranca con el molde y el estilo de la familia; si no tocó nada, los pone la sugerencia."""
+        """La hoja arranca con el molde de la familia. El estilo no se escribe: lo sugiere el motor y se
+        cambia en Aprobación de Guiones (QC)."""
         f = formatos_ui.formato(self._familia_activa())
         idea = self._idea_texto()
         base = cargar_guion(PLANTILLAS_DIR / "guion_base.yaml")
@@ -207,7 +208,7 @@ class PaginaCrear:
             update={
                 "titulo": (idea[:60] if idea else base.titulo),
                 "molde": self.eleccion["molde"] or f.moldes[0],
-                "tema": self.eleccion["tema"] or f.tema,
+                "tema": None,
             }
         )
         self.cargar_editor(EditorGuion(guion, None))
@@ -319,9 +320,9 @@ class PaginaCrear:
 
     def _cambiar_pieza(self, clave: str, pieza: str) -> None:
         """La pieza que trajo la familia, editable sin deshacer la familia."""
-        campo = {"Molde": "molde", "Estilo": "tema", "Dibujos": "dibujo"}[pieza]
+        campo = {"Molde": "molde", "Dibujos": "dibujo"}[pieza]
         f = formatos_ui.formato(clave)
-        por_defecto = {"Molde": f.moldes[0], "Estilo": f.tema, "Dibujos": f.dibujos[0]}[pieza]
+        por_defecto = {"Molde": f.moldes[0], "Dibujos": f.dibujos[0]}[pieza]
         opciones = dict(next(op for nombre, _valor, op in formatos_ui.piezas(clave) if nombre == pieza))
         with ui.dialog() as dialogo, ui.card().classes("tpi-hoja w-96 p-4 gap-3"):
             ui.label(f"{pieza} de «{f.nombre}»").classes("tpi-titulo text-base")
@@ -864,11 +865,6 @@ class PaginaCrear:
                 self.resumen = ui.label("").classes("tpi-ayuda")
             self.avisos = ui.column().classes("w-full gap-1")
             editor.render()
-        # El selector muestra el estilo que trae el guion (el de la familia): si no, crearía con otro
-        # distinto del que él vio en el muro.
-        estilo_del_guion = editor.datos.get("tema")
-        if estilo_del_guion in self.tema.options:
-            self.tema.value = estilo_del_guion
         self.ir("hoja")
         editor.revisar()
         destino = self.zona_guion.id
@@ -913,13 +909,10 @@ class PaginaCrear:
     def controles_video(self) -> None:
         """El pie de la hoja: lo que arranca el render. Ninguno se apaga por no haber tocado una sugerencia."""
         with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
-            temas = {i: t.nombre for i, t, _ in listar_temas()}
-            por_defecto = cargar_marca().tema
             with ui.row().classes("w-full items-center gap-3"):
-                self.tema = ui.select(
-                    temas, label="Estilo", value=por_defecto if por_defecto in temas else None
-                )
-                self.tema.props("outlined dense").classes("w-64")
+                with ui.column().classes("gap-0 w-64"):
+                    ui.label("Estilo: el sugerido para este video").classes("text-sm font-bold")
+                    ui.link("Se elige en Aprobación de Guiones (QC)", "/qc").classes("tpi-ayuda")
                 ui.button("Crear borrador", icon="bolt", on_click=lambda: self._crear(True)).props("outline")
                 ui.button("Crear el video", icon="movie", on_click=lambda: self._crear(False))
 
@@ -943,7 +936,7 @@ class PaginaCrear:
                 ui.button("Solo el gancho (≈5 s)", icon="crop_free", on_click=self._solo_gancho).props(
                     "outline"
                 )
-                ui.button("Otra vez con este estilo", icon="refresh", on_click=self._otra_vez).props("flat")
+                ui.button("Cambiar el estilo", icon="palette", on_click=self._otra_vez).props("flat")
                 ui.label(
                     "El clip de 5 s es solo el gancho, sin subtítulos: sirve para ver si frena el scroll."
                 ).classes("tpi-ayuda")
@@ -995,19 +988,12 @@ class PaginaCrear:
                     ui.label(f"{clip.get('estilo', '')} · {clip.get('segundos', 0)} s").classes("tpi-ayuda")
 
     def _otra_vez(self) -> None:
-        """El mismo guion, otro estilo: el mismo diálogo que usa «Mis videos»."""
+        """El mismo guion con otro estilo: se elige en QC, el único lugar donde se cambia."""
         ruta = self._guion_del_render()
         if ruta is None:
             ui.notify("Primero guarda la hoja.", type="warning")
             return
-        titulo = self.editor.nombre["valor"] if self.editor else ruta.stem
-        dialogo_rehacer(ruta, titulo, por_defecto=self.tema.value, al_terminar=self._repintar)
-
-    def _repintar(self) -> None:
-        """El reproductor muestra el clip recién rehacer, no el anterior."""
-        t = TAREAS.actual
-        if t and t.ok and t.resultado.get("video"):
-            self._reproducir(Path(t.resultado["video"]), t.resultado, borrador=False)
+        ui.navigate.to(f"/qc?guion={quote(str(ruta))}")
 
     def _reproducir(self, video: Path, resultado: dict, borrador: bool) -> None:
         """El clip que salió, con el kit de publicación al lado."""
@@ -1039,11 +1025,7 @@ class PaginaCrear:
             return
         self.ultimo_guion = ruta
         self.ir("video")
-        args = (
-            ["crear", str(ruta)]
-            + (["--borrador"] if borrador else [])
-            + (["--tema", self.tema.value] if self.tema.value else [])
-        )
+        args = ["crear", str(ruta)] + (["--borrador"] if borrador else [])
         self.barra.set_visibility(True)
         self.barra.value = 0
         self.boton_cancelar.set_visibility(True)

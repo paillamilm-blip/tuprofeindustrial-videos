@@ -19,15 +19,16 @@ from ..formatos import (
     palabra_que_delata,
     puntuar_idea,
 )
-from ..guion import MATERIAS
+from ..guion import CATEGORIA_DE_MATERIA, MATERIAS
 from ..ideas import DIFICULTADES
 from ..moldes import MOLDES, nombre_molde, normalizar_molde
 from ..redactor import TECHO_DE_LECTURA
 from ..revision import PISO_LECTURA, coma
 from ..rodaje import QUE_HACE, RECETA_LIBRE, Receta, rodaje_para
-from ..temas import listar_temas
+from ..temas import MOTIVO_POR_MOLDE, TEMA_POR_MOLDE, listar_temas, sugerir_tema  # noqa: F401 (re-export)
 
-# Las piezas de la tarjeta «Así está armado». «rodaje» no es una bandera: se cambia en Ajustes.
+# Las piezas de la tarjeta «Así está armado». «rodaje» y «tema» no son banderas: el rodaje se cambia
+# en Ajustes y el estilo en Aprobación de Guiones (QC), el único lugar donde se elige.
 ETIQUETAS = {
     "familia": "Familia",
     "molde": "Molde",
@@ -46,7 +47,6 @@ BANDERAS = {  # cada pieza con la bandera real de `tpi producir`
     "materia": "--materia",
     "nivel": "--nivel",
     "dificultad": "--dificultad",
-    "tema": "--estilo",
     "voz": "--voz",
     "segundos": "--segundos",
     "lectura": "--piso-lectura",
@@ -56,22 +56,7 @@ LIBRE = RECETA_LIBRE  # la receta de los videos que no llevan molde
 # Los cuatro mandos que se ven en la pantalla; los otros cuatro sólo cambian una letra del guion.
 MANDOS_VISTOS = (("gancho", "La apertura"), ("pasos", "Los pasos"), ("deriva", "El cuadro"), ("partida", "El tablero"))
 
-# El molde también decide cómo se ve el video: cada uno tiene su tema. Coincide con el estilo que ya
-# traían las familias, así que la recomendación funciona incluso cuando la frase no delató ninguna.
-TEMA_POR_MOLDE = {
-    "reto": "neon_reja",
-    "mito_realidad": "vineta_cine",
-    "tres_errores": "rotulador",
-    "pov": "kraft_tiza",
-    "nadie_te_enseno": "plano_azul",
-}
-MOTIVO_POR_MOLDE = {
-    "reto": "Un reto pide neón: se lee como desafío.",
-    "mito_realidad": "El contraste mito/realidad funciona en cine.",
-    "tres_errores": "Tres errores seguidos se siguen mejor en papel.",
-    "pov": "Un POV se siente en cuaderno, no en pantalla.",
-    "nadie_te_enseno": "El dato sorpresa va en plano azul.",
-}
+# El estilo por molde vive en temas.py (el único que decide); TEMA_POR_MOLDE se re-exporta arriba.
 
 # El motor nombra las materias en mayúsculas (son rótulos del video); la tarjeta las muestra normales.
 NOMBRE_MATERIA = {clave: nombre.capitalize() for clave, nombre in MATERIAS.items()}
@@ -166,7 +151,7 @@ def armar(
         _una_materia(cambios, preferencias, propuesta),
         _un_nivel(cambios, preferencias, propuesta),
         _una_dificultad(cambios, preferencias, propuesta),
-        _una_tema(la_familia, cambios, preferencias, el_molde.codigo),
+        _una_tema(el_molde.codigo, _una_materia(cambios, preferencias, propuesta).codigo, preferencias),
         _una_voz(cambios, preferencias),
         _una_duracion(cambios, propuesta),
         _una_lectura(cambios),
@@ -288,16 +273,17 @@ def _una_dificultad(cambios: dict[str, str], pref: Preferencias, propuesta: dict
     )
 
 
-def _una_tema(la_familia, cambios: dict[str, str], pref: Preferencias, molde: str | None = None) -> Pieza:
-    if "tema" in cambios:
-        codigo, razon, tocada = (cambios["tema"] or pref.tema), "Cambiado por ti.", True
-    elif molde and molde in TEMA_POR_MOLDE:
-        codigo, razon, tocada = TEMA_POR_MOLDE[molde], MOTIVO_POR_MOLDE[molde], False
-    elif la_familia:
-        codigo, razon, tocada = la_familia.tema, f"El estilo de {la_familia.nombre}.", False
-    else:
-        codigo, razon, tocada = pref.tema, "Tu estilo de siempre (Ajustes).", False
-    return Pieza("tema", ETIQUETAS["tema"], _nombre_tema(codigo), codigo, razon, tocada)
+def _una_tema(molde: str | None, materia: str | None, pref: Preferencias) -> Pieza:
+    """El estilo que el motor le pondrá al video: solo se muestra. Se elige en QC, no acá."""
+    sugerido = sugerir_tema(molde=molde, categoria=CATEGORIA_DE_MATERIA.get(materia or ""), de_siempre=pref.tema)
+    return Pieza(
+        clave="tema",
+        etiqueta=ETIQUETAS["tema"],
+        valor=_nombre_tema(sugerido.clave),
+        codigo=sugerido.clave,  # solo para la portada: «tema» no tiene bandera, no viaja al motor
+        razon=f"{sugerido.razon} Se afina con los dibujos del guion; se cambia en QC.",
+        destino="/qc",
+    )
 
 
 def _una_voz(cambios: dict[str, str], pref: Preferencias) -> Pieza:

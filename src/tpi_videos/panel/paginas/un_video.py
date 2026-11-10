@@ -811,9 +811,6 @@ class PaginaUnVideo:
             # No hay «que lo decida la IA»: el piso es un tiempo, y 0 ya es una opción de la lista.
             self._dialogo_lista(clave, "Tiempo para leer cada fórmula", sugerencia.opciones(clave), codigo, False)
             return
-        if clave == "tema":
-            self._dialogo_lista(clave, "Tu estilo de siempre", sugerencia.opciones(clave), codigo, False)
-            return
         self._dialogo_lista(
             clave, f"Cambiar {sugerencia.ETIQUETAS[clave].lower()}", sugerencia.opciones(clave), codigo
         )

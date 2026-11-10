@@ -489,10 +489,14 @@ def _dialogo_tarea() -> None:
 class AprobacionDeGuiones:
     """Una lista corta a la izquierda y la lectura limpia del guion elegido a la derecha."""
 
-    def __init__(self, al_aprobar: Callable[[], None]) -> None:
+    def __init__(self, al_aprobar: Callable[[], None], abrir: str | None = None) -> None:
         self.al_aprobar = al_aprobar
         self.elegido: Path | None = None
         self.todos = False
+        # /qc?guion=…: otra pantalla («Mis videos», el editor) manda a elegir el estilo de un guion.
+        if abrir and qc.guion_revisable(Path(abrir)):
+            self.elegido = Path(abrir).resolve()
+            self.todos = qc.estado(self.elegido) != qc.POR_REVISAR
 
     def render(self) -> None:
         with (
@@ -508,6 +512,7 @@ class AprobacionDeGuiones:
     @ui.refreshable_method
     def lista(self) -> None:
         rutas = qc.guiones(incluir_decididos=self.todos)
+        rutas = [r.resolve() for r in rutas]
         if self.elegido is None or self.elegido not in rutas:
             self.elegido = rutas[0] if rutas else None
         with ui.row().classes("w-full items-center justify-between"):
@@ -558,6 +563,8 @@ class AprobacionDeGuiones:
                 ui.label(f"Este guion no pasa la validación: {f.error}").classes("tpi-rojo text-sm")
             for nota in f.observaciones:
                 ui.label(f"⚠ {nota}").classes("tpi-ambar text-sm")
+        if f.estilo is not None:
+            self._estilo(f)
         with _consola():
             _rotulo("Para redes · toca para copiar")
             if f.metadatos:
@@ -624,6 +631,93 @@ class AprobacionDeGuiones:
             if not f.aprobable or f.estado == qc.APROBADO:
                 aprobar.disable()
 
+    # ── El estilo del video: el único lugar del panel donde se elige ───────────────────────
+
+    def _estilo(self, f: qc.Ficha) -> None:
+        estilo, sugerido = f.estilo, f.sugerido
+        temas = _temas()
+        elegido = estilo.origen == "guion"
+        with _clic(_consola(), lambda: self._dialogo_estilo(f), "Elegir otro estilo para este video"):
+            with ui.row().classes("w-full items-center justify-between"):
+                _rotulo("Estilo del video · toca para cambiarlo")
+                ui.label("elegido por ti" if elegido else "★ sugerido").classes(
+                    "tpi-ambar text-xs" if elegido else "tpi-verde text-xs"
+                )
+            with ui.row().classes("w-full items-center gap-5 no-wrap"):
+                _muestra(estilo.clave, temas, ancho=72)
+                with ui.column().classes("gap-1 min-w-0"):
+                    ui.label(_nombre_estilo(estilo.clave, temas)).classes("text-xl font-semibold")
+                    ui.label(estilo.razon).classes("tpi-sobrio text-sm")
+                    if elegido and sugerido is not None and sugerido.clave != estilo.clave:
+                        ui.label(
+                            f"El sugerido sería {_nombre_estilo(sugerido.clave, temas)}: {sugerido.razon}"
+                        ).classes("tpi-sobrio text-xs")
+                    if estilo.clave not in temas:
+                        ui.label("Ese estilo no está en este equipo: el video no se podrá crear.").classes(
+                            "tpi-rojo text-xs"
+                        )
+
+    def _dialogo_estilo(self, f: qc.Ficha) -> None:
+        temas = _temas()
+        actual, sugerido = f.estilo.clave, f.sugerido.clave
+        orden = [sugerido, *(c for c in temas if c != sugerido)]
+        with (
+            ui.dialog() as dialogo,
+            ui.card().props("flat").classes("tpi-consola p-8 gap-4 w-[880px] max-w-[95vw]"),
+        ):
+            ui.label(f"Estilo de «{f.titulo}»").classes("text-lg font-semibold")
+            ui.label(f"★ Sugerido: {_nombre_estilo(sugerido, temas)}. {f.sugerido.razon}").classes(
+                "tpi-sobrio text-sm"
+            )
+
+            def elegir(clave: str) -> None:
+                try:
+                    nuevo = qc.cambiar_estilo(f.ruta, clave)
+                except ErrorMotor as e:
+                    ui.notify(f"No pude cambiar el estilo: {e.mensaje}", type="negative")
+                    return
+                dialogo.close()
+                ui.notify(
+                    f"Estilo: {_nombre_estilo(nuevo.clave, temas)}. Toca «Vista Previa Rápida» para verlo.",
+                    type="positive",
+                )
+                self.lista.refresh()
+                self.lectura.refresh()
+
+            with (
+                ui.element("div")
+                .classes("w-full grid gap-3")
+                .style("grid-template-columns: repeat(auto-fill, minmax(250px, 1fr))")
+            ):
+                for clave in orden:
+                    if clave not in temas:
+                        continue
+                    tema = temas[clave]
+                    marcas = ("★ sugerido " if clave == sugerido else "") + (
+                        "✓ actual" if clave == actual else ""
+                    )
+                    with _clic(
+                        ui.row().classes(
+                            "tpi-ficha w-full p-3 gap-3 no-wrap items-start"
+                            + (" tpi-ficha-elegida" if clave == actual else "")
+                        ),
+                        lambda c=clave: elegir(c),
+                        "Usar este estilo",
+                    ):
+                        _muestra(clave, temas, ancho=54)
+                        with ui.column().classes("gap-0 min-w-0"):
+                            if marcas:
+                                ui.label(marcas.strip()).classes("tpi-ambar text-xs")
+                            ui.label(tema.nombre).classes("font-semibold leading-snug")
+                            ui.label(_primera_frase(tema.descripcion)).classes(
+                                "tpi-sobrio text-xs leading-snug"
+                            )
+            with ui.row().classes("w-full justify-end pt-2"):
+                ui.button(color=None, text="Cerrar", on_click=dialogo.close).props("flat no-caps").classes(
+                    "tpi-sobrio"
+                )
+        dialogo.open()
+
     def _aprobar(self, f: qc.Ficha) -> None:
         from ...cli import encolar_guion
 
@@ -673,6 +767,40 @@ class AprobacionDeGuiones:
 
 
 NOMBRES_CATEGORIA = {"matematicas": "Matemáticas", "fisica": "Física", "ingenieria": "Ingeniería"}
+
+
+def _temas() -> dict[str, Any]:
+    from ...temas import listar_temas
+
+    return {clave: tema for clave, tema, _propio in listar_temas()}
+
+
+def _nombre_estilo(clave: str, temas: dict[str, Any]) -> str:
+    return temas[clave].nombre if clave in temas else clave
+
+
+def _primera_frase(texto: str) -> str:
+    frase = (texto or "").split(":")[0].split(".")[0].strip()
+    return frase[:90] + ("…" if len(frase) > 90 else "")
+
+
+def _muestra(clave: str, temas: dict[str, Any], ancho: int) -> None:
+    """Cómo se ve un estilo: el cuadro de su vista previa si ya existe; si no, sus colores de verdad."""
+    from ...vista_previa import en_cache
+
+    cuadros = en_cache(clave) if clave in temas else None
+    caja = f"width:{ancho}px; aspect-ratio:9/16; flex-shrink:0; border-radius:8px; overflow:hidden"
+    if cuadros:
+        ui.image(url_medio(cuadros[0])).style(caja)
+        return
+    if clave not in temas:
+        ui.element("div").classes("tpi-ficha").style(caja)
+        return
+    c = temas[clave].colores
+    with ui.column().classes("items-center justify-center gap-1").style(f"{caja}; background:{c.fondo}"):
+        ui.label("Aa").classes("font-bold").style(f"color:{c.titulos}; font-size:{ancho // 3}px")
+        ui.element("div").style(f"width:60%; height:3px; border-radius:2px; background:{c.acento}")
+        ui.element("div").style(f"width:40%; height:3px; border-radius:2px; background:{c.formulas}")
 
 
 def _resumen_de(ruta: Path) -> tuple[str, str | None]:
@@ -938,7 +1066,7 @@ def tablero(
                 cola_vista.firma = ()
 
         cola_vista = ColaDeProduccion(ir_a)
-        qc_vista = AprobacionDeGuiones(refrescar_cola)
+        qc_vista = AprobacionDeGuiones(refrescar_cola, abrir=guion if pestana == "qc" else None)
 
         def construir(clave: str) -> None:
             if clave in construidos:

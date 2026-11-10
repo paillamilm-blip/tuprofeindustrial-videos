@@ -25,28 +25,149 @@ TEMAS_DIR = PLANTILLAS_DIR / "temas"
 FONDOS_DIR = PAQUETE / "assets" / "fondos"
 TEMA_POR_DEFECTO = "hoja_de_desarrollo"
 
-# El estilo que le toca a cada categoría de guion cuando nadie eligió uno. Solo estilos que ya
-# existen en plantillas/temas/ (una prueba lo exige): este mapa elige, no crea ni modifica nada.
+# ------------------------------------------------------------------------------------------
+# El estilo sugerido: el ÚNICO lugar del motor que decide cómo se ve un video que nadie eligió.
+# Lo usan el render, la vista previa, el QC y la tarjeta «Así está armado». Solo estilos que ya
+# existen en plantillas/temas/ (una prueba lo exige): estas tablas eligen, no crean nada.
+# ------------------------------------------------------------------------------------------
+
+# 3° La materia: la identidad de cada asignatura.
 TEMA_POR_CATEGORIA: dict[str, str] = {
     "matematicas": "pizarra_nocturna",
     "fisica": "neon_cian",
     "ingenieria": "plano_noche",
 }
+NOMBRE_CATEGORIA = {"matematicas": "Matemáticas", "fisica": "Física", "ingenieria": "Ingeniería"}
+
+# 1° El molde: la forma del video manda sobre la materia (un reto se ve como reto en cualquier ramo).
+TEMA_POR_MOLDE: dict[str, str] = {
+    "reto": "neon_reja",
+    "mito_realidad": "vineta_cine",
+    "tres_errores": "rotulador",
+    "pov": "kraft_tiza",
+    "nadie_te_enseno": "plano_azul",
+}
+MOTIVO_POR_MOLDE = {
+    "reto": "Un reto pide neón: se lee como desafío.",
+    "mito_realidad": "El contraste mito/realidad funciona en cine.",
+    "tres_errores": "Tres errores seguidos se siguen mejor en papel.",
+    "pov": "Un POV se siente en cuaderno, no en pantalla.",
+    "nadie_te_enseno": "El dato sorpresa va en plano azul.",
+}
+
+# 2° Lo que se dibuja: cuando el dibujo pide su propio papel.
+DIBUJOS_INDUSTRIALES = frozenset(
+    {
+        "tolva_3d",
+        "tuberia_3d",
+        "eje_3d",
+        "engranaje",
+        "mohr",
+        "viga",
+        "cercha",
+        "gradiente_termico",
+        "perfil_flujo",
+    }
+)
+TEMA_POR_DIBUJO: tuple[tuple[frozenset[str], str, str], ...] = (
+    (frozenset({"circuito"}), "plano_azul", "Tiene un circuito: se lee mejor en lámina de ingeniería."),
+    (DIBUJOS_INDUSTRIALES, "plano_noche", "Tiene piezas industriales: lucen en el plano nocturno."),
+)
+TEMA_DE_ERROR = "cuaderno_con_sello"
+MOTIVO_DE_ERROR = "Corrige un error típico: el rojo de profe del cuaderno lo marca."
+
+
+class EstiloSugerido(BaseModel):
+    """Qué estilo lleva un video y por qué, en una frase que se le puede mostrar a una persona."""
+
+    model_config = ConfigDict(frozen=True)
+
+    clave: str
+    razon: str
+    origen: Literal["guion", "molde", "dibujo", "error", "materia", "marca"]
+
+
+def sugerir_tema(
+    *,
+    molde: str | None = None,
+    categoria: str | None = None,
+    dibujos: set[str] | frozenset[str] = frozenset(),
+    con_error: bool = False,
+    de_siempre: str | None = None,
+) -> EstiloSugerido:
+    """El estilo que mejor le queda a un video, según lo que se sabe de él (sin mirar el ``tema:``).
+
+    1° su molde · 2° sus dibujos · 3° si corrige un error · 4° su materia · 5° ``de_siempre``
+    (el ``tema`` de marca.yaml).
+    """
+    if molde in TEMA_POR_MOLDE:
+        return EstiloSugerido(clave=TEMA_POR_MOLDE[molde], razon=MOTIVO_POR_MOLDE[molde], origen="molde")
+    for tipos, clave, razon in TEMA_POR_DIBUJO:
+        if tipos & set(dibujos):
+            return EstiloSugerido(clave=clave, razon=razon, origen="dibujo")
+    if con_error:
+        return EstiloSugerido(clave=TEMA_DE_ERROR, razon=MOTIVO_DE_ERROR, origen="error")
+    if categoria in TEMA_POR_CATEGORIA:
+        clave = TEMA_POR_CATEGORIA[categoria]
+        return EstiloSugerido(
+            clave=clave, razon=f"Es de {NOMBRE_CATEGORIA[categoria]}: su estilo de materia.", origen="materia"
+        )
+    clave = (de_siempre or TEMA_POR_DEFECTO).strip()
+    return EstiloSugerido(clave=clave, razon="Tu estilo de siempre (marca.yaml).", origen="marca")
+
+
+def sugerir_tema_de_guion(guion: Any, marca: Marca | None = None) -> EstiloSugerido:
+    """La sugerencia para un guion ya escrito: lee su molde, sus dibujos, sus errores y su materia."""
+    pasos = list(getattr(guion, "pasos", None) or [])
+    dibujos = {str(p.visual.tipo) for p in pasos if getattr(p, "visual", None) is not None}
+    gancho = getattr(guion, "gancho", None)
+    if getattr(gancho, "visual", None) is not None:
+        dibujos.add(str(gancho.visual.tipo))
+    return sugerir_tema(
+        molde=getattr(guion, "molde", None),
+        categoria=getattr(guion, "categoria", None),
+        dibujos=dibujos,
+        con_error=any(getattr(p, "error", False) for p in pasos),
+        de_siempre=marca.tema if marca else None,
+    )
+
+
+def estilo_del_guion(guion: Any, marca: Marca | None = None) -> EstiloSugerido:
+    """El estilo con que saldrá el guion: el que se eligió en QC (``tema:``) o, si no, el sugerido."""
+    elegido = str(getattr(guion, "tema", None) or "").strip()
+    if elegido:
+        return EstiloSugerido(clave=elegido, razon="Elegido por ti en Aprobación de Guiones.", origen="guion")
+    return sugerir_tema_de_guion(guion, marca)
+
+
+def cuando_se_sugiere(clave: str) -> list[str]:
+    """En qué videos sugiere el motor este estilo, en frases cortas (para el catálogo de estilos)."""
+    from .moldes import nombre_molde
+
+    casos = [f"molde {nombre_molde(m)}" for m, t in TEMA_POR_MOLDE.items() if t == clave]
+    casos += [
+        "circuitos" if "circuito" in tipos else "piezas industriales"
+        for tipos, t, _razon in TEMA_POR_DIBUJO
+        if t == clave
+    ]
+    if clave == TEMA_DE_ERROR:
+        casos.append("videos que corrigen un error")
+    casos += [NOMBRE_CATEGORIA[c] for c, t in TEMA_POR_CATEGORIA.items() if t == clave]
+    return casos
 
 
 def resolver_tema(manual: str | None, guion: Any | None, marca: Marca) -> str:
     """Qué estilo lleva un video, en cascada.
 
-    1° Lo que se eligió a mano: ``--tema`` (o el estilo del panel) y, si no, el ``tema:`` escrito en
-       el guion. 2° El estilo de su categoría (``TEMA_POR_CATEGORIA``). 3° El ``tema:`` de marca.yaml.
+    1° Lo que se pidió en la llamada (``--tema`` en la Terminal). 2° El ``tema:`` del guion (lo que
+    se eligió en QC). 3° El sugerido para ese video (``sugerir_tema``: molde, dibujos, error, materia).
+    4° El ``tema:`` de marca.yaml.
     """
-    for elegido in (manual, getattr(guion, "tema", None)):
-        if elegido and str(elegido).strip():
-            return str(elegido).strip()
-    categoria = getattr(guion, "categoria", None)
-    if categoria in TEMA_POR_CATEGORIA:
-        return TEMA_POR_CATEGORIA[categoria]
-    return (marca.tema or TEMA_POR_DEFECTO).strip()
+    if manual and str(manual).strip():
+        return str(manual).strip()
+    if guion is None:
+        return (marca.tema or TEMA_POR_DEFECTO).strip()
+    return estilo_del_guion(guion, marca).clave
 
 
 _ID_VALIDO = re.compile(r"[A-Za-z0-9_-]{1,80}")

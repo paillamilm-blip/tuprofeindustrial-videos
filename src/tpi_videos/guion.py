@@ -1379,6 +1379,36 @@ def cargar_guion(ruta: str | Path) -> Guion:
         ) from e
 
 
+_LINEA_TEMA = re.compile(r"^tema:[^\n]*(?:\n|$)", re.MULTILINE)
+_ANCLA_TEMA = re.compile(r"^(?:categoria|materia):[^\n]*(?:\n|$)", re.MULTILINE)
+
+
+def fijar_tema(ruta: str | Path, clave: str | None) -> Guion:
+    """Escribe (o borra, con ``None``) la línea ``tema:`` del guion, sin tocar nada más del archivo.
+
+    Los comentarios, el orden y las comillas quedan como estaban. Si el guion resultante no valida,
+    el archivo queda exactamente como antes y se avisa.
+    """
+    ruta = Path(ruta)
+    original = ruta.read_text(encoding="utf-8")
+    if clave is not None and not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", clave):
+        raise ErrorMotor(f"«{clave}» no es un nombre de estilo válido.")
+    texto = _LINEA_TEMA.sub("", original)
+    if clave:
+        anclas = list(_ANCLA_TEMA.finditer(texto))
+        fin = anclas[-1].end() if anclas else 0
+        salto = "" if fin == 0 or texto[fin - 1] == "\n" else "\n"
+        texto = f"{texto[:fin]}{salto}tema: {clave}\n{texto[fin:]}"
+    if texto == original:
+        return cargar_guion(ruta)
+    ruta.write_text(texto, encoding="utf-8")
+    try:
+        return cargar_guion(ruta)
+    except ErrorMotor:
+        ruta.write_text(original, encoding="utf-8")
+        raise
+
+
 # ---------------------------------------------------------------------------------------------
 # Escritura (el inverso de cargar_guion): textos con "…", fórmulas con '…', como en los ejemplos
 # ---------------------------------------------------------------------------------------------
