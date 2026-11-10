@@ -63,9 +63,9 @@ jobs:
 
               pag.goto(URL + "/")
               pag.wait_for_selector("text=Lanzar Renderización en Lote")
-              pag.get_by_text("PENDIENTES", exact=True).first.hover()
+              pag.get_by_text("Pendientes", exact=True).first.hover()
               toma("01_hover_cifra")
-              pag.get_by_text("PENDIENTES", exact=True).first.click()
+              pag.get_by_text("Pendientes", exact=True).first.click()
               pag.wait_for_selector(".q-dialog")
               toma("02_dialogo_pendientes")
               pag.keyboard.press("Escape")
