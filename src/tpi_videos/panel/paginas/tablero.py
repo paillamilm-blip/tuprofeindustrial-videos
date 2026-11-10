@@ -25,6 +25,7 @@ from ..supervision import (
     EN_RENDER,
     LANZAMIENTO,
     PENDIENTES,
+    args_de_lote,
     columnas,
     lotes_por_producir,
 )
@@ -100,6 +101,22 @@ def _rotulo(texto: str) -> None:
     ui.label(texto).classes("tpi-rotulo")
 
 
+def _clic(elemento: Any, accion: Callable[[], Any], ayuda: str) -> Any:
+    """Todo lo que se ve en el tablero responde: puntero, resalte al pasar y qué va a pasar."""
+    elemento.classes("tpi-clic cursor-pointer").on("click", lambda _e=None: accion())
+    elemento.tooltip(ayuda)
+    return elemento
+
+
+def _copiar(texto: str, que: str) -> None:
+    ui.clipboard.write(texto)
+    ui.notify(f"{que} copiado.", type="positive")
+
+
+def _abrir_editor(ruta: Path) -> None:
+    ui.navigate.to(f"/crear?guion={quote(str(ruta))}")
+
+
 # ------------------------------------------------------------------------------------------
 # 1 · Cola de Producción
 # ------------------------------------------------------------------------------------------
@@ -113,15 +130,23 @@ class ColaDeProduccion:
         self.firma: tuple = ()
 
     def render(self) -> None:
+        self.firma = self._firma()  # lo recién pintado no se repinta: un clic no cae sobre algo que se va
         self.resumen()
         self.columnas()
         ui.timer(1.5, self._mirar)
 
     def _mirar(self) -> None:
         # Se repinta solo si algo cambió: un tablero que parpadea cansa la vista.
+        firma = self._firma()
+        if firma != self.firma:
+            self.firma = firma
+            self.resumen.refresh()
+            self.columnas.refresh()
+
+    def _firma(self) -> tuple:
         datos = cola.cargar()
         vivo = _en_vivo()
-        firma = (
+        return (
             tuple(
                 (v.get("id"), v.get("estado"), round(float(v.get("avance") or 0), 2))
                 for lote in datos.get("lotes", [])
@@ -132,11 +157,8 @@ class ColaDeProduccion:
             ),
             TAREAS.ocupado(),
             LANZAMIENTO.activo,
+            len(qc.guiones()),
         )
-        if firma != self.firma:
-            self.firma = firma
-            self.resumen.refresh()
-            self.columnas.refresh()
 
     @ui.refreshable_method
     def resumen(self) -> None:
@@ -146,12 +168,21 @@ class ColaDeProduccion:
         por_revisar = len(qc.guiones())
         with _consola():
             with ui.row().classes("w-full items-center justify-between gap-8 flex-wrap"):
-                with ui.row().classes("gap-12 items-end"):
+                with ui.row().classes("gap-6 items-end"):
                     for clave, nombre in COLUMNAS.items():
-                        with ui.column().classes("gap-1"):
+                        cifra = _clic(
+                            ui.column().classes("gap-1 px-3 py-2 rounded-xl"),
+                            lambda c=clave, n=nombre, fs=fichas[clave]: self._lista_de(n, fs),
+                            f"Ver los {nombre.lower()}",
+                        )
+                        with cifra:
                             ui.label(str(len(fichas[clave]))).classes(f"tpi-cifra {CLASE_COLUMNA[clave]}")
                             _rotulo(nombre)
-                    with ui.column().classes("gap-1"):
+                    with _clic(
+                        ui.column().classes("gap-1 px-3 py-2 rounded-xl"),
+                        lambda: self.ir_a("qc"),
+                        "Ir a aprobar guiones",
+                    ):
                         ui.label(str(por_revisar)).classes("tpi-cifra")
                         _rotulo("Guiones por aprobar")
                 with ui.row().classes("items-center gap-3"):
@@ -180,11 +211,134 @@ class ColaDeProduccion:
                         boton.tooltip("No hay videos esperando. Aprueba un guion en la pestaña QC.")
             t = TAREAS.actual
             if t is not None and not t.terminada:
-                with ui.column().classes("w-full gap-1"):
+                with _clic(
+                    ui.column().classes("w-full gap-1 px-3 py-2 rounded-xl"),
+                    _dialogo_tarea,
+                    "Ver qué está haciendo el motor",
+                ):
                     ui.linear_progress(value=t.avance, show_value=False, color=None).props(
                         "rounded size=6px"
                     ).classes("w-full")
                     ui.label(t.detalle or t.texto_etapa).classes("tpi-sobrio text-sm")
+
+    def _lista_de(self, nombre: str, fichas: list[Any]) -> None:
+        with (
+            ui.dialog() as dialogo,
+            ui.card().props("flat").classes("tpi-consola p-8 gap-4 w-[560px] max-w-[95vw]"),
+        ):
+            with ui.row().classes("w-full items-center justify-between"):
+                ui.label(nombre).classes("text-lg font-semibold")
+                ui.button(color=None, icon="close", on_click=dialogo.close).props("flat round").classes(
+                    "tpi-sobrio"
+                )
+            if not fichas:
+                ui.label("No hay videos acá.").classes("tpi-sobrio")
+            for f in fichas:
+                with _clic(
+                    ui.column().classes("tpi-ficha w-full p-4 gap-1"),
+                    lambda f=f: (dialogo.close(), self._detalle(f)),
+                    "Ver el detalle",
+                ):
+                    ui.label(f.titulo).classes("font-semibold")
+                    ui.label(f"{f.texto_estado} · {f.tema}").classes("tpi-sobrio text-xs")
+        dialogo.open()
+
+    def _detalle(self, f: Any) -> None:
+        """Todo lo que se puede hacer con un video de la cola, en un solo lugar."""
+        activo = f.estado in cola.ESTADOS_ACTIVOS
+        with (
+            ui.dialog() as dialogo,
+            ui.card().props("flat").classes("tpi-consola p-8 gap-4 w-[560px] max-w-[95vw]"),
+        ):
+            with ui.row().classes("w-full items-start justify-between no-wrap"):
+                with ui.column().classes("gap-1"):
+                    _rotulo(f.tema)
+                    ui.label(f.titulo).classes("text-xl font-semibold leading-tight")
+                ui.button(color=None, icon="close", on_click=dialogo.close).props("flat round").classes(
+                    "tpi-sobrio"
+                )
+            color = "tpi-rojo" if f.fallo else ("tpi-ambar" if activo else "tpi-sobrio")
+            ui.label(f.texto_estado + (f" · {round(f.avance * 100)} %" if activo else "")).classes(color)
+            if activo:
+                ui.linear_progress(value=f.avance, show_value=False, color=None).props("rounded size=6px")
+            if activo and f.detalle and f.detalle != f.texto_estado:
+                ui.label(f.detalle).classes("tpi-sobrio text-sm")
+            if f.error:
+                ui.label(str(f.error)).classes("tpi-rojo text-sm")
+
+            def cerrar_y(accion: Callable[[], Any]) -> Callable[[], None]:
+                def hacer() -> None:
+                    dialogo.close()
+                    accion()
+
+                return hacer
+
+            with ui.row().classes("w-full gap-3 pt-4 flex-wrap"):
+                if f.video is not None:
+                    ui.button(
+                        color=None,
+                        text="Ver el video",
+                        icon="play_circle",
+                        on_click=cerrar_y(lambda: _ver(f.video)),
+                    ).classes("tpi-aprobar")
+                    ui.button(
+                        color=None,
+                        text="Kit para publicar",
+                        icon="content_copy",
+                        on_click=lambda: _kit(f.video, dialogo),
+                    ).props("flat no-caps").classes("tpi-sobrio")
+                    ui.button(
+                        color=None,
+                        text="Carpeta",
+                        icon="folder_open",
+                        on_click=lambda: abrir_en_mac(f.video, True),
+                    ).props("flat no-caps").classes("tpi-sobrio")
+                if not activo and f.estado != "listo":
+                    ui.button(
+                        color=None,
+                        text="Producir este ahora",
+                        icon="play_arrow",
+                        on_click=cerrar_y(lambda: self._producir(f)),
+                    ).classes("tpi-boton-principal")
+                if f.guion is not None:
+                    ui.button(
+                        color=None,
+                        text="Abrir el guion",
+                        icon="edit",
+                        on_click=cerrar_y(lambda: _abrir_editor(f.guion)),
+                    ).props("flat no-caps").classes("tpi-sobrio")
+                if activo:
+                    ui.button(
+                        color=None, text="Detener", icon="stop", on_click=cerrar_y(self._detener)
+                    ).props("flat no-caps").classes("tpi-rojo")
+                else:
+                    ui.button(
+                        color=None,
+                        text="Quitar de la cola",
+                        icon="delete",
+                        on_click=cerrar_y(lambda: self._quitar(f)),
+                    ).props("flat no-caps").classes("tpi-rojo")
+        dialogo.open()
+
+    def _producir(self, f: Any) -> None:
+        if TAREAS.ocupado():
+            ui.notify("Ya hay un trabajo en curso: espera a que termine.", type="warning")
+            return
+        TAREAS.lanzar(f.titulo, args_de_lote(f.lote_id))
+        ui.notify(f"Produciendo «{f.titulo}».", type="positive")
+        self.firma = ()
+
+    def _quitar(self, f: Any) -> None:
+        def si() -> None:
+            try:
+                cola.descartar_lote(f.lote_id)
+            except ErrorMotor as e:
+                ui.notify(e.mensaje, type="warning")
+                return
+            ui.notify("Quitado de la cola. Los archivos que ya salieron no se borran.", type="info")
+            self.firma = ()
+
+        confirmar(f"¿Quitar «{f.titulo}» (y su lote, «{f.tema}») de la cola?", si, "Sí, quitar")
 
     def _lanzar(self) -> None:
         if TAREAS.ocupado():
@@ -222,23 +376,37 @@ class ColaDeProduccion:
                             ui.label(nombre).classes("text-base font-semibold")
                         ui.label(str(len(fichas[clave]))).classes("tpi-sobrio")
                     if not fichas[clave]:
-                        ui.label(self._vacio(clave)).classes("tpi-sobrio text-sm py-6")
+                        texto, accion, ayuda = self._vacio(clave)
+                        _clic(
+                            ui.label(texto).classes("tpi-sobrio text-sm py-6 px-3 rounded-xl"), accion, ayuda
+                        )
                     for ficha in fichas[clave]:
                         self._ficha(ficha)
 
-    @staticmethod
-    def _vacio(clave: str) -> str:
+    def _vacio(self, clave: str) -> tuple[str, Callable[[], Any], str]:
         return {
-            PENDIENTES: "Nada esperando. Lo que apruebes en QC llega acá.",
-            EN_RENDER: "El motor está libre.",
-            COMPLETADOS: "Todavía no sale ningún video.",
+            PENDIENTES: (
+                "Nada esperando. Lo que apruebes en QC llega acá.",
+                lambda: self.ir_a("qc"),
+                "Ir a QC",
+            ),
+            EN_RENDER: ("El motor está libre.", self._lanzar, "Producir lo pendiente"),
+            COMPLETADOS: (
+                "Todavía no sale ningún video.",
+                lambda: ui.navigate.to("/videos"),
+                "Abrir la biblioteca de videos",
+            ),
         }[clave]
 
     def _ficha(self, f: Any) -> None:
         clase = (
             "tpi-ficha-activa" if f.estado in cola.ESTADOS_ACTIVOS else ("tpi-ficha-fallo" if f.fallo else "")
         )
-        with ui.column().classes(f"tpi-ficha {clase} w-full p-4 gap-2"):
+        with _clic(
+            ui.column().classes(f"tpi-ficha {clase} w-full p-4 gap-2"),
+            lambda: self._detalle(f),
+            "Ver el detalle y qué hacer",
+        ):
             ui.label(f.titulo).classes("font-semibold leading-snug")
             with ui.row().classes("w-full items-center justify-between gap-2"):
                 color = (
@@ -257,21 +425,60 @@ class ColaDeProduccion:
                 ui.label(str(f.error)).classes("tpi-sobrio text-xs")
             if f.video is not None:
                 with ui.row().classes("gap-1 -ml-2"):
-                    ui.button(
-                        color=None, text="Ver", icon="play_circle", on_click=lambda v=f.video: _ver(v)
-                    ).props("flat dense no-caps").classes("tpi-verde")
-                    ui.button(
-                        color=None,
-                        text="Carpeta",
-                        icon="folder_open",
-                        on_click=lambda v=f.video: abrir_en_mac(v, True),
-                    ).props("flat dense no-caps").classes("tpi-sobrio")
+                    ui.button(color=None, text="Ver", icon="play_circle").props("flat dense no-caps").classes(
+                        "tpi-verde"
+                    ).on("click.stop", lambda _e, v=f.video: _ver(v))
+                    ui.button(color=None, text="Carpeta", icon="folder_open").props(
+                        "flat dense no-caps"
+                    ).classes("tpi-sobrio").on("click.stop", lambda _e, v=f.video: abrir_en_mac(v, True))
 
 
 def _ver(video: Path) -> None:
     from .videos import ver_video
 
     ver_video(video)
+
+
+async def _kit(video: Path, dialogo: Any = None) -> None:
+    from .videos import abrir_kit
+
+    if dialogo is not None:
+        dialogo.close()
+    await abrir_kit(video.parent)  # dentro del clic: el diálogo del kit necesita su pestaña
+
+
+def _dialogo_tarea() -> None:
+    """Lo que el motor está haciendo ahora mismo, con su registro y el botón para detenerlo."""
+    t = TAREAS.actual
+    if t is None:
+        return
+    with (
+        ui.dialog() as dialogo,
+        ui.card().props("flat").classes("tpi-consola p-8 gap-4 w-[720px] max-w-[95vw]"),
+    ):
+        with ui.row().classes("w-full items-center justify-between"):
+            ui.label(t.nombre).classes("text-lg font-semibold")
+            ui.button(color=None, icon="close", on_click=dialogo.close).props("flat round").classes(
+                "tpi-sobrio"
+            )
+        ui.label(f"{t.texto_etapa} · {round(t.avance * 100)} %").classes("tpi-ambar")
+        if t.detalle:
+            ui.label(t.detalle).classes("tpi-sobrio text-sm")
+        ui.code("\n".join(t.registro[-40:]) or "Todavía no hay mensajes.", language="text").classes(
+            "tpi-codigo w-full text-xs"
+        )
+        if not t.terminada:
+
+            def detener() -> None:
+                LANZAMIENTO.detener()
+                TAREAS.cancelar()
+                dialogo.close()
+                ui.notify("Producción detenida.", type="info")
+
+            ui.button(color=None, text="Detener", icon="stop", on_click=detener).props(
+                "flat no-caps"
+            ).classes("tpi-rojo")
+    dialogo.open()
 
 
 # ------------------------------------------------------------------------------------------
@@ -309,7 +516,7 @@ class AprobacionDeGuiones:
                 "dense color=amber"
             )
         if not rutas:
-            with _consola():
+            with _clic(_consola(), lambda: ui.navigate.to("/crear"), "Escribir un guion a mano"):
                 ui.label("No hay guiones esperando aprobación.").classes("font-semibold")
                 ui.label("Los que escribe ./tpi redactar aparecen acá solos.").classes("tpi-sobrio text-sm")
         for ruta in rutas[:40]:
@@ -317,7 +524,7 @@ class AprobacionDeGuiones:
             elegida = "tpi-ficha-elegida" if ruta == self.elegido else ""
             with (
                 ui.column()
-                .classes(f"tpi-ficha {elegida} w-full p-4 gap-1 cursor-pointer")
+                .classes(f"tpi-ficha tpi-clic {elegida} w-full p-4 gap-1 cursor-pointer")
                 .on("click", lambda r=ruta: self._elegir(r))
             ):
                 ui.label(_titulo_de(ruta)).classes("font-semibold leading-snug")
@@ -339,7 +546,7 @@ class AprobacionDeGuiones:
         if self.elegido is None:
             return
         f = qc.ficha(self.elegido)
-        with _consola():
+        with _clic(_consola(), lambda: _abrir_editor(f.ruta), "Abrir este guion en el editor"):
             _rotulo(" · ".join(x for x in (f.materia, f.nivel, qc.NOMBRES[f.estado]) if x))
             ui.label(f.titulo).classes("text-2xl font-semibold leading-tight")
             if f.error:
@@ -347,19 +554,47 @@ class AprobacionDeGuiones:
             for nota in f.observaciones:
                 ui.label(f"⚠ {nota}").classes("tpi-ambar text-sm")
         with _consola():
-            _rotulo("Para redes")
+            _rotulo("Para redes · toca para copiar")
             if f.metadatos:
-                ui.label(f.metadatos["titulo"]).classes("text-lg font-semibold")
-                ui.label(f.metadatos["descripcion"]).classes("tpi-voz")
-                ui.label("  ".join(f.metadatos["hashtags"])).classes("tpi-hashtag")
+                m = f.metadatos
+                _clic(
+                    ui.label(m["titulo"]).classes("text-lg font-semibold rounded-lg px-2 -mx-2"),
+                    lambda: _copiar(m["titulo"], "Título"),
+                    "Copiar el título",
+                )
+                _clic(
+                    ui.label(m["descripcion"]).classes("tpi-voz rounded-lg px-2 -mx-2"),
+                    lambda: _copiar(m["descripcion"], "Descripción"),
+                    "Copiar la descripción",
+                )
+                with ui.row().classes("gap-2"):
+                    for etiqueta in m["hashtags"]:
+                        _clic(
+                            ui.label(etiqueta).classes("tpi-hashtag rounded-lg px-2"),
+                            lambda e=etiqueta: _copiar(e, "Hashtag"),
+                            "Copiar este hashtag",
+                        )
+                    _clic(
+                        ui.label("copiar todos").classes("tpi-sobrio text-xs rounded-lg px-2"),
+                        lambda: _copiar(" ".join(m["hashtags"]), "Hashtags"),
+                        "Copiar los hashtags juntos",
+                    )
             else:
-                ui.label("Este guion no trae título ni hashtags: el kit los escribirá al publicar.").classes(
-                    "tpi-sobrio text-sm"
+                _clic(
+                    ui.label(
+                        "Este guion no trae título ni hashtags: el kit los escribirá al publicar."
+                    ).classes("tpi-sobrio text-sm rounded-lg px-2 -mx-2"),
+                    lambda: _abrir_editor(f.ruta),
+                    "Abrir el guion para agregarlos",
                 )
         with _consola():
             _rotulo("Lo que dice la voz")
             for voz in f.voces:
-                with ui.row().classes("w-full gap-6 no-wrap items-start"):
+                with _clic(
+                    ui.row().classes("w-full gap-6 no-wrap items-start rounded-lg px-2 py-1 -mx-2"),
+                    lambda v=voz: _copiar(v.texto, "Texto de la voz"),
+                    "Copiar lo que dice esta voz",
+                ):
                     ui.label(voz.seccion.capitalize()).classes("tpi-sobrio text-xs w-24 shrink-0 pt-1")
                     with ui.row().classes("gap-1 items-center"):
                         ui.label(voz.texto).classes("tpi-voz")
@@ -368,7 +603,11 @@ class AprobacionDeGuiones:
         with ui.expansion("Detalles técnicos", icon="code").classes("w-full tpi-plegable").props("dense"):
             with ui.column().classes("w-full gap-2 p-2"):
                 for linea in f.tecnico:
-                    ui.label(linea).classes("tpi-sobrio text-sm font-mono")
+                    _clic(
+                        ui.label(linea).classes("tpi-sobrio text-sm font-mono rounded-lg px-2"),
+                        lambda x=linea: _copiar(x, "Línea"),
+                        "Copiar",
+                    )
                 ui.code(f.yaml, language="yaml").classes("tpi-codigo w-full text-xs")
         with ui.row().classes("w-full justify-end gap-4 pt-2"):
             ui.button(
