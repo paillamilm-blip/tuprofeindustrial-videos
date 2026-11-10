@@ -40,13 +40,25 @@ PIEL = {
     "aviso_fuerte": "#8A5A00",  # el ámbar de un texto de ayuda sobre blanco o crema
     "aviso_muro": "#F0B664",  # el ámbar que se lee sobre la tarjeta oscura (el de siempre baja de 4,5:1)
     "costado_px": "392",  # el ancho del panel de detalle aprobado en el mockup
+    # El tablero de supervisión: una sala de control oscura, un solo acento ámbar de seguridad.
+    "sala": "#0D1117",  # el fondo de toda la pantalla
+    "consola": "#151B23",  # las tarjetas
+    "consola_alta": "#1C2430",  # lo que va encima de una tarjeta (una ficha, el código)
+    "linea_sala": "#26303C",  # separadores y bordes, apenas visibles
+    "texto_sala": "#E6EDF3",
+    "tenue_sala": "#8D99A6",  # se lee sobre la consola (4,8:1)
+    "ambar": "#F2A93B",  # la acción principal y lo que está trabajando
+    "tinta_ambar": "#1A1205",  # el texto sobre el botón ámbar
+    "verde_sala": "#3FB950",
+    "rojo_sala": "#F85149",
+    "celeste_sala": "#58A6FF",  # lo que está en espera
 }
 
-# Tres vistas. Los caminos de producción viven adentro de «Fábrica» (pestañas), no en el menú.
+# Tres pestañas: supervisar, aprobar y, solo si hace falta, meter las manos.
 PAGINAS = (
-    ("/", "Fábrica de contenido", "movie_creation"),
-    ("/cola", "Cola y biblioteca", "video_library"),
-    ("/motor", "Motor visual y ajustes", "palette"),
+    ("/", "Cola de Producción", "dashboard"),
+    ("/qc", "Aprobación de Guiones (QC)", "fact_check"),
+    ("/avanzado", "Avanzado", "tune"),
 )
 
 CSS = f"""
@@ -54,13 +66,47 @@ CSS = f"""
 @font-face {{ font-family: 'Comic Neue'; src: url('/fuentes/ComicNeue-Bold.ttf'); font-weight: 700; }}
 @font-face {{ font-family: 'Bangers'; src: url('/fuentes/Bangers-Regular.ttf'); }}
 @font-face {{ font-family: 'Montserrat'; src: url('/fuentes/Montserrat-SemiBold.ttf'); font-weight: 600; }}
-body {{
+body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
+.tpi-legado {{
   background-color: {PIEL["papel_panel"]};
   background-image: linear-gradient({PIEL["renglon_panel"]} 1px, transparent 1px),
                     linear-gradient(90deg, {PIEL["renglon_panel"]} 1px, transparent 1px);
   background-size: 24px 24px;
-  color: {PIEL["tinta"]};
+  color: {PIEL["tinta"]}; border-radius: 16px; padding: 24px;
 }}
+.tpi-cabecera {{ background: {PIEL["sala"]}; border-bottom: 1px solid {PIEL["linea_sala"]}; }}
+.tpi-pestanas .q-tab {{ color: {PIEL["tenue_sala"]}; text-transform: none; font-size: .95rem; padding: 0 20px; }}
+.tpi-pestanas .q-tab--active {{ color: {PIEL["texto_sala"]}; }}
+.tpi-pestanas .q-tab__indicator {{ background: {PIEL["ambar"]}; height: 3px; }}
+.tpi-consola {{ background: {PIEL["consola"]}; border-radius: 16px; box-shadow: none; color: {PIEL["texto_sala"]}; }}
+.tpi-ficha {{ background: {PIEL["consola_alta"]}; border-radius: 12px; color: {PIEL["texto_sala"]}; }}
+.tpi-ficha-activa {{ box-shadow: inset 3px 0 0 {PIEL["ambar"]}; }}
+.tpi-ficha-fallo {{ box-shadow: inset 3px 0 0 {PIEL["rojo_sala"]}; }}
+.tpi-ficha-elegida {{ box-shadow: 0 0 0 1px {PIEL["ambar"]}; }}
+.tpi-sobrio {{ color: {PIEL["tenue_sala"]}; }}
+.tpi-cifra {{ font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 2rem; line-height: 1; }}
+.tpi-rotulo {{ color: {PIEL["tenue_sala"]}; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }}
+.tpi-ambar {{ color: {PIEL["ambar"]}; }}
+.tpi-verde {{ color: {PIEL["verde_sala"]}; }}
+.tpi-rojo {{ color: {PIEL["rojo_sala"]}; }}
+.tpi-celeste {{ color: {PIEL["celeste_sala"]}; }}
+.tpi-boton-principal {{ background: {PIEL["ambar"]} !important; color: {PIEL["tinta_ambar"]} !important;
+  font-weight: 700; border-radius: 12px; padding: 14px 28px; font-size: 1rem; text-transform: none; }}
+.tpi-aprobar {{ background: {PIEL["verde_sala"]} !important; color: {PIEL["sala"]} !important;
+  font-weight: 700; border-radius: 12px; padding: 14px 28px; font-size: 1rem; text-transform: none; }}
+.tpi-rechazar {{ background: transparent !important; color: {PIEL["rojo_sala"]} !important;
+  box-shadow: inset 0 0 0 1px {PIEL["rojo_sala"]}; font-weight: 700; border-radius: 12px; padding: 14px 28px;
+  font-size: 1rem; text-transform: none; }}
+.tpi-voz {{ font-size: 1.05rem; line-height: 1.65; color: {PIEL["texto_sala"]}; }}
+.tpi-pausa {{ display: inline-block; margin: 0 6px; padding: 0 8px; border-radius: 999px; font-size: .75rem;
+  color: {PIEL["ambar"]}; box-shadow: inset 0 0 0 1px {PIEL["ambar"]}; vertical-align: middle; }}
+.tpi-hashtag {{ color: {PIEL["celeste_sala"]}; font-size: .9rem; }}
+.tpi-tablero .q-expansion-item {{ background: {PIEL["consola"]}; border-radius: 16px; overflow: hidden; }}
+.tpi-tablero .q-expansion-item + .q-expansion-item {{ margin-top: 12px; }}
+.tpi-tablero .q-expansion-item .q-item {{ min-height: 64px; color: {PIEL["texto_sala"]}; }}
+.tpi-tablero .q-linear-progress {{ color: {PIEL["ambar"]}; }}
+.tpi-codigo {{ background: {PIEL["consola_alta"]} !important; border-radius: 12px; }}
+.tpi-hoja {{ color: {PIEL["tinta"]}; }}
 .tpi-marca {{ font-family: 'Comic Neue', sans-serif; font-weight: 700; letter-spacing: .03em; }}
 .tpi-titulo {{ font-family: 'Comic Neue', sans-serif; font-weight: 700; color: {PIEL["marca"]}; text-transform: uppercase; }}
 .tpi-hoja {{ background: {PIEL["hoja"]}; border: 1px solid {PIEL["borde_hoja"]}; border-radius: 14px; }}
@@ -132,34 +178,47 @@ def _estado_tarea(chip: ui.chip) -> None:
         chip.text = f"⏳ {t.nombre} · {round(t.avance * 100)} %"
 
 
-@contextmanager
-def marco(ruta_activa: str) -> Iterator[None]:
-    """Encabezado con la marca y el menú; el contenido de la página va dentro del bloque."""
+def piel_de_la_pagina() -> None:
     ui.add_css(CSS)
     ui.colors(
         primary=PIEL["marca"],
         secondary=PIEL["secundario"],
-        accent=PIEL["error"],
+        accent=PIEL["ambar"],
         positive=PIEL["exito"],
         negative=PIEL["error"],
+        warning=PIEL["aviso"],
     )
-    with ui.header().classes("items-center justify-between px-6 py-2").style(f"background:{PIEL['marca']}"):
+
+
+def cabecera(con_menu: bool = True) -> None:
+    """La barra de arriba, oscura y sin ruido: la marca, el estado del motor y (si toca) volver."""
+    with ui.header().classes("tpi-cabecera items-center justify-between px-8 py-3"):
         with ui.row().classes("items-center gap-3"):
-            ui.image("/marca/panel.png").classes("w-11 h-11").props('alt="" no-spinner no-transition')
+            ui.image("/marca/panel.png").classes("w-9 h-9").props('alt="" no-spinner no-transition')
             with ui.column().classes("gap-0"):
-                ui.label("TU PROFE INDUSTRIAL").classes("tpi-marca text-lg leading-tight")
-                ui.label("Motor de video · panel de control").classes("text-xs opacity-80")
-        with ui.row().classes("tpi-nav items-center gap-1 flex-wrap justify-end"):
-            for ruta, nombre, icono in PAGINAS:
-                clase = "activa" if ruta == ruta_activa else ""
-                with ui.link(target=ruta).classes(f"{clase} flex items-center gap-1"):
-                    ui.icon(icono).classes("text-lg")
-                    ui.label(nombre)
-        chip = ui.chip("", color="white", text_color="primary").props("outline").classes("bg-white")
-        chip.set_visibility(False)
-        ui.timer(0.7, lambda: _estado_tarea(chip))
-    with ui.column().classes("w-full max-w-6xl mx-auto px-4 py-6 gap-6"):
-        yield
+                ui.label("TU PROFE INDUSTRIAL").classes("tpi-marca text-base leading-tight")
+                ui.label("Sala de producción").classes("tpi-sobrio text-xs")
+        with ui.row().classes("items-center gap-4"):
+            chip = ui.chip("").props("outline").classes("tpi-ambar")
+            chip.set_visibility(False)
+            ui.timer(0.7, lambda: _estado_tarea(chip))
+            if con_menu:
+                ui.link("← Volver al tablero", "/").classes("tpi-sobrio no-underline")
+
+
+@contextmanager
+def marco(ruta_activa: str) -> Iterator[None]:
+    """Las páginas sueltas de siempre (el editor de un estilo): cabecera oscura y su hoja clara.
+
+    El contenido va dentro de ``tpi-legado``: conserva el papel con renglones y la tinta oscura con
+    que se diseñaron, así nada queda claro sobre claro ni oscuro sobre oscuro.
+    """
+    del ruta_activa  # se conserva la firma: las páginas antiguas la siguen llamando igual
+    piel_de_la_pagina()
+    cabecera(con_menu=True)
+    with ui.column().classes("w-full max-w-6xl mx-auto px-4 py-8"):
+        with ui.column().classes("tpi-legado w-full gap-6"):
+            yield
 
 
 def titulo_seccion(numero: str | None, texto: str, ayuda: str | None = None) -> None:
