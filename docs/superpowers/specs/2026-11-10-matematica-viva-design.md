@@ -1,7 +1,14 @@
 # Motor visual · Matemática viva (subproyecto B)
 
 Fecha: 2026-11-10
-Estado: borrador para revisión. Nada de esto está implementado.
+Estado: implementado en `feat/motor-visual-vivo` (PR #23), junto con C (`2026-11-10-3d-cinematico-design.md`).
+
+Cambios respecto del borrador:
+- La tangente y el área no piden `duracion`: con `fisico=False` el recorrido llena la voz del paso.
+- `resaltar_cambio` además **tacha** sobre la fórmula anterior lo que se va, antes de que viaje.
+- Los puntos críticos (raíces y vértice) se encienden cuando el recorrido pasa por ellos.
+- `resultado.destello: true` (opcional): aro que se expande y rayos de confirmación.
+- La revisión no suma avisos nuevos: el recorrido nunca se corta, así que no hay qué advertir.
 
 ## 1. Contexto y alcance
 

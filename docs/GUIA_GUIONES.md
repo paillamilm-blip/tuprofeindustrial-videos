@@ -134,6 +134,48 @@ se pueden dejar fuera, y `./tpi revisar` avisa si la función no se entiende o s
 En el panel, el mismo dibujo se arma en cada tarjeta de paso, dentro de «Dibujo en el pie de la hoja».
 Ejemplo con los tres: `guiones/ejemplos/visuales_tres_tipos.yaml`.
 
+### Dibujos que se mueven y álgebra viva (todo opcional)
+
+Si no escribes ninguno de estos campos, el video sale igual que siempre.
+
+```yaml
+    visual:
+      tipo: grafico_funcion
+      funcion: 'x^2 - 2x'
+      rango: [-1, 3]
+      movimiento: tangente          # tangente: una recta recorre la curva · area: el área se llena por tramos
+      desde: -1                     # opcional: dónde empieza el recorrido (por defecto, el inicio del rango)
+      hasta: 3                      # opcional: dónde termina
+      anotar: [pendiente]           # pendiente (con tangente) · area (con area): el valor se lee en vivo
+```
+
+Al pasar por una raíz o por el vértice, el punto se enciende. Bajo el eje el área se pinta en rojo
+(resta). Si la función no existe en algún punto del recorrido (por ejemplo `1/x` en 0), `revisar` lo
+dice antes de grabar.
+
+```yaml
+    visual:
+      tipo: solido_3d               # la cámara gira sola alrededor del cuerpo y termina en la «vista»
+      figura: cilindro
+      radio: "3 cm"
+      altura: "5 cm"
+      despiece: true                # opcional: al final se separan las piezas (tapas y manto, caras del cubo)
+```
+
+Con `corte: mitad` el cubo se parte y la mitad de arriba se levanta para mostrar la cara nueva.
+
+En un paso con fórmula:
+
+```yaml
+  - tex: '2x = 2'
+    voz: "El menos dos pasa al otro lado sumando."
+    resaltar_cambio: true           # lo que se va se tacha antes de viajar y lo que llega se ilumina
+    halo: ['2x']                    # un resplandor sobre un término; repítelo en varios pasos para seguirlo
+```
+
+Y en el resultado, `destello: true` hace salir un destello del recuadro al confirmar la respuesta.
+Ejemplo con todo: `guiones/ejemplos/motor_vivo.yaml`.
+
 ## 3. Reglas para la voz (lo que se escucha)
 
 - **Gancho en los primeros 3 segundos.** Nunca empieces con "Hola" ni "En este video te mostraré…".

@@ -1262,6 +1262,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         pila: list[Linea] = []
         en_historial: set[int] = set()  # líneas ya achicadas (por id de la ecuación)
         resaltes: list[VGroup] = []
+        halos_vivos: list[VGroup] = []  # el resplandor del paso anterior: se va de golpe, no se desvanece
         extras_vivos: list[Mobject] = []  # emojis del paso anterior (salen en el siguiente)
         dibujo_vivo: d.Dibujo | None = None  # el dibujo del paso anterior (sale en el siguiente)
         ultima: Any = None  # última ecuación CORRECTA (origen de la transformación)
@@ -1336,6 +1337,11 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     ancla.shift(LEFT * hueco / 2)
                     emoji.next_to(ancla, RIGHT, buff=0.2)
 
+                # El halo se apaga de golpe: la línea a la que pertenece sube y se achica en esta misma
+                # animación, y un halo que se desvanece se quedaría flotando en el sitio viejo.
+                if halos_vivos:
+                    self.remove(*halos_vivos)
+                    halos_vivos = []
                 previas: list[Animation] = (
                     [FadeOut(r) for r in resaltes] + [FadeOut(x) for x in extras_vivos] + sale_dibujo
                 )
@@ -1400,7 +1406,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 halos = self._halos_del_paso(paso, eq, fuente if mapa is not None else None)
                 if halos is not None:
                     self.play(FadeIn(halos, scale=1.08), run_time=0.4)
-                    resaltes.append(halos)
+                    halos_vivos.append(halos)
                 if paso.visual is not None and alto_dibujo > 0:
                     dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
 
@@ -1471,7 +1477,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     if not paso.error:
                         ultima = eq
 
-        self.pila, self.resaltes, self.ultima = pila, resaltes, ultima
+        self.pila, self.resaltes, self.ultima = pila, resaltes + halos_vivos, ultima
         if self._chip_vivo is not None:
             self._pendientes.append(FadeOut(self._chip_vivo))
             self._chip_vivo = None
