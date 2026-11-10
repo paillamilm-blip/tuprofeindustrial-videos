@@ -15,6 +15,10 @@ try:
 except ImportError:  # el panel y las pruebas corren sin Manim
     MANIM = False
 
+from tpi_videos.entorno import latex_disponible
+
+LATEX = all(latex_disponible())  # macOS/Windows en CI no traen TeX: lo que dibuja fórmulas se salta
+
 if MANIM:
     import numpy as np
     from manim import Arrow
@@ -64,7 +68,7 @@ class GuionRampaTest(unittest.TestCase):
         self.assertEqual(visual.angulo, 30)
 
 
-@unittest.skipUnless(MANIM, "manim no está instalado")
+@unittest.skipUnless(MANIM and LATEX, "manim o LaTeX no están instalados")
 class DibujoRampaTest(unittest.TestCase):
     """Dos flechas punteadas que salen del cuerpo: una a lo largo del plano y otra a lo ancho."""
 

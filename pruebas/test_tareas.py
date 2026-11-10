@@ -95,7 +95,7 @@ class CorrerTest(unittest.IsolatedAsyncioTestCase):
         t = Tareas()
         with (
             mock.patch.object(asyncio, "create_subprocess_exec", _proceso_falso()),
-            mock.patch.object(os, "killpg", lambda *a, **kw: None),
+            mock.patch.object(os, "killpg", lambda *a, **kw: None, create=True),  # Windows no tiene killpg
         ):
 
             def boom(_tarea):

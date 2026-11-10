@@ -10,12 +10,13 @@ on:
 
 jobs:
   render:
-    runs-on: ubuntu-latest
+    # Fijo: «ubuntu-latest» pasará a Ubuntu 26 y cambiaría los paquetes de TeX sin avisar.
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -74,8 +75,8 @@ jobs:
 
   # Portabilidad: la suite en Windows y macOS, sólo para VER los fallos de cada plataforma.
   # No bloquea (continue-on-error): el gate que corta el PR sigue siendo «render» en Ubuntu.
-  # Hoy se saben fallos de entorno (manimpango en Windows, os.killpg/os.symlink, cp1252, LaTeX);
-  # este job los hace visibles en cada PR sin frenar las fusiones mientras se arreglan.
+  # Sin TeX en estos equipos: las pruebas que dibujan fórmulas se saltan solas (en Ubuntu sí corren).
+  # Si algo se rompe en Mac o Windows, este job lo muestra en cada PR sin frenar las fusiones.
   portabilidad:
     name: Suite en ${{ matrix.os }} (informativa)
     runs-on: ${{ matrix.os }}
@@ -90,9 +91,9 @@ jobs:
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 

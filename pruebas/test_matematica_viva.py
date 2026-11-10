@@ -15,6 +15,10 @@ try:
 except ImportError:  # el panel y las pruebas corren sin Manim
     MANIM = False
 
+from tpi_videos.entorno import latex_disponible
+
+LATEX = all(latex_disponible())  # macOS/Windows en CI no traen TeX: lo que dibuja fórmulas se salta
+
 if MANIM:
     from tpi_videos.dibujos import ALTO_DIBUJO, dibujar_visual
     from tpi_videos.escena import recorrido_sin_fisica
@@ -145,7 +149,7 @@ class ValidacionDelMovimientoTest(unittest.TestCase):
         self.assertEqual(texto.count("resaltar_cambio"), 1)
 
 
-@unittest.skipUnless(MANIM, "manim no está instalado")
+@unittest.skipUnless(MANIM and LATEX, "manim o LaTeX no están instalados")
 class GraficoVivoTest(unittest.TestCase):
     def _dibujo(self, **extra):
         return dibujar_visual(_grafico(**extra), ColoresTema(), ANCHO_HOJA, ALTO_DIBUJO)
@@ -196,7 +200,7 @@ class GraficoVivoTest(unittest.TestCase):
             self.assertLessEqual(dib.mobs.height, ALTO_DIBUJO + 1e-6)
 
 
-@unittest.skipUnless(MANIM, "manim no está instalado")
+@unittest.skipUnless(MANIM and LATEX, "manim o LaTeX no están instalados")
 class HaloDelCambioTest(unittest.TestCase):
     def test_lo_que_llega_nuevo_es_solo_el_termino_que_cambio(self):
         from tpi_videos import componentes as c
