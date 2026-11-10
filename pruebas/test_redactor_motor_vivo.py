@@ -18,6 +18,10 @@ try:
 except ImportError:  # el panel y las pruebas corren sin Manim
     COMPLETO = False
 
+from tpi_videos.entorno import latex_disponible
+
+LATEX = all(latex_disponible())  # macOS/Windows en CI no traen TeX: lo que dibuja fórmulas se salta
+
 
 def _guion(clave: str) -> Guion:
     g = next(g for titulo, g in EJEMPLOS_DINAMICOS.items() if titulo.startswith(clave))
@@ -148,7 +152,8 @@ class RedactarDePuntaAPuntaTest(unittest.TestCase):
             ):
                 for tema, (tipo, campo) in temas.items():
                     resultado = redactor.redactar(tema)
-                    self.assertEqual(resultado.pendientes, [], tema)
+                    pendientes = [p for p in resultado.pendientes if LATEX or "falta LaTeX" not in p]
+                    self.assertEqual(pendientes, [], tema)
                     datos = yaml.safe_load(resultado.ruta.read_text(encoding="utf-8"))
                     visual = next(p["visual"] for p in datos["pasos"] if "visual" in p)
                     self.assertEqual(visual["tipo"], tipo, tema)

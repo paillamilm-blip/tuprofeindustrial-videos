@@ -27,7 +27,7 @@ class ConRaiz(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.viejo = os.environ.get("TPI_RAIZ")
         os.environ["TPI_RAIZ"] = self.tmp.name
-        self.raiz = Path(self.tmp.name)
+        self.raiz = Path(self.tmp.name).resolve()  # macOS: /var → /private/var
         (self.raiz / "salida").mkdir()
         (self.raiz / "guiones" / "ejemplos").mkdir(parents=True)
         self.guion = self.raiz / "guiones" / "motor_vivo.yaml"

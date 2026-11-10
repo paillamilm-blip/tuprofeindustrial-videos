@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -46,7 +47,7 @@ class BordeSubtituloTest(unittest.TestCase):
     def _linea_estilo(self, tema) -> str:
         from tpi_videos.subtitulos import Palabra, escribir_ass
 
-        ruta = Path("/tmp/borde_prueba.ass")
+        ruta = Path(tempfile.mkdtemp()) / "borde_prueba.ass"
         escribir_ass([[Palabra(texto="Hola", inicio=0.0, fin=0.5)]], ruta, tema.subtitulos)
         return next(
             linea
