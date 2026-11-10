@@ -107,6 +107,16 @@ class GuionTest(unittest.TestCase):
         self.assertEqual(cuando_se_sugiere("comic_azul"), [])
 
 
+class GuionesDelRepoTest(unittest.TestCase):
+    def test_todos_cargan_y_su_estilo_existe(self):
+        from tpi_videos.temas import listar_temas
+
+        existentes = {clave for clave, _t, _p in listar_temas()}
+        for ruta in sorted((RAIZ / "guiones").glob("*.yaml")):
+            estilo = estilo_del_guion(cargar_guion(ruta), MARCA)
+            self.assertIn(estilo.clave, existentes, ruta.name)
+
+
 class FijarTemaTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -178,6 +188,21 @@ class CambiarEnQcTest(unittest.TestCase):
         self.assertEqual(cargar_guion(self.guion).tema, "kraft_claro")
         self.assertEqual(qc.cambiar_estilo(self.guion, "plano_noche").origen, "dibujo")
         self.assertIsNone(cargar_guion(self.guion).tema)  # el sugerido no se escribe: queda automático
+
+    def test_todos_al_sugerido_de_una_vez(self):
+        from tpi_videos.panel import qc
+
+        otro = self.guion.with_name("otro.yaml")
+        shutil.copy(self.guion, otro)
+        fijar_tema(self.guion, "kraft_claro")
+        fijar_tema(otro, "tiza_verde")
+        qc.aprobar(otro, "lote-9")
+        self.assertEqual(len(qc.con_estilo_propio()), 2)
+        self.assertEqual(sorted(p.name for p in qc.todos_al_sugerido()), ["mohr.yaml", "otro.yaml"])
+        self.assertEqual(qc.con_estilo_propio(), [])
+        self.assertIsNone(cargar_guion(otro).tema)
+        self.assertEqual(qc.estado(otro), qc.APROBADO)  # la aprobación sigue en pie
+        self.assertEqual(qc.todos_al_sugerido(), [])  # una segunda vez no hace nada
 
     def test_cambiar_el_estilo_no_deshace_la_aprobacion(self):
         from tpi_videos.panel import qc

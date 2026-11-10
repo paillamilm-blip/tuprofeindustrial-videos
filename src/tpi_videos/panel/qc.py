@@ -254,3 +254,28 @@ def cambiar_estilo(ruta: Path, clave: str) -> EstiloSugerido:
         datos["guiones"][_clave(ruta)]["huella"] = huella(ruta)
         _guardar(datos)
     return estilo_del_guion(guion, marca)
+
+
+def con_estilo_propio() -> list[Path]:
+    """Los guiones (de todos los estados) que traen su propio «tema:» en vez del sugerido."""
+    salida = []
+    for ruta in guiones(incluir_decididos=True):
+        try:
+            if cargar_guion(ruta).tema:
+                salida.append(ruta)
+        except ErrorMotor:
+            continue  # uno que no valida no se toca: se arregla en el editor
+    return salida
+
+
+def todos_al_sugerido() -> list[Path]:
+    """Deja cada guion con el estilo sugerido (borra su «tema:»). Devuelve los que cambiaron.
+
+    Las aprobaciones y rechazos se mantienen, igual que al cambiar el estilo de uno.
+    """
+    cambiados = []
+    for ruta in con_estilo_propio():
+        sugerido = sugerir_tema_de_guion(cargar_guion(ruta), cargar_marca())
+        cambiar_estilo(ruta, sugerido.clave)
+        cambiados.append(ruta)
+    return cambiados
