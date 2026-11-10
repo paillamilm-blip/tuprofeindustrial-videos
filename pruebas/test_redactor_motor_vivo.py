@@ -139,6 +139,7 @@ class RedactarDePuntaAPuntaTest(unittest.TestCase):
             "Un balance de masa en una tolva de inyección": ("tolva_3d", "despiece"),
             "Cálculo de altura máxima en tiro parabólico": ("grafico_funcion", "movimiento"),
             "Derivada de una función cuadrática paso a paso": ("grafico_funcion", "movimiento"),
+            "Explicación del flujo turbulento en una Tuberia3D con despiece": ("tuberia_3d", "despiece"),
         }
         with tempfile.TemporaryDirectory() as carpeta:
             with (
@@ -153,6 +154,10 @@ class RedactarDePuntaAPuntaTest(unittest.TestCase):
                     self.assertEqual(visual["tipo"], tipo, tema)
                     self.assertIn(campo, visual, tema)
                     self.assertTrue(datos["resultado"].get("destello"), tema)
+                    self.assertIn("#tuprofeindustrial", datos["metadatos"]["hashtags"], tema)
+                    self.assertTrue(datos["metadatos"]["titulo"] and datos["metadatos"]["descripcion"], tema)
+                    self.assertTrue(any("<break" in p["voz"] for p in datos["pasos"]), tema)
+                    Guion.model_validate(datos)
                     if tipo == "grafico_funcion":
                         self.assertIn("desde", visual)
                         self.assertIn("hasta", visual)

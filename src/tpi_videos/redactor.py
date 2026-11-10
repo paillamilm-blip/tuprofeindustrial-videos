@@ -384,6 +384,16 @@ class PasoIA(BaseModel):
     )
 
 
+class MetadatosIA(BaseModel):
+    titulo: str = Field(
+        description="Título para YouTube Shorts, Reels y TikTok: máximo 70 caracteres, con el gancho; sin revelar el resultado"
+    )
+    descripcion: str = Field(
+        description="2 o 3 frases: qué se aprende y una pregunta que invite a comentar. Sin hashtags"
+    )
+    hashtags: list[str] = Field(description="De 8 a 12, en español, sin tildes ni espacios, cada uno con #")
+
+
 class GuionIA(BaseModel):
     es_ejercicio: bool = Field(description="false si no es un ejercicio resoluble")
     motivo: str = Field(default="", description="Solo si es_ejercicio es false: por qué")
@@ -413,6 +423,7 @@ class GuionIA(BaseModel):
     supuestos: list[str] = Field(
         description="Supuestos o aclaraciones para el profesor (no salen en el video)"
     )
+    metadatos: MetadatosIA = Field(description="Título, descripción y hashtags para publicar el video")
 
 
 class RevisionIA(BaseModel):
@@ -474,6 +485,20 @@ EJEMPLO = GuionIA(
     reto_voz="Ahora tú. ¿Cuánto tarda desde cuarenta y cinco metros, con g igual a diez?",
     reto_emoji="✍️",
     supuestos=[],
+    metadatos=MetadatosIA(
+        titulo="¿Cuánto tarda una piedra en caer 20 metros? 🤔",
+        descripcion="Caída libre paso a paso: despejamos el tiempo de h = ½gt². ¿Te dio lo mismo?",
+        hashtags=[
+            "#tuprofeindustrial",
+            "#fisica",
+            "#caidalibre",
+            "#cinematica",
+            "#ejerciciosresueltos",
+            "#paes",
+            "#estudiantes",
+            "#aprendeentiktok",
+        ],
+    ),
 )
 
 
@@ -508,7 +533,7 @@ EJEMPLOS_DINAMICOS: dict[str, GuionIA] = {
             PasoIA(
                 nota="Dos cuerpos",
                 tex=r"V = V_{cil} + V_{cono}",
-                voz="La tolva se abre en dos piezas. Su volumen es el del cilindro más el del cono.",
+                voz='Mira cómo la tolva se abre en dos piezas. <break time="1.5s"/> Su volumen es el del cilindro más el del cono.',
                 dibujo="tolva",
                 radio="0,5 m",
                 altura="0,8 m",
@@ -546,6 +571,20 @@ EJEMPLOS_DINAMICOS: dict[str, GuionIA] = {
         reto_voz="Ahora tú. ¿Cuánto tarda si salen sesenta kilos por hora?",
         reto_emoji="✍️",
         supuestos=["Se usa la densidad aparente de los pellets, no la del plástico macizo."],
+        metadatos=MetadatosIA(
+            titulo="¿En cuántas horas se llena esta tolva? ⏱️",
+            descripcion="Balance de masa en una tolva de inyección: volumen, masa y lo que se acumula. ¿Cuánto te dio?",
+            hashtags=[
+                "#tuprofeindustrial",
+                "#ingenieria",
+                "#balancedemasa",
+                "#tolva",
+                "#procesos",
+                "#tecnicoprofesional",
+                "#ejerciciosresueltos",
+                "#estudiantes",
+            ],
+        ),
     ),
     "Física · tiro parabólico con la tangente en movimiento": GuionIA(
         es_ejercicio=True,
@@ -573,7 +612,7 @@ EJEMPLOS_DINAMICOS: dict[str, GuionIA] = {
             PasoIA(
                 nota="Arriba no sube",
                 tex=r"v_y = 0 \Rightarrow t = \frac{v_{0y}}{g} = 2,5\ \text{s}",
-                voz="Mira la tangente: se aplana justo arriba. Ahí la velocidad vertical vale cero.",
+                voz='Mira la tangente recorrer la curva. <break time="1.5s"/> Se aplana justo arriba: ahí la velocidad vertical vale cero.',
                 dibujo="grafico",
                 funcion="24.5t - 4.9t^2",
                 variable="t",
@@ -608,6 +647,20 @@ EJEMPLOS_DINAMICOS: dict[str, GuionIA] = {
         reto_voz="Ahora tú. ¿Cuánto sube si la lanzas a sesenta grados?",
         reto_emoji="✍️",
         supuestos=[],
+        metadatos=MetadatosIA(
+            titulo="¿Qué tan alto sube una pelota a 49 m/s? 🚀",
+            descripcion="Tiro parabólico: la altura máxima es donde la velocidad vertical se hace cero. ¿Lo sabías?",
+            hashtags=[
+                "#tuprofeindustrial",
+                "#fisica",
+                "#tiroparabolico",
+                "#cinematica",
+                "#paes",
+                "#ejerciciosresueltos",
+                "#estudiantes",
+                "#aprendeentiktok",
+            ],
+        ),
     ),
     "Matemática · despeje con halo": GuionIA(
         es_ejercicio=True,
@@ -631,7 +684,7 @@ EJEMPLOS_DINAMICOS: dict[str, GuionIA] = {
             PasoIA(
                 nota="El nueve cruza",
                 tex="x^2 = 16 + 9",
-                voz="El menos nueve pasa al otro lado sumando.",
+                voz='El menos nueve pasa al otro lado sumando. <break time="1s"/>',
                 halo=["x^2"],
                 resaltar_cambio=True,
             ),
@@ -660,6 +713,20 @@ EJEMPLOS_DINAMICOS: dict[str, GuionIA] = {
         reto_voz="Ahora tú. Resuelve x al cuadrado más cuatro igual a cuarenta.",
         reto_emoji="✍️",
         supuestos=[],
+        metadatos=MetadatosIA(
+            titulo="x² − 9 = 16 tiene DOS respuestas 🤯",
+            descripcion="Despejamos x al cuadrado sin perder la raíz negativa. ¿Cuál se te había olvidado?",
+            hashtags=[
+                "#tuprofeindustrial",
+                "#matematica",
+                "#algebra",
+                "#ecuaciones",
+                "#paes",
+                "#ejerciciosresueltos",
+                "#estudiantes",
+                "#aprendeentiktok",
+            ],
+        ),
     ),
 }
 
@@ -673,6 +740,7 @@ def _ejemplos_dinamicos() -> str:
             "pasos": [p.model_dump(exclude_defaults=True) for p in g.pasos],
             "resultado_tex": g.resultado_tex,
             "resultado_destello": g.resultado_destello,
+            "metadatos": g.metadatos.model_dump(),
         }
         bloques.append(f"### {titulo}\n{json.dumps(compacto, ensure_ascii=False, indent=1)}")
     return "\n\n".join(bloques)
@@ -1103,6 +1171,15 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
         guion["reto"] = {"texto": _texto(g.reto_texto), "voz": _texto(g.reto_voz) or None} | _emoji(
             g.reto_emoji
         )
+    m = g.metadatos
+    if m is not None and (m.titulo.strip() or m.descripcion.strip() or m.hashtags):
+        # Aquí sí van emojis (es texto para la red, no para el video). Los hashtags no se limpian:
+        # si la IA inventa uno con espacios o signos, el motor se lo devuelve para que lo corrija.
+        guion["metadatos"] = {
+            "titulo": " ".join(m.titulo.replace("—", ", ").split()),
+            "descripcion": m.descripcion.replace("—", ", ").strip(),
+            "hashtags": [h.strip() for h in m.hashtags if h.strip()],
+        }
     return guion
 
 

@@ -11,6 +11,7 @@ import re
 from dataclasses import dataclass, field
 
 from .guion import Guion, Visual
+from .pausas import segundos_de_pausa, sin_pausas
 from .visuales import (
     DURACION_RESORTE,
     analizar_circuito,
@@ -52,9 +53,10 @@ _SIMBOLOS_PROBLEMATICOS = {
 
 
 def estimar_segundos(texto: str) -> float:
-    """Duración aproximada de un texto hablado por la voz sintética."""
-    texto = " ".join(texto.split())
-    return max(1.0, len(texto) / CARACTERES_POR_SEGUNDO + PAUSA_POR_BLOQUE)
+    """Duración aproximada de un texto hablado por la voz sintética, más sus pausas ``<break/>``."""
+    silencio = segundos_de_pausa(texto)
+    texto = sin_pausas(texto)
+    return max(1.0, len(texto) / CARACTERES_POR_SEGUNDO + PAUSA_POR_BLOQUE) + silencio
 
 
 @dataclass
@@ -215,7 +217,7 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
     segundos = sum(estimar_segundos(t) for _, t in voces) + SEGUNDOS_ANIMACION_EXTRA
     dibujos = [guion.gancho.visual, *(p.visual for p in guion.pasos)]
     segundos += sum(v.segundos for v in dibujos if v)  # el dibujo se mira un rato más
-    palabras = sum(len(t.split()) for _, t in voces)
+    palabras = sum(len(sin_pausas(t).split()) for _, t in voces)
 
     # Duración total
     if segundos > 90:
@@ -237,7 +239,7 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
         avisos.append(Aviso("sugerencia", "duración", f"~{segundos:.0f} s es muy corto; ¿falta algún paso?"))
 
     # Gancho (primeros 3 segundos)
-    gancho = guion.gancho.voz_final
+    gancho = sin_pausas(guion.gancho.voz_final)
     if gancho.lower().startswith(_INICIOS_DEBILES):
         avisos.append(
             Aviso(
@@ -257,7 +259,8 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
         )
 
     # Frases y símbolos en lo que se dice
-    for seccion, texto in voces:
+    for seccion, con_pausas in voces:
+        texto = sin_pausas(con_pausas)  # la etiqueta de pausa no es una barra ni un signo igual
         for frase in _frases(texto):
             n = len(frase.split())
             if n > 22:
