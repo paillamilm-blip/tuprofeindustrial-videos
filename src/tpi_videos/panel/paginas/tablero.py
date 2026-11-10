@@ -520,6 +520,19 @@ class AprobacionDeGuiones:
             ui.switch("Ver todos", value=self.todos, on_change=self._cambiar_filtro).props(
                 "dense color=amber"
             )
+        propios = len(qc.con_estilo_propio())
+        if propios:
+            with _clic(
+                ui.row().classes("tpi-ficha w-full p-3 gap-2 no-wrap items-center"),
+                lambda: confirmar(
+                    f"¿Pasar los {propios} guiones con estilo propio al estilo sugerido para cada uno?",
+                    self._todos_al_sugerido,
+                    boton="Sí, todos al sugerido",
+                ),
+                "Cada guion queda con el estilo que le sugiere el motor (molde, dibujos, error, materia)",
+            ):
+                ui.icon("auto_awesome").classes("tpi-ambar")
+                ui.label(f"{propios} con estilo propio · Todos al sugerido").classes("tpi-ambar text-sm")
         if not rutas:
             with _clic(_consola(), lambda: ui.navigate.to("/crear"), "Escribir un guion a mano"):
                 ui.label("No hay guiones esperando aprobación.").classes("font-semibold")
@@ -540,6 +553,12 @@ class AprobacionDeGuiones:
                 ui.label(qc.NOMBRES[estado]).classes(f"{color} text-xs")
                 if estado == qc.POR_REVISAR:
                     VistaPrevia(ruta).render()
+
+    def _todos_al_sugerido(self) -> None:
+        cambiados = qc.todos_al_sugerido()
+        ui.notify(f"Listo: {len(cambiados)} guiones quedaron con su estilo sugerido.", type="positive")
+        self.lista.refresh()
+        self.lectura.refresh()
 
     def _cambiar_filtro(self, e: Any) -> None:
         self.todos = bool(e.value)

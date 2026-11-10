@@ -1,0 +1,69 @@
+name: Todo al sugerido
+
+# Temporal: la tabla de estilos de cada guion y el botón «Todos al sugerido» del QC.
+
+on:
+  pull_request:
+
+jobs:
+  revisar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: El motor y Playwright
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libcairo2-dev libpango1.0-dev
+          python -m pip install --upgrade pip
+          pip install -e . playwright
+          python -m playwright install --with-deps chromium
+      - name: El estilo de cada guion
+        run: |
+          python - <<'EOF'
+          from pathlib import Path
+          from tpi_videos.config import cargar_marca
+          from tpi_videos.guion import cargar_guion
+          from tpi_videos.temas import estilo_del_guion, listar_temas
+          nombres = {c: t.nombre for c, t, _ in listar_temas()}
+          m = cargar_marca()
+          for ruta in sorted(Path("guiones").glob("*.yaml")):
+              g = cargar_guion(ruta); e = estilo_del_guion(g, m)
+              print(f"FILA|{g.titulo}|{g.materia}|{nombres[e.clave]}|{e.origen}|{e.razon}")
+          EOF
+      - name: El botón, en el navegador
+        run: |
+          printf 'tema: kraft_claro\n' > /tmp/linea
+          sed -i '/^materia:/r /tmp/linea' guiones/el_circulo_de_mohr.yaml guiones/mru_tiempo_en_minutos_de_un_bus.yaml
+          grep -c "^tema:" guiones/*.yaml | grep -v ":0"
+          tpi panel --no-abrir --puerto 8765 > /tmp/panel.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8765/ > /dev/null && break; sleep 1; done
+          mkdir -p capturas
+          python - <<'EOF'
+          import time
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as p:
+              b = p.chromium.launch(); pag = b.new_page(viewport={"width": 1440, "height": 1000})
+              errores = []; pag.on("pageerror", lambda e: errores.append(str(e)))
+              pag.goto("http://127.0.0.1:8765/qc")
+              boton = pag.get_by_text("Todos al sugerido").first
+              boton.wait_for(timeout=20000)
+              print("botón:", boton.inner_text())
+              time.sleep(1); pag.screenshot(path="capturas/01_boton.png")
+              boton.click()
+              pag.get_by_role("button", name="Sí, todos al sugerido").click()
+              time.sleep(2); pag.screenshot(path="capturas/02_hecho.png")
+              print("botón sigue:", pag.get_by_text("Todos al sugerido").count())
+              print("con tema:", [r.name for r in Path("guiones").glob("*.yaml") if "\ntema:" in r.read_text()])
+              print("errores de la página:", errores or "ninguno")
+              b.close()
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: todo-sugerido
+          path: capturas
+          retention-days: 7
