@@ -135,11 +135,6 @@
     <span><b>Versión del paquete:</b> 0.10.1</span>
     <span><b>Fecha del análisis:</b> 10 de noviembre de 2026</span>
     <span><b>Entorno:</b> macOS Apple Silicon, Python 3.12 (el del usuario). La integración continua (CI) corre en Ubuntu 24.04, macOS y Windows, todos con Python 3.12.</span>
-    <span><b>Lectura rápida:</b> el diseño está sano y bien separado. Desde el análisis del 9 de noviembre se resolvieron el lockfile, las dependencias escondidas, los globales de estilo, el layout fijo en código, la falta de paralelismo y el caché sin poda. Lo que queda es el entorno Mac atado a mano, el CI que no prueba la voz de Microsoft ni el Gemini real, y el panel que repite banderas de la CLI.</span>
-    <span><b>Frontera clave:</b> el panel no calcula nada del video. Construye argumentos de CLI, abre un subproceso y refleja el avance que llega por líneas JSON. Las decisiones que sí toma el panel (aprobar, elegir el estilo) escriben archivos que la CLI lee: <code>salida/.cola/qc.json</code> y la línea <code>tema:</code> del guion.</span>
-    <span><b>Una sola regla del estilo:</b> <code>temas.sugerir_tema</code> decide el estilo de un video que nadie eligió (1° molde, 2° dibujos —circuito → Plano azul, piezas industriales → Plano nocturno—, 3° si corrige un error → Cuaderno con sello, 4° materia, 5° <code>marca.yaml</code>). <code>resolver_tema</code> aplica la cascada <code>--tema</code> &gt; <code>tema:</code> del guion &gt; sugerido. En el panel se elige en un solo lugar, la ficha del guion en QC (<code>qc.cambiar_estilo</code> → <code>guion.fijar_tema</code>).</span>
-    <span><b>Veredicto:</b> el motor está sano y bien separado: dominio → escena → postproducción, con contratos en archivos y 885 pruebas rápidas en tres sistemas. La deuda del 9 de noviembre (lock, dependencias escondidas, globales, layout en código, caché sin poda) está saldada. El riesgo mayor hoy es externo: que edge-tts o los modelos de Gemini cambien sin que el CI lo note, porque el CI no los llama.</span>
-    <span><b>Lo que no se tocaría:</b> - La frontera panel ↔ CLI por subproceso: es lo que mantiene el panel simple y reanudable.</span>
   </div>
 </header>
 

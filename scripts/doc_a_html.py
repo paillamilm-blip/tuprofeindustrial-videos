@@ -154,7 +154,8 @@ def convertir(md: str, estilo: str) -> str:
     titulo = next((l[2:].strip() for l in lineas if l.startswith("# ")), "Documento")
     principal, _, bajada = titulo.partition(" — ")
     comentarios = dict(re.findall(r"<!--\s*([a-z]+):\s*(.*?)\s*-->", md))
-    meta = re.findall(r"^\*\*([^*]+):\*\*\s*(.+)$", md, re.MULTILINE)
+    cabecera = md.split("\n## ", 1)[0]  # los datos del documento van antes de la primera sección
+    meta = re.findall(r"^\*\*([^*]+):\*\*\s*(.+)$", cabecera, re.MULTILINE)
 
     # Secciones: todo lo que va bajo cada «## ».
     secciones: list[tuple[str, list[str]]] = []
