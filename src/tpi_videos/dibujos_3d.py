@@ -535,7 +535,11 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
                         silueta.start_new_path(pantalla(q0 + salida))
                         silueta.add_line_to(pantalla(q1 + salida))
                 nuevos.append(silueta)
-        cuerpo_mob.submobjects = nuevos
+        # El orden de pintado va en z_index y no en el orden de los hijos: Manim fija la lista de lo
+        # que pinta al empezar cada animación, pero la reordena por z_index en cada cuadro. Todo el
+        # cuerpo cabe bajo 0,5 para que los rótulos (0,55) y las fórmulas (1) queden siempre encima.
+        for rango, mob in enumerate(nuevos):
+            mob.z_index = 0.02 + 0.46 * rango / max(len(nuevos), 1)
 
     pose(1.0, lambda q: q)
 
@@ -602,6 +606,8 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
         )
         pie += 1
 
+    parches.set_z_index(0.55)
+    rótulos.set_z_index(0.56)
     todo = VGroup(cuerpo_mob, parches, rótulos)
     corrido = -todo.get_center()
     todo.shift(corrido)

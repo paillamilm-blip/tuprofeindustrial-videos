@@ -490,17 +490,21 @@ def _curva_viva(
 
     rotulo_caja = VGroup()  # el valor en vivo, con su papel detrás para que la curva no lo tape
     escrito = [""]
-    # Arriba a la derecha, alineado por la derecha: cambia de ancho sin moverse de su esquina.
-    esquina = fijo(np.array([der - 0.1, arr - 0.05, 0.0]))
 
     def escribir(texto: str) -> None:
         if texto == escrito[0]:
             return
         escrito[0] = texto
+        # Arriba a la derecha, alineado por la derecha: cambia de ancho sin moverse de su esquina.
+        # Se calcula cada vez: ``fijo`` sigue al dibujo cuando la escena lo cambia de sitio.
+        esquina = fijo(np.array([der - 0.1, arr - 0.05, 0.0]))
         nuevo = c.texto(texto, 22, SEMIBOLD, col.texto)
         nuevo.move_to(esquina + LEFT * nuevo.width / 2 + DOWN * nuevo.height / 2)
-        # Se cambian los hijos, no se usa become(): con otro número de letras become() alinea las
-        # familias rellenando con copias, y quedarían letras fantasma del valor anterior.
+        # Se cambian los hijos, no se usa become(): con otro número de letras become() rellena con
+        # copias y quedan letras fantasma. Los hijos viejos además se apagan: Manim arma la lista de
+        # lo que pinta al empezar cada animación y los seguiría dibujando encima del valor nuevo.
+        for viejo in rotulo_caja.submobjects:
+            viejo.set_opacity(0.0)
         rotulo_caja.submobjects = list(_parche(nuevo, papel, 0.16).submobjects)
 
     if movimiento == "tangente":
