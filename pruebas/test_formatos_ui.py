@@ -35,7 +35,7 @@ class PieTest(unittest.TestCase):
 
         for clave in cargar_formatos():
             nombres = [p[0] for p in piezas(clave)]
-            self.assertEqual(nombres, ["Molde", "Estilo", "Dibujos"], clave)
+            self.assertEqual(nombres, ["Molde", "Dibujos"], clave)
             for nombre, valor, opciones in piezas(clave):
                 self.assertTrue(valor, f"{clave} · {nombre} llegó vacío")
                 self.assertTrue(opciones, f"{clave} · {nombre} no tiene con qué cambiarse")

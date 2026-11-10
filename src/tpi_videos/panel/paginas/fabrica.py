@@ -295,7 +295,9 @@ class PaginaFabrica:
 
             with ui.row().classes("w-full items-center gap-2 pt-2"):
                 ui.icon("info", size="18px").set_text_color(PIEL["gris"])
-                ui.label("Usa la voz y el estilo que elegiste en Ajustes. ¿Prefieres revisar las ideas?")
+                ui.label(
+                    "Usa tu voz de Ajustes y el estilo sugerido para cada video. ¿Prefieres revisar las ideas?"
+                )
                 ui.link("Elegirlas una por una", "/crear").classes("font-bold")
 
         self.cola_lotes = ColaLotes(self._correr)

@@ -16,9 +16,16 @@ from ...config import cargar_marca, guardar_ajustes_marca
 from ...emojis import stickers_dir, stickers_disponibles
 from ...entorno import raiz_proyecto
 from ...errores import ErrorMotor
-from ...moldes import MOLDES
+from ...moldes import MOLDES, nombre_molde
 from ...rodaje import NOMBRE_MANDO, QUE_HACE, RECETA_LIBRE, campos_de_receta, guardar_receta
-from ...temas import TEMA_POR_CATEGORIA, listar_temas
+from ...temas import (
+    NOMBRE_CATEGORIA,
+    TEMA_DE_ERROR,
+    TEMA_POR_CATEGORIA,
+    TEMA_POR_DIBUJO,
+    TEMA_POR_MOLDE,
+    listar_temas,
+)
 from ..comun import PIEL, confirmar, url_medio
 from ..sugerencia import DIFICULTADES, NOMBRE_MATERIA
 from ..tareas import consultar
@@ -228,33 +235,31 @@ def _seccion_voz() -> None:
             ui.button("Guardar voz", icon="save", on_click=guardar).props("outline")
 
 
-NOMBRES_CATEGORIA = {"matematicas": "Matemáticas", "fisica": "Física", "ingenieria": "Ingeniería"}
-
-
 def _seccion_tema() -> None:
+    """Cómo elige el motor el estilo de cada video. Se cambia en QC: acá solo se explica."""
     temas = {i: t.nombre for i, t, _ in listar_temas()}
-    actual = cargar_marca().tema
-    porta = ", ".join(f"{NOMBRES_CATEGORIA[c]}: {temas.get(t, t)}" for c, t in TEMA_POR_CATEGORIA.items())
+
+    def nombre(clave: str) -> str:
+        return temas.get(clave, clave)
+
     with _tarjeta(
-        "Estilo de siempre",
-        f"Cada materia ya trae su estilo ({porta}). Este se usa solo si la materia no tiene uno; "
-        "un guion o el botón de estilo siempre pueden elegir otro.",
+        "Estilo de cada video",
+        "El motor sugiere uno para cada video según su molde, sus dibujos y su materia. "
+        "Lo ves y lo cambias en un solo lugar: Aprobación de Guiones (QC).",
     ):
-        with ui.row().classes("items-center gap-3"):
-            eleccion = (
-                ui.select(temas, value=actual if actual in temas else None, label="Estilo")
-                .props("outlined dense")
-                .classes("w-72")
-            )
-
-            def guardar() -> None:
-                if not eleccion.value:
-                    ui.notify("Elige un estilo primero.", type="warning")
-                    return
-                guardar_ajustes_marca({"tema": eleccion.value})
-                ui.notify("Estilo guardado.", type="positive")
-
-            ui.button("Guardar", icon="save", on_click=guardar).props("outline")
+        reglas = [
+            ("1° El molde", ", ".join(f"{nombre_molde(m)} → {nombre(t)}" for m, t in TEMA_POR_MOLDE.items())),
+            ("2° Los dibujos", ", ".join(f"{('circuitos' if 'circuito' in d else 'piezas industriales')} → "
+                                         f"{nombre(t)}" for d, t, _r in TEMA_POR_DIBUJO)),  # fmt: skip
+            ("3° Si corrige un error", nombre(TEMA_DE_ERROR)),
+            ("4° La materia", ", ".join(f"{NOMBRE_CATEGORIA[c]} → {nombre(t)}" for c, t in TEMA_POR_CATEGORIA.items())),
+        ]
+        for regla, detalle in reglas:
+            with ui.row().classes("w-full gap-3 no-wrap items-start"):
+                ui.label(regla).classes("text-sm font-bold w-44 shrink-0")
+                ui.label(detalle).classes("tpi-ayuda")
+        with ui.row().classes("items-center gap-4"):
+            ui.link("Elegir el estilo de un video (QC)", "/qc")
             ui.link("Ver y personalizar estilos", "/motor")
 
 

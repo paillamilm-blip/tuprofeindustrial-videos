@@ -69,13 +69,13 @@ class SugerenciaTest(unittest.TestCase):
             self.assertNotIn("No reconocí", s.pieza("familia").razon, tema)
 
     def test_lo_que_cambia_ella_gana_y_queda_marcado(self):
-        s = armar("un dato curioso con porcentajes", {"tema": "pizarra_nocturna"}, PREF)
+        s = armar("un dato curioso con porcentajes", {"materia": "fisica"}, PREF)
         molde_familia = s.pieza("molde")
         self.assertFalse(molde_familia.tocada)  # ése lo trajo la familia
-        estilo = s.pieza("tema")
-        self.assertTrue(estilo.tocada)
-        self.assertEqual(estilo.codigo, "pizarra_nocturna")
-        self.assertEqual(estilo.razon, "Cambiado por ti.")
+        materia = s.pieza("materia")
+        self.assertTrue(materia.tocada)
+        self.assertEqual(materia.codigo, "fisica")
+        self.assertEqual(materia.razon, "Cambiado por ti.")
 
     def test_la_propuesta_de_la_ia_deja_de_ser_un_secreto(self):
         """Si la idea trajo molde, gancho y duración, la tarjeta lo dice: no «lo decidió la IA»."""
@@ -129,7 +129,7 @@ class ArgsTest(unittest.TestCase):
             check=False,
         ).stdout
         for s in (
-            armar("porcentajes", {"molde": "reto", "tema": "pizarra_nocturna"}, PREF),
+            armar("porcentajes", {"molde": "reto", "materia": "fisica"}, PREF),
             armar("porcentajes", {}, PREF, {"molde": "mito_realidad", "segundos": 42, "gancho": "Mirá"}),
         ):
             for bandera in [a for a in s.args if a.startswith("--") and a != "--"]:
@@ -138,7 +138,8 @@ class ArgsTest(unittest.TestCase):
     def test_el_orden_del_comando(self):
         args = list(armar("porcentajes", {}, PREF).args)
         self.assertEqual(args[0], "producir")
-        self.assertEqual(args.index("--") > args.index("--estilo"), True)
+        self.assertEqual(args.index("--") > args.index("--molde"), True)
+        self.assertNotIn("--estilo", args)  # el estilo no viaja desde la tarjeta: se elige en QC
 
 
 class PiezasTest(unittest.TestCase):
@@ -161,9 +162,10 @@ class PiezasTest(unittest.TestCase):
             set(BANDERAS),
             {
                 "molde", "materia", "nivel", "dificultad",
-                "tema", "voz", "segundos", "lectura", "gancho",
+                "voz", "segundos", "lectura", "gancho",
             },
         )  # fmt: skip
+        self.assertNotIn("tema", BANDERAS)  # el estilo se elige en QC, no viaja desde la tarjeta
 
     def test_el_piso_de_lectura_viaja_aunque_no_se_toque(self):
         """Lo que muestra la tarjeta y lo que recibe el motor tienen que ser el mismo comando."""
@@ -208,28 +210,44 @@ class EstiloPorMoldeTest(unittest.TestCase):
         self.assertFalse(estilo.tocada)
         self.assertIn("reto", estilo.razon.lower())
 
-    def test_los_cinco_moldes_tienen_estilo_y_ninguno_se_repite(self) -> None:
-        """Las 3 ideas de un lote traen moldes distintos: los estilos salen distintos solos."""
+    def test_los_moldes_con_estilo_propio_no_se_repiten(self) -> None:
+        """Las 3 ideas de un lote traen moldes distintos: los estilos salen distintos solos.
+
+        «Nadie te enseñó esto» es el dato sorpresa de cualquier ramo: luce el estilo de su materia.
+        """
+        from tpi_videos.temas import TEMA_POR_MOLDE
+
+        self.assertEqual(set(TEMA_POR_MOLDE), set(MOLDES) - {"nadie_te_enseno"})
         codigos = {
             armar("porcentajes", {}, PREF, {"molde": clave, "titulo": "La idea"}).pieza("tema").codigo
-            for clave in MOLDES
+            for clave in TEMA_POR_MOLDE
         }
-        self.assertEqual(len(codigos), len(MOLDES))
+        self.assertEqual(len(codigos), len(TEMA_POR_MOLDE))
+        dato = armar("porcentajes", {"materia": "fisica"}, PREF, {"molde": "nadie_te_enseno", "titulo": "D"})
+        self.assertEqual(dato.pieza("tema").codigo, "neon_cian")
         from tpi_videos.temas import listar_temas
 
         validos = {ident for ident, _tema, _propio in listar_temas()}
         self.assertTrue(codigos <= validos, "no puedo recomendar un estilo que el motor no tiene")
 
-    def test_su_cambio_le_gana_al_molde(self) -> None:
+    def test_el_estilo_solo_se_muestra_y_se_cambia_en_qc(self) -> None:
+        """La tarjeta dice qué estilo saldrá, pero no lo manda: se elige en un solo lugar (QC)."""
         s = armar("porcentajes", {"tema": "pizarra_nocturna"}, PREF, {"molde": "reto", "titulo": "La idea"})
-        self.assertEqual(s.pieza("tema").codigo, "pizarra_nocturna")
-        self.assertTrue(s.pieza("tema").tocada)
+        estilo = s.pieza("tema")
+        self.assertEqual(estilo.codigo, "neon_reja")  # un cambio viejo guardado ya no manda
+        self.assertFalse(estilo.tocada)
+        self.assertEqual(estilo.destino, "/qc")
+        self.assertNotIn("--estilo", s.args)
 
-    def test_sin_molde_no_inventa_un_estilo(self) -> None:
-        """Sin familia y sin molde la tarjeta sigue diciendo «tu estilo de siempre»: nada bloqueado."""
+    def test_sin_molde_el_estilo_sale_de_la_materia(self) -> None:
+        s = armar("una frase que no delata nada", {"materia": "fisica"}, PREF)
+        self.assertEqual(s.pieza("tema").codigo, "neon_cian")
+        self.assertIn("Física", s.pieza("tema").razon)
+
+    def test_sin_molde_ni_materia_queda_el_de_siempre(self) -> None:
         s = armar("una frase que no delata nada", {}, PREF)
         self.assertEqual(s.pieza("tema").codigo, PREF.tema)
-        self.assertEqual(s.pieza("tema").razon, "Tu estilo de siempre (Ajustes).")
+        self.assertIn("Tu estilo de siempre", s.pieza("tema").razon)
 
 
 class PublicoTest(unittest.TestCase):

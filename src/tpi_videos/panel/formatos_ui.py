@@ -51,12 +51,14 @@ def opciones_de(pieza: str) -> dict[str, str]:
 
 
 def piezas(clave: str) -> list[tuple[str, str, dict[str, str]]]:
-    """(nombre, valor elegido por la familia, opciones) — el valor se muestra siempre con su «cambiar»."""
+    """(nombre, valor elegido por la familia, opciones) — el valor se muestra siempre con su «cambiar».
+
+    El estilo no es una pieza: lo sugiere el motor para cada video y se elige en QC.
+    """
     f = formato(clave)
-    moldes, estilos, dibujos = opciones_de("Molde"), opciones_de("Estilo"), opciones_de("Dibujos")
+    moldes, dibujos = opciones_de("Molde"), opciones_de("Dibujos")
     return [
         ("Molde", " o ".join(moldes.get(m, m) for m in f.moldes), moldes),
-        ("Estilo", estilos.get(f.tema, f.tema), estilos),
         ("Dibujos", ", ".join(dibujos.get(d, d).split(" · ")[-1] for d in f.dibujos), dibujos),
     ]
 
