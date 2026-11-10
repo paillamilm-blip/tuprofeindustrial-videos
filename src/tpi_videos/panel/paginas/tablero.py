@@ -130,15 +130,23 @@ class ColaDeProduccion:
         self.firma: tuple = ()
 
     def render(self) -> None:
+        self.firma = self._firma()  # lo recién pintado no se repinta: un clic no cae sobre algo que se va
         self.resumen()
         self.columnas()
         ui.timer(1.5, self._mirar)
 
     def _mirar(self) -> None:
         # Se repinta solo si algo cambió: un tablero que parpadea cansa la vista.
+        firma = self._firma()
+        if firma != self.firma:
+            self.firma = firma
+            self.resumen.refresh()
+            self.columnas.refresh()
+
+    def _firma(self) -> tuple:
         datos = cola.cargar()
         vivo = _en_vivo()
-        firma = (
+        return (
             tuple(
                 (v.get("id"), v.get("estado"), round(float(v.get("avance") or 0), 2))
                 for lote in datos.get("lotes", [])
@@ -149,11 +157,8 @@ class ColaDeProduccion:
             ),
             TAREAS.ocupado(),
             LANZAMIENTO.activo,
+            len(qc.guiones()),
         )
-        if firma != self.firma:
-            self.firma = firma
-            self.resumen.refresh()
-            self.columnas.refresh()
 
     @ui.refreshable_method
     def resumen(self) -> None:

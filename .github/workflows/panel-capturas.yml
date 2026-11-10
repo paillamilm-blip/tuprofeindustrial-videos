@@ -106,7 +106,9 @@ jobs:
               pag.get_by_text("TU PROFE INDUSTRIAL").click()
               pag.wait_for_url(URL + "/")
               pag.wait_for_selector("text=Lanzar Renderización en Lote")
+              time.sleep(2)
               pag.get_by_text("El motor está libre").click()
+              pag.wait_for_selector("text=Producción en marcha", timeout=10000)
               time.sleep(3)
               toma("09_lanzado_desde_columna_vacia")
               try:
