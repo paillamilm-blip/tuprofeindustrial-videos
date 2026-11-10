@@ -7,7 +7,8 @@ Plantilla comentada: `./tpi nuevo mi_ejercicio` · Ejemplos completos: `guiones/
 
 > **Atajo:** `./tpi redactar "enunciado…"` (o una foto o PDF) hace que la IA escriba el guion siguiendo
 > estas mismas reglas (sus instrucciones están en `src/tpi_videos/plantillas/ia/`). Esta guía te sirve
-> para revisarlo y ajustarlo. En el panel (`./tpi panel` → Crear) haces lo mismo con tarjetas, sin tocar el YAML.
+> para revisarlo y ajustarlo. En el panel (`./tpi panel` → **Avanzado → Crear a mano**) haces lo mismo con
+> tarjetas, sin tocar el YAML, y en **Aprobación de Guiones (QC)** lo lees limpio antes de mandarlo a producir.
 
 ## 1. La estructura del video
 
@@ -29,9 +30,12 @@ Plantilla comentada: `./tpi nuevo mi_ejercicio` · Ejemplos completos: `guiones/
 ```yaml
 titulo: "Caída libre: ¿cuánto tarda en caer?"   # corto: cabe en 1–2 líneas
 materia: fisica                                  # matematica | fisica | ingenieria
+categoria: fisica                                # la escribe el motor: sale de la materia (no hace falta)
 nivel: "2° medio"                                # opcional: "1° medio"… "4° medio" o "1° año ingeniería"… "4° año ingeniería"
-carrera: electrica                              # opcional (universidad): industrial | electrica | obras_civiles
+carrera: electrica                               # opcional (universidad): industrial | electrica | obras_civiles
+molde: reto                                      # opcional: la estructura del video (sección 8)
 tema: pizarra_nocturna                           # opcional: si falta, el motor sugiere uno (se elige en QC)
+camara: suave                                    # opcional: quieta | suave (por defecto) | fuerte
 voz: "es-CL-CatalinaNeural"                      # opcional: otra voz solo para este video
 velocidad: "+10%"                                # opcional
 
@@ -78,6 +82,16 @@ reto:
   voz: "Ahora tú: ¿y desde cuarenta y cinco metros? Déjalo en los comentarios."
 ```
 
+**Los campos de arriba, en breve:**
+
+- `categoria` la escribe el motor a partir de `materia` (matemática → `matematicas`). Si la escribes a mano tiene
+  que calzar con la materia; si no calza, `revisar` lo dice.
+- `nivel` es texto libre, pero el motor lo lee en uno de los 8 niveles de sus dos públicos (enseñanza media y
+  universidad de ingeniería; ver `src/tpi_videos/niveles.py`). Así lo agrupa «Para hoy».
+- `tema` es el estilo visual. Si no está, el motor sugiere uno según el molde, los dibujos, si hay un error típico
+  y la materia. Se cambia en un solo lugar del panel: la ficha del guion en QC, que escribe o borra esta línea.
+- `camara` dice cuánto se acerca la cámara en los pasos: `quieta` (nada), `suave` o `fuerte`.
+
 **Forma corta:** `gancho`, `enunciado`, `verificacion`, `reto` y `cierre` aceptan un solo texto
 (`reto: "…"`); en ese caso se muestra y se dice lo mismo.
 
@@ -88,7 +102,8 @@ reemplaza al engranaje de la marca.
 
 Un paso puede llevar un dibujo, que se traza en el pie de la hoja mientras suena la voz de ese paso.
 Sirve para lo que la fórmula sola no muestra: la parábola de la caída, las fuerzas sobre el cuerpo,
-las ramas del circuito. El motor conoce tres:
+las ramas del circuito. El motor conoce **33 dibujos** (tabla al final de esta sección). Estos son los tres
+de base:
 
 **1. `grafico_funcion`** — la curva de una función.
 
@@ -130,10 +145,52 @@ Sin `angulo` el cuerpo está sobre una mesa horizontal.
       resistencias: ['4 Ω', '6 Ω', '12 Ω']   # de 2 a 4, cada una con su unidad
 ```
 
-Las reglas: **un dibujo por video** (más de uno se confunde en 60 segundos), los campos de otro tipo
-se pueden dejar fuera, y `./tpi revisar` avisa si la función no se entiende o si falta un número.
-En el panel, el mismo dibujo se arma en cada tarjeta de paso, dentro de «Dibujo en el pie de la hoja».
-Ejemplo con los tres: `guiones/ejemplos/visuales_tres_tipos.yaml`.
+Las reglas: **mejor uno o dos dibujos por video** (más se confunden en 60 segundos; el motor no lo
+prohíbe), los campos de otro tipo se pueden dejar fuera, y `./tpi revisar` avisa si la función no se
+entiende o si falta un número. En el panel, el mismo dibujo se arma en cada tarjeta de paso, dentro de
+«Dibujo en el pie de la hoja». Ejemplo con los tres: `guiones/ejemplos/visuales_tres_tipos.yaml`.
+
+**Todos los dibujos.** El `tipo:` va en la primera columna; los campos, en la última. Los datos de ejemplo de cada
+uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra al elegir el dibujo.
+
+| `tipo` | Qué dibuja | Materia | Campos |
+|---|---|---|---|
+| `grafico_funcion` | Gráfico de la función | Matemática | funcion, variable, eje_x, eje_y, rango, marcar, movimiento, desde, hasta, anotar |
+| `poligono_regular` | Polígono regular | Matemática | lados, lado, anotar |
+| `circulo_trig` | Círculo trigonométrico | Matemática | angulo, anotar |
+| `solido` | Sólido (lámina) | Matemática | figura, lado, radio, altura, anotar |
+| `vector_3d` | Vector dentro de una caja (3D) | Matemática | componentes, unidad, anotar |
+| `venn` | Diagrama de Venn | Matemática | solo_a, solo_b, ambos, fuera, anotar |
+| `recta` | Recta numérica | Matemática | extremo_a, extremo_b, incluye_a, incluye_b, derecha |
+| `probabilidad` | Urna de probabilidad | Matemática | favorables, totales, anotar |
+| `torta` | Torta de porcentajes | Matemática | categorias |
+| `barras` | Barras de datos | Matemática | categorias |
+| `diagrama_fuerzas` | Diagrama de fuerzas | Física | cuerpo, vectores, angulo, descomponer |
+| `proyectil` | Tiro parabólico | Física | velocidad, angulo, anotar |
+| `circuito` | Circuito | Física | fuente, arreglo, resistencias |
+| `onda` | Onda anotada | Física | amplitud, longitud_onda, periodo, anotar |
+| `energia` | Barras de energía | Física | categorias |
+| `optica` | Refracción de la luz | Física | n1, n2, angulo_incidence |
+| `pendulo` | Péndulo | Física | longitud, angulo, anotar |
+| `resorte` | Resorte | Física | constante, extension, anotar |
+| `oscilador` | Oscilador que se apaga | Física | masa, constante, amplitud, amortiguamiento, duracion, anotar |
+| `pendulo_doble` | Péndulo doble | Física | masa_1, masa_2, longitud_1, longitud_2, angulo_1, angulo_2, duracion, anotar |
+| `polea` | Polea con dos masas | Física | masa_a, masa_b, anotar |
+| `solido_3d` | Sólido en 3D | Ingeniería | figura, lado, radio, altura, vista, corte, despiece, anotar |
+| `tanque` | Tanque con llave y fisura | Ingeniería | capacidad, entrada, salida, anotar |
+| `viga` | Viga apoyada | Ingeniería | longitud, carga, repartida, anotar |
+| `cercha` | Cercha | Ingeniería | base, altura, carga, anotar |
+| `bloques` | Lazo de control | Ingeniería | adelante, retro, negativa, anotar |
+| `engranaje` | Pareja de engranajes | Ingeniería | dientes_a, dientes_b, rpm, anotar |
+| `mohr` | Círculo de Mohr | Ingeniería | sigma_x, sigma_y, cortante, anotar |
+| `tolva_3d` | Tolva en 3D | Ingeniería | radio, altura, radio_salida, altura_cono, vista, despiece, anotar |
+| `tuberia_3d` | Tubería con bridas (3D) | Ingeniería | radio, espesor, longitud, bridas, vista, despiece, anotar |
+| `eje_3d` | Eje escalonado (3D) | Ingeniería | radios, largos, unidad, vista, despiece, anotar |
+| `gradiente_termico` | Calor en una placa | Ingeniería | temp_izquierda, temp_derecha, temp_arriba, temp_abajo, base, altura, anotar |
+| `perfil_flujo` | Flujo entre placas | Ingeniería | flujo, velocidad, separacion, viscosidad, anotar |
+
+La materia de la tabla es solo de dónde viene el dibujo: cualquier guion puede usar cualquiera. Los dibujos de
+circuito y de piezas industriales también influyen en el estilo que se sugiere (ver arriba, `tema`).
 
 ### Dibujos que se mueven y álgebra viva (todo opcional)
 

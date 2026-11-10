@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Análisis técnico · Motor de video Tu Profe Industrial</title>
+<title>Motor de video de Tu Profe Industrial</title>
 <style>
   :root{
     --hoja:#FBF7EC; --papel:#F3F3F0; --tinta:#1B2430; --secundario:#5B6B86;
@@ -124,484 +124,384 @@
 <body>
 <div class="lienzo">
 
+<!-- Generado con scripts/doc_a_html.py a partir del .md del mismo nombre: no editar a mano. -->
 <header class="tapa">
   <p class="sobretitulo">Documento técnico · Sistema 2</p>
   <h1>Motor de video de Tu Profe Industrial</h1>
-  <p>Análisis exhaustivo del repositorio <code>tuprofeindustrial-videos</code>: tecnologías, arquitectura, pipeline de producción, contratos de datos, acoplamientos manuales, cuellos de botella y orden de modernización.</p>
+  <p>contexto técnico</p>
   <div class="meta">
-    <span>9 de noviembre de 2026</span>
-    <span>Rama <code>feat/piso-de-lectura</code></span>
-    <span>Versión 0.10.1</span>
-    <span>Mac · Python 3.12</span>
+    <span><b>Repositorio:</b> <code>tuprofeindustrial-videos</code></span>
+    <span><b>Rama:</b> <code>main</code> · commit <code>7869cd7</code> (después del PR #37)</span>
+    <span><b>Versión del paquete:</b> 0.10.1</span>
+    <span><b>Fecha del análisis:</b> 10 de noviembre de 2026</span>
+    <span><b>Entorno:</b> macOS Apple Silicon, Python 3.12 (el del usuario). La integración continua (CI) corre en Ubuntu 24.04, macOS y Windows, todos con Python 3.12.</span>
   </div>
 </header>
 
 <div class="cifras">
-  <div class="cifra"><b>46</b><small>guiones YAML en el repo</small></div>
-  <div class="cifra"><b>28</b><small>tipos de dibujo animado</small></div>
+  <div class="cifra"><b>48</b><small>guiones YAML en el repo</small></div>
+  <div class="cifra"><b>33</b><small>tipos de dibujo animado</small></div>
   <div class="cifra"><b>19</b><small>estilos visuales</small></div>
-  <div class="cifra"><b>19</b><small>comandos de terminal</small></div>
-  <div class="cifra"><b>664</b><small>pruebas automáticas (≈24 s)</small></div>
-  <div class="cifra"><b>22.521</b><small>líneas de Python en <code>src/</code></small></div>
+  <div class="cifra"><b>21</b><small>comandos de terminal</small></div>
+  <div class="cifra"><b>885</b><small>pruebas automáticas (3 sistemas)</small></div>
+  <div class="cifra"><b>28.773</b><small>líneas de Python en <code>src/</code></small></div>
 </div>
 
 <nav class="indice">
   <h2>Contenido</h2>
   <ol>
-    <li><a href="#resumen">Resumen en una pantalla</a></li>
-    <li><a href="#stack">Tecnologías, lenguajes y librerías</a></li>
-    <li><a href="#apis">APIs externas</a></li>
-    <li><a href="#arquitectura">Arquitectura interna</a></li>
-    <li><a href="#pipeline">Pipeline paso a paso</a></li>
-    <li><a href="#contratos">Contratos de datos</a></li>
-    <li><a href="#acoplamientos">Dependencias críticas y acoplamientos manuales</a></li>
-    <li><a href="#cuellos">Cuellos de botella</a></li>
-    <li><a href="#veredicto">Veredicto y orden de modernización</a></li>
-    <li><a href="#anexo">Anexo: mapa de archivos y verificación</a></li>
+    <li><a href="#como-usar-este-documento">Cómo usar este documento</a></li>
+    <li><a href="#resumen">Resumen</a></li>
+    <li><a href="#tecnologias-lenguajes-y-librerias">Tecnologías, lenguajes y librerías</a></li>
+    <li><a href="#apis-externas">APIs externas</a></li>
+    <li><a href="#arquitectura-interna">Arquitectura interna</a></li>
+    <li><a href="#pipeline-paso-a-paso">Pipeline paso a paso</a></li>
+    <li><a href="#contratos-de-datos">Contratos de datos</a></li>
+    <li><a href="#dependencias-criticas-y-acoplamientos-manuales">Dependencias críticas y acoplamientos manuales</a></li>
+    <li><a href="#cuellos-de-botella">Cuellos de botella</a></li>
+    <li><a href="#veredicto-y-orden-de-modernizacion">Veredicto y orden de modernización</a></li>
+    <li><a href="#anexo-mapa-de-archivos-y-verificacion">Anexo: mapa de archivos y verificación</a></li>
   </ol>
 </nav>
 
+<section id="como-usar-este-documento">
+  <h2>Cómo usar este documento</h2>
+  <ul>
+    <li>Describe un repositorio completo sin adjuntar el código: todo lo que no esté aquí no se puede deducir de otro lado. Si falta un dato, conviene decirlo en vez de suponerlo.</li>
+    <li>Las cifras fueron medidas sobre el repositorio en la fecha indicada (líneas, archivos, pruebas, tiempos). Las versiones de librerías son las declaradas en <code>pyproject.toml</code> y fijadas en <code>uv.lock</code>.</li>
+    <li>Los nombres de archivo son reales y relativos a la raíz del repositorio. Los nombres de función y módulo también.</li>
+    <li>No contiene secretos, claves ni credenciales.</li>
+    <li>Si se propone un cambio de arquitectura, conviene contrastarlo con la sección 9: hay decisiones que el autor no quiere tocar.</li>
+  </ul>
+</section>
 <section id="resumen">
-  <h2><span class="num">1</span>Resumen en una pantalla</h2>
-  <p class="bajada">Qué es el motor, qué recibe y qué entrega, sin entrar todavía en el detalle.</p>
+  <h2><span class="num">1</span>Resumen</h2>
+  <p>El repositorio es <strong>un solo programa Python</strong> que convierte un ejercicio de Matemática, Física o Ingeniería en un video vertical 9:16 para TikTok, Reels y Shorts. Sirve a <strong>dos públicos</strong>: enseñanza media (1° a 4° medio) y universidad de ingeniería (1° a 4° año de Ing. Civil Industrial, Civil Eléctrica y en Obras Civiles). No usa web, base de datos ni servicios propios: todo el estado vive en archivos (<code>guiones/</code>, <code>salida/</code>, <code>mis_ajustes/</code>).</p>
 
-<pre class="flujo"><span class="c">// dos entradas, una sola salida</span>
+  <p>Hay tres entradas y una sola salida:</p>
+
+<pre class="flujo">tema o nivel vacío ──IA (ideas)──┐
 enunciado (texto / foto / PDF) ──IA──┐
-                                     ├─► <span class="k">guion.yaml</span> (pydantic) ─► escena Manim + voz ─► mp4 intermedio
-guion.yaml escrito a mano ───────────┘                                  │
-                                                                        ├─► <span class="k">linea_de_tiempo.json</span> (contrato)
-                                                                        ├─► ASS/SRT ─► FFmpeg ─► <span class="k">mp4 final</span>
-                                                                        └─► portada + kit de publicación (IA)</pre>
-
-  <p>El repositorio es <strong>un solo programa Python</strong> que convierte un ejercicio de Matemática, Física o Ingeniería en un video vertical 9:16 para TikTok, Reels y Shorts. No depende de la web ni de una base de datos: todo el estado vive en archivos (<code>guiones/</code>, <code>salida/</code>, <code>mis_ajustes/</code>).</p>
+                                     ├─► guion.yaml (pydantic) ─► QC (aprobar, estilo) ─► cola
+guion.yaml escrito a mano ───────────┘                                                   │
+                                     escena Manim + voz ◄───────────────────────────────┘
+                                        ├─► linea_de_tiempo.json (contrato)
+                                        ├─► ASS/SRT ─► FFmpeg ─► mp4 final + portada.jpg
+                                        └─► kit de publicación (metadatos del guion o IA)</pre>
 
   <div class="tabla-envoltura">
     <table>
-      <thead><tr><th>Dimensión</th><th>Estado actual</th></tr></thead>
+      <thead><tr><th>Dimensión</th><th>Estado</th></tr></thead>
       <tbody>
-        <tr><td><b>Lenguaje</b></td><td>Python 3.12 en tu Mac (<code>.python-version</code>); el CI usa 3.11</td></tr>
-        <tr><td><b>Tamaño</b></td><td>22.521 líneas en <code>src/</code> (16.451 en el paquete base) + 7.508 en <code>pruebas/</code></td></tr>
-        <tr><td><b>Pruebas</b></td><td>59 archivos, 664 pruebas con <code>unittest</code>, ~24 s; CI renderiza además un ejemplo real</td></tr>
-        <tr><td><b>Interfaces</b></td><td>CLI <code>./tpi</code> (19 comandos) + panel local NiceGUI en <code>127.0.0.1:8765</code></td></tr>
-        <tr><td><b>Salida</b></td><td>MP4 1080×1920 (o 540×960 borrador), SRT, ASS, portada PNG, miniatura JPG y textos de publicación</td></tr>
+        <tr><td>Lenguaje</td><td>Python 3.12 (<code>.python-version</code>); CI también en 3.12</td></tr>
+        <tr><td>Tamaño</td><td>28.773 líneas en <code>src/</code> (20.809 en el motor y 7.964 en el panel) + 11.059 en <code>pruebas/</code></td></tr>
+        <tr><td>Pruebas</td><td>83 archivos, 885 pruebas con <code>unittest</code> (~45 s en CI); el CI además renderiza un video real</td></tr>
+        <tr><td>Interfaces</td><td>CLI <code>./tpi</code> (21 comandos) + panel local NiceGUI en <code>127.0.0.1:8765</code> (3 pestañas)</td></tr>
+        <tr><td>Salida</td><td>MP4 1080×1920 (o 540×960 en borrador), SRT, ASS, <code>portada.jpg</code>, portada del kit, miniatura y textos de publicación</td></tr>
+        <tr><td>Contenido</td><td>48 guiones YAML (40 propios + 8 ejemplos), 33 tipos de dibujo animado, 19 estilos visuales, 8 niveles en 2 públicos</td></tr>
       </tbody>
     </table>
   </div>
 
-  <div class="nota"><strong>Lectura rápida:</strong> el diseño está sano y bien separado. Lo que lo frena no es la arquitectura, sino el <em>entorno Mac atado a mano</em>, el <em>render secuencial</em> y la <em>falta de lockfile</em>.</div>
+  <p><strong>Lectura rápida:</strong> el diseño está sano y bien separado. Desde el análisis del 9 de noviembre se resolvieron el lockfile, las dependencias escondidas, los globales de estilo, el layout fijo en código, la falta de paralelismo y el caché sin poda. Lo que queda es el entorno Mac atado a mano, el CI que no prueba la voz de Microsoft ni el Gemini real, y el panel que repite banderas de la CLI.</p>
 </section>
-
-<section id="stack">
+<section id="tecnologias-lenguajes-y-librerias">
   <h2><span class="num">2</span>Tecnologías, lenguajes y librerías</h2>
-  <p class="bajada">Todo lo que hay que tener instalado para que un guion se vuelva video, con el archivo que lo declara.</p>
+  <h3>2.1 Base y empaquetado</h3>
 
-  <h3>2.1 Python y empaquetado</h3>
   <div class="tabla-envoltura">
     <table>
       <thead><tr><th>Pieza</th><th>Versión</th><th>Para qué</th><th>Definido en</th></tr></thead>
       <tbody>
-        <tr><td>Python</td><td>≥3.11 (local 3.12)</td><td>lenguaje único del motor</td><td><code>pyproject.toml</code>, <code>.python-version</code></td></tr>
-        <tr><td>setuptools</td><td>≥69</td><td>build backend, paquete <code>src/</code></td><td><code>pyproject.toml</code></td></tr>
+        <tr><td>Python</td><td>≥3.11 (se usa 3.12)</td><td>lenguaje único del motor</td><td><code>pyproject.toml</code>, <code>.python-version</code></td></tr>
+        <tr><td>setuptools</td><td>≥69</td><td>build backend, paquete en <code>src/</code></td><td><code>pyproject.toml</code></td></tr>
+        <tr><td>uv + <code>uv.lock</code></td><td>—</td><td>versiones exactas; el CI comprueba que el lock siga al día</td><td><code>uv.lock</code>, <code>.github/workflows/render.yml</code></td></tr>
         <tr><td>Entrada CLI</td><td>—</td><td><code>tpi = tpi_videos.cli:main</code></td><td><code>pyproject.toml</code></td></tr>
         <tr><td>Lanzador</td><td>bash</td><td>añade LaTeX y <code>ffmpeg-full</code> al PATH, fija <code>TPI_RAIZ</code></td><td><code>tpi</code></td></tr>
-        <tr><td>Ruff</td><td>line-length 110</td><td>lint (E, F, I, B, UP)</td><td><code>pyproject.toml</code></td></tr>
+        <tr><td>Ruff</td><td>line-length 110</td><td>lint (E, F, I, B, UP) y formato</td><td><code>pyproject.toml</code></td></tr>
       </tbody>
     </table>
   </div>
 
   <h3>2.2 Librerías por rol</h3>
+
   <div class="tabla-envoltura">
     <table>
       <thead><tr><th>Rol</th><th>Librería</th><th>Versión</th><th>Dónde se usa</th></tr></thead>
       <tbody>
         <tr><td>Animación</td><td>Manim</td><td><code>&gt;=0.22,&lt;0.23</code></td><td><code>escena.py</code>, <code>dibujos.py</code>, <code>dibujos_3d.py</code></td></tr>
         <tr><td>Voz sincronizada</td><td>manim-voiceover <code>[gtts]</code></td><td>0.4.x</td><td><code>escena.py</code> (hablar por bloque), <code>voces.py</code></td></tr>
-        <tr><td>Voz neural</td><td>edge-tts</td><td><code>&gt;=7.3.1,&lt;8</code></td><td><code>voces.EdgeTTSService</code></td></tr>
-        <tr><td>IA</td><td>google-genai</td><td><code>&gt;=2.30.1,&lt;3</code></td><td><code>ia.py</code>, <code>redactor.py</code>, <code>publicar.py</code></td></tr>
+        <tr><td>Voz neural</td><td>edge-tts</td><td><code>&gt;=7.3.1,&lt;8</code></td><td><code>voces.EdgeTTSService</code> (envuelto por <code>ServicioConPausas</code>)</td></tr>
+        <tr><td>IA</td><td>google-genai</td><td><code>&gt;=2.30.1,&lt;3</code></td><td><code>ia.py</code>, <code>redactor.py</code>, <code>ideas.py</code>, <code>publicar.py</code></td></tr>
         <tr><td>Panel</td><td>NiceGUI</td><td><code>&gt;=3.18,&lt;4</code></td><td><code>panel/</code></td></tr>
         <tr><td>Modelos de datos</td><td>pydantic</td><td><code>&gt;=2.10,&lt;3</code></td><td><code>guion.py</code>, <code>config.py</code>, <code>temas.py</code>, <code>publicar.py</code></td></tr>
-        <tr><td>Configuración</td><td>PyYAML + python-dotenv</td><td>≥6.0 / ≥1.0</td><td><code>guion.py</code>, <code>config.py</code>, <code>ia.py</code></td></tr>
+        <tr><td>Configuración</td><td>PyYAML + python-dotenv</td><td>≥6.0 / ≥1.0</td><td><code>guion.py</code>, <code>config.py</code>, <code>malla.py</code>, <code>ia.py</code></td></tr>
         <tr><td>Consola</td><td>Rich</td><td>≥13</td><td><code>cli.py</code></td></tr>
-        <tr><td>Matemática</td><td>SciPy</td><td>≥1.13</td><td><code>simulacion.py</code> (oscilador, péndulo doble)</td></tr>
-        <tr><td>Matemática simbólica</td><td>SymPy</td><td><code>1.12–1.x</code></td><td><code>visuales.py</code> (raíces, vértice)</td></tr>
-        <tr><td>Imágenes</td><td>Pillow</td><td><code>&lt;13</code> (pin forzado)</td><td>PNG del caché 3D; Manim 0.22 choca con Pillow 13</td></tr>
+        <tr><td>Matemática</td><td>SciPy, numpy</td><td>≥1.13 / ≥1.26 (declaradas)</td><td><code>simulacion.py</code> (oscilador, péndulo doble, calor, flujo)</td></tr>
+        <tr><td>Matemática simbólica</td><td>SymPy</td><td>1.12–1.x</td><td><code>visuales.py</code> (raíces, vértice, tangente, área)</td></tr>
+        <tr><td>Video</td><td>PyAV (<code>av</code>)</td><td>≥11 (declarada)</td><td><code>postproduccion.duracion()</code>, <code>extraer_cuadro()</code> (portadas)</td></tr>
+        <tr><td>Imágenes</td><td>Pillow</td><td><code>&lt;13</code> (pin forzado)</td><td>PNG del caché 3D, portadas; Manim 0.22 choca con Pillow 13</td></tr>
+        <tr><td>Audio</td><td>pydub</td><td>transitiva (manim-voiceover)</td><td><code>voces.ServicioConPausas</code> (une trozos con silencio)</td></tr>
         <tr><td>Transcripción (opcional)</td><td>openai-whisper</td><td>—</td><td><code>whisper_sync.py</code>; arrastra PyTorch (~1 GB)</td></tr>
-        <tr><td>Video (no declarada)</td><td>PyAV (<code>av</code>)</td><td>transitiva</td><td><code>postproduccion.duracion()</code> y <code>resolucion()</code></td></tr>
-        <tr><td>Base de Manim (no declaradas)</td><td>numpy, matplotlib, cairo, pango</td><td>transitivas</td><td>render, tipografías, SVG</td></tr>
       </tbody>
     </table>
   </div>
 
   <h3>2.3 Requisitos del sistema (fuera de pip)</h3>
+
   <div class="tabla-envoltura">
     <table>
-      <thead><tr><th>Requisito</th><th>Para qué</th><th>Quién lo instala / detecta</th></tr></thead>
+      <thead><tr><th>Requisito</th><th>Para qué</th><th>Quién lo instala o detecta</th></tr></thead>
       <tbody>
         <tr><td><code>ffmpeg-full</code> con libass</td><td>quemar subtítulos y normalizar volumen</td><td><code>scripts/instalar_mac.sh</code>, <code>entorno.ffmpeg_con_libass()</code></td></tr>
-        <tr><td>BasicTeX + <code>standalone</code>, <code>preview</code>, <code>dvisvgm</code></td><td>fórmulas LaTeX de Manim</td><td>instalador + <code>doctor._probar_latex()</code></td></tr>
-        <tr><td><code>cairo</code>, <code>pkg-config</code></td><td>dibujo vectorial de Manim</td><td><code>brew</code> en el instalador</td></tr>
+        <tr><td>BasicTeX + <code>standalone</code>, <code>preview</code>, <code>dvisvgm</code></td><td>fórmulas LaTeX de Manim</td><td>instalador + <code>doctor._probar_latex()</code>; <code>entorno.latex_disponible()</code></td></tr>
+        <tr><td><code>cairo</code>, <code>pango</code>, <code>pkg-config</code></td><td>dibujo vectorial de Manim</td><td><code>brew</code> en el instalador</td></tr>
         <tr><td><code>sox</code></td><td>utilidades de audio de manim-voiceover</td><td><code>brew</code> en el instalador</td></tr>
-        <tr><td><code>uv</code></td><td>crear el entorno e instalar el paquete</td><td><code>brew</code> en el instalador</td></tr>
+        <tr><td><code>uv</code></td><td>crear el entorno virtual e instalar desde el lock</td><td><code>brew</code> en el instalador</td></tr>
         <tr><td>13 fuentes TTF</td><td>títulos, cuerpo y subtítulos (Bangers, Comic Neue, Montserrat…)</td><td><code>assets/fuentes/</code>, registradas por <code>tipografia.py</code></td></tr>
-        <tr><td>63 emojis 3D</td><td>stikers de la escena</td><td><code>assets/emojis/</code></td></tr>
+        <tr><td>62 emojis 3D</td><td>stickers de la escena</td><td><code>assets/emojis/</code></td></tr>
         <tr><td>macOS <code>osascript</code> / <code>xattr</code></td><td>ícono del panel en el Escritorio</td><td><code>icono.py</code></td></tr>
       </tbody>
     </table>
   </div>
 </section>
-
-<section id="apis">
+<section id="apis-externas">
   <h2><span class="num">3</span>APIs externas</h2>
-  <p class="bajada">Cinco servicios fuera del repo: dos por internet, tres por línea de comandos.</p>
   <div class="tabla-envoltura">
     <table>
       <thead><tr><th>API</th><th>Uso concreto</th><th>Archivo</th><th>Riesgo</th></tr></thead>
       <tbody>
-        <tr>
-          <td>Gemini (Google AI Studio)</td>
-          <td>redactar guion, segunda revisión, ideas del lote, textos de publicación</td>
-          <td><code>ia.py</code>, <code>redactor.py</code>, <code>publicar.py</code>, <code>ideas.py</code></td>
-          <td><span class="chip medio">MEDIO</span> nombres de modelo rotan; hay cadena de respaldo y reintentos 429/5xx</td>
-        </tr>
-        <tr>
-          <td>edge-tts (Read Aloud de Edge)</td>
-          <td>voz <code>es-CL-LorenzoNeural</code> / <code>CatalinaNeural</code> con marcas por palabra</td>
-          <td><code>voces.py</code></td>
-          <td><span class="chip alto">ALTO</span> cliente no oficial: si Microsoft cambia el endpoint, la voz se cae</td>
-        </tr>
-        <tr>
-          <td>HTTP local NiceGUI</td>
-          <td>panel, estáticos de fuentes/emojis/marca, medios de <code>salida/</code></td>
-          <td><code>panel/app.py</code></td>
-          <td><span class="chip bajo">BAJO</span> solo <code>127.0.0.1</code></td>
-        </tr>
-        <tr>
-          <td>FFmpeg (CLI)</td>
-          <td>quemar ASS, <code>loudnorm</code> a −14 LUFS, H.264/AAC, faststart, extraer cuadros</td>
-          <td><code>postproduccion.py</code></td>
-          <td><span class="chip medio">MEDIO</span> exige build con libass</td>
-        </tr>
-        <tr>
-          <td>LaTeX + dvisvgm (CLI)</td>
-          <td>compilar cada fórmula de la escena</td>
-          <td><code>tex.py</code>, <code>entorno.py</code></td>
-          <td><span class="chip medio">MEDIO</span> ruta MacTeX/BasicTeX inyectada a mano</td>
-        </tr>
-        <tr>
-          <td>Whisper (local, opcional)</td>
-          <td>tiempos de subtítulos cuando la voz no trae marcas</td>
-          <td><code>whisper_sync.py</code></td>
-          <td><span class="chip bajo">BAJO</span> pesa ~1 GB y se carga solo si hace falta</td>
-        </tr>
+        <tr><td>Gemini (Google AI Studio)</td><td>ideas, redactar guion, segunda revisión, completar niveles, textos de publicación</td><td><code>ia.py</code>, <code>redactor.py</code>, <code>ideas.py</code>, <code>completar.py</code>, <code>publicar.py</code></td><td><span class="chip medio">MEDIO</span> los nombres de modelo rotan; hay cadena de respaldo y reintentos ante 429/5xx. En CI se usa un Gemini falso (<code>scripts/gemini_falso.py</code>, <code>pruebas/ia_falsa.py</code>)</td></tr>
+        <tr><td>edge-tts (Read Aloud de Edge)</td><td>voz <code>es-CL-LorenzoNeural</code> / <code>es-CL-CatalinaNeural</code> con marcas por palabra</td><td><code>voces.py</code></td><td><span class="chip alto">ALTO</span> cliente no oficial; si Microsoft cambia el endpoint, la voz se cae (respaldo: <code>gtts</code> o <code>silencio</code>)</td></tr>
+        <tr><td>HTTP local NiceGUI</td><td>panel, estáticos de fuentes/emojis/marca, medios de <code>salida/</code></td><td><code>panel/app.py</code></td><td><span class="chip bajo">BAJO</span> solo escucha en <code>127.0.0.1</code></td></tr>
+        <tr><td>FFmpeg (CLI)</td><td>quemar ASS, <code>loudnorm</code> a −14 LUFS, H.264/AAC, faststart</td><td><code>postproduccion.py</code></td><td><span class="chip medio">MEDIO</span> exige una build con libass</td></tr>
+        <tr><td>LaTeX + dvisvgm (CLI)</td><td>compilar cada fórmula de la escena</td><td><code>tex.py</code>, <code>entorno.py</code></td><td><span class="chip medio">MEDIO</span> la ruta de MacTeX/BasicTeX se inyecta a mano</td></tr>
+        <tr><td>Whisper (local, opcional)</td><td>tiempos de subtítulos cuando la voz no trae marcas</td><td><code>whisper_sync.py</code></td><td><span class="chip bajo">BAJO</span> pesa ~1 GB y se carga solo si hace falta</td></tr>
       </tbody>
     </table>
   </div>
-</section>
 
-<section id="arquitectura">
+  <p>El modelo de IA por defecto se define en la constante <code>ia.MODELO_POR_DEFECTO</code>; no conviene fijarlo en la documentación porque cambia con frecuencia.</p>
+</section>
+<section id="arquitectura-interna">
   <h2><span class="num">4</span>Arquitectura interna</h2>
-  <p class="bajada">Siete capas, cada una con un contrato claro con la siguiente. La UI nunca importa el motor: lo lanza como subproceso.</p>
+  <p>Ocho capas, cada una con un contrato claro hacia la siguiente. La UI nunca importa el render: lo lanza como subproceso.</p>
 
   <div class="tabla-envoltura">
     <table>
-      <thead><tr><th>Capa</th><th>Módulos (líneas)</th><th>Responsabilidad</th></tr></thead>
+      <thead><tr><th>Capa</th><th>Módulos (líneas aproximadas)</th><th>Responsabilidad</th></tr></thead>
       <tbody>
-        <tr>
-          <td><b>Entrada y dominio</b></td>
-          <td><code>guion.py</code> (1.325), <code>ideas.py</code> (488), <code>formatos.py</code>, <code>moldes.py</code>, <code>rodaje.py</code>, <code>revision.py</code> (408)</td>
-          <td>esquema pydantic del guion, normalización, reglas de formato, recetas de rodaje, validación y piso de lectura (2,5 s)</td>
-        </tr>
-        <tr>
-          <td><b>IA</b></td>
-          <td><code>ia.py</code>, <code>redactor.py</code> (1.193), <code>plantillas/ia/*.md</code></td>
-          <td>prompt de sistema, JSON estructurado, hasta 2 rondas de corrección, comprobación de LaTeX</td>
-        </tr>
-        <tr>
-          <td><b>Dibujo y análisis</b></td>
-          <td><code>visuales.py</code> (1.634), <code>dibujos.py</code> (2.383), <code>dibujos_3d.py</code> (521), <code>simulacion.py</code>, <code>componentes.py</code> (735)</td>
-          <td>modelos matemáticos por tipo de visual, 28 dibujos Manim, caché PNG para 3D, primitivas de texto y cajas</td>
-        </tr>
-        <tr>
-          <td><b>Escena</b></td>
-          <td><code>escena.py</code> (1.540), <code>voces.py</code>, <code>subtitulos.py</code>, <code>temas.py</code>, <code>tipografia.py</code></td>
-          <td>línea de tiempo, cámara, voz por bloque, generación de ASS/SRT</td>
-        </tr>
-        <tr>
-          <td><b>Render y salida</b></td>
-          <td><code>render.py</code> (301), <code>postproduccion.py</code>, <code>publicar.py</code>, <code>vista_previa.py</code>, <code>ganchos.py</code>, <code>icono.py</code></td>
-          <td>Manim → mp4, quema de subtítulos, kit de publicación, laboratorio de ganchos, 3 cuadros por estilo</td>
-        </tr>
-        <tr>
-          <td><b>Lote y estado</b></td>
-          <td><code>lote.py</code> (481), <code>cola.py</code> (469)</td>
-          <td>producción en serie, reintentos con espera creciente, cola JSON con candado por PID e hitos reanudables</td>
-        </tr>
-        <tr>
-          <td><b>UI local</b></td>
-          <td><code>panel/</code>: <code>app.py</code>, <code>tareas.py</code>, <code>sugerencia.py</code>, 7 páginas</td>
-          <td>pantalla que lanza <code>python -m tpi_videos … --progreso-json</code> y lee eventos; un trabajo a la vez</td>
-        </tr>
+        <tr><td>Entrada y dominio</td><td><code>guion.py</code> (1.771), <code>ideas.py</code> (489), <code>formatos.py</code>, <code>moldes.py</code>, <code>rodaje.py</code>, <code>revision.py</code> (463), <code>niveles.py</code>, <code>malla.py</code></td><td>esquema pydantic del guion, normalización, reglas de formato, recetas de rodaje, validación, piso de lectura (2,5 s), los dos públicos y su malla</td></tr>
+        <tr><td>IA</td><td><code>ia.py</code>, <code>redactor.py</code> (1.628), <code>completar.py</code>, <code>plantillas/ia/*.md</code></td><td>prompt de sistema, JSON estructurado, hasta 2 rondas de corrección, comprobación de LaTeX, pista de la malla en niveles universitarios</td></tr>
+        <tr><td>Dibujo y análisis</td><td><code>visuales.py</code> (1.991), <code>dibujos.py</code> (3.157), <code>dibujos_3d.py</code> (1.140), <code>simulacion.py</code> (396), <code>componentes.py</code> (845)</td><td>modelos por tipo de visual, 33 dibujos Manim, 3D en órbita con despiece y caché PNG, simulaciones con SciPy, primitivas de texto y cajas</td></tr>
+        <tr><td>Escena</td><td><code>escena.py</code> (1.694), <code>voces.py</code>, <code>pausas.py</code>, <code>subtitulos.py</code>, <code>temas.py</code> (372), <code>tipografia.py</code></td><td>línea de tiempo, cámara, voz por bloque con pausas, ASS/SRT, la regla del estilo sugerido</td></tr>
+        <tr><td>Render y salida</td><td><code>render.py</code> (351), <code>postproduccion.py</code>, <code>publicar.py</code>, <code>vista_previa.py</code>, <code>ganchos.py</code>, <code>icono.py</code></td><td>Manim a mp4, <code>portada.jpg</code>, quema de subtítulos, kit de publicación, laboratorio de ganchos, 3 cuadros por estilo</td></tr>
+        <tr><td>Lote y estado</td><td><code>lote.py</code> (636), <code>cola.py</code> (534), <code>mantenimiento.py</code></td><td>producción en serie o en paralelo (<code>--workers</code>), reintentos con espera creciente, cola JSON con candado <code>O_EXCL</code> e hitos, poda del caché</td></tr>
+        <tr><td>Supervisión</td><td><code>panel/qc.py</code> (284), <code>panel/para_hoy.py</code> (197), <code>panel/supervision.py</code></td><td>aprobaciones con huella del archivo (<code>salida/.cola/qc.json</code>), estilo de cada guion, «Para hoy», columnas de la cola</td></tr>
+        <tr><td>UI local</td><td><code>panel/paginas/tablero.py</code> (1.283), <code>crear.py</code>, <code>un_video.py</code>, <code>estilos.py</code>, <code>ajustes.py</code>, <code>videos.py</code>, <code>tareas.py</code></td><td>lanza <code>python -m tpi_videos … --progreso-json</code> y lee eventos; un trabajo a la vez</td></tr>
       </tbody>
     </table>
   </div>
 
-  <div class="nota"><strong>Frontera clave:</strong> el panel no calcula nada del video. Construye argumentos de CLI, abre un subproceso y refleja el avance que llega por líneas JSON. Eso lo hace simple y reanudable, pero obliga a mantener el protocolo de eventos en dos lados.</div>
+  <p><strong>Frontera clave:</strong> el panel no calcula nada del video. Construye argumentos de CLI, abre un subproceso y refleja el avance que llega por líneas JSON. Las decisiones que sí toma el panel (aprobar, elegir el estilo) escriben archivos que la CLI lee: <code>salida/.cola/qc.json</code> y la línea <code>tema:</code> del guion.</p>
+
+  <p><strong>Una sola regla del estilo:</strong> <code>temas.sugerir_tema</code> decide el estilo de un video que nadie eligió (1° molde, 2° dibujos —circuito → Plano azul, piezas industriales → Plano nocturno—, 3° si corrige un error → Cuaderno con sello, 4° materia, 5° <code>marca.yaml</code>). <code>resolver_tema</code> aplica la cascada <code>--tema</code> &gt; <code>tema:</code> del guion &gt; sugerido. En el panel se elige en un solo lugar, la ficha del guion en QC (<code>qc.cambiar_estilo</code> → <code>guion.fijar_tema</code>).</p>
 </section>
-
-<section id="pipeline">
+<section id="pipeline-paso-a-paso">
   <h2><span class="num">5</span>Pipeline paso a paso</h2>
-  <p class="bajada">Entrada → procesamiento → salida, con las tres puertas de entrada que existen hoy.</p>
-
   <h3>5.1 Un video desde un guion ya escrito</h3>
+
   <ol>
-    <li><code>tpi crear guion.yaml</code> carga y valida el guion: materia, molde, velocidad y visuales se normalizan (<code>guion.cargar_guion</code>).</li>
-    <li>Se resuelve estilo y voz con precedencia <em>flag &gt; guion &gt; marca.yaml</em> (<code>render.crear_video</code>).</li>
-    <li>Manim arranca con <code>tempconfig</code>: 540×960/15 fps en borrador, 1080×1920/30 fps en final, con <code>disable_caching=True</code> porque manim-voiceover lo exige.</li>
+    <li><code>tpi crear guion.yaml</code> carga y valida el guion: materia, categoría, molde, nivel, carrera, velocidad y visuales se normalizan (<code>guion.cargar_guion</code>).</li>
+    <li>Se resuelve el estilo (<code>temas.resolver_tema</code>) y la voz (bandera &gt; guion &gt; <code>marca.yaml</code>).</li>
+    <li>Manim arranca con <code>tempconfig</code>: 540×960 a 15 fps en borrador, 1080×1920 a 30 fps en final, siempre con <code>disable_caching=True</code> porque manim-voiceover lo exige.</li>
     <li><code>VideoEjercicio.construct</code> arma la escena en orden fijo: fondo → gancho → enunciado → datos → pasos → resultado → verificación → reto → cierre.</li>
-    <li>Cada bloque abre <code>hablar(texto)</code>: TTS con caché en <code>manim/voiceovers/</code>, palabras y tiempos al manifiesto, y el piso de lectura de 2,5 s para cada fórmula.</li>
-    <li>Manim deja el <b>mp4 intermedio</b> y se escribe <code>linea_de_tiempo.json</code> (bloques, palabras, silencio de lectura).</li>
-    <li>Subtítulos: la fuente de tiempos por bloque es <em>marcas exactas de edge</em> → <em>Whisper</em> → <em>estimado</em>; se agrupan y salen <code>.ass</code> y <code>.srt</code>.</li>
-    <li>FFmpeg quema el ASS con <code>fontsdir</code> relativo, normaliza a −14 LUFS, codifica H.264 CRF 18 y deja <code>+faststart</code>.</li>
-    <li>Se genera portada, miniatura y kit de publicación (plantilla o Gemini, con aviso de contenido IA).</li>
+    <li>Cada bloque abre <code>hablar(texto)</code>: TTS con caché en <code>manim/voiceovers/</code>; las pausas <code>&lt;break&gt;</code> se resuelven con silencio real (<code>ServicioConPausas</code>); palabras y tiempos van al manifiesto, con el piso de lectura de 2,5 s para cada fórmula.</li>
+    <li>Manim deja el <strong>mp4 intermedio</strong> y se escribe <code>linea_de_tiempo.json</code> (bloques, palabras, silencio de lectura, <code>tema_clave</code>).</li>
+    <li>Subtítulos: la fuente de tiempos por bloque es <strong>marcas exactas de edge → Whisper → estimado</strong>; salen <code>.ass</code> y <code>.srt</code>.</li>
+    <li>FFmpeg quema el ASS, normaliza a −14 LUFS, codifica H.264 CRF 18 y deja <code>+faststart</code>.</li>
+    <li>Se extrae **<code>portada.jpg</code>** del video sin subtítulos, al final del gancho, acotado entre los segundos 2 y 4.</li>
+    <li>Con <code>tpi publicar</code> (o en el lote) se arma el kit: si el guion trae <code>metadatos:</code> se usan tal cual; si no, Gemini o plantilla.</li>
   </ol>
 
-  <h3>5.2 Un video desde un enunciado (con IA)</h3>
-  <pre class="flujo"><span class="c">// tpi redactar / tpi producir / panel «Crear»</span>
-enunciado ──► Gemini (GuionIA) ──► limpieza (emoji, LaTeX, visuales)
-          ──► Guion válido ──► revisión IA + reglas
-          ──► hasta 2 rondas de corrección ──► guion.yaml
-          ──► pipeline 5.1 ──► kit</pre>
-  <p>La segunda revisión y las rondas de corrección son lo que evita que un guion con LaTeX roto o con un visual imposible llegue al render.</p>
+  <p>Medida real en CI (Ubuntu): un borrador de 56 s con voz edge-tts tardó 1 min 9 s de proceso.</p>
 
-  <h3>5.3 En serie y desde el panel</h3>
+  <h3>5.2 Un video desde un enunciado o un tema (con IA)</h3>
+
+<pre class="flujo">tpi redactar / tpi producir / panel «Crear a mano»
+enunciado ──► Gemini (GuionIA) ──► limpieza (emoji, LaTeX, visuales, pausas)
+          ──► Guion válido ──► revisión IA + reglas
+          ──► hasta 2 rondas de corrección ──► guion.yaml (con metadatos)
+tpi completar-niveles / «Pedírselo a la IA»
+hueco nivel × materia ──► ramo de la malla (+ carrera) ──► 3 ideas ──► redactar la primera ──► guion.yaml</pre>
+
+  <p>En niveles universitarios, <code>redactar</code> agrega la pista «PÚBLICO UNIVERSITARIO» con los ramos de ese año, materia y carrera, para que el ejercicio no sea de media.</p>
+
+  <h3>5.3 Supervisión, cola y panel</h3>
+
   <ul>
-    <li><b>Lote:</b> <code>producir_lote</code> produce una idea a la vez, reintenta si el error es transitorio (cuota de IA) y guarda hitos en <code>salida/.cola/trabajos.json</code> para reanudar sin repetir lo hecho.</li>
-    <li><b>Panel:</b> <code>TAREAS.lanzar</code> abre un subproceso con <code>--progreso-json</code>, parsea cada línea y actualiza la tarjeta; si cierras la pestaña el video sigue; al abrir el panel se retoma la cola pendiente.</li>
-    <li><b>Laboratorio de ganchos:</b> renderiza solo cabecera + gancho (3–6 s) para elegir el primer segundo antes del video completo. Hoy <em>no</em> incluye el dibujo del gancho: la variante se arma sin <code>visual</code>.</li>
+    <li><strong>«Para hoy»</strong> (<code>panel/para_hoy.py</code>): agrupa los guiones por revisar por nivel y materia y propone uno por materia del mismo nivel. Ordena por: no repetir carrera ni molde del último video, traer metadatos, tener vista previa al día y antigüedad.</li>
+    <li><strong>QC</strong> (<code>panel/qc.py</code>): aprobar llama a <code>cli.encolar_guion</code> (equivale a <code>tpi lote &lt;guion&gt; --solo-encolar</code>) y guarda la decisión con la huella del archivo; editar el guion lo devuelve a «por revisar», cambiar el estilo no.</li>
+    <li><strong>Lote:</strong> <code>producir_lote</code> produce de a uno (o <code>--workers N</code> a la vez), reintenta si el error es transitorio y guarda hitos en <code>salida/.cola/trabajos.json</code> para reanudar sin repetir lo hecho.</li>
+    <li><strong>Panel:</strong> <code>TAREAS.lanzar</code> abre un subproceso con <code>--progreso-json</code>, parsea cada línea y actualiza la pantalla; un trabajo a la vez. Vista Previa Rápida es <code>tpi crear &lt;guion&gt; --borrador</code> dentro de la tarjeta.</li>
+    <li><strong>Laboratorio de ganchos:</strong> renderiza solo cabecera + gancho (3–6 s), con su dibujo, para elegir el primer segundo.</li>
   </ul>
 
   <h3>5.4 Dentro de la escena</h3>
+
   <div class="tabla-envoltura">
     <table>
       <thead><tr><th>Bloque</th><th>Qué aporta</th><th>Cámara / dibujo</th></tr></thead>
       <tbody>
-        <tr><td>Gancho</td><td>pregunta grande, destacados por voz, emoji o fórmula</td><td>plano entero; si hay visual, la banda baja hasta el subtítulo</td></tr>
+        <tr><td>Gancho</td><td>pregunta grande, destacados por voz, emoji, fórmula o dibujo</td><td>plano entero; si hay visual, la banda baja hasta el subtítulo</td></tr>
         <tr><td>Enunciado</td><td>título y datos del problema</td><td>sin dibujo</td></tr>
-        <tr><td>Pasos</td><td>pila o ancla de fórmulas, error típico tachado, nota y emoji</td><td>golpes de cámara; visual del paso en la banda</td></tr>
-        <tr><td>Resultado</td><td>fórmula final con su caja y «explica»</td><td>primer plano controlado</td></tr>
+        <tr><td>Pasos</td><td>pila o ancla de fórmulas, error típico tachado, halo, cambio resaltado, nota y emoji</td><td>golpes de cámara según <code>camara:</code>; visual del paso en la banda (tangente, área, 3D en órbita, simulaciones)</td></tr>
+        <tr><td>Resultado</td><td>fórmula final con su caja, «explica» y destello opcional</td><td>primer plano controlado</td></tr>
         <tr><td>Verificación / reto / cierre</td><td>comprobación, desafío al espectador y marca</td><td>limpieza de tablero</td></tr>
       </tbody>
     </table>
   </div>
-</section>
 
-<section id="contratos">
+  <p>Las zonas del encuadre (<code>y_cabecera</code>, <code>y_zona_enunciado</code>, <code>y_zona_pasos</code>, <code>banda_subtitulo</code>, <code>aire_dibujo</code>) se pueden fijar en el <code>layout</code> del YAML del tema; si faltan, valen los de <code>componentes._ZONAS</code> (banda de subtítulo y aire del dibujo 0,28). El dibujo nunca debe invadir la banda de subtítulos.</p>
+</section>
+<section id="contratos-de-datos">
   <h2><span class="num">6</span>Contratos de datos</h2>
-  <p class="bajada">Si vas a tocar el motor, esto es lo que no se puede romper sin migrar archivos existentes.</p>
+  <p>Lo que no se puede romper sin migrar los archivos existentes.</p>
+
   <div class="tabla-envoltura">
     <table>
-      <thead><tr><th>Archivo / carpeta</th><th>Formato</th><th>Quién lo lee</th></tr></thead>
+      <thead><tr><th>Archivo o carpeta</th><th>Formato</th><th>Quién lo lee</th></tr></thead>
       <tbody>
-        <tr><td><code>guiones/*.yaml</code></td><td><code>Guion</code> pydantic: gancho, enunciado, datos, pasos, resultado, verificación, reto, cierre</td><td>CLI, redactor, panel</td></tr>
-        <tr><td><code>marca.yaml</code> + <code>mis_ajustes/marca.yaml</code></td><td><code>Marca</code>, fusión profunda (lo de <code>mis_ajustes</code> gana)</td><td>todo el motor</td></tr>
-        <tr><td><code>plantillas/temas/*.yaml</code> + <code>mis_ajustes/temas/</code></td><td><code>Tema</code>: colores, tipografía, <code>marco</code>, hoja, subtítulos, resplandor</td><td>escena, postproducción, panel</td></tr>
-        <tr><td><code>salida/&lt;slug&gt;/linea_de_tiempo.json</code></td><td>bloques con tiempos y palabras, <code>silencio_de_lectura</code>, guion, tema, intermedio</td><td>subtítulos, panel, kit</td></tr>
-        <tr><td><code>salida/_3d/&lt;figura&gt;_&lt;hash&gt;.png</code> + <code>.json</code></td><td>caché 3D; el hash incluye vista, ángulos, colores, papel, resolución y aspecto</td><td>dibujos 3D</td></tr>
-        <tr><td><code>salida/.cola/trabajos.json</code></td><td>lotes, videos, hitos y candado con PID</td><td>lote, panel</td></tr>
-        <tr><td><code>salida/&lt;slug&gt;/</code></td><td>mp4, srt, ass, <code>manim/</code>, <code>portada.png</code>, <code>miniatura.jpg</code>, <code>publicacion.json/md</code></td><td>publicación, panel</td></tr>
+        <tr><td><code>guiones/*.yaml</code></td><td><code>Guion</code> pydantic: gancho, enunciado, datos, pasos, resultado, verificación, reto, cierre; opcionales <code>molde</code>, <code>tema</code>, <code>camara</code>, <code>carrera</code>, <code>categoria</code> (calza con la materia), <code>gancho_variantes</code>, <code>metadatos</code></td><td>CLI, redactor, panel</td></tr>
+        <tr><td><code>marca.yaml</code> + <code>mis_ajustes/marca.yaml</code></td><td><code>Marca</code>, fusión profunda (lo de <code>mis_ajustes</code> gana); incluye <code>publico</code> (materia, nivel, dificultad)</td><td>todo el motor</td></tr>
+        <tr><td><code>plantillas/temas/*.yaml</code> + <code>mis_ajustes/temas/</code></td><td><code>Tema</code>: colores, tipografía, <code>marco</code>, <code>layout</code>, hoja, subtítulos, resplandor</td><td>escena, postproducción, panel</td></tr>
+        <tr><td><code>plantillas/malla.yaml</code> + <code>mis_ajustes/malla.yaml</code></td><td>nivel → materia → ramos (Ingeniería por carrera desde 3° año)</td><td>redactor, completar</td></tr>
+        <tr><td><code>salida/&lt;slug&gt;/linea_de_tiempo.json</code></td><td>bloques con tiempos y palabras, <code>silencio_de_lectura</code>, guion, <code>tema_clave</code>, materia, molde, intermedio</td><td>subtítulos, panel, kit</td></tr>
+        <tr><td><code>salida/&lt;slug&gt;/</code></td><td>mp4, srt, ass, <code>manim/</code>, <code>portada.jpg</code>, <code>portada.png</code> (kit), <code>miniatura.jpg</code> (panel), <code>publicacion.json/md</code></td><td>publicación, panel</td></tr>
+        <tr><td><code>salida/_3d/&lt;figura&gt;_&lt;hash&gt;.png</code> + <code>.json</code></td><td>caché 3D; el hash incluye vista, ángulos, colores, papel, resolución y aspecto</td><td>dibujos 3D, <code>tpi podar</code></td></tr>
+        <tr><td><code>salida/.cola/trabajos.json</code></td><td><code>version: 1</code>, lotes, videos, hitos y candado <code>lote.lock</code> (<code>O_EXCL</code>)</td><td>lote, panel</td></tr>
+        <tr><td><code>salida/.cola/qc.json</code></td><td>decisión por guion (estado, huella, fecha, <code>cola_id</code> o nota)</td><td>panel (QC, «Para hoy»)</td></tr>
         <tr><td><code>.env</code></td><td><code>GEMINI_API_KEY</code>, permisos 600</td><td><code>ia.py</code></td></tr>
       </tbody>
     </table>
   </div>
 </section>
-
-<section id="acoplamientos">
+<section id="dependencias-criticas-y-acoplamientos-manuales">
   <h2><span class="num">7</span>Dependencias críticas y acoplamientos manuales</h2>
-  <p class="bajada">Lo que hoy exige memoria humana, rutas fijas o edición de código para un cambio que debería ser de configuración.</p>
+  <h3>7.1 Lo que ya se resolvió (desde el 9-11-2026)</h3>
+
+  <div class="tabla-envoltura">
+    <table>
+      <thead><tr><th>Punto</th><th>Cómo quedó</th></tr></thead>
+      <tbody>
+        <tr><td>Sin lockfile</td><td><code>uv.lock</code> en el repo; el CI corta si <code>pyproject.toml</code> cambia sin regenerarlo</td></tr>
+        <tr><td><code>av</code> y <code>numpy</code> no declarados</td><td>declarados en <code>pyproject.toml</code></td></tr>
+        <tr><td>Estado global de estilo</td><td><code>componentes.usar_estilo</code> usa una variable de contexto (<code>ContextVar</code>) con su <code>restablecer_estilo</code></td></tr>
+        <tr><td>Zonas del layout en Python</td><td>el tema puede fijarlas en su <code>layout</code>; <code>_ZONAS</code> queda como valor por defecto</td></tr>
+        <tr><td>Gancho de laboratorio sin dibujo</td><td><code>ganchos.py</code> conserva el <code>visual</code> de cada variante</td></tr>
+        <tr><td>Cola sin versión y candado frágil</td><td><code>version: 1</code> y candado exclusivo con <code>O_EXCL</code> que se renueva al guardar</td></tr>
+        <tr><td>Caché 3D sin poda</td><td><code>tpi podar</code> limpia <code>salida/_3d</code> por antigüedad y cuota, y los audios de voz sin uso</td></tr>
+        <tr><td>CI distinto de la Mac (versión)</td><td>CI en Python 3.12, en Ubuntu, macOS y Windows</td></tr>
+        <tr><td>Estilo elegido en siete lugares</td><td>una regla (<code>sugerir_tema</code>) y un lugar (QC)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>7.2 Lo que sigue pendiente</h3>
+
   <div class="tabla-envoltura">
     <table>
       <thead><tr><th>Punto</th><th>Evidencia</th><th>Por qué duele</th><th>Severidad</th></tr></thead>
       <tbody>
-        <tr>
-          <td>Entorno Mac específico</td>
-          <td><code>tpi</code> inyecta <code>/Library/TeX/texbin</code> y <code>ffmpeg-full</code> al PATH; fija <code>TPI_RAIZ</code></td>
-          <td>Si cambia Homebrew (Intel/ARM) o BasicTeX, nada arranca. Los caminos están en dos lugares: lanzador y <code>doctor</code></td>
-          <td><span class="chip alto">ALTO</span></td>
-        </tr>
-        <tr>
-          <td>Sin lockfile</td>
-          <td>el instalador usa <code>uv pip install -e .</code></td>
-          <td>Dos Macs pueden resolver Manim/Pillow distinto; el pin de Pillow <code>&lt;13</code> ya es un parche por incompatibilidad</td>
-          <td><span class="chip alto">ALTO</span></td>
-        </tr>
-        <tr>
-          <td>Dependencia transitiva no declarada</td>
-          <td><code>import av</code> en <code>postproduccion.py</code></td>
-          <td>Un cambio de Manim puede sacar PyAV y romper la duración sin tocar este repo</td>
-          <td><span class="chip medio">MEDIO</span></td>
-        </tr>
-        <tr>
-          <td>Estado global de estilo</td>
-          <td><code>componentes.usar_estilo</code> fija tipografía y zonas en globales</td>
-          <td>Dos escenas en el mismo proceso se pisan; los tests dependen del orden; no hay tema inyectado</td>
-          <td><span class="chip medio">MEDIO</span></td>
-        </tr>
-        <tr>
-          <td>Zonas del layout en Python</td>
-          <td><code>_ZONAS</code> con <code>Y_CABECERA</code>, <code>Y_ZONA_*</code> y constantes de 0,15 / 0,28</td>
-          <td>El YAML del tema elige colores y letra, pero no puede mover nada: cada ajuste visual es un cambio de código</td>
-          <td><span class="chip medio">MEDIO</span></td>
-        </tr>
-        <tr>
-          <td>Panel duplica la CLI</td>
-          <td>las páginas arman argumentos a mano; protocolo <code>--progreso-json</code> y tabla <code>ETAPAS</code></td>
-          <td>Agregar una bandera obliga a tocar CLI, panel y sugerencia</td>
-          <td><span class="chip medio">MEDIO</span></td>
-        </tr>
-        <tr>
-          <td>Gancho de laboratorio sin dibujo</td>
-          <td><code>ganchos.idea_desde_guion</code> pierde el campo <code>visual</code></td>
-          <td>Lo que previsualizas no es exactamente lo que sale</td>
-          <td><span class="chip bajo">BAJO</span></td>
-        </tr>
-        <tr>
-          <td>Cola en JSON con candado PID</td>
-          <td><code>cola.py</code> reescribe todo el archivo en cada hito</td>
-          <td>Dos procesos pueden pisarse si el candado queda huérfano; no hay versión de esquema</td>
-          <td><span class="chip medio">MEDIO</span></td>
-        </tr>
-        <tr>
-          <td>CI distinto de tu Mac</td>
-          <td>Ubuntu 3.11, TeX de apt, <code>--voz silencio</code></td>
-          <td>No prueba edge-tts, ni macOS, ni <code>ffmpeg-full</code>: el verde no garantiza tu Mac</td>
-          <td><span class="chip alto">ALTO</span></td>
-        </tr>
-        <tr>
-          <td><code>salida/</code> dentro del repo</td>
-          <td>269 archivos en <code>_3d</code>, renders completos</td>
-          <td>Crece sin poda; hoy hubo que sacar 372 MB a la Papelera</td>
-          <td><span class="chip medio">MEDIO</span></td>
-        </tr>
+        <tr><td>Entorno Mac específico</td><td><code>tpi</code> inyecta <code>/Library/TeX/texbin</code> y <code>ffmpeg-full</code> al PATH; fija <code>TPI_RAIZ</code></td><td>si cambia Homebrew (Intel/ARM) o BasicTeX, nada arranca; los caminos están en dos lugares (lanzador y <code>doctor</code>)</td><td><span class="chip alto">ALTO</span></td></tr>
+        <tr><td>CI no prueba lo de Microsoft ni de Google</td><td>el render del CI usa <code>--voz silencio</code>; la IA es un Gemini falso; macOS y Windows corren sin TeX (11 pruebas se saltan)</td><td>el verde no garantiza la voz edge-tts ni la calidad de Gemini en la Mac</td><td><span class="chip alto">ALTO</span></td></tr>
+        <tr><td>Panel duplica la CLI</td><td>las páginas arman argumentos a mano; protocolo <code>--progreso-json</code> y tabla <code>ETAPAS</code></td><td>agregar una bandera obliga a tocar CLI, panel y sugerencia</td><td><span class="chip medio">MEDIO</span></td></tr>
+        <tr><td>Cola en JSON reescrita entera</td><td><code>cola.py</code> reescribe el archivo completo al guardar (escritura atómica)</td><td>con muchos lotes el archivo crece; sin índice</td><td><span class="chip bajo">BAJO</span></td></tr>
+        <tr><td>Cancelar en Windows</td><td><code>panel/tareas.py</code> usa <code>os.killpg</code></td><td>en Windows, cancelar desde el panel fallaría (el motor se usa en Mac)</td><td><span class="chip bajo">BAJO</span></td></tr>
+        <tr><td>La malla es genérica</td><td><code>plantillas/malla.yaml</code> es una malla típica chilena</td><td>puede no calzar con la universidad del público; se corrige en <code>mis_ajustes/malla.yaml</code></td><td><span class="chip bajo">BAJO</span></td></tr>
       </tbody>
     </table>
   </div>
 </section>
-
-<section id="cuellos">
-  <h2><span class="num">8</span>Cuellos de botella para modernizar</h2>
-  <p class="bajada">Con medidas reales donde existen: tiempos tomados de la cola de producción del propio repo.</p>
+<section id="cuellos-de-botella">
+  <h2><span class="num">8</span>Cuellos de botella</h2>
   <div class="tabla-envoltura">
     <table>
-      <thead><tr><th>Cuello</th><th>Medida / evidencia</th><th>Impacto</th></tr></thead>
+      <thead><tr><th>Cuello</th><th>Medida o evidencia</th><th>Impacto</th></tr></thead>
       <tbody>
-        <tr>
-          <td>Render Manim por bloque</td>
-          <td><b>50 a 286 s</b> de proceso para videos de 32 a 50 s (<code>salida/.cola/trabajos.json</code>)</td>
-          <td>Es el 80–90 % del tiempo total</td>
-        </tr>
-        <tr>
-          <td>LaTeX por fórmula</td>
-          <td>cada <code>MathTex</code> compila con dvisvgm; el CI da 40 min de margen</td>
-          <td>El primer render en frío es el peor caso</td>
-        </tr>
-        <tr>
-          <td>Voz por bloque</td>
-          <td>edge-tts es red; reintentos de 1,5 s por intento; caché mitiga</td>
-          <td>Sin internet no hay voz (queda <code>silencio</code>)</td>
-        </tr>
-        <tr>
-          <td>Doble codificación</td>
-          <td>Manim escribe CRF 12 y FFmpeg re-codifica a CRF 18 + <code>loudnorm</code></td>
-          <td>~2× tiempo de encode; <code>loudnorm</code> en una sola pasada</td>
-        </tr>
-        <tr>
-          <td>Serie, no paralelo</td>
-          <td><code>producir_lote</code> va de a una idea; el panel permite un solo trabajo</td>
-          <td>La Mac queda tomada; no usa los núcleos</td>
-        </tr>
-        <tr>
-          <td>Caché 3D sin poda</td>
-          <td>hash largo; los PNG viejos nunca se borran</td>
-          <td>Repos y respaldos engordan</td>
-        </tr>
-        <tr>
-          <td>Whisper opcional</td>
-          <td>PyTorch ~1 GB; se carga solo si hace falta</td>
-          <td>Instalación y RAM</td>
-        </tr>
+        <tr><td>Render Manim por bloque</td><td>borrador de 56 s en 1 min 9 s en CI; finales de 32 a 50 s entre 50 y 286 s en la Mac (cola de producción)</td><td>es el 80–90 % del tiempo total</td></tr>
+        <tr><td>LaTeX por fórmula</td><td>cada <code>MathTex</code> compila con dvisvgm; el CI reserva 40 min de margen</td><td>el primer render en frío es el peor caso</td></tr>
+        <tr><td>Voz por bloque</td><td>edge-tts es red; las pausas sintetizan trozos por separado; el caché mitiga</td><td>sin internet no hay voz (queda <code>silencio</code>)</td></tr>
+        <tr><td>Doble codificación</td><td>Manim escribe el intermedio y FFmpeg recodifica a CRF 18 + <code>loudnorm</code></td><td>~2× tiempo de encode; <code>loudnorm</code> va en una sola pasada</td></tr>
+        <tr><td>Un trabajo a la vez en el panel</td><td><code>TAREAS</code> corre un subproceso por vez (el lote puede usar <code>--workers</code>)</td><td>mientras se renderiza, Vista Previa y «Pedírselo a la IA» esperan</td></tr>
+        <tr><td>Completar niveles</td><td>cada guion nuevo son 2 a 6 consultas a Gemini; la cuenta gratuita tiene límite por minuto y por día</td><td>completar los 15 huecos de hoy toma varias pasadas de <code>--maximo 3</code></td></tr>
       </tbody>
     </table>
   </div>
 </section>
-
-<section id="veredicto">
+<section id="veredicto-y-orden-de-modernizacion">
   <h2><span class="num">9</span>Veredicto y orden de modernización</h2>
-  <p class="bajada">Qué está sano, qué no, y en qué orden conviene moverlo sin abrir sistemas nuevos.</p>
+  <p><strong>Veredicto:</strong> el motor está sano y bien separado: dominio → escena → postproducción, con contratos en archivos y 885 pruebas rápidas en tres sistemas. La deuda del 9 de noviembre (lock, dependencias escondidas, globales, layout en código, caché sin poda) está saldada. El riesgo mayor hoy es externo: que edge-tts o los modelos de Gemini cambien sin que el CI lo note, porque el CI no los llama.</p>
 
-  <div class="veredicto">
-    <h3>Veredicto</h3>
-    <p>El motor está <b>sano y bien separado</b> para lo que hace: dominio → escena → postproducción, con contratos JSON claros y 664 pruebas rápidas. Lo que lo frena no es el diseño: es el <b>entorno Mac atado a mano</b>, el <b>render secuencial</b> y la <b>falta de lockfile</b>. El riesgo mayor hoy es que una actualización de Manim, Pillow o PyAV rompa sin que el CI lo note, porque el CI no reproduce tu Mac.</p>
-  </div>
+  <p>Orden propuesto:</p>
 
-  <div class="pasos-cont">
-    <div class="paso">
-      <b class="n">1</b>
-      <p><strong>Lockfile y dependencias honestas</strong>
-      Fijar versiones exactas, declarar <code>av</code> y numpy, y subir el CI a Python 3.12. Es barato y elimina la clase de fallo más probable.</p>
-    </div>
-    <div class="paso">
-      <b class="n">2</b>
-      <p><strong>Zonas del layout al YAML del tema</strong>
-      Mover <code>_ZONAS</code> y las constantes de posición al archivo del estilo y quitar los globales de <code>componentes</code>. Es el acoplamiento que hoy obliga a tocar código para algo visual.</p>
-    </div>
-    <div class="paso">
-      <b class="n">3</b>
-      <p><strong>Paralelizar el lote y podar el caché</strong>
-      Dos o tres workers por proceso con la cola como fuente de verdad, y limpieza por antigüedad en <code>salida/_3d</code>. Ataca el 90 % del tiempo y el crecimiento de disco.</p>
-    </div>
-  </div>
+  <ol>
+    <li><strong>Una prueba con servicios reales, a demanda.</strong> Un workflow manual (no en cada PR) que renderice con edge-tts y redacte un guion con Gemini usando un secreto de GitHub. Avisa a tiempo si Microsoft o Google cambian algo.</li>
+    <li><strong>Un solo lugar para las banderas.</strong> Que el panel arme los argumentos desde la definición de la CLI (o un esquema compartido), para que agregar una opción no obligue a tocar tres archivos.</li>
+    <li><strong>Entorno sin rutas fijas.</strong> Que <code>tpi</code> y <code>doctor</code> lean las rutas de LaTeX y FFmpeg de un solo lugar (detectadas una vez y guardadas en <code>mis_ajustes/</code>).</li>
+  </ol>
 
-  <h4>Lo que no tocaría</h4>
+  <p><strong>Lo que no se tocaría:</strong></p>
+
   <ul>
     <li>La frontera panel ↔ CLI por subproceso: es lo que mantiene el panel simple y reanudable.</li>
-    <li>El esquema pydantic del guion: es el contrato con los 46 guiones existentes.</li>
+    <li>El esquema pydantic del guion: es el contrato con los 48 guiones existentes (todo campo nuevo es opcional).</li>
     <li>La salida en archivos planos: para un solo usuario en una Mac es más robusta que cualquier base de datos.</li>
+    <li>La regla única del estilo (<code>sugerir_tema</code>) y el selector único en QC.</li>
   </ul>
 </section>
-
-<section id="anexo">
+<section id="anexo-mapa-de-archivos-y-verificacion">
   <h2><span class="num">10</span>Anexo: mapa de archivos y verificación</h2>
-  <p class="bajada">Dónde está cada cosa y cómo comprobar que el análisis sigue vigente.</p>
+  <h3>Archivos que mandan</h3>
 
-  <h4>Archivos que mandan</h4>
   <div class="tabla-envoltura">
     <table>
       <thead><tr><th>Archivo</th><th>Qué define</th></tr></thead>
       <tbody>
-        <tr><td><code>pyproject.toml</code></td><td>dependencias, entrypoint, lint, datos del paquete</td></tr>
+        <tr><td><code>pyproject.toml</code> / <code>uv.lock</code></td><td>dependencias, entrypoint, lint, datos del paquete / versiones exactas</td></tr>
         <tr><td><code>tpi</code></td><td>PATH de LaTeX y FFmpeg, <code>TPI_RAIZ</code></td></tr>
         <tr><td><code>scripts/instalar_mac.sh</code></td><td>Homebrew, ffmpeg-full, BasicTeX, uv, venv, Whisper</td></tr>
-        <tr><td><code>marca.yaml</code> / <code>mis_ajustes/</code></td><td>identidad visual y sonora; lo de <code>mis_ajustes</code> gana</td></tr>
-        <tr><td><code>src/tpi_videos/plantillas/temas/*.yaml</code></td><td>19 estilos (Hoja de desarrollo incluido)</td></tr>
+        <tr><td><code>marca.yaml</code> / <code>mis_ajustes/</code></td><td>identidad visual y sonora, público; lo de <code>mis_ajustes</code> gana</td></tr>
+        <tr><td><code>src/tpi_videos/plantillas/temas/*.yaml</code></td><td>19 estilos</td></tr>
+        <tr><td><code>src/tpi_videos/plantillas/malla.yaml</code></td><td>ramos por nivel, materia y carrera</td></tr>
+        <tr><td><code>src/tpi_videos/plantillas/ia/*.md</code></td><td>instrucciones de la IA (sistema, ideas, revisor, publicar)</td></tr>
+        <tr><td><code>src/tpi_videos/temas.py</code></td><td>estilos y la regla del estilo sugerido</td></tr>
+        <tr><td><code>src/tpi_videos/niveles.py</code></td><td>los dos públicos, los 8 niveles y las 3 carreras</td></tr>
         <tr><td><code>src/tpi_videos/escena.py</code></td><td>línea de tiempo, cámara, voz, dibujo en escena</td></tr>
-        <tr><td><code>src/tpi_videos/render.py</code></td><td>config de Manim y encadenado del video final</td></tr>
-        <tr><td><code>.github/workflows/render.yml</code></td><td>pruebas + render real en CI</td></tr>
-        <tr><td><code>DESIGN.md</code></td><td>contrato visual del panel (colores, rejilla, tipografías)</td></tr>
+        <tr><td><code>src/tpi_videos/render.py</code></td><td>configuración de Manim, video final y <code>portada.jpg</code></td></tr>
+        <tr><td><code>src/tpi_videos/panel/paginas/tablero.py</code></td><td>las 3 pestañas del panel, «Para hoy», QC</td></tr>
+        <tr><td><code>.github/workflows/render.yml</code></td><td>lock al día, pruebas en 3 sistemas y render real en CI</td></tr>
+        <tr><td><code>DESIGN.md</code></td><td>contrato visual del panel (colores, rejillas, tipografías)</td></tr>
+        <tr><td><code>docs/superpowers/</code></td><td>especificaciones y planes de cada fase</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h4>Cómo verificar</h4>
-  <pre class="flujo"><span class="c"># entorno completo</span>
+  <h3>Cómo verificar que el análisis sigue vigente</h3>
+
+<pre class="flujo"><span class="c"># entorno completo</span>
 ./tpi doctor
 
-<span class="c"># pruebas (664, ~24 s)</span>
+<span class="c"># pruebas (885, ~45 s)</span>
 .venv/bin/python -m unittest discover -s pruebas -t .
 
 <span class="c"># un video de prueba sin internet</span>
-./tpi crear guiones/ejemplos/visuales_tres_tipos.yaml --borrador --voz silencio</pre>
+./tpi crear guiones/ejemplos/visuales_tres_tipos.yaml --borrador --voz silencio
 
-  <p style="margin-top:18px;color:var(--secundario);font-size:13.5px">Documento generado a partir del código y de los artefactos del repositorio el 9 de noviembre de 2026. Los números de línea citados corresponden a la rama <code>feat/piso-de-lectura</code>.</p>
+<span class="c"># qué niveles faltan</span>
+./tpi completar-niveles --simular</pre>
+
+  <p>Documento generado a partir del código y de los artefactos del repositorio el 10 de noviembre de 2026, rama <code>main</code>, commit <code>7869cd7</code>.</p>
 </section>
 
 <footer>Motor de video Tu Profe Industrial · Sistema 2 · Análisis técnico</footer>

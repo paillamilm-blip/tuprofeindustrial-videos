@@ -17,8 +17,9 @@
 
 titulo: "Título corto del ejercicio"
 materia: fisica              # matematica | fisica | ingenieria
-nivel: "2° medio"            # opcional
-# tema: pizarra_nocturna     # opcional: otro estilo solo para este video (ver ./tpi temas)
+nivel: "2° medio"            # opcional: "1° medio"… "4° medio" o "1° año ingeniería"… "4° año ingeniería"
+# carrera: electrica         # opcional (universidad): industrial | electrica | obras_civiles
+# tema: pizarra_nocturna     # opcional: si falta, el motor sugiere uno (se cambia en QC; ver ./tpi temas)
 
 # Los primeros 3 segundos: una pregunta o un dato que sorprenda. Nada de "Hola" ni "en este video…".
 gancho:

@@ -3,27 +3,32 @@
 Convierte un ejercicio de **Matemática, Física o Ingeniería** escrito en un archivo de texto (un *guion*) en un
 **video vertical 9:16** listo para TikTok, Reels y Shorts:
 
-- 🎛️ **Panel de control en tu navegador**: del enunciado (o una foto) al video y al kit para publicar, sin
-  usar la Terminal. Funciona solo en tu Mac.
+- 🎛️ **Sala de producción en tu navegador**: «Para hoy» te propone el video del día, lo apruebas en QC y se
+  produce solo, con su kit para publicar. Sin usar la Terminal y solo en tu Mac.
+- 🎓 **Dos públicos**: enseñanza media (1° a 4° medio) y universidad (1° a 4° año de Ing. Civil Industrial, Civil
+  Eléctrica y en Obras Civiles), con la malla de cada año.
 - 📓 **Tu estilo «Hoja de desarrollo»**: hoja cuadriculada sobre fondo difuminado, títulos de cómic técnico
   (Comic Neue) que se escriben como con plumón. El estilo original «Pizarra nocturna» sigue disponible.
 - 🧮 **Animaciones con Manim**: las fórmulas (LaTeX) se transforman paso a paso, como en una pizarra.
-- ✏️ **Dibujos que se trazan solos**: un paso puede llevar su **gráfico de función** (con raíces y vértice
-  marcados), su **diagrama de fuerzas** (bloque o bola, con plano inclinado) o su **circuito** (serie o
-  paralelo). Se dibujan en el pie de la hoja mientras suena ese paso. Ejemplo: `guiones/ejemplos/visuales_tres_tipos.yaml`.
+- ✏️ **33 dibujos que se trazan solos**: gráficos con tangente y área en vivo, fuerzas, circuitos, péndulos y
+  osciladores simulados, Mohr, vigas, engranajes, y piezas 3D que giran y se despiezan (tolva, tubería, eje).
+  Se dibujan mientras suena ese paso. Lista completa: [docs/GUIA_GUIONES.md](docs/GUIA_GUIONES.md).
+- 🎨 **El estilo justo para cada video**: el motor lo sugiere según el molde, los dibujos y la materia (19 estilos),
+  y se cambia en un solo lugar.
 - 🤯 **Emojis 3D y «error típico»**: emojis que aparecen con un salto y un paso que muestra la forma
   equivocada y la tacha con una ✗ roja («¿Resuelves así?»).
 - 🗣️ **Voz sintética chilena** (manim-voiceover + voces neurales `es-CL`), sincronizada con cada animación.
 - 💬 **Subtítulos estilo CapCut**: letra Bangers, pocas palabras y la que suena en amarillo (FFmpeg; Whisper
   cuando hace falta).
-- 📦 **Kit de publicación**: portada y, con IA, título, descripción y hashtags para cada red.
+- 📦 **Kit de publicación**: portada (`portada.jpg`, sale sola con cada video) y, con IA, título, descripción y
+  hashtags para cada red. La IA ya los escribe dentro del guion (`metadatos:`).
 
 > Es el **Sistema 2** del ecosistema Tu Profe Industrial y es **100 % independiente de la web**: este repo es solo Python.
 
 ![Cuadros del ejemplo «error típico» en el estilo Hoja de desarrollo: gancho, error tachado, pasos, resultado y reto](docs/img/vista_previa.jpg)
 
 ```
-guion .yaml ─► ./tpi revisar ─► Manim + voz ─► subtítulos ─► FFmpeg ─► salida/…/video.mp4 (1080×1920)
+guion .yaml ─► ./tpi revisar ─► Manim + voz ─► subtítulos ─► FFmpeg ─► salida/…/video.mp4 (1080×1920) + portada.jpg
 ```
 
 ---
@@ -70,20 +75,31 @@ Se abre en tu navegador, en `http://127.0.0.1:8765`. **Solo funciona en tu Mac**
 ni siquiera desde tu WiFi. Deja abierta la ventana de la Terminal mientras lo usas; para cerrar el panel,
 cierra esa ventana (o presiona `Control + C`).
 
-![El panel: el guion en tarjetas, con cada fórmula dibujada, y «Mis videos» con sus miniaturas](docs/img/panel.jpg)
+El panel tiene **tres pestañas**:
+
+![Cola de Producción: «Para hoy» con tres guiones de 3° medio, uno por materia, y la cola debajo](docs/img/panel_cola.png)
 
 | Pestaña | Para qué sirve |
 |---|---|
-| **Un video** (la que se abre primero) | Una sola pantalla: escribes el enunciado o la idea y, al lado, ves cómo va quedando armado el video (familia, molde, estilo sugerido, voz, duración, gancho y rodaje). Cada pieza dice **por qué** está así y tiene su **«cambiar»**; nada te tapa el botón. Un clic en **«Crear el video»** y el avance aparece ahí mismo. Abajo se lee el comando exacto que se va a ejecutar. |
-| **Lote de 3** | Un campo y un botón: escribes el tema, aprietas **«Crear los 3 videos»** y listo. La IA reparte sola los tres ángulos y las tres dificultades, ves en qué video vamos, y al terminar la misma pantalla te da **«Abrir la carpeta»**, el video y el kit de cada uno. Si uno no sale, tiene su botón **«Intentar solo este»**. |
-| **Paso a paso** | 4 pestañas, para revisar todo a mano: **Ideas** (la IA propone 3 y tú eliges una), **Escribir con IA** (el enunciado, una foto o un PDF → el guion), **Abrir un guion** y **Empezar en blanco**. El guion se edita en tarjetas: lo que se ve, lo que se escucha, emojis y «error típico», con cada fórmula dibujada tal como saldrá en el video. Luego creas el borrador o el video final (con el estilo sugerido; se cambia en QC): verás una barra de avance y el video aparece ahí mismo. |
-| **Mis videos** | Ver tus videos, mostrarlos en Finder, rehacerlos, ir a cambiarles el estilo (en QC), borrarlos y abrir el 📦 **kit de publicación**. |
-| **Estilos** | Ver una vista previa de cada estilo y en qué videos se sugiere. Para cambiar colores, letras, el fondo (¡también con tu foto!), la hoja o los subtítulos, duplica un estilo y edita la copia. |
-| **Ajustes** | Tu clave de Gemini, tu marca, la voz (con muestra ▶), tus stickers y el diagnóstico. |
+| **Cola de Producción** (la que se abre primero) | Arriba, **«Para hoy · elige uno»**: tres guiones del mismo nivel, uno por materia (Matemáticas, Física, Ingeniería). Cada uno dice por qué se propone y trae **Vista Previa Rápida**, **Otra** y **Crear este**. Eliges el nivel con los chips (Enseñanza media / Universidad); si a un nivel le falta una materia, **«Pedírselo a la IA»** escribe ese guion ahí mismo. Debajo, las cifras (Pendientes, En renderizado, Completados, Guiones por aprobar), el botón **Lanzar Renderización en Lote** y las tres columnas de la cola. Todo se puede tocar: una cifra abre su lista, una ficha abre su detalle. |
+| **Aprobación de Guiones (QC)** | La lista de guiones por revisar, con la insignia de su materia y su **Vista Previa Rápida**. A la derecha, la ficha limpia: el **estilo del video** (el sugerido y por qué; tócalo para elegir otro), el texto para redes (toca para copiar), lo que dice la voz con sus pausas y los detalles técnicos. Dos decisiones: **Aprobar y Enviar a Cola** o **Rechazar / Editar**. Arriba de la lista, **«Todos al sugerido»** si hay guiones con un estilo propio. |
+| **Avanzado** | Lo manual, plegado: **Crear a mano** (Un video, Lote de 3 y el editor Paso a paso), la **cola detallada por lote** (reanudar, reintentar, descartar), la **biblioteca de videos**, los **estilos visuales** (vista previa, en qué videos se sugiere cada uno, duplicar y personalizar) y **Ajustes y diagnóstico** (clave de Gemini, voz, marca, tu público, stickers, `tpi doctor`). |
 
-**📦 Kit de publicación:** la **portada** (el cuadro del gancho, en PNG) y, con IA, el **título, la descripción
-y los hashtags** para YouTube Shorts, TikTok e Instagram Reels, con botones para copiar. Sin clave de Gemini se
-arma con una plantilla. Desde la Terminal: `./tpi publicar salida/mi-video/mi-video.mp4`.
+![Aprobación de Guiones (QC): la lista con insignias y Vista Previa Rápida, y la ficha con el estilo sugerido](docs/img/panel_qc.png)
+
+Dentro de **Avanzado → Crear a mano**:
+
+- **Un video:** escribes el enunciado o la idea y al lado ves cómo va quedando armado (familia, molde, estilo
+  sugerido, voz, duración, gancho y rodaje). Cada pieza dice **por qué** está así y tiene su **«cambiar»**.
+- **Lote de 3:** escribes el tema y aprietas **«Crear los 3 videos»**. La IA reparte los ángulos y las dificultades.
+- **Paso a paso:** Ideas, Escribir con IA (texto, foto o PDF), Abrir un guion o Empezar en blanco. El guion se edita
+  en tarjetas, con cada fórmula dibujada tal como saldrá en el video.
+
+**📦 Kit de publicación:** la **portada** y, con IA, el **título, la descripción y los hashtags** para YouTube
+Shorts, TikTok e Instagram Reels, con botones para copiar. Si el guion ya trae `metadatos:` (la IA los escribe
+siempre), se usan tal cual. Sin clave de Gemini se arma con una plantilla. Además, cada video deja una
+**`portada.jpg`** junto al `.mp4` (el final del gancho, entre los segundos 2 y 4). Desde la Terminal:
+`./tpi publicar salida/mi-video/mi-video.mp4`.
 
 Todo lo que hace el panel lo hacen los mismos comandos `./tpi` de las secciones siguientes: puedes usar los dos.
 
@@ -103,10 +119,23 @@ cd ~/Downloads/tuprofeindustrial-videos
 El video queda en `salida/fisica-caida-libre/fisica-caida-libre.mp4`, junto a un `.srt` con subtítulos
 para subir a YouTube.
 
-## 4. El día a día: de un enunciado a un video
+## 4. El día a día: un video al día
+
+**En el panel (lo recomendado):**
+
+1. Abre el panel: queda en **Cola de Producción**.
+2. En **«Para hoy»** elige el nivel y mira las tres opciones. Si quieres verla en movimiento, **Vista Previa Rápida**.
+3. Toca **Crear este** en la que más te guste: se aprueba, entra a la cola y se produce sola.
+4. Cuando aparezca en **Completados**, abre su kit, copia el texto y publícalo.
+
+Si prefieres revisar a fondo antes, ve a **Aprobación de Guiones (QC)**, lee la ficha, cambia el estilo si quieres
+y toca **Aprobar y Enviar a Cola**. Para tener siempre guiones de todos los niveles: `./tpi completar-niveles`
+(sección 5).
+
+**Desde un enunciado propio:**
 
 1. **Consigue el guion.** Cuatro caminos:
-   - **En el panel (recomendado):** pestaña **Paso a paso** → «Escribir con IA» (ver sección 2).
+   - **En el panel:** **Avanzado → Crear a mano → Paso a paso** → «Escribir con IA» (ver sección 2).
    - **Con IA, en un comando:** pásale el enunciado escrito, una **foto** o un **PDF** (ver sección 5). La IA
      resuelve el ejercicio y escribe el guion; con `--crear` también hace el borrador.
    - **Con Kiro:** pásale el enunciado en el chat y te entrega el guion en un Pull Request.
@@ -227,7 +256,7 @@ Sirven las mismas opciones de `crear` y `redactar`: `--borrador`, `--estilo piza
 `--voz es-CL-CatalinaNeural`, `--sin-kit`, `--sin-revision`, y `--segundos 45` para exigir la duración
 de la tarjeta (el panel lo pasa solo al presionar «Hacer este video»).
 
-**En el panel es todavía más fácil:** solapa **Paso a paso → Ideas**. Escribes el tema (o tocas uno sugerido, como
+**En el panel es todavía más fácil:** **Avanzado → Crear a mano → Paso a paso → Ideas**. Escribes el tema (o tocas uno sugerido, como
 *Ley de Ohm* o *Caída libre*), ves las 3 tarjetas, presionas **«Otras 3 ideas»** si no te convencen y en la que
 eliges presionas **«Hacer este video»**. Ahí mismo ves el avance: el guion, el video y el kit.
 
@@ -253,7 +282,7 @@ El elegido pasa a ser el gancho del guion y los demás quedan como alternativas.
 
 ### Hacer los 3 de una sola vez (el lote)
 
-Si ninguna idea sobra y quieres la semana cubierta de una pasada, usa la pestaña **Lote de 3** del panel: un
+Si ninguna idea sobra y quieres la semana cubierta de una pasada, usa **Avanzado → Crear a mano → Lote de 3**: un
 campo, el botón **«Crear los 3 videos»** y a otra cosa. O, debajo de las tarjetas de Paso a paso → Ideas, el mismo
 botón. En la Terminal:
 
@@ -275,18 +304,20 @@ panel.
 Cada video guarda su avance y sus hitos (guion, video, kit) en una **cola** en `salida/.cola/`, así que si la IA se
 cae, cierras el panel o se corta el render, **no pierdes lo ya hecho**:
 
-- En el **panel (Lote de 3)** ves una barra por video con su fase (redactando, animando, subtítulos, kit) y una tarjeta
-  «Cola de videos» con lo pendiente. Al reabrir el panel, lo que quedó a medio hacer se marca «interrumpido» y lo que
-  esperaba a la IA **se reanuda solo**.
+- En el **panel**, **Cola de Producción** muestra cada video en su columna (Pendientes, En renderizado, Completados)
+  con su barra y su fase, y **Avanzado → Cola detallada por lote** permite reanudar, reintentar o descartar. Al reabrir
+  el panel, lo que quedó a medio hacer se marca «interrumpido» y lo que esperaba a la IA **se reanuda solo**.
 - En la **Terminal**, `./tpi lote --reanudar` retoma el lote pendiente con los mismos ajustes guardados, sin volver a
   pedirle las ideas a Gemini y sin repetir el guion, el video o el kit que ya salieron.
 
 Sirven las mismas opciones de `producir` (`--borrador`, `--estilo`, `--voz`, `--sin-kit`, `--sin-revision`) más
-`--evitar "título"` para no repetir ideas que ya viste y `--dificultad media` si los tres videos van a ser del
-mismo nivel.
+`--evitar "título"` para no repetir ideas que ya viste, `--dificultad media` si los tres videos van a ser del
+mismo nivel y `--workers 2` para hacer dos videos a la vez (usa dos núcleos). Con guiones ya escritos,
+`./tpi lote guiones/a.yaml guiones/b.yaml --solo-encolar` los deja en la cola sin producirlos (es lo que hace
+el botón «Aprobar» de QC).
 
-> 💡 Las ideas usan lo que el motor ya sabe dibujar: fórmulas y texto en la pizarra, gráficos de funciones,
-> diagramas de fuerzas y circuitos. Si el ejercicio se entiende mejor con un dibujo, la idea lo pide sola.
+> 💡 Las ideas usan lo que el motor ya sabe dibujar (los 33 dibujos, incluidas las piezas 3D y las simulaciones).
+> Si el ejercicio se entiende mejor con un dibujo, la idea lo pide sola.
 
 ### Dos públicos: enseñanza media y universidad de ingeniería
 
@@ -331,6 +362,8 @@ una materia, toca **«Pedírselo a la IA»**, o completa todo desde la Terminal:
 | `./tpi crear GUION.yaml --voz es-CL-CatalinaNeural` | Otra voz (ver `./tpi voces`) |
 | `./tpi crear GUION.yaml --voz silencio` | Sin voz y sin internet: para revisar el diseño |
 | `./tpi crear GUION.yaml --sin-subtitulos` | Sin subtítulos quemados |
+| `./tpi podar` | Borra cachés temporales viejos (dibujos 3D y audios de voz) para liberar espacio |
+| `./tpi cuota` | Muestra cuánto te queda de la cuota gratuita de Gemini |
 | `./tpi publicar VIDEO.mp4` | Kit de publicación: portada + título, descripción y hashtags (`--sin-ia` para la plantilla) |
 | `./tpi subtitular VIDEO.mp4` | Subtítulos estilo CapCut para **cualquier** video (por ejemplo, uno grabado por ti) |
 | `./tpi temas` | Lista los estilos visuales (⭐ = el que se usa por defecto) |
@@ -342,8 +375,9 @@ Agrega `--abrir` a `crear` o `subtitular` para que el video se abra solo al term
 
 ## 7. Personalizar la marca y el estilo
 
-- **Lo más fácil:** en el panel, pestañas **Estilos** (colores, letras, fondo, subtítulos) y **Ajustes** (marca y
-  voz). Cada estilo muestra una vista previa de 3 cuadros antes de crear un video.
+- **Lo más fácil:** en el panel, **Avanzado → Estilos visuales** (colores, letras, fondo, subtítulos) y
+  **Avanzado → Ajustes y diagnóstico** (marca, voz y tu público). Cada estilo muestra una vista previa de 3 cuadros
+  y en qué videos se sugiere.
 - **Estilo de cada video (un solo lugar):** en el panel, **Aprobación de Guiones (QC)** → la ficha del guion →
   **Estilo del video**. El motor sugiere uno según el video y su materia, en este orden: 1° el molde (reto →
   Neón sobre reja, mito/realidad → Pizarra de cine, 3 errores → Rotulador, POV → Kraft y tiza; «Nadie te enseñó esto»
@@ -363,16 +397,17 @@ Así se ve el estilo original «Pizarra nocturna»:
 ## 8. Dónde queda cada cosa
 
 ```
-guiones/ejemplos/     5 guiones de ejemplo (física, matemática, ingeniería, un «error típico» y uno con dibujos)
+guiones/ejemplos/     8 guiones de ejemplo (uno por materia, «error típico», dibujos, moldes, motor vivo y sólidos 3D)
 guiones/              tus guiones (y los que redacta la IA o guardas en el panel)
+fuera_de_uso/         guiones retirados, por si quieres recuperar alguno
 enunciados/ejemplos/  enunciados de prueba para ./tpi redactar
 marca.yaml            identidad visual y sonora (y el estilo por defecto)
-mis_ajustes/          tus temas, fondos, stickers, ajustes del panel y archivos subidos (no se sube a GitHub)
+mis_ajustes/          tus temas, fondos, stickers, malla propia, ajustes del panel y archivos subidos (no se sube a GitHub)
 .env                  tu clave de Gemini (solo en tu Mac, no se sube)
-salida/               videos, portadas y kits de publicación (no se suben a GitHub)
+salida/               videos, portadas, kits, la cola (.cola/) y las aprobaciones de QC (no se suben a GitHub)
 src/tpi_videos/       el motor (Python); el panel está en src/tpi_videos/panel/
-docs/                 guía de guiones y plan del proyecto
-scripts/              instalador para Mac
+docs/                 guía de guiones, plan, análisis técnico, estudio visual y specs (docs/superpowers/)
+scripts/              instalador para Mac, Gemini de prueba (gemini_falso.py) y el generador de los HTML de docs/
 tpi                   lanzador de comandos
 ```
 
@@ -412,6 +447,8 @@ tpi                   lanzador de comandos
 - **IA (Gemini):** con la cuenta gratuita, Google puede usar lo que envías para mejorar sus productos. Para
   enunciados de ejercicios no suele importar; no envíes datos personales de estudiantes. Cada guion usa
   entre 2 y 6 consultas; cada kit de publicación, 1.
+- **Pruebas automáticas:** cada cambio corre las 885 pruebas en Ubuntu, macOS y Windows y renderiza un video de
+  ejemplo de verdad (GitHub Actions). En Mac y Windows se saltan solas las que necesitan LaTeX.
 - **Letras:** Montserrat, Comic Neue, Bangers, Cinzel, Caveat y Patrick Hand (SIL Open Font License) y
   Luckiest Guy (Apache 2.0). Licencias en `src/tpi_videos/assets/fuentes/licencias/`.
 - **Emojis:** Noto Emoji 3D de Google (SIL Open Font License), en `src/tpi_videos/assets/emojis/`.
