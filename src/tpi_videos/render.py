@@ -13,7 +13,7 @@ from . import entorno
 from .config import CALIDADES, Marca, cargar_marca
 from .errores import ErrorMotor
 from .guion import Guion, cargar_guion, sin_tildes
-from .temas import Tema, cargar_tema
+from .temas import Tema, cargar_tema, resolver_tema
 
 # progreso(etapa, avance 0–1, detalle): para barras de progreso (panel y --progreso-json)
 Progreso = Callable[[str, float, str], None]
@@ -139,7 +139,7 @@ def crear_video(
     progreso: Progreso | None = None,
     piso: float | None = None,
 ) -> ResultadoVideo:
-    """Crea el video. Estilo: ``tema`` (si se pide) > ``tema:`` del guion > ``tema:`` de marca.yaml."""
+    """Crea el video. Estilo: ``tema`` o ``tema:`` del guion > el de su categoría > ``tema:`` de marca.yaml."""
     from .postproduccion import duracion, quemar_subtitulos, recodificar
     from .subtitulos import agrupar, escribir_ass, escribir_srt, palabras_de_bloques
 
@@ -152,7 +152,7 @@ def crear_video(
         raise ErrorMotor(f"Calidad «{calidad}» no existe.", ayuda=f"Opciones: {', '.join(CALIDADES)}")
     guion = cargar_guion(ruta_guion)
     marca = cargar_marca()
-    tema_usado = (tema or guion.tema or marca.tema or "").strip()
+    tema_usado = resolver_tema(tema, guion, marca)
     estilo_video = cargar_tema(tema_usado, marca)
     verificar_requisitos(subtitulos)
     avisar("preparando", 0.02, estilo_video.nombre)
@@ -286,7 +286,7 @@ def crear_clip_gancho(
     import shutil
 
     marca = cargar_marca()
-    estilo = cargar_tema(guion.tema, marca)
+    estilo = cargar_tema(resolver_tema(None, guion, marca), marca)
     verificar_requisitos(subtitulos=False)
     if proveedor == "silencio" or voz == "silencio":
         proveedor, voz = "silencio", "silencio"

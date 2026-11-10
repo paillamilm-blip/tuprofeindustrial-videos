@@ -18,7 +18,7 @@ from ...entorno import raiz_proyecto
 from ...errores import ErrorMotor
 from ...moldes import MOLDES
 from ...rodaje import NOMBRE_MANDO, QUE_HACE, RECETA_LIBRE, campos_de_receta, guardar_receta
-from ...temas import listar_temas
+from ...temas import TEMA_POR_CATEGORIA, listar_temas
 from ..comun import PIEL, confirmar, url_medio
 from ..sugerencia import DIFICULTADES, NOMBRE_MATERIA
 from ..tareas import consultar
@@ -228,10 +228,18 @@ def _seccion_voz() -> None:
             ui.button("Guardar voz", icon="save", on_click=guardar).props("outline")
 
 
+NOMBRES_CATEGORIA = {"matematicas": "Matemáticas", "fisica": "Física", "ingenieria": "Ingeniería"}
+
+
 def _seccion_tema() -> None:
     temas = {i: t.nombre for i, t, _ in listar_temas()}
     actual = cargar_marca().tema
-    with _tarjeta("Estilo de siempre", "El estilo de tus videos (cada guion puede elegir otro)."):
+    porta = ", ".join(f"{NOMBRES_CATEGORIA[c]}: {temas.get(t, t)}" for c, t in TEMA_POR_CATEGORIA.items())
+    with _tarjeta(
+        "Estilo de siempre",
+        f"Cada materia ya trae su estilo ({porta}). Este se usa solo si la materia no tiene uno; "
+        "un guion o el botón de estilo siempre pueden elegir otro.",
+    ):
         with ui.row().classes("items-center gap-3"):
             eleccion = (
                 ui.select(temas, value=actual if actual in temas else None, label="Estilo")
