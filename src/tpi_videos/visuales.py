@@ -1063,16 +1063,14 @@ class Proyectil:
 
 
 def analizar_proyectil(velocidad: str | None, angulo: float, gravedad: float = 9.8) -> Proyectil:
-    """Saca el número de «20 m/s» y resuelve el vuelo con las componentes de la velocidad."""
-    texto = str(velocidad or "")
-    m = re.search(r"-?\d+(?:[.,]\d+)?", texto)
-    if not m:
+    """Convierte la velocidad a m/s y resuelve el vuelo con sus componentes."""
+    v0, unidad = _medida_solido(velocidad, "velocidad de lanzamiento", hasta_barra=True)
+    clave = unidad.replace(" ", "").lower()
+    if clave and clave not in _VELOCIDAD_EN_MS:
         raise ValueError(
-            f"la velocidad de lanzamiento necesita un número con su unidad, ej. «20 m/s», y leí «{texto}»"
+            f"no reconozco la unidad de la velocidad («{unidad}»): usa mm/s, cm/s, m/s o km/h"
         )
-    v0 = float(m.group().replace(",", "."))
-    if v0 <= 0:
-        raise ValueError(f"la velocidad de lanzamiento debe ser positiva, y leí «{texto}»")
+    v0 *= _VELOCIDAD_EN_MS.get(clave, 1.0)
     if not 0 < angulo < 90:
         raise ValueError(f"el ángulo de lanzamiento va entre 0 y 90 grados, y dice {angulo}")
     rad = math.radians(angulo)
@@ -1082,7 +1080,7 @@ def analizar_proyectil(velocidad: str | None, angulo: float, gravedad: float = 9
     return Proyectil(
         velocidad=v0,
         angulo=angulo,
-        unidad=texto[m.end() :].strip().split("/")[0],
+        unidad="m",
         tiempo=tiempo,
         alcance=horizontal * tiempo,
         altura=vertical**2 / (2 * gravedad),
@@ -1154,13 +1152,18 @@ def analizar_solido(
     """Resuelve el cuerpo con las fórmulas del cuaderno (el cono usa su generatriz)."""
     if figura not in SOLIDOS:
         raise ValueError(f"el motor sabe dibujar {', '.join(SOLIDOS)}, y le pedí «{figura}»")
-    medidas: dict[str, float] = {}
-    unidad = ""
-    for nombre, crudo in (("lado", lado), ("radio", radio), ("altura", altura)):
-        if crudo not in (None, ""):
-            valor, uni = _medida_solido(crudo, nombre)
-            medidas[nombre] = valor
-            unidad = uni or unidad
+    pares = [
+        (nombre, crudo)
+        for nombre, crudo in (("lado", lado), ("radio", radio), ("altura", altura))
+        if crudo not in (None, "")
+    ]
+    for nombre, crudo in pares:
+        _, uni = _medida_solido(crudo, nombre, hasta_barra=True)
+        if uni and uni.lower() not in _LONGITUD_EN_METROS:
+            raise ValueError(f"no reconozco la unidad de {nombre} («{uni}»): usa mm, cm, dm, m o km")
+    valores, unidad = _longitudes(pares)
+    unidad = unidad.lower()
+    medidas = {nombre: valor for (nombre, _), valor in zip(pares, valores, strict=True)}
 
     def exigir(*nombres: str) -> None:
         for nombre in nombres:

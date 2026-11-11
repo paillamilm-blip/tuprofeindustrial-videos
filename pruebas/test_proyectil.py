@@ -44,8 +44,22 @@ class MatematicaProyectilTest(unittest.TestCase):
         self.assertGreater(recto, self._figura(angulo=30).alcance)
         self.assertGreater(recto, self._figura(angulo=60).alcance)
 
-    def test_la_unidad_se_conserva_para_los_rotulos(self):
-        self.assertEqual(self._figura("12,5 km/h").unidad, "km")
+    def test_velocidades_equivalentes_producen_el_vuelo_en_metros(self):
+        for velocidad in ("36 km/h", "1000 cm/s", "10000 mm/s", "10 m/s", "36 KM / H", "10"):
+            with self.subTest(velocidad=velocidad):
+                figura = self._figura(velocidad, 45)
+                self.assertAlmostEqual(figura.velocidad, 10.0)
+                self.assertAlmostEqual(figura.alcance, 10.2040816327)
+                self.assertAlmostEqual(figura.altura, 2.5510204082)
+                self.assertAlmostEqual(figura.tiempo, 1.4430750636)
+                self.assertEqual(figura.unidad, "m")
+
+    def test_unidades_de_velocidad_desconocidas_se_rechazan(self):
+        for velocidad in ("10 mph", "10 m/min", "10 cm"):
+            with self.subTest(velocidad=velocidad):
+                with self.assertRaises(ValueError) as error:
+                    self._figura(velocidad)
+                self.assertIn("unidad", str(error.exception))
 
     def test_sin_numero_el_error_viene_en_espanol(self):
         with self.assertRaises(ValueError) as error:

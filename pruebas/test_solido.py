@@ -49,6 +49,35 @@ class MatematicaSolidoTest(unittest.TestCase):
         self.assertAlmostEqual(figura.volumen, 64, places=6)
         self.assertAlmostEqual(figura.area, 96, places=6)
 
+    def test_el_cilindro_convierte_todas_las_medidas_a_la_primera_unidad(self):
+        casos = (
+            ("1 m", "100 cm", "m", 1.0, 1.0, math.pi, 4 * math.pi),
+            ("100 cm", "1 m", "cm", 100.0, 100.0, 1000000 * math.pi, 40000 * math.pi),
+            ("10 dm", "1000 mm", "dm", 10.0, 10.0, 1000 * math.pi, 400 * math.pi),
+        )
+        for radio, altura, unidad, r, h, volumen, area in casos:
+            with self.subTest(radio=radio, altura=altura):
+                figura = analizar_solido("cilindro", radio=radio, altura=altura)
+                self.assertEqual(figura.unidad, unidad)
+                self.assertAlmostEqual(figura.radio, r)
+                self.assertAlmostEqual(figura.altura, h)
+                self.assertAlmostEqual(figura.volumen, volumen)
+                self.assertAlmostEqual(figura.area, area)
+
+    def test_el_cono_convierte_la_altura_antes_de_calcular_la_generatriz(self):
+        figura = analizar_solido("cono", radio="3 cm", altura="0,04 m")
+        self.assertEqual(figura.unidad, "cm")
+        self.assertAlmostEqual(figura.altura, 4.0)
+        self.assertAlmostEqual(figura.volumen, 12 * math.pi)
+        self.assertAlmostEqual(figura.area, 24 * math.pi)
+
+    def test_una_unidad_que_no_es_longitud_se_rechaza(self):
+        for radio in ("3 pulgadas", "3 mph", "3 m/s", "3 m²"):
+            with self.subTest(radio=radio):
+                with self.assertRaises(ValueError) as error:
+                    analizar_solido("esfera", radio=radio)
+                self.assertIn("unidad", str(error.exception))
+
     def test_al_cilindro_le_falta_la_altura(self):
         with self.assertRaises(ValueError) as error:
             analizar_solido("cilindro", radio="3 cm")
@@ -69,6 +98,15 @@ class GuionSolidoTest(unittest.TestCase):
     def test_pide_el_solido_con_sus_medidas(self):
         visual = Visual(tipo="solido", figura="cilindro", radio="3 cm", altura="5 cm", anotar=["volumen"])
         self.assertAlmostEqual(visual.solido().volumen, math.pi * 45, places=2)
+
+    def test_los_solidos_planos_y_3d_normalizan_las_medidas_del_guion(self):
+        for tipo in ("solido", "solido_3d"):
+            with self.subTest(tipo=tipo):
+                visual = Visual(tipo=tipo, figura="cilindro", radio="1 m", altura="100 cm")
+                figura = visual.solido()
+                self.assertEqual(figura.unidad, "m")
+                self.assertAlmostEqual(figura.altura, 1.0)
+                self.assertAlmostEqual(figura.volumen, math.pi)
 
     def test_sin_radio_el_error_habla_del_solido(self):
         with self.assertRaises(ValidationError) as error:

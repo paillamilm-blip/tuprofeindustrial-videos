@@ -1710,6 +1710,8 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
         lineas.append(f"carrera: {guion['carrera']}")
     if guion.get("molde"):
         lineas.append(f"molde: {guion['molde']}")
+    if guion.get("camara") not in (None, "suave"):
+        lineas.append(f"camara: {guion['camara']}")
     for clave in ("tema", "voz", "velocidad"):
         if guion.get(clave):
             lineas.append(f"{clave}: {_dobles(guion[clave])}")
@@ -1740,6 +1742,9 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
                 lineas.append(f"    tex: {_simples(v['tex'])}")
             if v.get("destacar"):
                 lineas.append(f"    destacar: [{', '.join(_dobles(d) for d in v['destacar'])}]")
+            if v.get("visual"):
+                lineas.append("    visual:")
+                lineas.extend(_visual_yaml(v["visual"], "      "))
     bloque("enunciado", guion["enunciado"])
     if guion.get("datos"):
         lineas += ["", "datos:"]
@@ -1763,6 +1768,19 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
             lineas.append("    resaltar_cambio: true")
         if p.get("emoji"):
             lineas.append(f"    emoji: {_dobles(p['emoji'])}")
+        if p.get("mapa"):
+            lineas.append("    mapa:")
+            for m in p["mapa"]:
+                termino = yaml.safe_dump(m["termino"], allow_unicode=True, default_style='"')
+                termino = termino.strip().replace("\n", "\n        ")
+                concepto = yaml.safe_dump(m["concepto"], allow_unicode=True, default_style='"')
+                concepto = concepto.strip().replace("\n", "\n        ")
+                lineas += [
+                    f"      - termino: {termino}",
+                    f"        concepto: {concepto}",
+                ]
+                if m.get("color"):
+                    lineas.append(f"        color: {_dobles(m['color'])}")
         if p.get("visual"):
             lineas.append("    visual:")
             lineas += _visual_yaml(p["visual"])
