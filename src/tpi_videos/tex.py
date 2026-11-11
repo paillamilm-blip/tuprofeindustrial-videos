@@ -124,6 +124,63 @@ def partes(tex: str) -> list[str]:
     return unidos or [tex]
 
 
+def agrupar_argumentos(tex: str) -> str:
+    dobles = {"frac", "dfrac", "tfrac", "cfrac", "binom", "dbinom", "stackrel", "overset", "underset", "textcolor"}
+    comandos = _CON_ARGUMENTO - {"big", "Big", "bigg", "Bigg", "bigl", "bigr", "Bigl", "Bigr", "biggl", "biggr"}
+    inserciones: dict[int, str] = {}
+
+    def saltar_espacios(i: int) -> int:
+        while i < len(tex) and tex[i].isspace():
+            i += 1
+        return i
+
+    def fin_grupo(i: int, apertura: str, cierre: str) -> int:
+        profundidad = 1
+        i += 1
+        while i < len(tex) and profundidad:
+            if tex[i] == "\\":
+                i += 2
+                continue
+            profundidad += (tex[i] == apertura) - (tex[i] == cierre)
+            i += 1
+        return i
+
+    def fin_argumento(i: int) -> int:
+        if i >= len(tex):
+            return i
+        if tex[i] == "{":
+            return fin_grupo(i, "{", "}")
+        m = _COMANDO.match(tex, i)
+        if m is None:
+            return i + 1
+        fin = m.end()
+        if m.group(1) in comandos:
+            fin = saltar_espacios(fin)
+            if m.group(1) == "sqrt" and fin < len(tex) and tex[fin] == "[":
+                fin = fin_grupo(fin, "[", "]")
+            for _ in range(2 if m.group(1) in dobles else 1):
+                fin = fin_argumento(saltar_espacios(fin))
+        return fin
+
+    for m in re.finditer(r"[\^_]|\\[a-zA-Z]+", tex):
+        nombre = m.group()[1:]
+        if m.group() not in ("^", "_") and nombre not in comandos:
+            continue
+        i = saltar_espacios(m.end())
+        if nombre == "sqrt" and i < len(tex) and tex[i] == "[":
+            i = saltar_espacios(fin_grupo(i, "[", "]"))
+        for _ in range(2 if nombre in dobles else 1):
+            i = saltar_espacios(i)
+            fin = fin_argumento(i)
+            if i < len(tex) and tex[i] != "{":
+                inserciones[i] = inserciones.get(i, "") + "{"
+                inserciones[fin] = "}" + inserciones.get(fin, "")
+            i = fin
+    for i in sorted(inserciones, reverse=True):
+        tex = tex[:i] + inserciones[i] + tex[i:]
+    return tex
+
+
 def llaves_balanceadas(tex: str) -> bool:
     profundidad = 0
     i = 0

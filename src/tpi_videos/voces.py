@@ -231,9 +231,9 @@ class ServicioConPausas(SpeechService):
         }
 
 
-def crear_servicio(proveedor: str, voz: str, velocidad: str) -> SpeechService:
+def crear_servicio(proveedor: str, voz: str, velocidad: str, tono: str = "+0Hz") -> SpeechService:
     if proveedor == "edge":
-        return ServicioConPausas(EdgeTTSService(voz=voz, velocidad=velocidad), "edge-tts")
+        return ServicioConPausas(EdgeTTSService(voz=voz, velocidad=velocidad, tono=tono), "edge-tts")
     if proveedor == "gtts":
         from manim_voiceover.services.gtts import GTTSService
 

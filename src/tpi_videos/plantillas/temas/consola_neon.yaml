@@ -1,0 +1,33 @@
+nombre: Consola neón
+descripcion: 'Pasos numerados, panel de progreso, mapas de color y micro-movimiento con resplandor.'
+marco: pizarra
+resplandor: true
+colores:
+  fondo: '#0B0E14'
+  panel: '#141A24'
+  borde: '#2A3444'
+  titulos: '#F5F7FA'
+  texto: '#F5F7FA'
+  formulas: '#F5F7FA'
+  tenue: '#8A94A6'
+  acento: '#FFC72C'
+  exito: '#22C55E'
+  cuadricula: '#38BDF8'
+  error: '#EF4444'
+fondo:
+  tipo: color
+tipografia:
+  titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
+  texto: {familia: Montserrat, grosor: SEMIBOLD}
+subtitulos:
+  posicion_y: 0.82
+layout:
+  banda_subtitulo: 0.28
+  banda_panel: 1.6
+  y_zona_pasos: -2.2
+gramatica:
+  tabs: true
+  panel: true
+  mapa_color: true
+  micro: true
+  paleta_pasos: ['#FFC72C', '#38BDF8', '#A78BFA', '#22C55E', '#F472B6', '#EF4444']

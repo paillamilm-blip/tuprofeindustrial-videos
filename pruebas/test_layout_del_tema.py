@@ -16,6 +16,12 @@ from tpi_videos import componentes, temas
 from tpi_videos.escena import Paisaje, franja_del_dibujo
 
 TEMAS = temas.TEMAS_DIR
+TEMAS_ORIGINALES = (
+    "comic_azul", "comic_semitono", "cuaderno_con_sello", "cuaderno_tinta_roja",
+    "hoja_de_desarrollo", "kraft_claro", "kraft_tiza", "neon_cian", "neon_reja",
+    "neon_uva", "pizarra_nocturna", "plano_azul", "plano_noche", "rotulador",
+    "rotulador_fucsia", "tiza_azul", "tiza_verde", "vineta_cine", "vineta_dorada",
+)
 ZONAS_DE_HOY = {  # (cabecera, techo de la zona, piso de la zona) que usa cada marco desde siempre
     "pizarra": (6.55, 4.75, -2.4),
     "hoja": (6.5, 4.15, -3.55),
@@ -41,7 +47,8 @@ def tema_con(layout: dict[str, Any] | None = None, **datos: Any) -> temas.Tema:
 class LayoutDelTemaTest(unittest.TestCase):
     def test_un_tema_sin_layout_conserva_las_zonas_del_marco(self) -> None:
         """Ninguno de los 19 temas de fábrica declara layout: tienen que seguir igual."""
-        for ruta in sorted(TEMAS.glob("*.yaml")):
+        for identificador in TEMAS_ORIGINALES:
+            ruta = TEMAS / f"{identificador}.yaml"
             crudo = yaml.safe_load(ruta.read_text(encoding="utf-8"))
             self.assertNotIn("layout", crudo, ruta.name)
             tema = temas.Tema.model_validate(crudo)

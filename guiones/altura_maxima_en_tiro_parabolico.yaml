@@ -1,0 +1,71 @@
+# Guion redactado con IA (gemini-3.5-flash-lite) el 10-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se asumió lanzamiento en terreno llano a nivel del suelo.
+#   - Se usó g = 9,8 m/s² estándar para Chile.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "Altura máxima en tiro parabólico"
+materia: fisica
+nivel: "2° medio"
+
+gancho:
+  texto: "¿Cómo calcular la altura máxima en tiro parabólico?"
+  voz: "¿Cómo calcular la altura máxima de un disparo parabólico? Es facilísimo."
+  tex: 'h_{max} = ?'
+  emoji: "🚀"
+
+enunciado:
+  texto: "Un balón es pateado a 20 m/s con un ángulo de 30° respecto a la horizontal. ¿Cuál es su altura máxima? Usa g = 9,8 m/s²."
+  voz: "Lanzamos un balón a veinte metros por segundo con un ángulo de treinta grados. ¿Cuál es la altura máxima que alcanza?"
+  destacar: ["20 m/s", "30°", "g = 9,8 m/s²"]
+
+datos:
+  - tex: 'v_0 = 20\ \text{m/s}'
+    voz: "La velocidad inicial es de veinte metros por segundo."
+  - tex: '\theta = 30^\circ'
+    voz: "El ángulo de disparo es de treinta grados."
+  - tex: 'g = 9,8\ \text{m/s}^2'
+    voz: "La gravedad, nueve coma ocho metros por segundo al cuadrado."
+
+pasos:
+  - nota: "Error típico"
+    tex: 'h_{max} = \frac{v_0^2}{2g}'
+    voz: "Muchos cometen el error de usar la velocidad total directamente, pero está equivocado."
+    emoji: "⚠️"
+    error: true   # error típico: se muestra tachado
+  - nota: "Velocidad vertical"
+    tex: 'v_{0y} = v_0 \cdot \sin(30^\circ) = 20 \cdot 0,5 = 10\ \text{m/s}'
+    voz: "Primero debemos calcular la componente vertical, porque solo ella eleva al objeto."
+    halo: ['v_{0y}']
+    emoji: "💡"
+    visual:
+      tipo: proyectil
+      velocidad: '20 m/s'
+      angulo: 30
+      anotar: ['altura_maxima', 'componentes']
+  - nota: "Fórmula de altura"
+    tex: 'h_{max} = \frac{v_{0y}^2}{2g}'
+    voz: "Ahora aplicamos la fórmula correcta con la velocidad vertical al cuadrado."
+    halo: ['v_{0y}^2']
+  - nota: "Reemplazamos"
+    tex: 'h_{max} = \frac{10^2}{2 \cdot 9,8} = \frac{100}{19,6}'
+    voz: "Reemplazamos diez al cuadrado, que es cien, dividido en diecinueve coma seis."
+    resaltar_cambio: true
+
+resultado:
+  tex: 'h_{max} \approx 5,10\ \text{m}'
+  voz: "Al realizar la división obtenemos aproximadamente cinco coma diez metros de altura."
+  emoji: "🎯"
+  destello: true
+
+verificacion:
+  texto: "En el punto más alto de la trayectoria, la velocidad vertical se hace instantáneamente cero."
+  voz: "Recuerda: en el punto más alto del movimiento parabólico, la velocidad vertical vale cero."
+
+reto:
+  texto: "Si el balón se lanza a 20 m/s pero con un ángulo de 90°, ¿cuál es su altura máxima?"
+  voz: "Ahora responde tú. Si lanzamos el balón verticalmente a veinte metros por segundo, ¿cuál es su altura?"
+  emoji: "✍️"

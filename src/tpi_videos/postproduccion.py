@@ -27,16 +27,31 @@ def _codec_video(ffmpeg: str) -> list[str]:
     return ["-c:v", "mpeg4", "-q:v", "2"]
 
 
-def _codificacion(ffmpeg: str, calidad: Calidad) -> list[str]:
+def _codificacion(ffmpeg: str, calidad: Calidad, con_cama: bool = False) -> list[str]:
     video = _codec_video(ffmpeg)
     if video[1] == "libx264":
         video += ["-preset", calidad.preset, "-crf", str(calidad.crf)]
+    audio = [] if con_cama else ["-af", "loudnorm=I=-14:TP=-1.5:LRA=11"]
     return [
         *video,
         "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
-        "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",  # volumen estándar de redes sociales
+        *audio,  # con cama el loudnorm va dentro del filter_complex (mezcla voz + cama)
         "-movflags", "+faststart",
+    ]  # fmt: skip
+
+
+def _argumentos_cama(cama: Path, volumen: float) -> list[str]:
+    """Entrada en bucle + mezcla: la cama suena bajo la voz durante todo el video, sin aire muerto."""
+    cadena = (
+        f"[1:a]volume={volumen}[cama];"
+        "[0:a][cama]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[mezcla];"
+        "[mezcla]loudnorm=I=-14:TP=-1.5:LRA=11[aout]"
+    )
+    return [
+        "-stream_loop", "-1", "-i", str(cama.resolve()),
+        "-filter_complex", cadena,
+        "-map", "0:v", "-map", "[aout]",
     ]  # fmt: skip
 
 
@@ -75,7 +90,10 @@ def _cadena_resplandor(ancho: int, alto: int) -> str:
     )  # fmt: skip
 
 
-def quemar_subtitulos(video: Path, ass: Path, salida: Path, calidad: Calidad, resplandor: bool = False) -> Path:
+def quemar_subtitulos(
+    video: Path, ass: Path, salida: Path, calidad: Calidad, resplandor: bool = False,
+    cama: Path | None = None, volumen_cama: float = 0.18,
+) -> Path:
     ffmpeg = entorno.ffmpeg_con_libass()
     if ffmpeg is None:
         raise ErrorMotor(
@@ -89,12 +107,14 @@ def quemar_subtitulos(video: Path, ass: Path, salida: Path, calidad: Calidad, re
         ancho, alto = resolucion(video)
         # el resplandor va antes: los subtítulos se dibujan encima y quedan nítidos
         filtro = f"{_cadena_resplandor(ancho, alto)},{filtro}"
+    extra = _argumentos_cama(cama, volumen_cama) if cama else []
     _ejecutar(
         [
             ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
             "-i", str(video.resolve()),
+            *extra,  # la entrada de la cama va antes de cualquier filtro de salida (-vf)
             "-vf", filtro,
-            *_codificacion(ffmpeg, calidad),
+            *_codificacion(ffmpeg, calidad, con_cama=cama is not None),
             str(salida.resolve()),
         ],
         cwd=carpeta,
@@ -103,18 +123,23 @@ def quemar_subtitulos(video: Path, ass: Path, salida: Path, calidad: Calidad, re
     return salida
 
 
-def recodificar(video: Path, salida: Path, calidad: Calidad, resplandor: bool = False) -> Path:
+def recodificar(
+    video: Path, salida: Path, calidad: Calidad, resplandor: bool = False,
+    cama: Path | None = None, volumen_cama: float = 0.18,
+) -> Path:
     """Sin subtítulos: solo normaliza volumen y deja el formato listo para redes."""
     ffmpeg = entorno.ffmpeg_cualquiera()
     if ffmpeg is None:  # sin FFmpeg el video de Manim igual sirve
         shutil.copyfile(video, salida)
         return salida
     argumentos = ["-hide_banner", "-loglevel", "error", "-y", "-i", str(video.resolve())]
+    if cama:  # la entrada de la cama va antes de cualquier filtro de salida (-vf)
+        argumentos += _argumentos_cama(cama, volumen_cama)
     if resplandor:
         ancho, alto = resolucion(video)
         argumentos += ["-vf", _cadena_resplandor(ancho, alto)]
     _ejecutar(
-        [ffmpeg, *argumentos, *_codificacion(ffmpeg, calidad), str(salida.resolve())],
+        [ffmpeg, *argumentos, *_codificacion(ffmpeg, calidad, con_cama=cama is not None), str(salida.resolve())],
         cwd=salida.parent,
         que="preparar el video final",
     )  # fmt: skip

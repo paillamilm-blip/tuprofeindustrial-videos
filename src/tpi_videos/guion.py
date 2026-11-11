@@ -22,6 +22,7 @@ from pydantic import (
     model_validator,
 )
 
+from .config import _validar_hex
 from .errores import ErrorMotor
 from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 from .pausas import validar_pausas
@@ -1061,6 +1062,16 @@ class Visual(_Base):
         return analizar_poligono(self.lados or 0, self.lado)
 
 
+class MapaColor(_Base):
+    """Une un término de la fórmula con su concepto mediante un color (gramática XCris)."""
+
+    termino: str = Field(min_length=1)
+    concepto: str = Field(min_length=1)
+    color: str | None = None
+
+    _hex = field_validator("color")(classmethod(lambda cls, v: _validar_hex(v) if v is not None else None))
+
+
 class Paso(_Base):
     voz: str = Field(min_length=1)
     tex: str | None = None
@@ -1075,6 +1086,8 @@ class Paso(_Base):
     # de la transformación a la vista (lo que se va se tacha, lo que llega se ilumina)
     halo: list[str] = []
     resaltar_cambio: StrictBool = False
+    # Gramática XCris (opcional): cada término de la fórmula se une a su concepto con un color
+    mapa: list[MapaColor] = []
 
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
     _lista = field_validator("destacar", "halo", mode="before")(classmethod(lambda cls, v: _como_lista(v)))
@@ -1100,6 +1113,21 @@ class Paso(_Base):
             if _ESPACIOS_TEX.sub("", termino) not in formula:
                 raise ValueError(
                     f"el halo «{termino}» no aparece en la fórmula del paso ({self.tex}): copia el término tal cual"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def _mapa_coherente(self) -> Paso:
+        if self.mapa and not self.tex:
+            raise ValueError("el mapa de color ilumina la fórmula: este paso necesita «tex»")
+        formula = _ESPACIOS_TEX.sub("", self.tex or "")
+        for m in self.mapa:
+            termino = _ESPACIOS_TEX.sub("", m.termino)
+            if not termino:
+                raise ValueError("el término del mapa debe contener algo más que espacios de LaTeX")
+            if termino not in formula:
+                raise ValueError(
+                    f"el término «{m.termino}» del mapa no aparece en la fórmula del paso ({self.tex})"
                 )
         return self
 

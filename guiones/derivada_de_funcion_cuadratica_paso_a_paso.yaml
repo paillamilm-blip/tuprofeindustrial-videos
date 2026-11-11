@@ -1,0 +1,65 @@
+# Guion redactado con IA (gemini-3.6-flash) el 10-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se propone una función cuadrática concreta f(x) = 2x² - 5x + 3 para resolver el ejercicio paso a paso.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "Derivada de función cuadrática paso a paso"
+materia: matematica
+nivel: "3° medio"
+
+gancho:
+  texto: "¿Cómo derivar una función cuadrática en 30 segundos?"
+  voz: "¿Sabes derivar una función cuadrática rápidamente? Te enseño el método paso a paso."
+  emoji: "🧠"
+
+enunciado:
+  texto: "Calcula la derivada de la función cuadrática f(x) = 2x² - 5x + 3."
+  voz: "Calcularemos paso a paso la derivada de dos equis al cuadrado menos cinco equis más tres."
+  destacar: ["f(x) = 2x² - 5x + 3"]
+
+pasos:
+  - nota: "Función original"
+    tex: 'f(x) = 2x^2 - 5x + 3'
+    voz: "Identificamos los tres términos de la función cuadrática."
+    halo: ['2x^2']
+    emoji: "📌"
+    visual:
+      tipo: grafico_funcion
+      funcion: '2x^2 - 5x + 3'
+      variable: "x"
+      rango: [-1, 4]
+      eje_x: "x"
+      eje_y: "f(x)"
+      movimiento: tangente
+      desde: -1
+      hasta: 4
+      anotar: ['pendiente']
+  - nota: "Regla de la potencia"
+    tex: 'f''(x) = 2 \cdot (2x^{2-1}) - 5 \cdot 1 + 0'
+    voz: "Aplicamos la regla de la potencia multiplicando el exponente por el coeficiente y restando uno al exponente."
+    halo: ['2x^{2-1}']
+    resaltar_cambio: true
+    emoji: "💡"
+  - nota: "Multiplicar términos"
+    tex: 'f''(x) = 4x - 5'
+    voz: "Multiplicamos dos por dos para obtener cuatro equis y restamos cinco."
+    halo: ['4x']
+    resaltar_cambio: true
+
+resultado:
+  tex: 'f''(x) = 4x - 5'
+  voz: "La derivada de la función cuadrática es cuatro equis menos cinco."
+  emoji: "🎯"
+  destello: true
+
+verificacion:
+  texto: "La derivada de una función cuadrática siempre resulta en una función lineal."
+  voz: "Fíjate que la derivada de una función de grado dos siempre resulta en una ecuación lineal de grado uno."
+
+reto:
+  texto: "¿Cuál es la derivada de f(x) = 3x² + 4x - 7?"
+  voz: "Ahora inténtalo tú: ¿cuál es la derivada de tres equis al cuadrado más cuatro equis menos siete?"
+  emoji: "✍️"

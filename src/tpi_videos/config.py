@@ -43,6 +43,12 @@ def _validar_hex(valor: str) -> str:
     return valor.upper()
 
 
+def _validar_tono(valor: str) -> str:
+    if not re.fullmatch(r"[+-]\d{1,3}Hz", valor):
+        raise ValueError(f"«{valor}» no es un tono válido; usa un signo y Hz (ej. +25Hz o -10Hz)")
+    return valor
+
+
 class Colores(_Base):
     fondo: str = "#0B1220"
     panel: str = "#121B2F"
@@ -68,6 +74,17 @@ class Voz(_Base):
     proveedor: str = "edge"
     nombre: str = "es-CL-LorenzoNeural"
     velocidad: str = "+5%"
+    tono: str = "+0Hz"
+
+    _tono = field_validator("tono")(classmethod(lambda cls, v: _validar_tono(v)))
+
+
+class Cama(_Base):
+    """La cama musical bajo la voz: continua, para que nunca haya aire muerto."""
+
+    activa: bool = True
+    volumen: float = Field(default=0.18, ge=0.0, le=1.0)  # respecto a la voz (1 = igual de fuerte)
+    archivo: str = ""  # un bucle propio (mp3/wav); vacío = el pad libre de derechos que genera el motor
 
 
 class Cierre(_Base):
@@ -112,6 +129,7 @@ class Marca(_Base):
     colores: Colores = Colores()
     materias: ColoresMateria = ColoresMateria()
     voz: Voz = Voz()
+    cama: Cama = Cama()
     cierre: Cierre = Cierre()
     subtitulos: EstiloSubtitulos = EstiloSubtitulos()
 

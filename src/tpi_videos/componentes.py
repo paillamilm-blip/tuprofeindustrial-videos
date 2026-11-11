@@ -40,7 +40,12 @@ from manim import (
     ULTRABOLD,
     UP,
     UR,
+    Animation,
+    Arrow,
     Circle,
+    Create,
+    FadeIn,
+    GrowFromEdge,
     Group,
     ImageMobject,
     Line,
@@ -54,12 +59,13 @@ from manim import (
     Text,
     VGroup,
     VMobject,
+    Write,
 )
 
 from . import tipografia
 from .errores import ErrorMotor
 from .guion import sin_tildes
-from .tex import corregir_decimales, partes
+from .tex import agrupar_argumentos, corregir_decimales, partes
 
 # ------------------------------------------------------------------------------------------
 # Estilo activo (lo fija `usar_estilo` al comenzar cada video). Vive en un ContextVar: cada hilo
@@ -530,7 +536,8 @@ def busca_en_la_voz(texto: str, frase: str) -> int:
 
 
 def ecuacion(
-    tex: str, tam: float = TAM_ECUACION, color: str = "#FFFFFF", ancho_max: float | None = None
+    tex: str, tam: float = TAM_ECUACION, color: str = "#FFFFFF", ancho_max: float | None = None,
+    *, aislar: list[str] | None = None,
 ) -> MathTex:
     """Fórmula dividida en partes (para animar cada término). Si la división falla, usa una sola."""
     ancho_max = estilo_activo().ancho_util if ancho_max is None else ancho_max
@@ -539,7 +546,25 @@ def ecuacion(
     registro = logging.getLogger("manim")
     nivel = registro.level
     try:
-        if len(piezas) > 1:
+        if aislar:
+            tex = agrupar_argumentos(tex)
+            espacio = r"(?:\\[,;:!]|\\quad|\\qquad|\\ |\s)*"
+            patrones = [espacio.join(re.escape(ch) for ch in _ESPACIOS_TEX.sub("", agrupar_argumentos(corregir_decimales(t))))
+                        for t in sorted(set(aislar), key=len, reverse=True)]
+            patron = re.compile("(?P<termino>" + "|".join(patrones) + r")|\\[a-zA-Z]+")
+            segmentos: list[str] = []
+            desde = 0
+            for match in patron.finditer(tex):
+                if match.group("termino") is None:
+                    continue
+                if match.start() > desde:
+                    segmentos.append(tex[desde:match.start()])
+                segmentos.append(match.group())
+                desde = match.end()
+            if desde < len(tex):
+                segmentos.append(tex[desde:])
+            eq = MathTex(*segmentos, arg_separator="", font_size=tam, color=color)
+        elif len(piezas) > 1:
             registro.setLevel(logging.CRITICAL)  # el primer intento puede fallar sin asustar a nadie
             try:
                 eq = MathTex(*piezas, font_size=tam, color=color)
@@ -641,6 +666,10 @@ def partes_por_tex(eq: MathTex, buscado: str) -> list[Mobject]:
     exactas = [p for p in eq.submobjects if getattr(p, "tex_string", "").strip() == buscado]
     if exactas:
         return exactas
+    agrupado = agrupar_argumentos(buscado)
+    exactas = [p for p in eq.submobjects if getattr(p, "tex_string", "").strip() == agrupado]
+    if exactas:
+        return exactas
     contenidas = [p for p in eq.submobjects if buscado and buscado in getattr(p, "tex_string", "")]
     if contenidas or not buscado:
         return contenidas
@@ -705,6 +734,112 @@ def visto(color: str, escala: float = 0.32) -> VMobject:
     marca = VMobject()
     marca.set_points_as_corners([[-0.5, 0.05, 0], [-0.12, -0.35, 0], [0.55, 0.45, 0]])
     return marca.scale(escala).set_stroke(color, 7)
+
+
+def tabs_de_pasos(n: int, activo: int, paleta: list[str]) -> VGroup:
+    """Una pestaña numerada por paso con el color de la paleta; la activa brilla y el resto se atenúa."""
+    tabs = VGroup()
+    for k in range(1, n + 1):
+        color = paleta[(k - 1) % len(paleta)]
+        tabs.add(chip(str(k), color, tam=16))
+    tabs.arrange(RIGHT, buff=0.18)
+    activar_tab(tabs, activo)
+    return tabs
+
+
+def activar_tab(tabs: VGroup, activo: int) -> None:
+    """Deja la pestaña ``activo`` a full y las demás tenues; idempotente (se llama en cada paso)."""
+    for k, tab in enumerate(tabs, 1):
+        caja, numero = tab[0], tab[1]
+        if k == activo:
+            caja.set_fill(opacity=0.22).set_stroke(opacity=1.0)
+            numero.set_fill(opacity=1.0)
+        else:
+            caja.set_fill(opacity=0.05).set_stroke(opacity=0.3)
+            numero.set_fill(opacity=0.4)
+
+
+def panel_persistente(
+    total: int, cerrados: list[str], paleta: list[str], ancho: float, relleno: str, borde: str,
+    *, completados: int | None = None,
+) -> VGroup:
+    """El segundo panel de XCris: contador de paso, barra de progreso y las últimas fórmulas cerradas.
+
+    Se reconstruye en cada paso con la lista acumulada (no se resetea): el contenido vive en ``panel[1]``
+    (``[0]`` contador, ``[1]`` barra, ``[2]`` mini-fórmulas), porque ``tarjeta`` envuelve el contenido.
+    """
+    k = len(cerrados) if completados is None else completados
+    color = paleta[min(k, max(0, total - 1)) % len(paleta)] if paleta else "#FFFFFF"
+    contador = texto(f"paso {min(k + 1, total)} de {total}", 16, ULTRABOLD, color)
+    pista = Rectangle(width=ancho - 1.2, height=0.12).set_fill(borde, 0.5).set_stroke(width=0)
+    lleno = Rectangle(width=max(0.02, pista.width * (k / total if total else 0.0)), height=0.12)
+    lleno.set_fill(color, 0.95).set_stroke(width=0)
+    lleno.align_to(pista, LEFT).align_to(pista, UP)
+    mini = VGroup(*[ecuacion(t, 20, "#FFFFFF", ancho_max=ancho - 1.2) for t in cerrados[-3:]])
+    mini.arrange(DOWN, buff=0.12, aligned_edge=LEFT)
+    contenido = VGroup(contador, VGroup(pista, lleno), mini).arrange(DOWN, buff=0.16, aligned_edge=LEFT)
+    return tarjeta(contenido, ancho, relleno, borde)
+
+
+def mapa_de_color(eq: MathTex, mapa: list, paleta: list[str]) -> VGroup:
+    """Por cada término del mapa, una etiqueta de concepto y una flecha del color que lo une a la fórmula.
+
+    Un término que no está en la fórmula se omite (la validación del guion ya lo impide, pero el
+    componente no revienta si llega igual). El color propio del mapa manda sobre la paleta.
+    """
+    etiquetas = VGroup()
+    objetivos: list[Mobject] = []
+    colores: list[str] = []
+    for j, m in enumerate(mapa):
+        color = m.color or paleta[j % len(paleta)]
+        termino = agrupar_argumentos(corregir_decimales(m.termino))
+        objetivo = eq.get_part_by_tex(termino)
+        if objetivo is None:
+            partes = partes_por_tex(eq, m.termino)
+            if not partes:
+                continue
+            objetivo = VGroup(*partes)
+        objetivo.set_color(color)
+        eq.set_color_by_tex(termino, color)
+        etiquetas.add(chip(m.concepto, color, tam=15))
+        objetivos.append(objetivo)
+        colores.append(color)
+    if not len(etiquetas):
+        return VGroup()
+    orden = sorted(range(len(objetivos)), key=lambda i: objetivos[i].get_center()[0])
+    etiquetas = VGroup(*[etiquetas[i] for i in orden])
+    objetivos = [objetivos[i] for i in orden]
+    colores = [colores[i] for i in orden]
+    etiquetas.arrange(RIGHT, buff=0.25)
+    ancho = min(estilo_activo().ancho_util, max(eq.width, 3.0))
+    if etiquetas.width > ancho:
+        etiquetas.scale_to_fit_width(ancho)
+    etiquetas.next_to(eq, DOWN, buff=0.6)
+    grupo = VGroup()
+    for etiqueta, objetivo, color in zip(etiquetas, objetivos, colores, strict=True):
+        flecha = Arrow(etiqueta.get_top(), objetivo.get_bottom(), buff=0.12, color=color, stroke_width=4)
+        grupo.add(VGroup(etiqueta, flecha))
+    return grupo
+
+
+def micro_movimiento(tipo: str, objetivo: Mobject) -> Animation:
+    if tipo == "tick":
+        marca = visto("#22C55E").scale_to_fit_width(objetivo.width * 0.22)
+        if marca.height > objetivo.height * 0.24:
+            marca.scale_to_fit_height(objetivo.height * 0.24)
+        marca.set_stroke(width=2.5).align_to(objetivo, UR)
+        marca.shift(LEFT * objetivo.width * 0.06 + DOWN * objetivo.height * 0.06)
+        return Create(marca)
+    if tipo == "barra":
+        return GrowFromEdge(objetivo, LEFT)
+    if tipo == "contador":
+        return FadeIn(objetivo, shift=UP * 0.2)
+    return Write(objetivo)
+
+
+def gramatica_activa(tema) -> bool:
+    g = tema.gramatica
+    return bool(g.tabs or g.panel or g.mapa_color or g.micro)
 
 
 def subrayado(objetivo: Mobject, color: str, grosor: float = 6, separacion: float = 0.1) -> Line:

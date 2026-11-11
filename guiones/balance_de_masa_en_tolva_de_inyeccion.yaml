@@ -1,0 +1,70 @@
+# Guion redactado con IA (gemini-3.6-flash) el 10-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se asume un flujo másico constante en la entrada y en la salida.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "Balance de masa en tolva de inyección"
+materia: ingenieria
+nivel: "4° medio TP"
+
+gancho:
+  texto: "¿Cuánto tarda en llenarse esta tolva de inyección?"
+  voz: "¿Sabes calcular cuánto tarda en llenarse una tolva de inyección industrial?"
+  emoji: "⚙️"
+
+enunciado:
+  texto: "Una tolva de inyección recibe 5 kg/min de polímero y entrega 2 kg/min a la máquina. Si requiere acumular 30 kg de plástico, ¿cuánto tiempo tardará?"
+  voz: "Una tolva de inyección recibe cinco kilogramos por minuto de polímero y entrega dos a la máquina. Si necesita acumular treinta kilogramos, ¿cuánto tiempo demora?"
+  destacar: ["5 kg/min", "2 kg/min", "30 kg"]
+
+datos:
+  - tex: '\dot{m}_{ent} = 5\ \text{kg/min}'
+    voz: "La entrada es de cinco kilogramos por minuto."
+  - tex: '\dot{m}_{sal} = 2\ \text{kg/min}'
+    voz: "La salida es de dos kilogramos por minuto."
+  - tex: '\Delta m = 30\ \text{kg}'
+    voz: "Queremos acumular treinta kilogramos."
+
+pasos:
+  - nota: "Balance de masa"
+    tex: '\dot{m}_{acum} = \dot{m}_{ent} - \dot{m}_{sal}'
+    voz: "El balance de masa dice que la acumulación es lo que entra menos lo que sale."
+    halo: ['\dot{m}_{acum}']
+    emoji: "💡"
+    visual:
+      tipo: tolva_3d
+      radio: '0,4 m'
+      altura: '0,6 m'
+      radio_salida: '0,1 m'
+      altura_cono: '0,4 m'
+      despiece: true
+      anotar: ['volumen']
+  - nota: "Restamos caudales"
+    tex: '\dot{m}_{acum} = 5 - 2 = 3\ \text{kg/min}'
+    voz: "Restamos los caudales de masa. Se acumulan tres kilogramos por cada minuto."
+    resaltar_cambio: true
+  - nota: "Fórmula del tiempo"
+    tex: 't = \frac{\Delta m}{\dot{m}_{acum}}'
+    voz: "El tiempo necesario es la masa total a acumular dividida en la tasa neta."
+  - nota: "Calculamos tiempo"
+    tex: 't = \frac{30}{3} = 10\ \text{min}'
+    voz: "Dividimos treinta en tres y obtenemos el tiempo final en minutos."
+    resaltar_cambio: true
+
+resultado:
+  tex: 't = 10\ \text{min}'
+  voz: "La tolva tarda exactamente diez minutos en acumular la masa deseada."
+  emoji: "🎯"
+  destello: true
+
+verificacion:
+  texto: "Si la salida fuera igual a la entrada, la masa acumulada no cambiaría jamás."
+  voz: "Fíjate que si la salida fuera igual a la entrada, no acumularía nada y el tiempo sería infinito."
+
+reto:
+  texto: "Si entran 8 kg/min y salen 3 kg/min, ¿cuánto tarda en acumular 25 kg?"
+  voz: "Ahora inténtalo tú. Si entran ocho kilogramos por minuto y salen tres, ¿cuánto tarda en juntar veinticinco kilogramos?"
+  emoji: "✍️"
