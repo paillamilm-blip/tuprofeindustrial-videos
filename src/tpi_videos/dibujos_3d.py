@@ -473,8 +473,13 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
         notas.append(
             f"{'V' if marca == 'volumen' else 'A'} = {d._numero_latex(valor)} {unidad}{sufijo}".strip()
         )
+    cotas = None
+    if cuerpo.figura == "cubo":
+        s = a / 2
+        cotas = [(medidas[0][0], [-s, -s, -s], [s, -s, -s], 0, "abajo")]
     return _cuerpo_vivo(
-        piezas, visual.vista, corte == "mitad" or despiece, col, ancho, alto, papel, medidas, notas
+        piezas, visual.vista, corte == "mitad" or despiece, col, ancho, alto, papel,
+        medidas, notas, cotas=cotas,
     )
 
 
@@ -489,6 +494,7 @@ def _cuerpo_vivo(
     medidas: list[tuple[str, list[float], int | None, str]],
     notas: list[str],
     ancho_cuerpo: float = 0.50,
+    cotas: list[tuple[str, list[float], list[float], int, str]] | None = None,
 ) -> d.Dibujo:
     """El motor común de los cuerpos 3D: órbita, luz, despiece, silueta y rótulos que viajan.
 
@@ -525,27 +531,37 @@ def _cuerpo_vivo(
     centro_2d = (bajo + alto_) / 2
     k = min(0.80 * alto / max(alto_[1] - bajo[1], 1e-6), ancho_cuerpo * ancho / max(alto_[0] - bajo[0], 1e-6))
 
-    # Metal satinado en la paleta del tema: la sombra no llega al negro y la luz casi al blanco.
-    oscuro = _tono(col.tenue, "#000000", 0.22)
-    claro = _tono(col.tenue, "#FFFFFF", 0.78)
-    limites = [np.zeros(4)]  # x mín, x máx, y mín, y máx del cuerpo en la pose actual
+    tecnico = cotas is not None
+    oscuro = _tono(col.tenue, "#000000", 0.15 if tecnico else 0.22)
+    claro = _tono(col.tenue, "#FFFFFF", 0.55 if tecnico else 0.78)
+    canto = _tono(col.formulas, col.tenue, 0.35) if tecnico else ManimColor(col.formulas)
+    limites = [np.zeros(4)]
     poligonos = [[VMobject() for _ in pieza.caras] for pieza in piezas]
-    siluetas = [VMobject().set_stroke(col.formulas, 3.5) if pieza.lisa else None for pieza in piezas]
-    cuerpo_mob = VGroup(*[m for fila in poligonos for m in fila], *[s for s in siluetas if s is not None])
+    siluetas = [VMobject().set_stroke(canto, 1.8 if tecnico else 3.5) if pieza.lisa else None for pieza in piezas]
+    rayados = [
+        [VMobject().set_fill(opacity=0).set_stroke(col.acento, 1.5)
+         if tecnico and cara.clase == "corte" else None for cara in pieza.caras]
+        for pieza in piezas
+    ]
+    cuerpo_mob = VGroup(
+        *[m for fila in poligonos for m in fila],
+        *[s for s in siluetas if s is not None],
+        *[r for fila in rayados for r in fila if r is not None],
+    )
     aristas = [_aristas(pieza) if pieza.lisa else [] for pieza in piezas]
 
     def color_de(cara: _Cara, normal: np.ndarray, hacia: np.ndarray, de_espalda: bool) -> ManimColor:
         if cara.clase == "corte":
-            return ManimColor(col.acento)  # la cara nueva se ve plana y en acento: es lo que se mira
+            return _tono(col.acento, papel, 0.85) if tecnico else ManimColor(col.acento)
         if de_espalda:
             return _tono(oscuro, "#000000", 0.25)  # el interior de una pieza abierta
         lambert = max(float(normal @ luz), 0.0)
-        brillo = max(float(normal @ _unitario(luz + hacia)), 0.0) ** 28
+        brillo = max(float(normal @ _unitario(luz + hacia)), 0.0) ** (18 if tecnico else 28)
         base = oscuro.interpolate(claro, 0.2 + 0.8 * lambert)
         if cara.clase == "interior":
             # Por dentro del tubo llega poca luz: el hueco se lee oscuro, como en la pieza real.
             return _tono(base, "#000000", 0.45)
-        return _tono(base, "#FFFFFF", 0.7 * brillo)
+        return _tono(base, "#FFFFFF", (0.18 if tecnico else 0.7) * brillo)
 
     def pose(t: float, llevar: Any) -> None:
         phi, theta, sep = momento(t)
@@ -566,7 +582,9 @@ def _cuerpo_vivo(
             pieza, salida = piezas[i], piezas[i].salida * sep
             filas = []
             visibles = []
-            for cara, mob in zip(pieza.caras, poligonos[i], strict=True):
+            for cara, mob, rayado in zip(pieza.caras, poligonos[i], rayados[i], strict=True):
+                if rayado is not None:
+                    rayado.clear_points()
                 de_frente = float(cara.normal @ hacia) > 1e-4
                 visibles.append(de_frente)
                 pts = cara.puntos + salida
@@ -579,10 +597,19 @@ def _cuerpo_vivo(
                 if pieza.lisa and cara.clase in ("cuerpo", "anillo", "interior"):
                     mob.set_fill(tinte, 1.0).set_stroke(tinte, 1.2, 1.0)  # borde del mismo tono: sin rendijas
                 else:
-                    mob.set_fill(tinte, 1.0).set_stroke(col.formulas, 3.0, 1.0)
+                    mob.set_fill(tinte, 1.0).set_stroke(canto, 1.6 if tecnico else 3.0, 1.0)
                 # El hueco de un tubo se ve solo por la boca: se pinta antes que la cáscara de afuera.
                 profundidad = float(pts.mean(axis=0) @ hacia) - (1e6 if cara.clase == "interior" else 0.0)
                 filas.append((profundidad, mob))
+                if rayado is not None:
+                    x0, y0, z = cara.puntos.min(axis=0)
+                    x1, y1, _ = cara.puntos.max(axis=0)
+                    for suma in np.linspace(x0 + y0, x1 + y1, 17)[1:-1]:
+                        inicio = np.array([max(x0, suma - y1), min(y1, suma - x0), z])
+                        fin = np.array([min(x1, suma - y0), max(y0, suma - x1), z])
+                        rayado.start_new_path(pantalla(inicio + salida))
+                        rayado.add_line_to(pantalla(fin + salida))
+                    filas.append((profundidad, rayado))
             nuevos += [mob for _, mob in sorted(filas, key=lambda par: par[0])]
             silueta = siluetas[i]
             if silueta is not None:
@@ -618,9 +645,28 @@ def _cuerpo_vivo(
         rótulos.add(rotulo)
         return fondo, rotulo
 
-    for texto, punto, pieza, lado in medidas:
+    for texto, punto, pieza, lado in ([] if tecnico else medidas):
         fondo, rotulo = etiqueta(texto, np.zeros(3))
         viajeros.append((fondo, rotulo, np.array(punto, dtype=float), pieza, lado))
+
+    lineas_cota = VGroup()
+    acotadas = []
+    for texto, inicio, fin, pieza, lado in cotas or []:
+        fondo, rotulo = etiqueta(texto, np.zeros(3))
+        lineas = VGroup(*[Line(np.zeros(3), np.array([1.0, 0.0, 0.0]),
+                              color=col.acento, stroke_width=1.5) for _ in range(5)])
+        lineas_cota.add(lineas)
+        delta = np.array(fin) - np.array(inicio)
+        proyectada = np.array([delta @ der_f, delta @ arr_f, 0.0])
+        if np.linalg.norm(proyectada) < 1e-5:
+            phi, theta, _ = momento(0.0)
+            der, arr, _ = _ejes_de_camara(phi, theta)
+            proyectada = np.array([delta @ der, delta @ arr, 0.0])
+        afuera = {"izquierda": [-1, 0, 0], "derecha": [1, 0, 0],
+                  "arriba": [0, 1, 0], "abajo": [0, -1, 0]}[lado]
+        normal = np.array([-proyectada[1], proyectada[0], 0.0])
+        signo = -1 if normal @ afuera < 0 else 1
+        acotadas.append((fondo, rotulo, lineas, np.array(inicio), np.array(fin), pieza, signo))
 
     def mover_rotulos(t: float, llevar: Any) -> None:
         """Cada medida sigue a su arista, pero apoyada por fuera del cuerpo: nunca encima de él.
@@ -646,22 +692,102 @@ def _cuerpo_vivo(
                 sitio = np.array([x, y0 - 0.1 - medio_alto, 0.0])
             fondo.move_to(llevar(sitio))
             rotulo.move_to(llevar(sitio))
+        for fondo, rotulo, lineas, inicio, fin, pieza, signo in acotadas:
+            salida = piezas[pieza].salida * sep
+            puntos = np.array([inicio + salida, fin + salida])
+            p, q = np.column_stack(((puntos @ der - centro_2d[0]) * k,
+                                    (puntos @ arr - centro_2d[1]) * k, np.zeros(2)))
+            largo = float(np.linalg.norm(q - p))
+            visible = largo > 1e-5
+            opacidad = float(visible)
+            if inicio[2] != fin[2]:
+                alto_rotulo = rotulo.height / factor
+                opacidad = d._suave((largo - alto_rotulo) / alto_rotulo)
+            lineas.set_stroke(opacity=opacidad)
+            fondo.set_fill(opacity=opacidad)
+            rotulo.set_opacity(opacidad)
+            if not visible:
+                sitio = llevar((p + q) / 2)
+                fondo.move_to(sitio)
+                rotulo.move_to(sitio)
+                for linea in lineas:
+                    linea.put_start_and_end_on(sitio, sitio + np.array([1e-8, 0.0, 0.0]))
+                continue
+            direccion = (q - p) / largo
+            normal = np.array([-direccion[1], direccion[0], 0.0]) * signo
+            esquinas = np.array([[x0, y0, 0], [x0, y1, 0], [x1, y0, 0], [x1, y1, 0]])
+            distancia = max(float((esquinas @ normal).max() - min(p @ normal, q @ normal)), 0) + 0.12
+            a, b = p + normal * distancia, q + normal * distancia
+            marca = _unitario(direccion + normal) * 0.045
+            segmentos = [(p, a + normal * 0.045), (q, b + normal * 0.045),
+                         (a, b), (a - marca, a + marca), (b - marca, b + marca)]
+            for linea, (desde, hasta) in zip(lineas, segmentos, strict=True):
+                linea.put_start_and_end_on(llevar(desde), llevar(hasta))
+            margen = (abs(normal[0]) * fondo.width + abs(normal[1]) * fondo.height) / factor / 2 + 0.1
+            sitio = llevar((a + b) / 2 + normal * margen)
+            fondo.move_to(sitio)
+            rotulo.move_to(sitio)
+        for fondo, rotulo, lineas, inicio, fin, _, _ in acotadas:
+            if inicio[2] != fin[2]:
+                continue
+            opacidad = float(rotulo.get_fill_opacity())
+            for otro, altura, _, p0, p1, _, _ in acotadas:
+                if p0[2] == p1[2] or altura.get_fill_opacity() < 0.01:
+                    continue
+                espacio_x = max(fondo.get_left()[0] - otro.get_right()[0],
+                                otro.get_left()[0] - fondo.get_right()[0])
+                espacio_y = max(fondo.get_bottom()[1] - otro.get_top()[1],
+                                otro.get_bottom()[1] - fondo.get_top()[1])
+                opacidad = min(opacidad, d._suave(max(espacio_x, espacio_y) / (0.15 * factor)))
+            lineas.set_stroke(opacity=opacidad)
+            fondo.set_fill(opacity=opacidad)
+            rotulo.set_opacity(opacidad)
 
     mover_rotulos(1.0, lambda q: q)
     # Las notas van a la derecha, donde siempre hubo hueco; si el cuerpo es largo (una tubería, un eje)
     # se corren lo justo para no pisar su punta en ninguna pose de la órbita.
     punta_derecha = (alto_[0] - centro_2d[0]) * k
+    quietas = []
     for pie, texto in enumerate(notas[:3]):
         fondo, rotulo = etiqueta(texto, np.array([ancho * 0.30, 0.42 - pie * 0.62, 0.0]), 28)
+        quietas.append((fondo, rotulo))
         minimo = punta_derecha + 0.3 + fondo.width / 2
         if fondo.get_x() < minimo:
             corrimiento = np.array([minimo - fondo.get_x(), 0.0, 0.0])
             fondo.shift(corrimiento)
             rotulo.shift(corrimiento)
 
+    lineas_cota.set_z_index(0.52)
     parches.set_z_index(0.55)
     rótulos.set_z_index(0.56)
-    todo = VGroup(cuerpo_mob, parches, rótulos)
+    todo = VGroup(cuerpo_mob, lineas_cota, parches, rótulos)
+    envolvente = None
+    if tecnico:
+        extremos = []
+        for t in np.linspace(0.0, 1.0, 65):
+            pose(float(t), lambda q: q)
+            mover_rotulos(float(t), lambda q: q)
+            punta_derecha = max(punta_derecha, lineas_cota.get_right()[0],
+                                *(fondo.get_right()[0] for fondo, *_ in acotadas))
+            extremos.extend([todo.get_corner(np.array([-1, -1, 0])),
+                             todo.get_corner(np.array([1, 1, 0]))])
+        for fondo, rotulo in quietas:
+            minimo = punta_derecha + 0.3 + fondo.width / 2
+            if fondo.get_x() < minimo:
+                corrimiento = np.array([minimo - fondo.get_x(), 0.0, 0.0])
+                fondo.shift(corrimiento)
+                rotulo.shift(corrimiento)
+        extremos.extend([todo.get_corner(np.array([-1, -1, 0])),
+                         todo.get_corner(np.array([1, 1, 0]))])
+        bajo_total, alto_total = np.min(extremos, axis=0), np.max(extremos, axis=0)
+        envolvente = VMobject().set_points_as_corners([
+            bajo_total, [alto_total[0], bajo_total[1], 0],
+            alto_total, [bajo_total[0], alto_total[1], 0], bajo_total,
+        ]).set_fill(opacity=0).set_stroke(width=0)
+        # El marco invisible conserva el centro de toda la órbita cuando la escena coloca el dibujo.
+        todo.add(envolvente)
+        pose(1.0, lambda q: q)
+        mover_rotulos(1.0, lambda q: q)
     corrido = -todo.get_center()
     todo.shift(corrido)
     fijo, desplazamiento = d._encaje(todo, ancho * 0.94, alto * 0.94)
@@ -677,7 +803,7 @@ def _cuerpo_vivo(
     return d.Dibujo(
         mobs=todo,
         trazo=[],
-        aparece=[cuerpo_mob, *rótulos],
+        aparece=[cuerpo_mob, *lineas_cota, *rótulos],
         vivo=vivo,
         duracion=d.SEGUNDOS_RECORRIDO,
         fisico=False,
@@ -773,7 +899,15 @@ def dibujar_tolva_3d(visual: Any, col: Any, ancho: float, alto: float, papel: st
     if "chapa" in visual.anotar:
         notas.append(f"Chapa = {d._numero_latex(t.chapa)} {u}²".strip())
     piezas = _piezas_tolva(t, visual.despiece)
-    return _cuerpo_vivo(piezas, visual.vista, visual.despiece, col, ancho, alto, papel, medidas, notas)
+    cotas = [
+        (m("R", t.radio), [0, 0, t.altura], [t.radio, 0, t.altura], 0, "arriba"),
+        (m("H", t.altura), [-t.radio, 0, 0], [-t.radio, 0, t.altura], 0, "izquierda"),
+        (m("h", t.altura_cono), [-t.radio_salida, 0, -t.altura_cono], [-t.radio_salida, 0, 0], 1, "izquierda"),
+        (m("r", t.radio_salida), [0, 0, -t.altura_cono], [t.radio_salida, 0, -t.altura_cono], 1, "abajo"),
+    ]
+    return _cuerpo_vivo(
+        piezas, visual.vista, visual.despiece, col, ancho, alto, papel, medidas, notas, cotas=cotas,
+    )
 
 
 # La brida se dibuja en proporción al tubo: el guion no la mide y no entra en las cuentas.

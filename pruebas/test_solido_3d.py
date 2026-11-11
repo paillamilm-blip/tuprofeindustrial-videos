@@ -37,7 +37,7 @@ class LasDieciseisCombinacionesTest(unittest.TestCase):
     """El encuadre es el defecto que hay que evitar: un cuerpo que toca el borde del cuadro se ve
     cortado en el video y nadie se da cuenta mirando el log del render."""
 
-    def _cuadro(self, visual):
+    def _cuadro(self, visual, solo_cuerpo=False):
         """El mismo camino de 2 líneas de la miniatura: dibujar_visual + Camera a 7,6 x 3,3."""
         from manim import Camera, tempconfig
 
@@ -54,7 +54,7 @@ class LasDieciseisCombinacionesTest(unittest.TestCase):
             }
         ):
             camara = Camera()
-            camara.capture_mobject(dibujo.mobs)
+            camara.capture_mobject(dibujo.aparece[0] if solo_cuerpo else dibujo.mobs)
             return camara.get_image()
 
     def test_ninguna_combinacion_toca_el_borde_y_todas_dejan_cuerpo(self):
@@ -99,13 +99,16 @@ class LasDieciseisCombinacionesTest(unittest.TestCase):
         self.assertLess(frente, 0.7, f"de frente el cilindro esbelto es un rectángulo alto: {frente}")
         self.assertGreater(piso, 0.9, f"desde arriba el cilindro es un disco: {piso}")
 
-    def test_el_corte_del_cubo_pinta_la_cara_en_acento(self):
-        im = self._cuadro(_visual("cubo", "axonometrica", corte="mitad")).convert("RGB")
+    def test_el_corte_del_cubo_muestra_rayado_en_acento(self):
         acento = tuple(int(str(COLORES.acento).lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
-        encontrados = sum(
-            1
-            for y in range(0, im.height, 3)
-            for x in range(0, im.width, 3)
-            if sum(abs(a - b) for a, b in zip(im.getpixel((x, y)), acento, strict=False)) < 40
-        )
-        self.assertGreater(encontrados, 200, "la cara del corte no se ve sombreada en el color de acento")
+        for corte, debe_verse in (("mitad", True), ("sin_corte", False)):
+            with self.subTest(corte=corte):
+                im = self._cuadro(_visual("cubo", "axonometrica", corte=corte), solo_cuerpo=True).convert("RGB")
+                encontrados = sum(
+                    sum(abs(a - b) for a, b in zip(pixel, acento, strict=True)) < 40
+                    for pixel in im.getdata()
+                )
+                if debe_verse:
+                    self.assertGreater(encontrados, 200, "el rayado del corte no llega al cuadro")
+                else:
+                    self.assertEqual(encontrados, 0, "un cubo sin cortar no tiene sección rayada")

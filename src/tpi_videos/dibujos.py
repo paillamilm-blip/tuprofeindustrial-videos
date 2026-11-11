@@ -3060,7 +3060,8 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
     mismo color (resistencias, batería y las medidas del polígono) sin que se note el truco.
     """
     dibujo = _dibujar_visual(visual, col, ancho, alto, papel)
-    afinar_trazo(dibujo.mobs)
+    tecnico = visual.tipo == "tolva_3d" or (visual.tipo == "solido_3d" and visual.figura == "cubo")
+    afinar_trazo(dibujo.mobs, minimo=1.5 if tecnico else GROSOR_MINIMO)
     return dibujo
 
 
