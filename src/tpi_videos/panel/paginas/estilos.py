@@ -276,9 +276,6 @@ class EditorTema:
     def __init__(self, identificador: str) -> None:
         self.id = identificador
         self.t = cargar_tema(identificador, cargar_marca()).model_dump(mode="json")
-        materias = self.t["materias"]
-        # el color de las etiquetas es el de la materia del propio estilo, nunca un color del panel
-        self.etiquetas = {"color": materias["matematica"]}
 
     def render(self) -> None:
         t = self.t
@@ -296,7 +293,10 @@ class EditorTema:
                     with ui.row().classes("gap-3"):
                         for clave, etiqueta in COLORES:
                             _color(t["colores"], clave, etiqueta)
-                        _color(self.etiquetas, "color", "Etiquetas (PROBLEMA…)")
+                        for materia, nombre in (
+                            ("matematica", "Matemática"), ("fisica", "Física"), ("ingenieria", "Ingeniería")
+                        ):
+                            _color(t["materias"], materia, f"Etiquetas: {nombre}")
                 with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
                     ui.label("Letras").classes("tpi-titulo")
                     with ui.row().classes("gap-3 items-center"):
@@ -335,6 +335,22 @@ class EditorTema:
 
     def _fondo(self) -> None:
         fondo = self.t["fondo"]
+        degradado = fondo["degradado"]
+        controles: list[ui.color_input] = []
+        sincronizando = False
+
+        def cambiar_color(e: events.ValueChangeEventArguments, indice: int) -> None:
+            nonlocal sincronizando
+            if sincronizando:
+                return
+            while len(degradado) <= indice:
+                degradado.append(degradado[-1] if degradado else self.t["colores"]["fondo"])
+            degradado[indice] = e.value
+            if indice == 0 and len(degradado) == 1:
+                sincronizando = True
+                controles[1].set_value(e.value)
+                sincronizando = False
+
         with ui.card().classes("tpi-hoja w-full p-5 gap-3"):
             ui.label("Fondo").classes("tpi-titulo")
             ui.toggle(
@@ -356,9 +372,12 @@ class EditorTema:
                           on_upload=self._subir_fondo).props('accept=".jpg,.jpeg,.png,.webp" flat bordered')  # fmt: skip
             with ui.row().classes("gap-3"):
                 for i, etiqueta in enumerate(("Degradado: arriba", "Degradado: abajo")):
-                    ui.color_input(etiqueta, value=fondo["degradado"][i],
-                                   on_change=lambda e, i=i: fondo["degradado"].__setitem__(i, e.value)).props(
-                        "outlined dense").classes("w-44")  # fmt: skip
+                    color = degradado[i] if i < len(degradado) else (
+                        degradado[-1] if degradado else self.t["colores"]["fondo"]
+                    )
+                    controles.append(ui.color_input(
+                        etiqueta, value=color, on_change=lambda e, i=i: cambiar_color(e, i)
+                    ).props("outlined dense").classes("w-44"))
 
     async def _subir_fondo(self, e: events.UploadEventArguments) -> None:
         fondos_usuario_dir().mkdir(parents=True, exist_ok=True)
@@ -437,7 +456,6 @@ class EditorTema:
                     ui.slider(min=1, max=5, step=1).props("label markers").bind_value(s, "max_palabras")
 
     async def guardar_y_ver(self) -> None:
-        self.t["materias"] = {m: self.etiquetas["color"] for m in ("matematica", "fisica", "ingenieria")}
         try:
             tema = Tema.model_validate(self.t)
         except ValidationError as e:
