@@ -460,6 +460,7 @@ class OpcionesEscena:
     solo_gancho: bool = False  # laboratorio de ganchos: cabecera + gancho, nada más
     # Segundos que toda fórmula debe llevar completa y quieta antes de que entre el paso siguiente.
     piso_lectura: float = PISO_LECTURA
+    tono: str = "+0Hz"  # pitch de la voz (edge-tts): acerca o aleja el timbre sin cambiar de voz
 
 
 @dataclass
@@ -898,7 +899,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
 
     def construct(self) -> None:
         c.usar_estilo(self.tema)
-        servicio = crear_servicio(self.op.proveedor, self.op.voz, self.op.velocidad)
+        servicio = crear_servicio(self.op.proveedor, self.op.voz, self.op.velocidad, self.op.tono)
         self.set_speech_service(servicio, create_subcaption=False)
         self.fondo = c.fondo_tema(self.tema)
         self.add(self.fondo)

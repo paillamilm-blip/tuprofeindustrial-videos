@@ -56,15 +56,18 @@ def _tarjeta(titulo: str, ayuda: str) -> ui.card:
     return tarjeta
 
 
-def _generar_muestra(voz: str, velocidad: str):
+def _generar_muestra(voz: str, velocidad: str, tono: str = "+0Hz"):
     import edge_tts
 
-    destino = raiz_proyecto() / "salida" / "_panel" / "voces" / f"{voz}_{velocidad.replace('%', '')}.mp3"
+    destino = (
+        raiz_proyecto() / "salida" / "_panel" / "voces"
+        / f"{voz}_{velocidad.replace('%', '')}_{tono.replace('Hz', '')}.mp3"
+    )
     if destino.exists():
         return destino
     destino.parent.mkdir(parents=True, exist_ok=True)
     try:
-        edge_tts.Communicate(MUESTRA, voz, rate=velocidad).save_sync(str(destino))
+        edge_tts.Communicate(MUESTRA, voz, rate=velocidad, pitch=tono).save_sync(str(destino))
     except Exception as e:  # sin internet, voz inexistente…
         destino.unlink(missing_ok=True)
         raise ErrorMotor("No pude generar la muestra de voz.", ayuda="Revisa tu conexión a internet.") from e
@@ -206,21 +209,32 @@ def _seccion_voz() -> None:
     if marca.voz.nombre not in opciones:
         opciones[marca.voz.nombre] = marca.voz.nombre
     m = re.fullmatch(r"([+-]\d+)%", marca.voz.velocidad or "+0%")
-    datos = {"voz": marca.voz.nombre, "velocidad": int(m.group(1)) if m else 0}
+    t = re.fullmatch(r"([+-]\d+)Hz", marca.voz.tono or "+0Hz")
+    datos = {
+        "voz": marca.voz.nombre,
+        "velocidad": int(m.group(1)) if m else 0,
+        "tono": int(t.group(1)) if t else 0,
+    }
     with _tarjeta("Voz", "La voz de tus videos (voces neurales gratis; necesitan internet)."):
         with ui.row().classes("w-full items-center gap-4"):
             ui.select(opciones, label="Voz").props("outlined dense").classes("w-80").bind_value(datos, "voz")
             with ui.column().classes("flex-1 gap-0"):
                 ui.label("Velocidad").classes("tpi-ayuda")
                 ui.slider(min=-20, max=30, step=5).props("label markers").bind_value(datos, "velocidad")
+            with ui.column().classes("flex-1 gap-0"):
+                ui.label("Tono (Hz)").classes("tpi-ayuda")
+                ui.slider(min=-50, max=50, step=5).props("label markers").bind_value(datos, "tono")
         reproductor = ui.row().classes("w-full")
 
         def velocidad() -> str:
             return f"{int(datos['velocidad']):+d}%"
 
+        def tono() -> str:
+            return f"{int(datos['tono']):+d}Hz"
+
         async def escuchar() -> None:
             try:
-                muestra = await run.io_bound(_generar_muestra, datos["voz"], velocidad())
+                muestra = await run.io_bound(_generar_muestra, datos["voz"], velocidad(), tono())
             except ErrorMotor as e:
                 ui.notify(f"{e.mensaje} {e.ayuda or ''}", type="negative")
                 return
@@ -232,7 +246,7 @@ def _seccion_voz() -> None:
 
         def guardar() -> None:
             guardar_ajustes_marca(
-                {"voz": {"proveedor": "edge", "nombre": datos["voz"], "velocidad": velocidad()}}
+                {"voz": {"proveedor": "edge", "nombre": datos["voz"], "velocidad": velocidad(), "tono": tono()}}
             )
             ui.notify("Voz guardada para tus próximos videos.", type="positive")
 

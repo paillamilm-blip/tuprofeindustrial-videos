@@ -112,6 +112,7 @@ def renderizar_manim(
     progreso: Callable[[int, int, str], None] | None = None,
     solo_gancho: bool = False,
     piso: float | None = None,
+    tono: str = "+0Hz",
 ) -> tuple[Path, dict]:
     entorno.preparar()
     entorno.registrar_fuentes()
@@ -153,6 +154,7 @@ def renderizar_manim(
                 progreso=progreso,
                 solo_gancho=solo_gancho,
                 piso_lectura=PISO_LECTURA if piso is None else piso,
+                tono=tono,
             ),
         )
         escena.render()
@@ -174,6 +176,7 @@ def crear_video(
     proveedor: str | None = None,
     voz: str | None = None,
     velocidad: str | None = None,
+    tono: str | None = None,
     subtitulos: bool = True,
     sincronizar: str = "auto",
     modelo_whisper: str = "base",
@@ -203,16 +206,27 @@ def crear_video(
     proveedor = proveedor or marca.voz.proveedor
     voz = voz or guion.voz or marca.voz.nombre
     velocidad = velocidad or guion.velocidad or marca.voz.velocidad
+    tono = tono or marca.voz.tono
     nombre = slug(Path(ruta_guion).stem)
     carpeta = (carpeta_salida or entorno.raiz_proyecto() / "salida") / nombre
     carpeta.mkdir(parents=True, exist_ok=True)
+    cama = None
+    if marca.cama.activa:
+        if marca.cama.archivo:
+            cama = Path(marca.cama.archivo).expanduser()
+            if not cama.is_absolute():
+                cama = entorno.raiz_proyecto() / cama
+        else:
+            from . import musica
+
+            cama = musica.bucle_cama(carpeta / "cama.wav")
 
     def por_bloque(actual: int, total: int, seccion: str) -> None:
         avisar("animacion", 0.04 + 0.8 * (actual - 1) / max(total, 1), seccion)
 
     video_manim, linea = renderizar_manim(
         guion, marca, estilo_video, calidad, proveedor, voz, velocidad, carpeta,
-        progreso=por_bloque if progreso else None, piso=piso,
+        progreso=por_bloque if progreso else None, piso=piso, tono=tono,
     )  # fmt: skip
     final = carpeta / (f"{nombre}.mp4" if calidad == "final" else f"{nombre}_{calidad}.mp4")
     # Para «Mis videos» del panel (rehacer con otro estilo) y para el kit de publicación
@@ -243,10 +257,16 @@ def crear_video(
         )
         resultado.srt = escribir_srt(palabras, carpeta / f"{nombre}.srt")
         avisar("video final", 0.9, "uniendo animación, voz y subtítulos")
-        quemar_subtitulos(video_manim, ass, final, CALIDADES[calidad], estilo_video.resplandor)
+        quemar_subtitulos(
+            video_manim, ass, final, CALIDADES[calidad], estilo_video.resplandor,
+            cama=cama, volumen_cama=marca.cama.volumen,
+        )
     else:
         avisar("video final", 0.9, "uniendo animación y voz")
-        recodificar(video_manim, final, CALIDADES[calidad], estilo_video.resplandor)
+        recodificar(
+            video_manim, final, CALIDADES[calidad], estilo_video.resplandor,
+            cama=cama, volumen_cama=marca.cama.volumen,
+        )
 
     resultado.duracion = duracion(final)
     avisar("portada", 0.97, NOMBRE_PORTADA)
