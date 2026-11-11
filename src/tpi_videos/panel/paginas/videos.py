@@ -245,13 +245,27 @@ class PaginaVideos:
             dialogo_rehacer(video.guion, video.titulo, al_terminar=self.lista.refresh)
 
     def _borrar(self, video: biblioteca.Video) -> None:
-        def si() -> None:
-            biblioteca.borrar(video)
-            ui.notify("Video borrado", type="info")
+        if TAREAS.ocupado():
+            ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+            return
+
+        async def si() -> None:
+            if TAREAS.ocupado():
+                ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+                return
+            try:
+                await run.io_bound(biblioteca.borrar, video)
+            except ErrorMotor as e:
+                ui.notify(e.mensaje, type="negative")
+                return
+            ui.notify("Video enviado a la Papelera. Puedes recuperarlo desde Finder.", type="positive")
             self.lista.refresh()
 
         with self.capa:
-            confirmar(f"¿Borrar «{video.titulo}» y sus archivos?", si)
+            confirmar(
+                f"¿Enviar «{video.titulo}» y todos sus archivos a la Papelera? Puedes recuperarlos desde Finder.",
+                si, boton="Enviar a la Papelera",
+            )
 
     async def _kit(self, video: biblioteca.Video) -> None:
         with self.capa:
@@ -291,7 +305,7 @@ class PaginaVideos:
                         ("folder_open", "Mostrar en Finder", lambda v: abrir_en_mac(v.principal, True)),
                         ("palette", "Cambiar el estilo (en QC)", self._estilo),
                         ("refresh", "Rehacer el video", self._rehacer),
-                        ("delete", "Borrar", self._borrar),
+                        ("delete", "Enviar a la Papelera", self._borrar),
                     ):
                         color = "grey-7" if icono == "delete" else "primary"
                         ui.button(icon=icono, on_click=lambda a=accion: a(video)).props(
@@ -331,6 +345,11 @@ class PaginaVideos:
     async def _miniaturas(imagenes: list[tuple[biblioteca.Video, ui.image]]) -> None:
         """Las miniaturas se crean de a una, sin hacer esperar a la página."""
         for video, imagen in imagenes:
-            ruta = await run.io_bound(biblioteca.miniatura, video)
+            try:
+                ruta = await run.io_bound(biblioteca.miniatura, video)
+            except FileNotFoundError:
+                if video.carpeta.exists():
+                    raise
+                continue
             if not imagen.is_deleted:
                 imagen.set_source(url_medio(ruta))

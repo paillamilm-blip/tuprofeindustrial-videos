@@ -252,7 +252,7 @@ def titulo_seccion(numero: str | None, texto: str, ayuda: str | None = None) -> 
 
 
 def confirmar(pregunta: str, accion: Callable[[], object], boton: str = "Sí, borrar") -> None:
-    with ui.dialog() as dialogo, ui.card().classes("p-6"):
+    with ui.dialog() as dialogo, ui.card().classes("tpi-hoja p-6"):
         ui.label(pregunta).classes("text-base")
         with ui.row().classes("justify-end w-full gap-2 mt-4"):
             ui.button("Cancelar", on_click=dialogo.close).props("flat")

@@ -204,8 +204,10 @@ class PortadaTest(unittest.TestCase):
     def test_un_video_sin_miniatura_devuelve_la_portada_de_reserva(self):
         from tpi_videos.panel import biblioteca
 
+        temporal = tempfile.TemporaryDirectory()
+        self.addCleanup(temporal.cleanup)
         video = biblioteca.Video(
-            carpeta=Path("/tmp/sin_miniatura"),
+            carpeta=Path(temporal.name),
             titulo="Un gancho cualquiera",
             tema="Neón cian",
             tema_clave=None,

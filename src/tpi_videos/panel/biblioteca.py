@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import functools
 import json
-import shutil
+import platform
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,7 +14,10 @@ import yaml
 
 from ..config import Colores
 from ..entorno import raiz_proyecto
+from ..errores import ErrorMotor
 from ..publicar import guion_del_video
+
+_ARCHIVOS_VIDEO = threading.Lock()
 
 # La portada de reserva se pinta con los colores del video, no con la piel del panel:
 # si un día cambia el estilo original del motor, la miniatura cambia con él.
@@ -174,25 +178,45 @@ def miniatura(video: Video) -> Path:
 
     Siempre devuelve una imagen: si el fotograma no se puede sacar, se arma la portada con el gancho.
     """
-    from ..errores import ErrorMotor
     from ..postproduccion import extraer_cuadro
     from ..publicar import _video_sin_subtitulos
 
-    destino = video.carpeta / "miniatura.jpg"
-    if destino.exists() and destino.stat().st_mtime >= video.fecha:
-        return destino
-    try:
-        linea = json.loads((video.carpeta / "linea_de_tiempo.json").read_text(encoding="utf-8"))
-        gancho = next((b for b in linea["bloques"] if b["seccion"] == "gancho"), linea["bloques"][0])
-        momento = gancho["inicio"] + max(0.1, gancho["duracion"] - 0.15)
-        return extraer_cuadro(_video_sin_subtitulos(video.carpeta, linea), momento, destino, ancho=270)
-    except (ErrorMotor, OSError, KeyError, IndexError, json.JSONDecodeError):
-        fondo, texto = _colores_del_tema(video)
-        return portada_de_reserva(video.titulo, fondo, texto, video.carpeta / "miniatura_fallback.png")
+    with _ARCHIVOS_VIDEO:
+        if not video.carpeta.is_dir():
+            raise FileNotFoundError(video.carpeta)
+        destino = video.carpeta / "miniatura.jpg"
+        if destino.exists() and destino.stat().st_mtime >= video.fecha:
+            return destino
+        try:
+            linea = json.loads((video.carpeta / "linea_de_tiempo.json").read_text(encoding="utf-8"))
+            gancho = next((b for b in linea["bloques"] if b["seccion"] == "gancho"), linea["bloques"][0])
+            momento = gancho["inicio"] + max(0.1, gancho["duracion"] - 0.15)
+            return extraer_cuadro(_video_sin_subtitulos(video.carpeta, linea), momento, destino, ancho=270)
+        except (ErrorMotor, OSError, KeyError, IndexError, json.JSONDecodeError):
+            fondo, texto = _colores_del_tema(video)
+            return portada_de_reserva(video.titulo, fondo, texto, video.carpeta / "miniatura_fallback.png")
 
 
-def borrar(video: Video) -> None:
-    salida = (raiz_proyecto() / "salida").resolve()
-    carpeta = video.carpeta.resolve()
-    if carpeta.parent == salida:  # nunca borrar nada fuera de salida/
-        shutil.rmtree(carpeta, ignore_errors=True)
+def borrar(video: Video) -> Path:
+    with _ARCHIVOS_VIDEO:
+        salida = (raiz_proyecto() / "salida").resolve()
+        carpeta = video.carpeta.resolve()
+        if video.carpeta.is_symlink() or carpeta.parent != salida or not carpeta.is_dir():
+            raise ErrorMotor("No encuentro una carpeta de video válida dentro de salida.")
+        from .tareas import TAREAS
+
+        if TAREAS.ocupado():
+            raise ErrorMotor("Hay un trabajo en curso: espera a que termine. No se trasladó el video.")
+        if platform.system() != "Darwin":
+            raise ErrorMotor("Enviar a la Papelera está disponible solo en macOS. No se borró el video.")
+        try:
+            from Foundation import NSFileManager, NSURL
+        except ImportError as e:
+            raise ErrorMotor("No se pudo acceder a la Papelera de macOS. No se borró el video.") from e
+        ok, destino, error = NSFileManager.defaultManager().trashItemAtURL_resultingItemURL_error_(
+            NSURL.fileURLWithPath_(str(carpeta)), None, None,
+        )
+        if not ok or destino is None:
+            detalle = error.localizedDescription() if error else "macOS no confirmó el traslado."
+            raise ErrorMotor(f"No se pudo enviar el video a la Papelera: {detalle}")
+        return Path(destino.path())
