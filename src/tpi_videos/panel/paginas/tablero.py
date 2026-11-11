@@ -79,8 +79,9 @@ def _en_vivo() -> dict[str, dict[str, Any]]:
     if t is None or t.terminada or "--cola-id" not in t.args:
         return {}
     lote_id = t.args[t.args.index("--cola-id") + 1]
+    video_id = t.args[t.args.index("--video-id") + 1] if "--video-id" in t.args else None
     return {
-        f"{lote_id}-{n}": {
+        video_id or f"{lote_id}-{n}": {
             "avance": datos.get("video_avance", datos.get("avance")),
             "estado": datos.get("estado"),
             "detalle": datos.get("detalle"),

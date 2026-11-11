@@ -268,6 +268,7 @@ class LoteWorkersTest(unittest.TestCase):
         self.assertEqual(ejecutor.max_workers, 2)
         self.assertEqual(ejecutor.encargos, 2)
         self.assertEqual([item.idea.titulo for item in items], [idea.titulo for idea in ideas])
+        self.assertEqual([item.como_dict().get("video_id") for item in items], [f"{lote_id}-1", f"{lote_id}-2"])
         self.assertEqual([video["estado"] for video in cola.videos_del_lote(lote_id)], ["listo", "listo"])
         self.assertEqual(cola.cargar()["lotes"][0]["estado"], "listo")
 

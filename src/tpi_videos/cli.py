@@ -859,7 +859,8 @@ def _cmd_reanudar(args: argparse.Namespace, *, json_activo: bool, avisar) -> int
     try:
         if cola.cargar().get("roto"):
             avisar("La cola anterior estaba dañada y se apartó: esos videos no se pudieron reanudar.")
-        cola.podar()
+        if args.video_id is None:
+            cola.podar()
         lote = cola.elegir_lote(solo_pendientes=args.solo_pendientes, cola_id=args.cola_id)
         if lote is None or lote.get("estado") == "listo":
             if json_activo:
@@ -867,6 +868,9 @@ def _cmd_reanudar(args: argparse.Namespace, *, json_activo: bool, avisar) -> int
             else:
                 consola.print("No hay videos pendientes." if lote is None else "Ese lote ya está listo.")
             return 0
+
+        if args.video_id is not None and not any(video["id"] == args.video_id for video in lote.get("videos", [])):
+            raise ErrorMotor("No encuentro ese video en el lote. No se modificó ningún video.")
 
         ajustes = dict(lote.get("ajustes") or {})
         if lote.get("videos"):
@@ -899,12 +903,19 @@ def _cmd_reanudar(args: argparse.Namespace, *, json_activo: bool, avisar) -> int
             **_producir_desde_ajustes(ajustes),
             espera=args.espera,
             cola_id=lote["id"],
+            video_id=args.video_id,
             reintentos=None,
             workers=args.workers,
             avisar=avisar,
             progreso=_progreso_json if json_activo else None,
         )
-        _resultado_lote(items, ideas, lote.get("tema"), lote["id"], json_activo)
+        ideas_del_resultado = ideas
+        if args.video_id is not None:
+            ideas_del_resultado = [
+                idea for idea, video in zip(ideas, lote["videos"], strict=True)
+                if video["id"] == args.video_id
+            ]
+        _resultado_lote(items, ideas_del_resultado, lote.get("tema"), lote["id"], json_activo)
         _mostrar_lote(items, lote.get("tema"))
         return 0
     finally:
@@ -1066,6 +1077,11 @@ def cmd_lote(args: argparse.Namespace) -> int:
 
     if (args.solo_pendientes or args.cola_id) and not args.reanudar:
         raise ErrorMotor("--solo-pendientes y --cola-id van con --reanudar.")
+    if args.video_id is not None:
+        if not args.video_id:
+            raise ErrorMotor("El identificador del video no puede estar vacío.")
+        if not (args.reanudar and args.cola_id):
+            raise ErrorMotor("Para reintentar un video indica --reanudar y --cola-id.")
     if args.solo_encolar and (args.reanudar or not (tema and _rutas_de_guiones(tema))):
         raise ErrorMotor(
             "--solo-encolar es para guiones ya escritos.",
@@ -1547,6 +1563,7 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--solo-pendientes", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.add_argument("--cola-id", help=argparse.SUPPRESS)  # para el panel
+    s.add_argument("--video-id", help=argparse.SUPPRESS)
     s.add_argument(
         "--workers",
         type=int,

@@ -685,6 +685,7 @@ class PaginaUnVideo:
         return sugerencia.Preferencias(
             tema=marca.tema,
             voz=marca.voz.nombre,
+            proveedor=marca.voz.proveedor,
             voces=dict(_VOCES),
             materia=marca.publico.materia or None,
             nivel=marca.publico.nivel or None,
@@ -827,7 +828,8 @@ class PaginaUnVideo:
 
         El valor de cada opción es la clave real (lo que viaja en la bandera), nunca el nombre bonito.
         """
-        valores = ({"": "Que lo decida la IA"} if permite_ia else {}) | opciones
+        predeterminado = "Usar lo guardado en Ajustes" if clave == "voz" else "Que lo decida la IA"
+        valores = ({"": predeterminado} if permite_ia else {}) | opciones
         with ui.dialog() as dialogo, ui.card().classes("p-5 gap-3 w-[360px]"):
             ui.label(titulo).classes("tpi-titulo text-base")
             opciones_ui = ui.select(

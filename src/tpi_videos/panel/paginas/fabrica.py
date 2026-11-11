@@ -11,7 +11,6 @@ siga respondiendo mientras se anima un video.
 
 from __future__ import annotations
 
-import json
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -100,9 +99,8 @@ class ColaLotes:
         self.aviso_roto = False  # la cola anterior se apartó por dañada; se avisa hasta que hay lotes
         self.zona = ui.column().classes("w-full gap-3")
 
-    def reintentar(self, idea: dict) -> None:
-        """La idea que falló, suelta: sin volver a pedirle ideas a Gemini."""
-        self.lanzar(["lote", "--ideas-json", json.dumps([idea], ensure_ascii=False)], "Reintento")
+    def reintentar(self, lote_id: str, video_id: str) -> None:
+        self.lanzar(["lote", "--reanudar", "--cola-id", lote_id, "--video-id", video_id], "Reintento")
 
     def dibujar(self) -> None:
         self.zona.clear()
@@ -166,7 +164,7 @@ class ColaLotes:
                             on_click=lambda lt=lote: self._confirmar_descarte(lt),
                         ).props("flat dense")
             for video in lote.get("videos", []):
-                self._fila(video)
+                self._fila(video, lote["id"])
             if estado == "listo":
                 ui.button(
                     "Abrir la carpeta",
@@ -174,7 +172,7 @@ class ColaLotes:
                     on_click=lambda: abrir_en_mac(raiz_proyecto() / "salida"),
                 ).props("outline dense")
 
-    def _fila(self, video: dict) -> None:
+    def _fila(self, video: dict, lote_id: str) -> None:
         estado = str(video.get("estado") or "en_cola")
         icono, color, etiqueta = ESTADOS_FILA.get(estado, ESTADOS_FILA["en_cola"])
         idea = video.get("idea") or {}
@@ -197,7 +195,7 @@ class ColaLotes:
                 ui.button(
                     "Intentar solo este",
                     icon="refresh",
-                    on_click=lambda i=idea: self.reintentar(i),
+                    on_click=lambda v=video: self.reintentar(lote_id, v["id"]),
                 ).props("flat dense")
             if estado == "listo" and (video.get("hitos") or {}).get("video"):
                 ruta = Path(str(video["hitos"]["video"].get("video") or ""))
@@ -383,7 +381,7 @@ class PaginaFabrica:
 
     # ── 3 · cuando terminan ─────────────────────────────────────────────────────────────
 
-    def _pantalla_resultado(self, items: list[dict]) -> None:
+    def _pantalla_resultado(self, items: list[dict], lote_id: str | None) -> None:
         listos = sum(1 for i in items if i.get("ok"))
         carpeta = raiz_proyecto() / "salida"
         with ui.card().classes("tpi-hoja w-full p-6 gap-3"):
@@ -398,7 +396,7 @@ class PaginaFabrica:
                 ).props("outline size=lg")
 
             for item in items:
-                self._fila_resultado(item)
+                self._fila_resultado(item, lote_id)
 
             with ui.row().classes("w-full items-center gap-2 pt-2 border-t"):
                 ui.icon("tips_and_updates", size="18px").set_text_color(PIEL["gris"])
@@ -407,7 +405,7 @@ class PaginaFabrica:
                 )
                 ui.link("Verlos todos en Mis videos", "/videos").classes("font-bold")
 
-    def _fila_resultado(self, item: dict) -> None:
+    def _fila_resultado(self, item: dict, lote_id: str | None) -> None:
         ok = bool(item.get("ok"))
         pasado = ok and not item.get("promesa_incumplida")
         lectura = float(item.get("lectura") or 0.0)
@@ -439,11 +437,11 @@ class PaginaFabrica:
                     )
                     if item.get("ayuda"):
                         ui.label(str(item["ayuda"])).classes("tpi-ayuda text-sm")
-                    if item.get("idea"):
+                    if lote_id and item.get("video_id"):
                         ui.button(
                             "Intentar solo este",
                             icon="refresh",
-                            on_click=lambda i=item: self.cola_lotes.reintentar(i["idea"]),
+                            on_click=lambda i=item: self.cola_lotes.reintentar(lote_id, i["video_id"]),
                         ).props("outline dense")
                     return
                 video = Path(item["video"])
@@ -535,7 +533,7 @@ class PaginaFabrica:
         try:
             with self.zona_resultado:
                 if t.ok:
-                    self._pantalla_resultado(list(t.resultado.get("lote") or []))
+                    self._pantalla_resultado(list(t.resultado.get("lote") or []), t.cola_id)
                 else:
                     error = t.error or {}
                     self._pantalla_error(

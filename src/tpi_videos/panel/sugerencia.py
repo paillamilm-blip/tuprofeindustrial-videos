@@ -68,6 +68,7 @@ class Preferencias:
 
     tema: str = "hoja_de_desarrollo"
     voz: str = "es-CL-LorenzoNeural"
+    proveedor: str = "edge"
     voces: dict[str, str] = field(default_factory=dict)
     materia: str | None = None
     nivel: str | None = None
@@ -287,14 +288,18 @@ def _una_tema(molde: str | None, materia: str | None, pref: Preferencias) -> Pie
 
 
 def _una_voz(cambios: dict[str, str], pref: Preferencias) -> Pieza:
-    codigo = cambios.get("voz") or pref.voz
+    codigo = cambios.get("voz") or None
+    nombre = codigo or pref.voz
+    valor = pref.voces.get(nombre, nombre)
+    if codigo is None:
+        valor = {"silencio": "Sin voz", "gtts": "Google (gTTS)"}.get(pref.proveedor, valor)
     return Pieza(
         clave="voz",
         etiqueta=ETIQUETAS["voz"],
-        valor=pref.voces.get(codigo, codigo),
+        valor=valor,
         codigo=codigo,
-        razon="Cambiada por ti." if "voz" in cambios else "Tu voz de siempre (Ajustes).",
-        tocada="voz" in cambios,
+        razon="Cambiada por ti." if codigo else "Tu voz de siempre (Ajustes).",
+        tocada=bool(codigo),
     )
 
 

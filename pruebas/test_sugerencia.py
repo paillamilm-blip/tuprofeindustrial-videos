@@ -8,6 +8,13 @@ cada razón tiene que decir de dónde vino el valor.
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+from nicegui import ui
+
+from tpi_videos.cli import _dividir_voz
+from tpi_videos.config import Marca
+from tpi_videos.panel.paginas.un_video import PaginaUnVideo
 
 from tpi_videos.formatos import formato
 from tpi_videos.guion import MATERIAS
@@ -140,6 +147,80 @@ class ArgsTest(unittest.TestCase):
         self.assertEqual(args[0], "producir")
         self.assertEqual(args.index("--") > args.index("--molde"), True)
         self.assertNotIn("--estilo", args)  # el estilo no viaja desde la tarjeta: se elige en QC
+
+
+class VozTest(unittest.TestCase):
+    def _armar(self, proveedor, cambios=None):
+        marca = Marca(voz={"proveedor": proveedor, "nombre": "es-CL-LorenzoNeural"})
+        with patch("tpi_videos.panel.paginas.un_video.cargar_marca", return_value=marca):
+            pref = PaginaUnVideo._preferencias(None)
+        return armar("caída libre", cambios or {}, pref)
+
+    def test_la_voz_heredada_no_fuerza_un_proveedor_en_el_comando(self):
+        for proveedor in ("edge", "silencio", "gtts"):
+            with self.subTest(proveedor=proveedor):
+                s = self._armar(proveedor)
+                self.assertNotIn("--voz", s.args)
+                self.assertIsNone(s.pieza("voz").codigo)
+                self.assertFalse(s.pieza("voz").tocada)
+
+    def test_la_tarjeta_muestra_sin_voz_en_vez_de_un_nombre_edge(self):
+        voz = self._armar("silencio").pieza("voz")
+        self.assertIn("Sin voz", voz.valor)
+        self.assertNotIn("Lorenzo", voz.valor)
+        self.assertIn("Ajustes", voz.razon)
+
+    def test_la_tarjeta_muestra_google_en_vez_de_un_nombre_edge(self):
+        voz = self._armar("gtts").pieza("voz")
+        self.assertIn("Google", voz.valor)
+        self.assertNotIn("Lorenzo", voz.valor)
+        self.assertIn("Ajustes", voz.razon)
+
+    def test_la_tarjeta_conserva_el_nombre_de_la_voz_edge_guardada(self):
+        voz = self._armar("edge").pieza("voz")
+        self.assertIn("Lorenzo", voz.valor)
+        self.assertIn("Ajustes", voz.razon)
+
+    def test_una_voz_elegida_expresamente_gana_al_proveedor_guardado(self):
+        for proveedor in ("edge", "silencio", "gtts"):
+            for nombre in ("es-CL-CatalinaNeural", "es-CL-LorenzoNeural"):
+                with self.subTest(proveedor=proveedor, nombre=nombre):
+                    s = self._armar(proveedor, {"voz": nombre})
+                    self.assertEqual(s.args.count("--voz"), 1)
+                    self.assertEqual(_dividir_voz(s.args[s.args.index("--voz") + 1]), ("edge", nombre))
+                    self.assertEqual(s.pieza("voz").codigo, nombre)
+                    self.assertTrue(s.pieza("voz").tocada)
+                    self.assertNotIn("Sin voz", s.pieza("voz").valor)
+                    self.assertNotIn("Google", s.pieza("voz").valor)
+
+    def test_volver_a_ajustes_deja_de_forzar_edge(self):
+        for proveedor in ("edge", "silencio", "gtts"):
+            with self.subTest(proveedor=proveedor):
+                s = self._armar(proveedor, {"voz": ""})
+                self.assertNotIn("--voz", s.args)
+                self.assertFalse(s.pieza("voz").tocada)
+                self.assertIn("Ajustes", s.pieza("voz").razon)
+
+    def test_el_dialogo_permite_volver_a_ajustes_sin_prometer_una_eleccion_de_ia(self):
+        pagina = PaginaUnVideo()
+        pagina.cambios = {"voz": "es-CL-CatalinaNeural"}
+        s = self._armar("silencio", pagina.cambios)
+        cliente = ui.context.client
+        anteriores = set(cliente.elements)
+        with patch.object(pagina, "_pintar"):
+            pagina._cambiar("voz", s)
+            nuevos = [elemento for ident, elemento in cliente.elements.items() if ident not in anteriores]
+            dialogo = next(elemento for elemento in nuevos if isinstance(elemento, ui.dialog))
+            self.addCleanup(dialogo.delete)
+            selector = next(elemento for elemento in nuevos if isinstance(elemento, ui.select))
+            self.assertIn("Ajustes", selector.options[""])
+            self.assertNotIn("IA", selector.options[""])
+            selector.value = ""
+            boton = next(elemento for elemento in nuevos if isinstance(elemento, ui.button) and elemento.text == "Cambiar")
+            evento = next(evento for evento in boton._event_listeners.values() if evento.type == "click")
+            evento.handler(None)
+        self.assertEqual(pagina.cambios["voz"], "")
+        self.assertNotIn("--voz", self._armar("silencio", pagina.cambios).args)
 
 
 class PiezasTest(unittest.TestCase):

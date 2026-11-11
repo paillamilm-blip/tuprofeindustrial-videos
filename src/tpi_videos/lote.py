@@ -55,6 +55,7 @@ class ItemLote:
     ayuda: str | None = None
     intentos: int = 1
     pendiente: bool = False
+    video_id: str | None = None
 
     def como_dict(self) -> dict[str, object]:
         return {
@@ -79,6 +80,7 @@ class ItemLote:
             "ayuda": self.ayuda,
             "intentos": self.intentos,
             "pendiente": self.pendiente,
+            "video_id": self.video_id,
         }
 
 
@@ -213,6 +215,7 @@ def producir_lote(
     con_kit: bool = True,
     espera: float = ESPERA_ENTRE_INTENTOS,
     cola_id: str | None = None,
+    video_id: str | None = None,
     dormir: Callable[[float], None] = time.sleep,
     reintentos: int | None = None,
     workers: int = 1,
@@ -228,9 +231,13 @@ def producir_lote(
     """
     from . import cola
 
-    total = len(ideas)
     workers = max(1, int(workers))
     fichas = {ficha["posicion"]: ficha for ficha in cola.videos_del_lote(cola_id)} if cola_id else {}
+    seleccion = [
+        (posicion, idea) for posicion, idea in enumerate(ideas, start=1)
+        if video_id is None or fichas.get(posicion, {}).get("id") == video_id
+    ]
+    total = len(seleccion)
     escribir = _guardar(avisar)
 
     if workers > 1 and total > 1:
@@ -267,10 +274,10 @@ def producir_lote(
 
     items: list[ItemLote] = []
 
-    for posicion, idea in enumerate(ideas, start=1):
+    for numero, (posicion, idea) in enumerate(seleccion, start=1):
         ficha = fichas.get(posicion)
         seguir = _Ficha(ficha, escribir) if ficha else None
-        avance_local, paso, aviso = _emitidores(posicion, total, progreso, avisar, seguir)
+        avance_local, paso, aviso = _emitidores(numero, total, progreso, avisar, seguir)
         if ficha:
             escribir(
                 cola.actualizar_video,
@@ -307,6 +314,8 @@ def producir_lote(
             paso=paso,
             esperar=lambda intento, segundos, _s=seguir, _p=paso: _esperar_ia(_s, _p, intento, segundos),
         )
+        if ficha:
+            item.video_id = ficha["id"]
         items.append(item)
         if ficha:
             _marcar_final(escribir, ficha, item)
@@ -441,6 +450,8 @@ def _producir_en_paralelo(
                 item = futuro.result()
             except Exception as error:  # un worker que se cae no se lleva a los demás videos
                 item = _fallo(encargo.idea, error, 1)
+            if encargo.ficha:
+                item.video_id = encargo.ficha["id"]
             resultados[encargo.posicion] = item
             if encargo.ficha:
                 _marcar_final(escribir, encargo.ficha, item)
