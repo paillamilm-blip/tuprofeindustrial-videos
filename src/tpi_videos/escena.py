@@ -56,6 +56,7 @@ from manim import (
     Rotate,
     RoundedRectangle,
     SurroundingRectangle,
+    Transform,
     TransformMatchingTex,
     UpdateFromAlphaFunc,
     VGroup,
@@ -478,6 +479,25 @@ def olvida_en_ancla(pila: list[Linea], ultima: Any) -> list[Linea]:
     return [linea for linea in pila if linea.eq is not ultima]
 
 
+def gramatica_de(tema, n_pasos: int) -> tuple[VGroup | None, VGroup | None]:
+    g = tema.gramatica
+    if not c.gramatica_activa(tema) or not n_pasos:
+        return None, None
+    token = c.usar_estilo(tema)
+    try:
+        paleta = g.paleta(tema.colores)
+        tabs = c.tabs_de_pasos(n_pasos, 1, paleta) if g.tabs else None
+        if tabs is not None and tabs.width > c.ancho_util_de(tema):
+            tabs.scale_to_fit_width(c.ancho_util_de(tema))
+        panel = (
+            c.panel_persistente(n_pasos, [], paleta, c.ancho_util_de(tema), tema.colores.panel, tema.colores.borde)
+            if g.panel else None
+        )
+        return tabs, panel
+    finally:
+        c.restablecer_estilo(token)
+
+
 class VideoEjercicio(VoiceoverScene, MovingCameraScene):
     def __init__(
         self, guion: Guion, marca: Marca, tema: Any, opciones: OpcionesEscena, **kwargs: Any
@@ -891,6 +911,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             self._guardar_linea_de_tiempo()
             return
 
+        self._iniciar_gramatica()
         self._gancho()
         self._enunciado()
         if self.guion.datos:
@@ -903,6 +924,65 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             self._reto()
         self._cierre()
         self._guardar_linea_de_tiempo()
+
+    def _fijar_gramatica(self, objeto: Mobject) -> None:
+        frame = self.camera.frame
+        ancho, centro = frame.width, frame.get_center().copy()
+
+        def seguir_cuadro(mob: Mobject) -> None:
+            nonlocal ancho, centro
+            nuevo_ancho, nuevo_centro = frame.width, frame.get_center().copy()
+            mob.scale(nuevo_ancho / ancho, about_point=centro).shift(nuevo_centro - centro)
+            ancho, centro = nuevo_ancho, nuevo_centro
+
+        objeto.set_z_index(30).add_updater(seguir_cuadro)
+        self.add(objeto)
+
+    def _colocar_panel_gramatica(self, panel: VGroup) -> VGroup:
+        banda = self.tema.layout.banda_panel or 1.6
+        if panel.height > banda:
+            panel.scale_to_fit_height(banda)
+        panel.move_to([0, -self.alto_cuadro / 2 + 0.25 + panel.height / 2, 0])
+        return panel.scale(self.camera.frame.width / self.ancho_cuadro, about_point=np.zeros(3)).shift(
+            self.camera.frame.get_center()
+        ).set_z_index(30)
+
+    def _iniciar_gramatica(self) -> None:
+        self.tabs_gram, self.panel_gram = gramatica_de(self.tema, len(self.guion.pasos))
+        self.cerrados_gram: list[str] = []
+        if self.tabs_gram is not None:
+            if self.tabs_gram.height > 0.32:
+                self.tabs_gram.scale_to_fit_height(0.32)
+            self.tabs_gram.move_to([0, self.alto_cuadro / 2 - 0.12 - self.tabs_gram.height / 2, 0])
+            self._fijar_gramatica(self.tabs_gram)
+        if self.panel_gram is not None:
+            self._colocar_panel_gramatica(self.panel_gram)
+            self._fijar_gramatica(self.panel_gram)
+
+    def _cerrar_paso_gramatica(self, i: int, paso: Any) -> None:
+        animaciones: list[Animation] = []
+        if self.panel_gram is not None:
+            if paso.tex and not paso.error:
+                self.cerrados_gram.append(paso.tex)
+            nuevo = c.panel_persistente(
+                len(self.guion.pasos), self.cerrados_gram, self.tema.gramatica.paleta(self.col),
+                c.ancho_util_de(self.tema), self.col.panel, self.col.borde, completados=i,
+            )
+            self._colocar_panel_gramatica(nuevo)
+            animaciones.append(Transform(self.panel_gram, nuevo))
+        if self.tabs_gram is not None and self.tema.gramatica.micro:
+            animacion = c.micro_movimiento("tick", self.tabs_gram[i - 1])
+            marca = animacion.mobject.set_z_index(31)
+            self.tabs_gram[i - 1].add(marca)
+            animaciones.append(animacion)
+        if animaciones:
+            self.play(*animaciones, run_time=0.3)
+        if self.panel_gram is not None:
+            # Transform conserva los tipos de origen: el panel vacío deja puntos en vez de MathTex.
+            self.panel_gram.remove(*list(self.panel_gram))
+            self.panel_gram.add(*nuevo)
+        if self.panel_gram is not None and self.tema.gramatica.micro and paso.tex and not paso.error:
+            self.play(c.micro_movimiento("cursor", self.panel_gram[1][2][-1]), run_time=0.2)
 
     def _cabecera(self) -> Group:
         if self.tema.marco == "hoja":
@@ -1270,6 +1350,13 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
 
         for i, paso in enumerate(self.guion.pasos, 1):
             with self.hablar(paso.voz, f"paso {i}") as tr:
+                if self.tabs_gram is not None:
+                    c.activar_tab(self.tabs_gram, i)
+                if i == 1 and self.panel_gram is not None and self.tema.gramatica.micro:
+                    self.play(
+                        c.micro_movimiento("contador", self.panel_gram[1][0]),
+                        c.micro_movimiento("barra", self.panel_gram[1][1][1]), run_time=0.3,
+                    )
                 fondo, centro_dibujo, alto_dibujo = self._franja_del_dibujo(paso, tope)
                 sale_dibujo = [FadeOut(dibujo_vivo.mobs)] if dibujo_vivo else []
                 dibujo_vivo = None
@@ -1280,9 +1367,14 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                         dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
                     elif ultima is not None:
                         self.play(Indicate(ultima, color=self.col.acento, scale_factor=1.04), run_time=0.6)
+                    if c.gramatica_activa(self.tema):
+                        self.hasta(tr, max(0.0, tr.duration - 0.6))
+                        self._cerrar_paso_gramatica(i, paso)
                     continue
 
-                eq = c.ecuacion(paso.tex, c.TAM_ECUACION, self.col.formulas).set_z_index(1)
+                terminos_mapa = [m.termino for m in paso.mapa] if self.tema.gramatica.mapa_color else []
+                eq = c.ecuacion(paso.tex, c.TAM_ECUACION, self.col.formulas,
+                                aislar=terminos_mapa).set_z_index(1)
                 if eq.height > c.ALTO_MAX_ECUACION:
                     eq.scale_to_fit_height(c.ALTO_MAX_ECUACION)
                 nota = self._nota(paso)
@@ -1404,6 +1496,10 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                         aparecer.append(FadeOut(tachas))
                 self.play(*aparecer, run_time=float(np.clip(tr.duration * 0.45, 0.8, 1.6)))
                 completa_desde = self.renderer.time  # desde acá la fórmula ya está completa en pantalla
+                if self.tema.gramatica.mapa_color and paso.mapa:
+                    conceptos = c.mapa_de_color(eq, paso.mapa, self.tema.gramatica.paleta(self.col))
+                    self.play(FadeIn(conceptos), run_time=0.4)
+                    extras_vivos.append(conceptos)
                 halos = self._halos_del_paso(paso, eq, fuente if mapa is not None else None)
                 if halos is not None:
                     self.play(FadeIn(halos, scale=1.08), run_time=0.4)
@@ -1477,6 +1573,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                         resaltes.append(marcos)
                     if not paso.error:
                         ultima = eq
+                if c.gramatica_activa(self.tema):
+                    self.hasta(tr, max(0.0, tr.duration - 0.6))
+                    self._cerrar_paso_gramatica(i, paso)
 
         self.pila, self.resaltes, self.ultima = pila, resaltes + halos_vivos, ultima
         if self._chip_vivo is not None:

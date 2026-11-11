@@ -248,6 +248,21 @@ class Animacion(_Base):
     titulos: Literal["aparecer", "plumon"] = "aparecer"
 
 
+class Gramatica(_Base):
+    """La gramática visual estilo XCris; apagada por defecto para no tocar los temas de hoy."""
+
+    tabs: bool = False
+    panel: bool = False
+    mapa_color: bool = False
+    micro: bool = False
+    paleta_pasos: list[str] = Field(default_factory=list)
+
+    _hex = field_validator("paleta_pasos")(classmethod(lambda cls, v: [_validar_hex(c) for c in v]))
+
+    def paleta(self, colores: ColoresTema) -> list[str]:
+        return self.paleta_pasos or [colores.acento, colores.cuadricula, colores.exito, colores.error, colores.tenue]
+
+
 class Layout(_Base):
     """Diagramación vertical del cuadro.
 
@@ -259,6 +274,7 @@ class Layout(_Base):
     y_zona_enunciado: float | None = None  # techo de la zona de trabajo (donde arranca el enunciado)
     y_zona_pasos: float | None = None  # piso de la zona de trabajo (donde se detiene la pila de pasos)
     banda_subtitulo: float = 0.28  # el tramo de abajo que se lleva el subtítulo quemado
+    banda_panel: float = Field(default=0.0, ge=0.0, le=2.0)  # alto del panel persistente de la gramática
     aire_dibujo: float = 0.28  # el respiro entre el techo del dibujo y la línea más baja de los pasos
 
 
@@ -281,6 +297,7 @@ class Tema(_Base):
     emojis: bool = True
     # El halo de los trazos brillantes que pone postproduccion.py al armar el video final
     resplandor: bool = False
+    gramatica: Gramatica = Gramatica()
 
 
 def temas_usuario_dir() -> Path:

@@ -160,6 +160,14 @@ def renderizar_manim(
     return video, json.loads(linea.read_text(encoding="utf-8"))
 
 
+def subtitulos_de(tema: Tema):
+    estilo = tema.subtitulos
+    if tema.gramatica.panel:
+        banda = tema.layout.banda_panel or 1.6
+        return estilo.model_copy(update={"posicion_y": max(0.3, estilo.posicion_y - banda / 16.0)})
+    return estilo
+
+
 def crear_video(
     ruta_guion: str | Path,
     calidad: str = "final",
@@ -229,7 +237,7 @@ def crear_video(
         palabras, resultado.fuentes_tiempo = palabras_de_bloques(
             linea["bloques"], sincronizar, modelo_whisper
         )
-        estilo = estilo_video.subtitulos
+        estilo = subtitulos_de(estilo_video)
         ass = escribir_ass(
             agrupar(palabras, estilo.max_palabras, estilo.max_caracteres), carpeta / "subtitulos.ass", estilo
         )
