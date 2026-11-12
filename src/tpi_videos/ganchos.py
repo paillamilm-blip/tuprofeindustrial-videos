@@ -75,7 +75,7 @@ def idea_desde_guion(guion: Guion) -> Idea:
     )
 
 
-def guion_de_vista_previa(idea: Idea, variante: GanchoIdea) -> Guion:
+def guion_de_vista_previa(idea: Idea, variante: GanchoIdea, guion_base: Guion | None = None) -> Guion:
     """Un guion mínimo válido: la escena corta solo dibuja la cabecera y este gancho."""
     datos = {
         "titulo": idea.titulo,
@@ -93,7 +93,8 @@ def guion_de_vista_previa(idea: Idea, variante: GanchoIdea) -> Guion:
         "pasos": [{"voz": "Vista previa del gancho.", "nota": "Vista previa"}],
         "resultado": {"tex": "x", "voz": "Vista previa."},
     }
-    return Guion.model_validate(datos)
+    vista = Guion.model_validate(datos)
+    return guion_base.model_copy(update={"gancho": vista.gancho}) if guion_base is not None else vista
 
 
 def _manifiesto(idea: Idea, clips: list[dict[str, Any]]) -> dict[str, Any]:
@@ -108,6 +109,7 @@ def _manifiesto(idea: Idea, clips: list[dict[str, Any]]) -> dict[str, Any]:
 def renderizar_ganchos(
     idea: Idea,
     *,
+    guion_base: Guion | None = None,
     calidad: str = "borrador",
     proveedor: str | None = None,
     voz: str | None = None,
@@ -133,7 +135,7 @@ def renderizar_ganchos(
 
         archivo = carpeta / f"gancho-{numero}.mp4"
         crear_clip_gancho(
-            guion_de_vista_previa(idea, variante),
+            guion_de_vista_previa(idea, variante, guion_base),
             calidad=calidad,
             proveedor="silencio" if sin_voz else proveedor,
             voz="silencio" if sin_voz else voz,
