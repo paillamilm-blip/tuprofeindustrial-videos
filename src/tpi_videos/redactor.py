@@ -1599,6 +1599,7 @@ def redactar(
     respuesta = pedir_json(cliente, modelo, sistema, base, GuionIA, "high", avisar=al_cambiar_de_modelo)
     rondas = 0
     revisado = False
+    mejor: tuple[Guion, dict[str, Any], Any, list[str]] | None = None  # el último guion que sí validó
     while True:
         if not respuesta.es_ejercicio:
             raise ErrorMotor(
@@ -1635,6 +1636,8 @@ def redactar(
                     problemas += [f"revisor: {p}" for p in revision.problemas] or [
                         "revisor: no aprobó el guion"
                     ]
+        if guion is not None:
+            mejor = (guion, datos, respuesta, list(problemas))
         historial += [f"ronda {rondas}: {p}" for p in problemas]
         if not problemas or rondas >= RONDAS_DE_CORRECCION:
             break
@@ -1653,6 +1656,10 @@ def redactar(
             cliente, modelo, sistema, [*base, pedido], GuionIA, "high", avisar=al_cambiar_de_modelo
         )
 
+    if guion is None and mejor is not None:
+        # La última corrección vino rota, pero una ronda anterior dejó un guion que valida: se usa ese,
+        # con sus observaciones a la vista, en vez de botar todo el trabajo.
+        guion, datos, respuesta, problemas = mejor
     if guion is None:
         detalle = "\n".join(f"  • {p}" for p in problemas[:8])
         raise ErrorMotor(f"No logré un guion válido tras {rondas + 1} intentos:\n{detalle}",
@@ -1684,7 +1691,7 @@ def redactar(
         supuestos=respuesta.supuestos,
         pendientes=problemas,
         rondas=rondas,
-        modelo=modelo,
+        modelo=en_uso["modelo"],  # el que escribió de verdad (puede ser un respaldo por cupo)
         revisado_por_ia=revisado,
         historial=historial,
     )

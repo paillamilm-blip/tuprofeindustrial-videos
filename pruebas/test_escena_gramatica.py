@@ -5,10 +5,14 @@ from tempfile import TemporaryDirectory
 import numpy as np
 from manim import tempconfig
 
-from tpi_videos import componentes as c, escena
+from tpi_videos import componentes as c
+from tpi_videos import escena
 from tpi_videos.config import Marca
+from tpi_videos.entorno import latex_disponible
 from tpi_videos.guion import Guion
 from tpi_videos.temas import Tema, cargar_tema, listar_temas
+
+LATEX = all(latex_disponible())  # macOS/Windows en CI no traen TeX: lo que dibuja fórmulas se salta
 
 
 class EscenaGramaticaTest(unittest.TestCase):
@@ -55,6 +59,7 @@ class EscenaGramaticaTest(unittest.TestCase):
         self.assertEqual(escena.gramatica_de(t, 0), (None, None))
 
 
+@unittest.skipUnless(LATEX, "LaTeX no está instalado")
 class PersistenciaEnEscenaTest(unittest.TestCase):
     def setUp(self):
         self.carpeta = TemporaryDirectory()

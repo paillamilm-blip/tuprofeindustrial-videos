@@ -86,7 +86,7 @@ class PapeleraTest(unittest.IsolatedAsyncioTestCase):
 
     def _contenido(self, carpeta):
         return {
-            str(archivo.relative_to(carpeta)): archivo.read_bytes()
+            archivo.relative_to(carpeta).as_posix(): archivo.read_bytes()  # «media/x» también en Windows
             for archivo in carpeta.rglob("*") if archivo.is_file()
         }
 
