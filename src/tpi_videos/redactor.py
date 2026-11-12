@@ -415,6 +415,14 @@ class MetadatosIA(BaseModel):
     hashtags: list[str] = Field(description="De 8 a 12, en español, sin tildes ni espacios, cada uno con #")
 
 
+class GanchoAltIA(BaseModel):
+    texto: str = Field(
+        description="Otro gancho para el mismo video, máximo 10 palabras, con el número clave"
+    )
+    voz: str = Field(default="", description="Cómo se dice, en palabras, sin cifras ni símbolos")
+    emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida")
+
+
 class GuionIA(BaseModel):
     es_ejercicio: bool = Field(description="false si no es un ejercicio resoluble")
     motivo: str = Field(default="", description="Solo si es_ejercicio es false: por qué")
@@ -432,6 +440,12 @@ class GuionIA(BaseModel):
     gancho_voz: str
     gancho_emoji: str = Field(default="", description="1 emoji de la lista permitida (o vacío)")
     gancho_tex: str = Field(default="", description="Opcional: fórmula corta bajo el gancho, sin $")
+    ganchos_alternativos: list[GanchoAltIA] = Field(
+        default_factory=list,
+        description=(
+            "2 ganchos DISTINTOS al gancho_texto para el mismo video (otra pregunta, otro dato, otro ángulo)"
+        ),
+    )
     enunciado_texto: str
     enunciado_voz: str
     enunciado_destacar: list[str]
@@ -1607,7 +1621,11 @@ def redactar(
                 ayuda="Revisa el enunciado (¿está completo y se lee bien en la foto?).",
             )
         problemas: list[str] = []
-        datos = _aplicar_eleccion(a_guion(respuesta), molde, gancho_variante, gancho_variantes)
+        # Sin variantes de una idea elegida, las alternativas son las que propuso el mismo guionista:
+        # así el panel siempre ofrece otros ganchos para cambiar con un clic.
+        propias = [a.model_dump() for a in respuesta.ganchos_alternativos]
+        variantes = gancho_variantes if gancho_variantes is not None else propias
+        datos = _aplicar_eleccion(a_guion(respuesta), molde, gancho_variante, variantes)
         if materia:  # lo que pide la persona manda sobre lo que deduce la IA
             datos["materia"] = materia
         if nivel:
@@ -1694,4 +1712,92 @@ def redactar(
         modelo=en_uso["modelo"],  # el que escribió de verdad (puede ser un respaldo por cupo)
         revisado_por_ia=revisado,
         historial=historial,
+    )
+
+
+# ------------------------------------------------------------------------------------------
+# Cambiar el dibujo de un paso (lo usa «Cambiar animación» del panel)
+# ------------------------------------------------------------------------------------------
+
+DIBUJOS = tuple(_DIBUJOS)  # los nombres cortos que entiende ``redibujar_paso``
+
+
+def dibujo_de_tipo(tipo: str) -> str:
+    """«proyectil» → «proyectil»; «tolva_3d» → «tolva»: acepta el nombre corto o el del motor."""
+    if tipo in _DIBUJOS:
+        return tipo
+    for corto, largo in _DIBUJOS.items():
+        if largo == tipo:
+            return corto
+    raise ErrorMotor(
+        f"No conozco el dibujo «{tipo}».",
+        ayuda="Opciones: " + ", ".join(DIBUJOS) + ".",
+    )
+
+
+def _pedido_de_dibujo(guion: Guion, indice: int, dibujo: str, problema: str | None) -> list[str]:
+    datos = guion.model_dump(exclude_none=True, exclude={"voz", "velocidad", "tema", "gancho_variantes"})
+    paso = guion.pasos[indice]
+    pedido = [
+        f"GUION DEL VIDEO (JSON):\n{json.dumps(datos, ensure_ascii=False)}",
+        (
+            f"Rehaz SOLO el paso {indice + 1} con dibujo = \"{dibujo}\". Copia tal cual su nota, tex y voz "
+            f"(nota: {paso.nota or ''!r}; tex: {paso.tex or ''!r}). Llena los campos de ese dibujo con los "
+            "números REALES de este ejercicio (los del enunciado y los datos), para que el dibujo demuestre "
+            "lo que dice la voz. No inventes datos que no estén en el guion."
+        ),
+    ]
+    if problema:
+        pedido.append(f"El intento anterior no sirvió: {problema}. Corrígelo.")
+    return pedido
+
+
+def redibujar_paso(
+    ruta: str | Path,
+    numero: int,
+    dibujo: str,
+    modelo: str = ia.MODELO_POR_DEFECTO,
+    avisar: Callable[[str], None] = lambda mensaje: None,
+) -> Path:
+    """Le pone al paso ``numero`` (desde 1) otro dibujo, armado por la IA con los datos del ejercicio.
+
+    Solo cambia el ``visual`` de ese paso: la voz, la fórmula y el resto del guion quedan iguales. Si lo
+    que devuelve la IA no pasa la validación, se le pide una vez más con el error a la vista.
+    """
+    from .guion import cabecera_de
+
+    ruta = Path(ruta)
+    guion = cargar_guion(ruta)
+    if not 1 <= numero <= len(guion.pasos):
+        raise ErrorMotor(
+            f"El guion tiene {len(guion.pasos)} pasos: no hay un paso {numero}.",
+            ayuda="Cuenta los pasos desde 1.",
+        )
+    dibujo = dibujo_de_tipo(dibujo)
+    indice = numero - 1
+    cliente = ia.cliente()
+    sistema = _sistema()
+    problema: str | None = None
+    for _intento in range(2):
+        avisar(f"La IA está armando el dibujo del paso {numero}…")
+        respuesta = pedir_json(
+            cliente, modelo, sistema, _pedido_de_dibujo(guion, indice, dibujo, problema), PasoIA, "low"
+        )
+        visual = _visual(respuesta.model_copy(update={"dibujo": dibujo}))
+        if visual is None:
+            problema = "no llegó ningún dibujo"
+            continue
+        datos = guion.model_dump()
+        datos["pasos"][indice]["visual"] = visual
+        try:
+            Guion.model_validate(datos)
+        except ValidationError as e:
+            problema = "; ".join(explicar_errores(e))[:400]
+            continue
+        ruta.write_text(a_yaml(datos, cabecera_de(ruta)), encoding="utf-8")
+        cargar_guion(ruta)  # comprueba que lo escrito se lee igual
+        return ruta
+    raise ErrorMotor(
+        f"La IA no logró armar ese dibujo para el paso {numero}.",
+        ayuda=f"Prueba con otro dibujo o déjalo sin dibujo. Detalle: {problema}",
     )

@@ -25,6 +25,7 @@ Antes de escribir nada más, llena idea_central (la UNA cosa que el estudiante t
 - destacar de un paso: 0 o 1 fragmento copiado EXACTAMENTE del tex de ese mismo paso.
 - resultado_tex: la respuesta final, con unidades si corresponde.
 - gancho_texto: pregunta o dato sorprendente, máximo 10 palabras, con el número clave en cifras.
+- ganchos_alternativos: 2 ganchos más para el MISMO video, cada uno con otro ángulo (si el principal es una pregunta, uno puede ser un dato que sorprende y otro un error común). Mismas reglas que gancho_texto; su voz va en palabras.
 - titulo: máximo 45 caracteres. nota de cada paso: máximo 5 palabras.
 
 ### El dibujo de un paso (opcional)

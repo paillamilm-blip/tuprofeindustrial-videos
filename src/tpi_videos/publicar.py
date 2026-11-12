@@ -122,9 +122,9 @@ def textos_de_plantilla(guion: Guion) -> TextosPublicacion:
     return TextosPublicacion(
         titulo_youtube=guion.titulo[:70],
         descripcion_youtube=f"{guion.gancho.texto}\n{guion.enunciado.texto}. Lo resolvemos paso a paso."
-        "\n\nSuscríbete para más ejercicios resueltos.",
-        texto_tiktok=f"{guion.gancho.texto} Te leo en los comentarios 👇"[:150],
-        texto_instagram=f"{guion.gancho.texto}\n\n{guion.enunciado.texto}{reto}\n\n¿Lo resolviste igual? 👇",
+        f"\n\n{SUSCRIBETE}",
+        texto_tiktok=f"{guion.gancho.texto} {LLAMADOS_DE_SIEMPRE[0]}"[:150],
+        texto_instagram=f"{guion.gancho.texto}\n\n{guion.enunciado.texto}{reto}\n\n{LLAMADOS_DE_SIEMPRE[1]}",
         hashtags=[*HASHTAGS_MATERIA.get(guion.materia, []), *HASHTAGS_BASE],
     )
 
@@ -138,10 +138,56 @@ def textos_de_metadatos(guion: Guion) -> TextosPublicacion | None:
     primera = m.descripcion.split("\n")[0].strip()
     return TextosPublicacion(
         titulo_youtube=m.titulo,
-        descripcion_youtube=f"{m.descripcion}\n\nSuscríbete para más ejercicios resueltos.",
+        descripcion_youtube=f"{m.descripcion}\n\n{SUSCRIBETE}",
         texto_tiktok=(primera if len(primera) <= 150 else m.titulo)[:150],
-        texto_instagram=f"{m.descripcion}{reto}\n\n¿Lo resolviste igual? 👇",
+        texto_instagram=f"{m.descripcion}{reto}\n\n{LLAMADOS_DE_SIEMPRE[1]}",
         hashtags=list(m.hashtags),
+    )
+
+
+LLAMADOS_DE_SIEMPRE = ("Te leo en los comentarios 👇", "¿Lo resolviste igual? 👇")
+SUSCRIBETE = "Suscríbete para más ejercicios resueltos."
+
+
+def _sin_llamado_de_siempre(texto: str) -> str:
+    for viejo in LLAMADOS_DE_SIEMPRE:
+        texto = texto.replace(viejo, "")
+    return texto.rstrip()
+
+
+def aplicar_llamado(textos: TextosPublicacion, llamado: str | None) -> TextosPublicacion:
+    """El llamado a la acción que eligió el profe reemplaza al de siempre en los tres textos.
+
+    Vale para la plantilla, los metadatos del guion y lo que escribió la IA: si la IA ya lo puso, no
+    se repite. En TikTok se acorta el resto (nunca el llamado) para no pasar de 150 caracteres.
+    """
+    llamado = (llamado or "").strip()
+    if not llamado:
+        return textos
+
+    def con(texto: str, separador: str) -> str:
+        if llamado.casefold() in texto.casefold():
+            return texto
+        base = _sin_llamado_de_siempre(texto)
+        return f"{base}{separador}{llamado}" if base else llamado
+
+    tiktok = con(textos.texto_tiktok, " ")
+    if len(tiktok) > 150:
+        espacio = 150 - len(llamado) - 2
+        base = _sin_llamado_de_siempre(textos.texto_tiktok)
+        tiktok = (f"{base[:espacio].rstrip()}… {llamado}" if espacio > 10 else llamado)[:150]
+    youtube = textos.descripcion_youtube
+    if llamado.casefold() not in youtube.casefold():
+        if SUSCRIBETE in youtube:
+            youtube = youtube.replace(SUSCRIBETE, f"{llamado}\n\n{SUSCRIBETE}")
+        else:
+            youtube = f"{youtube.rstrip()}\n\n{llamado}"
+    return textos.model_copy(
+        update={
+            "texto_tiktok": tiktok,
+            "texto_instagram": con(textos.texto_instagram, "\n\n"),
+            "descripcion_youtube": youtube,
+        }
     )
 
 
@@ -240,7 +286,7 @@ def crear_kit(
             avisos.append(f"No se pudo usar la IA ({e}); los textos se armaron con una plantilla.")
     aviso = " ".join(avisos) or None
     con_ia_real = textos is not None and guion.metadatos is None
-    textos = _limpiar(textos or textos_de_plantilla(guion))
+    textos = _limpiar(aplicar_llamado(textos or textos_de_plantilla(guion), guion.llamado))
 
     archivo = carpeta / "publicacion.md"
     archivo.write_text(_markdown(textos, guion), encoding="utf-8")

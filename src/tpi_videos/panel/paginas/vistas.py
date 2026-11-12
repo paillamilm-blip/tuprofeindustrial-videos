@@ -1,6 +1,7 @@
-"""Las rutas del panel: un solo tablero con tres pestañas.
+"""Las rutas del panel: el Estudio en «/» y la sala de producción con sus tres pestañas.
 
-El motor escribe y produce solo; el panel es una sala de supervisión (ver ``tablero.py``). Las rutas
+«/» es la pantalla única (idea → guion para revisar → video; ver ``estudio.py``). La sala de
+supervisión (``tablero.py``) sigue en «/cola», «/qc» y «/avanzado» para lo masivo y lo manual. Las rutas
 antiguas siguen respondiendo y abren la pestaña (y el plegable de «Avanzado») donde ahora vive lo que
 mostraban, para que ningún enlace interno ni favorito quede roto.
 """
@@ -9,15 +10,16 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from . import estudio
 from .tablero import tablero
 
 TITULO = "Sala de producción · Tu Profe Industrial"
 
 
 def registrar() -> None:
-    @ui.page("/", title=TITULO)
-    def cola_de_produccion() -> None:
-        tablero("cola")
+    @ui.page("/", title="Estudio · Tu Profe Industrial")
+    def estudio_unico(guion: str | None = None) -> None:
+        estudio.pagina(guion)
 
     @ui.page("/qc", title=TITULO)
     def aprobacion(guion: str | None = None) -> None:

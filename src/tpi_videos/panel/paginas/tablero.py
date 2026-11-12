@@ -1237,7 +1237,7 @@ def tablero(
     pestana: str = "cola", abrir: str | None = None, modo: str = "uno", guion: str | None = None
 ) -> None:
     piel_de_la_pagina()
-    cabecera(con_menu=False)
+    cabecera(con_menu=False, al_estudio=True)
     with ui.column().classes("tpi-tablero w-full max-w-7xl mx-auto px-8 py-10 gap-8"):
         pestanas = ui.tabs(value=pestana).props("align=left no-caps inline-label").classes("tpi-pestanas")
         with pestanas:
