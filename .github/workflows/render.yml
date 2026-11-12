@@ -81,6 +81,27 @@ jobs:
             echo "✅ consola_$variante: ${dur} s"
           done
 
+      - name: El dibujo demuestra (los cubos que caben al duplicar la arista)
+        # 4 cuadros repartidos en cada paso con dibujo «escala»: tienen que verse entrar las piezas.
+        run: |
+          tpi crear guiones/caben_ocho_cubos.yaml --borrador --voz silencio --salida salida/demuestra
+          carpeta=salida/demuestra/caben-ocho-cubos
+          python - "$carpeta" <<'PY'
+          import json, subprocess, sys
+          carpeta = sys.argv[1]
+          linea = json.load(open(f"{carpeta}/linea_de_tiempo.json", encoding="utf-8"))
+          video = f"{carpeta}/caben-ocho-cubos_borrador.mp4"
+          for bloque in linea["bloques"]:
+              if bloque["seccion"] not in ("paso 1", "paso 2"):
+                  continue
+              for n in range(1, 5):
+                  t = bloque["inicio"] + bloque["duracion"] * n / 5
+                  nombre = bloque["seccion"].replace(" ", "")
+                  subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{t:.2f}", "-i", video,
+                                  "-frames:v", "1", f"muestras/demuestra_{nombre}_{n}.png"], check=True)
+          print("✅ cuadros de la demostración listos")
+          PY
+
       - name: Guardar los cuadros de muestra de la familia
         if: always()
         uses: actions/upload-artifact@v4

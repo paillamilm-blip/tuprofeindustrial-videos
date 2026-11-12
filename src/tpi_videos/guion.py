@@ -33,6 +33,7 @@ from .visuales import (
     MARCAS_CIRCULO,
     MARCAS_EJE,
     MARCAS_ENGRANAJE,
+    MARCAS_ESCALA,
     MARCAS_FLUJO,
     MARCAS_FUNCION,
     MARCAS_MOHR,
@@ -62,6 +63,7 @@ from .visuales import (
     analizar_eje,
     analizar_energia,
     analizar_engranajes,
+    analizar_escala,
     analizar_flujo,
     analizar_funcion,
     analizar_mohr,
@@ -221,6 +223,7 @@ class Visual(_Base):
         "optica",
         "pendulo",
         "resorte",
+        "escala",
         "oscilador",
         "pendulo_doble",
         "polea",
@@ -298,6 +301,10 @@ class Visual(_Base):
     # probabilidad
     favorables: int | None = None
     totales: int | None = None
+
+    # escala (además de lado / anotar): caben factor² cuadrados o factor³ cubos del original
+    factor: int | None = None  # cuántas veces crece el lado: 2 o 3
+    dimension: int | None = None  # 2 = área (cuadrados), 3 = volumen (cubos)
 
     # torta / barras: categorías con su valor al final, ej. ['Fútbol 12', 'Básquetbol 8']
     categorias: list[str] = []
@@ -712,6 +719,16 @@ class Visual(_Base):
                     f"«{desconocidas[0]}» no es una marca del resorte; "
                     f"el motor sabe anotar {', '.join(MARCAS_RESORTE)}"
                 )
+        elif self.tipo == "escala":
+            if not (self.lado or "").strip():
+                raise ValueError("la escala necesita el lado original con su unidad, ej. lado: '4 cm'")
+            analizar_escala(self.lado, self.factor or 2, self.dimension or 3)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_ESCALA]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de la escala; "
+                    f"el motor sabe anotar {', '.join(MARCAS_ESCALA)}"
+                )
         elif self.tipo == "polea":
             if not (self.masa_a or "").strip() or not (self.masa_b or "").strip():
                 raise ValueError("la polea necesita sus dos masas, ej. masa_a: '3 kg' y masa_b: '2 kg'")
@@ -986,6 +1003,12 @@ class Visual(_Base):
         if self.tipo != "resorte":
             raise ValueError(f"«{self.tipo}» no es un resorte")
         return analizar_resorte(self.constante or "", self.extension or "")
+
+    def escala(self):
+        """Cuántas piezas del original caben al agrandar el lado (cuadrados o cubos)."""
+        if self.tipo != "escala":
+            raise ValueError(f"«{self.tipo}» no es una escala")
+        return analizar_escala(self.lado or "", self.factor or 2, self.dimension or 3)
 
     def polea(self):
         """La máquina de Atwood con su aceleración y su tensión."""
@@ -1583,6 +1606,12 @@ def _visual_yaml(v: dict[str, Any], sangria: str = "      ") -> list[str]:
     elif tipo == "resorte":
         campos.append(("constante", _simples(v.get("constante") or "")))
         campos.append(("extension", _simples(v.get("extension") or "")))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "escala":
+        campos.append(("lado", _simples(v.get("lado") or "")))
+        campos.append(("factor", str(int(v.get("factor") or 2))))
+        campos.append(("dimension", str(int(v.get("dimension") or 3))))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     elif tipo == "polea":

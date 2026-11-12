@@ -173,6 +173,7 @@ uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra 
 | `optica` | Refracción de la luz | Física | n1, n2, angulo_incidence |
 | `pendulo` | Péndulo | Física | longitud, angulo, anotar |
 | `resorte` | Resorte | Física | constante, extension, anotar |
+| `escala` | Escala: caben N piezas | Matemática | lado, factor (2 o 3), dimension (2 área, 3 volumen), anotar (contador, razon). El dibujo **demuestra**: las copias del original entran de a una antes de la fórmula |
 | `oscilador` | Oscilador que se apaga | Física | masa, constante, amplitud, amortiguamiento, duracion, anotar |
 | `pendulo_doble` | Péndulo doble | Física | masa_1, masa_2, longitud_1, longitud_2, angulo_1, angulo_2, duracion, anotar |
 | `polea` | Polea con dos masas | Física | masa_a, masa_b, anotar |
