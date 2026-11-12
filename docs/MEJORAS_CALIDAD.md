@@ -1,6 +1,6 @@
 # Mejoras de calidad: voz y explicación
 
-Fecha: 12-11-2026 · Estado: diagnóstico listo, falta la decisión del dueño
+Fecha: 12-11-2026 · Estado: el dueño eligió la voz A y pasó dos videos de @xcris222 como modelo; implementado en `feat/voz-gemini`
 
 ## El problema (lo que vio el dueño en el video del cubo)
 
@@ -67,6 +67,43 @@ de cada palabra.
 ### 3 · Primera prueba
 Reescribir el video del cubo con el plan 2, generarlo con la voz elegida en el plan 1 y
 compararlo con el actual.
+
+## Lo que enseñan los videos de @xcris222 (modelo elegido por el dueño)
+
+Se analizaron dos videos: la transcripción completa, la velocidad de la voz y 8 cuadros de cada uno.
+- [Tu primera animación con código](https://www.tiktok.com/@xcris222/video/7700722993890102549): 89 s, 145 palabras/min.
+- [Navier-Stokes, forma diferencial](https://www.tiktok.com/@xcris222/video/7697732555067510036): 115 s, 166 palabras/min.
+
+Esto se suma a los 3 videos que ya estaban medidos en `docs/superpowers/specs/2026-11-11-gramatica-visual-xcris-design.md`.
+
+**Cómo explica**
+1. **El porqué al inicio.** «La forma integral sirve para… pero si queremos saber qué pasa en cada punto necesitamos la diferencial.»
+2. **Punto de partida e idea clave con nombre.** «Partimos de…», «El truco es el teorema de la divergencia…». Primero da la imagen física («lo que sale por las seis caras de un cubito; si sumas todos los cubitos, las caras interiores se cancelan») y después la fórmula.
+3. **Pasos numerados en voz alta**, y en pantalla con su nombre: «② Teorema de la divergencia», «⑤ Presión en las caras del cubito».
+4. **Qué hacer y para qué**, en la misma frase: «marca la casilla… para que tu computadora lo reconozca».
+5. **Conectores que muestran el razonamiento:** «Con él…», «Ahora todo es…», «Como ese volumen puede ser cualquiera… tiene que ser cero en cada punto».
+6. **Cada término con su significado:** etiquetas chicas sobre la fórmula («local», «convectiva», «presión», «fricción»).
+7. **Cierre en palabras:** «Aceleración local más aceleración convectiva, igual a presión, peso y fricción».
+8. **Frases completas y naturales** de ~12 palabras. Videos de 90 a 115 s: claro antes que corto.
+
+**Cómo se ve:** arriba un panel con el dibujo del concepto y el chip numerado del paso; al medio, el subtítulo; abajo, un panel con las fórmulas. La fórmula anterior queda tenue sobre la nueva.
+
+## Qué se implementó (rama `feat/voz-gemini`)
+- **Voz A, Gemini TTS:** proveedor `gemini` con la voz `Charon` por defecto y un estilo «profe chileno cercano, con calma» que se puede cambiar en `marca.yaml` (`voz.estilo`).
+  - `./tpi voces --gemini` muestra las 30 voces.
+  - En el panel, Ajustes → Voz, las voces ✨ Gemini se escuchan y se guardan.
+  - `./tpi doctor` avisa si falta la clave.
+  - `--voz edge` vuelve a la voz gratis.
+- **Reglas de enseñanza** en `plantillas/ia/sistema.md`: las 8 de arriba, frases completas y videos de 45 a 100 s.
+- **Gemini piensa antes de escribir:** primero llena `idea_central` y `confusion_tipica`.
+- **El revisor también revisa la claridad:** un guion correcto que no se entiende no se aprueba.
+- **El dibujo que demuestra (`escala`) se traza antes que su fórmula.**
+- **`guiones/caben_ocho_cubos.yaml` reescrito** con estas reglas, como primera prueba.
+
+## Pendiente
+- Probar la voz de Gemini en el Mac del dueño. Desde el sandbox no se puede: no tiene la clave.
+- Si gusta, clonar la voz del dueño (Gemini voice replication) y usarla con `voz.nombre: voice_…`.
+- Que el dueño compare el cubo nuevo con el anterior y diga qué falta.
 
 ## Lo que necesita decidir el dueño
 - Qué voz probar: A, B o C.

@@ -43,6 +43,8 @@ from .errores import ErrorMotor
 # soft_wrap: nunca cortar rutas ni comandos con saltos de línea (así se copian y pegan bien)
 consola = Console(highlight=False, soft_wrap=True)
 
+AYUDA_VOZ = "edge | gemini | gtts | silencio, o el nombre de una voz (./tpi voces y ./tpi voces --gemini)"
+
 # Con --progreso-json (lo usa el panel), la salida estándar lleva solo líneas JSON
 # ({"etapa": …, "avance": 0–1, "detalle": …}) y los mensajes para personas van a la salida de errores.
 _JSON = {"activo": False}
@@ -90,12 +92,18 @@ def _de_lectura(segundos: float) -> str:
 
 
 def _dividir_voz(valor: str | None) -> tuple[str | None, str | None]:
-    """``--voz`` acepta un servicio (edge | gtts | silencio) o el nombre de una voz."""
-    from .voces import PROVEEDORES
+    """``--voz`` acepta un servicio (edge | gemini | gtts | silencio) o el nombre de una voz.
 
+    Un nombre de voz de Gemini («Charon», «Kore», o una propia «voice_…») va a Gemini; el resto, a edge.
+    """
+    from .voz_gemini import es_voz_de_gemini
+
+    proveedores = ("edge", "gemini", "gtts", "silencio")  # los de voces.PROVEEDORES, sin importar Manim
     if not valor:
         return None, None
-    return (valor, None) if valor in PROVEEDORES else ("edge", valor)
+    if valor in proveedores:
+        return valor, None
+    return ("gemini", valor) if es_voz_de_gemini(valor) else ("edge", valor)
 
 
 # ------------------------------------------------------------------------------------------
@@ -161,7 +169,7 @@ def _mostrar_revision(ruta: str) -> bool:
     consola.print(
         f"[bold]📋 {guion.titulo}[/]  ({guion.etiqueta_materia.lower()}, {n} paso{'' if n == 1 else 's'})"
     )
-    color = "green" if 30 <= rev.segundos <= 75 else "yellow"
+    color = "green" if 30 <= rev.segundos <= 100 else "yellow"
     consola.print(
         f"[{color}]⏱  Duración estimada: ~{rev.segundos:.0f} s[/] ({rev.palabras} palabras, {rev.bloques} bloques de voz)"
     )
@@ -1329,6 +1337,18 @@ def cmd_icono(args: argparse.Namespace) -> int:
 
 
 def cmd_voces(args: argparse.Namespace) -> int:
+    if getattr(args, "gemini", False):
+        from .voz_gemini import VOCES, VOZ_POR_DEFECTO
+
+        tabla = Table("Voz de Gemini (para --voz)", "Carácter", header_style="bold")
+        for nombre, caracter in VOCES.items():
+            tabla.add_row(nombre, caracter, style="bold green" if nombre == VOZ_POR_DEFECTO else "")
+        consola.print(tabla)
+        consola.print(
+            "Todas hablan español. Ejemplo: ./tpi crear guiones/x.yaml --voz Kore   "
+            "(para siempre: voz.proveedor: gemini y voz.nombre en marca.yaml)"
+        )
+        return 0
     from .voces import listar_voces_es
 
     with consola.status("Consultando voces…"):
@@ -1382,7 +1402,7 @@ def construir_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("crear", help="crea el video a partir de un guion")
     s.add_argument("guion", help="ruta al .yaml")
     s.add_argument("--borrador", action="store_true", help="calidad baja y rápida para revisar")
-    s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
+    s.add_argument("--voz", help=AYUDA_VOZ)
     s.add_argument("--velocidad", help="velocidad de la voz, ej. +10%% o -5%%")
     s.add_argument(
         "--piso-lectura",
@@ -1466,7 +1486,7 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--ganchos", action="store_true", help="lista las 3–5 variantes de gancho de cada idea")
     s.add_argument("--borrador", action="store_true", help="crear un borrador rápido en vez del video final")
     s.add_argument("--estilo", help="estilo visual del video, ej. consola_dato (ver ./tpi temas)")
-    s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
+    s.add_argument("--voz", help=AYUDA_VOZ)
     s.add_argument("--sin-kit", action="store_true", help="no armar el kit de publicación")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
@@ -1511,7 +1531,7 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--borrador", action="store_true", help="crea un borrador rápido en vez del video final")
     s.add_argument("--estilo", help="estilo visual del video, ej. consola_dato (ver ./tpi temas)")
-    s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
+    s.add_argument("--voz", help=AYUDA_VOZ)
     s.add_argument("--velocidad", help="velocidad de la voz, ej. +10%% o -5%%")
     s.add_argument(
         "--piso-lectura",
@@ -1539,7 +1559,7 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--elegir", type=int, help="deja ese gancho en el guion sin renderizar")
     s.add_argument("--sin-voz", action="store_true", help="clips sin voz (más rápidos)")
     s.add_argument("--borrador", action="store_true", help="clips rápidos en 540×960 (ya sale así)")
-    s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
+    s.add_argument("--voz", help=AYUDA_VOZ)
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_ganchos)
 
@@ -1584,7 +1604,7 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--borrador", action="store_true", help="los 3 como borradores rápidos (en vez del final)")
     s.add_argument("--estilo", help="estilo visual de los videos, ej. consola_dato (ver ./tpi temas)")
-    s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
+    s.add_argument("--voz", help=AYUDA_VOZ)
     s.add_argument("--velocidad", help="velocidad de la voz, ej. +10%% o -5%%")
     s.add_argument("--sin-subtitulos", action="store_true", help="no quemar subtítulos")
     s.add_argument(
@@ -1629,6 +1649,7 @@ def construir_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("voces", help="lista las voces en español")
     s.add_argument("--todas", action="store_true", help="todos los países de habla hispana")
+    s.add_argument("--gemini", action="store_true", help="las voces de Gemini (las más naturales)")
     s.set_defaults(func=cmd_voces)
 
     s = sub.add_parser("temas", help="lista los estilos visuales (Hoja de desarrollo, Pizarra nocturna…)")
@@ -1653,7 +1674,9 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_publicar)
 
-    s = sub.add_parser("podar", help="borra cachés temporales viejos (dibujos 3D, voz, vistas previas y trozos de Manim)")
+    s = sub.add_parser(
+        "podar", help="borra cachés temporales viejos (dibujos 3D, voz, vistas previas y trozos de Manim)"
+    )
     s.add_argument("--dias", type=int, default=7, help="edad mínima para borrar (por defecto 7 días)")
     s.add_argument("--max-mb", type=int, default=500, help="cuota de salida/_3d en MB (por defecto 500)")
     s.add_argument("--si", action="store_true", help="borra sin preguntar")

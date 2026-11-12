@@ -184,6 +184,9 @@ def plan_de_movimiento(duracion: float, restante: float) -> tuple[float, float, 
 # hoja entera a propósito: es lo único que le deja a la cámara papel libre para bajar de una mitad
 # a la otra, y como además entra, la letra sale del mismo tamaño que en el plano general de siempre.
 ANCHO_CASILLERO = 3.9
+
+# Los dibujos que son la prueba de la idea (no su ilustración): se trazan antes que la fórmula del paso.
+DIBUJOS_QUE_DEMUESTRAN = frozenset({"escala"})
 AIRE_CASILLERO = 0.5
 
 # Los subtítulos se queman después, centrados en el 72 % del alto (y ≈ -1,76). Lo que se escribe
@@ -991,7 +994,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             self.panel_gram.remove(*list(self.panel_gram))
             self.panel_gram.add(*nuevo)
         formulas = self.panel_gram[1][2] if self.panel_gram is not None else None
-        if formulas is not None and len(formulas) and self.tema.gramatica.micro and paso.tex and not paso.error:
+        escribe = self.tema.gramatica.micro and paso.tex and not paso.error
+        if formulas is not None and len(formulas) and escribe:
             self.play(c.micro_movimiento("cursor", formulas[-1]), run_time=0.2)
 
     def _cabecera(self) -> Group:
@@ -1510,6 +1514,15 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                         self.add(fuente)
                         self.play(LaggedStart(*[Create(t) for t in tachas], lag_ratio=0.2), run_time=0.4)
                         aparecer.append(FadeOut(tachas))
+                # El dibujo que demuestra va ANTES que su fórmula: primero se ve (caben 8 cubos) y la
+                # fórmula llega como resumen de lo que ya se vio. El rótulo del paso sí entra primero.
+                demuestra_primero = (
+                    paso.visual is not None and paso.visual.tipo in DIBUJOS_QUE_DEMUESTRAN and alto_dibujo > 0
+                )
+                if demuestra_primero:
+                    if nota is not None:
+                        self.play(aparecer.pop(0), run_time=0.6)
+                    dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
                 self.play(*aparecer, run_time=float(np.clip(tr.duration * 0.45, 0.8, 1.6)))
                 completa_desde = self.renderer.time  # desde acá la fórmula ya está completa en pantalla
                 if self.tema.gramatica.mapa_color and paso.mapa:
@@ -1520,7 +1533,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 if halos is not None:
                     self.play(FadeIn(halos, scale=1.08), run_time=0.4)
                     halos_vivos.append(halos)
-                if paso.visual is not None and alto_dibujo > 0:
+                if paso.visual is not None and alto_dibujo > 0 and not demuestra_primero:
                     dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
 
                 linea_nueva = Linea(mobs=list(nueva), eq=eq)

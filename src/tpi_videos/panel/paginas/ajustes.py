@@ -6,6 +6,8 @@ Todo se guarda en ``mis_ajustes/`` (``marca.yaml``, ``rodaje.yaml``; la clave en
 
 from __future__ import annotations
 
+import hashlib
+
 import re
 from collections.abc import Callable
 
@@ -29,7 +31,14 @@ from ..comun import PIEL, confirmar, url_medio
 from ..sugerencia import DIFICULTADES, NOMBRE_MATERIA
 from ..tareas import consultar
 
+def _voces_gemini() -> dict[str, str]:
+    from ...voz_gemini import VOCES as DE_GEMINI
+
+    return {nombre: f"✨ Gemini · {nombre} ({caracter})" for nombre, caracter in DE_GEMINI.items()}
+
+
 VOCES = {
+    **_voces_gemini(),  # las más naturales: primero
     "es-CL-LorenzoNeural": "🇨🇱 Lorenzo (Chile, hombre)",
     "es-CL-CatalinaNeural": "🇨🇱 Catalina (Chile, mujer)",
     "es-MX-JorgeNeural": "🇲🇽 Jorge (México, hombre)",
@@ -55,6 +64,10 @@ def _tarjeta(titulo: str, ayuda: str) -> ui.card:
 
 
 def _generar_muestra(voz: str, velocidad: str, tono: str = "+0Hz"):
+    from ...voz_gemini import es_voz_de_gemini
+
+    if es_voz_de_gemini(voz):
+        return _muestra_gemini(voz, velocidad)
     import edge_tts
 
     destino = (
@@ -70,6 +83,25 @@ def _generar_muestra(voz: str, velocidad: str, tono: str = "+0Hz"):
         destino.unlink(missing_ok=True)
         raise ErrorMotor("No pude generar la muestra de voz.", ayuda="Revisa tu conexión a internet.") from e
     return destino
+
+
+def _muestra_gemini(voz: str, velocidad: str):
+    from ...voz_gemini import estilo_con_ritmo, sintetizar
+
+    estilo = estilo_con_ritmo(cargar_marca().voz.estilo, velocidad)
+    huella = hashlib.sha1(estilo.encode("utf-8")).hexdigest()[:8]
+    destino = raiz_proyecto() / "salida" / "_panel" / "voces" / f"gemini_{voz}_{huella}.wav"
+    if destino.exists():
+        return destino
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_bytes(sintetizar(MUESTRA, voz, estilo))  # sus errores ya vienen explicados
+    return destino
+
+
+def _proveedor(voz: str) -> str:
+    from ...voz_gemini import es_voz_de_gemini
+
+    return "gemini" if es_voz_de_gemini(voz) else "edge"
 
 
 def _seccion_clave() -> None:
@@ -213,7 +245,11 @@ def _seccion_voz() -> None:
         "velocidad": int(m.group(1)) if m else 0,
         "tono": int(t.group(1)) if t else 0,
     }
-    with _tarjeta("Voz", "La voz de tus videos (voces neurales gratis; necesitan internet)."):
+    with _tarjeta(
+        "Voz",
+        "La voz de tus videos. Las ✨ Gemini suenan más naturales (usan tu clave de Gemini); "
+        "las demás son voces neurales gratis. Todas necesitan internet.",
+    ):
         with ui.row().classes("w-full items-center gap-4"):
             ui.select(opciones, label="Voz").props("outlined dense").classes("w-80").bind_value(datos, "voz")
             with ui.column().classes("flex-1 gap-0"):
@@ -244,7 +280,8 @@ def _seccion_voz() -> None:
 
         def guardar() -> None:
             guardar_ajustes_marca(
-                {"voz": {"proveedor": "edge", "nombre": datos["voz"], "velocidad": velocidad(), "tono": tono()}}
+                {"voz": {"proveedor": _proveedor(datos["voz"]), "nombre": datos["voz"],
+                         "velocidad": velocidad(), "tono": tono()}}  # fmt: skip
             )
             ui.notify("Voz guardada para tus próximos videos.", type="positive")
 

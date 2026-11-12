@@ -3,6 +3,9 @@
 - ``edge``: voces neurales de Microsoft (gratis, requiere internet). Por defecto usa una voz
   chilena (es-CL-LorenzoNeural / es-CL-CatalinaNeural) y entrega la marca de tiempo exacta de
   cada palabra, lo que permite subtítulos palabra por palabra sin re-transcribir.
+- ``gemini``: la voz de Gemini TTS (misma clave que el redactor). Natural y se le pide el tono con
+  palabras (``voz.estilo`` de marca.yaml). No trae marcas por palabra: los subtítulos van con Whisper
+  o repartidos sobre la duración real del audio.
 - ``gtts``: Google Translate TTS (gratis, requiere internet, voz más robótica). Sin marcas de
   tiempo: los subtítulos se sincronizan con Whisper.
 - ``silencio``: sin voz y sin internet, con la duración estimada. Para revisar ritmo y diseño.
@@ -23,7 +26,7 @@ from .errores import ErrorMotor
 from .pausas import tiene_pausas, trozos
 from .revision import estimar_segundos
 
-PROVEEDORES = ("edge", "gtts", "silencio")
+PROVEEDORES = ("edge", "gemini", "gtts", "silencio")
 RESOLUCION = 10_000_000  # manim-voiceover mide los tiempos en unidades de 100 ns
 
 
@@ -144,6 +147,55 @@ class EdgeTTSService(SpeechService):
         )
 
 
+class GeminiTTSService(SpeechService):
+    """La voz de Gemini (ver ``voz_gemini``): natural, con el tono que pide el estilo."""
+
+    def __init__(
+        self, voz: str, estilo: str, modelo: str | None = None, cliente: Any = None, **kwargs: Any
+    ) -> None:
+        from .voz_gemini import MODELO_TTS
+
+        initialize_speech_service(self, kwargs)
+        self.voz = voz
+        self.estilo = estilo
+        self.modelo = modelo or MODELO_TTS
+        self._cliente = cliente  # se crea recién al primer audio que no está en caché
+
+    def generate_from_text(self, text: str, cache_dir=None, path=None, **kwargs: Any) -> dict[str, Any]:
+        from .voz_gemini import cliente_tts, sintetizar
+
+        cache_dir = cache_dir or self.cache_dir
+        texto = remove_bookmarks(text)
+        input_data = {
+            "input_text": texto,
+            "service": "gemini-tts",
+            "config": {"voice": self.voz, "style": self.estilo, "model": self.modelo},
+        }
+        en_cache = self.get_cached_result(input_data, cache_dir)
+        if en_cache is not None:
+            return en_cache
+
+        if self._cliente is None:
+            self._cliente = cliente_tts()  # guardar la referencia: si se libera, cierra su conexión
+        audio = sintetizar(texto, self.voz, self.estilo, self.modelo, cliente=self._cliente)
+        audio_path = self.get_audio_basename(input_data) + ".wav" if path is None else path_to_string(path)
+        destino = Path(cache_dir) / audio_path
+        destino.write_bytes(audio)
+        try:
+            with wave.open(str(destino), "rb") as wav:
+                duracion = wav.getnframes() / float(wav.getframerate())
+        except (wave.Error, EOFError):
+            duracion = estimar_segundos(texto)
+        return {
+            "input_text": text,
+            "input_data": input_data,
+            "original_audio": audio_path,
+            # Gemini no da el tiempo de cada palabra: se reparten sobre la duración REAL del audio
+            # (si Whisper está instalado, el subtítulo usa Whisper en su lugar).
+            "word_boundaries": _marcas_estimadas(texto, duracion),
+        }
+
+
 class SilencioService(SpeechService):
     """Sin voz: genera silencio con la duración estimada del texto (no necesita internet)."""
 
@@ -195,7 +247,8 @@ class ServicioConPausas(SpeechService):
 
         partes = trozos(remove_bookmarks(text))
         limpio = " ".join(t for t, _ in partes if t)
-        config = {k: getattr(self.base, k) for k in ("voz", "velocidad", "tono") if hasattr(self.base, k)}
+        claves = ("voz", "velocidad", "tono", "estilo", "modelo")
+        config = {k: getattr(self.base, k) for k in claves if hasattr(self.base, k)}
         input_data = {"input_text": text, "service": self.nombre, "config": config, "pausas": True}
         en_cache = self.get_cached_result(input_data, cache_dir)
         if en_cache is not None:
@@ -234,6 +287,12 @@ class ServicioConPausas(SpeechService):
 def crear_servicio(proveedor: str, voz: str, velocidad: str, tono: str = "+0Hz") -> SpeechService:
     if proveedor == "edge":
         return ServicioConPausas(EdgeTTSService(voz=voz, velocidad=velocidad, tono=tono), "edge-tts")
+    if proveedor == "gemini":
+        from .config import cargar_marca
+        from .voz_gemini import estilo_con_ritmo, voz_de_gemini
+
+        estilo = estilo_con_ritmo(cargar_marca().voz.estilo, velocidad)
+        return ServicioConPausas(GeminiTTSService(voz=voz_de_gemini(voz), estilo=estilo), "gemini-tts")
     if proveedor == "gtts":
         from manim_voiceover.services.gtts import GTTSService
 

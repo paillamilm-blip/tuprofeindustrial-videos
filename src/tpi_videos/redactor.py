@@ -418,6 +418,13 @@ class MetadatosIA(BaseModel):
 class GuionIA(BaseModel):
     es_ejercicio: bool = Field(description="false si no es un ejercicio resoluble")
     motivo: str = Field(default="", description="Solo si es_ejercicio es false: por qué")
+    # Se piensan ANTES que el resto del guion (por eso van primero): todo lo demás les sirve.
+    idea_central: str = Field(
+        default="", description="La UNA idea que el estudiante se lleva, en una frase sin fórmulas"
+    )
+    confusion_tipica: str = Field(
+        default="", description="Qué confunde o qué cree mal el estudiante de ese nivel sobre esto"
+    )
     titulo: str
     materia: Literal["matematica", "fisica", "ingenieria"]
     nivel: str
@@ -454,6 +461,8 @@ class RevisionIA(BaseModel):
 
 EJEMPLO = GuionIA(
     es_ejercicio=True,
+    idea_central="El tiempo de caída no depende de la masa: solo de la altura y de la gravedad.",
+    confusion_tipica="Creer que lo más pesado cae más rápido, o despejar t olvidando la raíz.",
     titulo="Caída libre: ¿cuánto tarda en caer?",
     materia="fisica",
     nivel="2° medio",
