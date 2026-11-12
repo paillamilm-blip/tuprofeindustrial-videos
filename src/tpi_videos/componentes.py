@@ -775,7 +775,7 @@ def panel_persistente(
     k = len(cerrados) if completados is None else completados
     color = paleta[min(k, max(0, total - 1)) % len(paleta)] if paleta else "#FFFFFF"
 
-    def armar(formulas: list[str]) -> VGroup:
+    def armar(formulas: list[str], alto_mini: float | None = None) -> VGroup:
         contador = texto(f"paso {min(k + 1, total)} de {total}", 16, ULTRABOLD, color)
         pista = Rectangle(width=ancho - 1.2, height=0.12).set_fill(borde, 0.5).set_stroke(width=0)
         lleno = Rectangle(width=max(0.02, pista.width * (k / total if total else 0.0)), height=0.12)
@@ -783,14 +783,20 @@ def panel_persistente(
         lleno.align_to(pista, LEFT).align_to(pista, UP)
         mini = VGroup(*[ecuacion(t, 22, "#FFFFFF", ancho_max=ancho - 1.2) for t in formulas])
         mini.arrange(DOWN, buff=0.12, aligned_edge=LEFT)
+        if alto_mini is not None and len(mini) and mini.height > alto_mini:
+            mini.scale_to_fit_height(alto_mini)
         contenido = VGroup(contador, VGroup(pista, lleno), mini).arrange(DOWN, buff=0.14, aligned_edge=LEFT)
         return tarjeta(contenido, ancho, relleno, borde, margen=0.25 if alto_max is not None else 0.4)
 
     ultimas = cerrados[-3:]
     panel = armar(ultimas)
-    while alto_max is not None and panel.height > alto_max and ultimas:
+    while alto_max is not None and panel.height > alto_max and len(ultimas) > 1:
         ultimas = ultimas[1:]  # sale la más antigua: la recién cerrada es la que importa
         panel = armar(ultimas)
+    if alto_max is not None and panel.height > alto_max and ultimas:
+        # Ni la recién cerrada entra a su tamaño (una fracción alta): se achica solo ella, no el panel.
+        libre = alto_max - armar([]).height - 0.14
+        panel = armar(ultimas, alto_mini=libre) if libre > 0.12 else armar([])
     return panel
 
 

@@ -987,8 +987,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             # Transform conserva los tipos de origen: el panel vacío deja puntos en vez de MathTex.
             self.panel_gram.remove(*list(self.panel_gram))
             self.panel_gram.add(*nuevo)
-        if self.panel_gram is not None and self.tema.gramatica.micro and paso.tex and not paso.error:
-            self.play(c.micro_movimiento("cursor", self.panel_gram[1][2][-1]), run_time=0.2)
+        formulas = self.panel_gram[1][2] if self.panel_gram is not None else None
+        if formulas is not None and len(formulas) and self.tema.gramatica.micro and paso.tex and not paso.error:
+            self.play(c.micro_movimiento("cursor", formulas[-1]), run_time=0.2)
 
     def _cabecera(self) -> Group:
         if self.tema.marco == "hoja":

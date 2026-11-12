@@ -57,6 +57,12 @@ class PanelPersistenteTest(unittest.TestCase):
         self.assertGreaterEqual(len(ultima), 1)
         self.assertIn("z", ultima[-1].tex_string)
 
+    def test_una_formula_alta_entra_achicada_y_el_panel_no_crece(self):
+        alta = r"\frac{\frac{a}{b}}{\frac{c}{d}} = \frac{ad}{bc}"
+        panel = c.panel_persistente(3, [alta], ["#FFC72C"], 6.0, "#141A24", "#2A3444", alto_max=1.6)
+        self.assertLessEqual(panel.height, 1.6 + 1e-6)
+        self.assertEqual(len(panel[1][2]), 1)  # la recién cerrada sigue ahí: el cursor la necesita
+
     def test_barra_crece_con_pasos(self):
         vacio = self._panel([])
         lleno = self._panel(["a", "b"])
