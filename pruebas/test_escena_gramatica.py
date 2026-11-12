@@ -27,7 +27,7 @@ class EscenaGramaticaTest(unittest.TestCase):
         t = cargar_tema("consola_pasos", Marca())
         self.assertTrue(t.gramatica.tabs)
         self.assertTrue(t.gramatica.panel)
-        self.assertTrue(t.resplandor)
+        self.assertFalse(t.resplandor)  # versión sobria: sin brillo neón
         self.assertIn("consola_pasos", [clave for clave, _, _ in listar_temas()])
         # la Consola neón original queda archivada: ya no se ofrece, pero se sigue pudiendo pedir
         self.assertNotIn("consola_neon", [clave for clave, _, _ in listar_temas()])

@@ -1,37 +1,38 @@
-# Familia Consola neón · RETO (molde «Reto»).
-# La pizarra de liceo de Tiza verde, con neón verde. Pasos numerados y panel para seguir el
-# intento; el resultado sale tapado (receta de rodaje del reto) para invitar a resolverlo.
+# Familia Consola · RETO (molde Reto).
+# Versión sobria (12-11-2026): fondo grafito liso con un degradado suave, sin rejas ni viñetas, sin
+# brillo neón y con un solo acento apagado por variante. Se conservan la estructura (pasos
+# numerados, panel, mapa de color), el plumón y los subtítulos de 3 palabras.
 nombre: Consola · Reto
-descripcion: 'Pizarra verde de liceo con neón: pasos numerados y la respuesta tapada para que lo intentes.'
+descripcion: 'Grafito verdoso con un verde salvia: pasos numerados y la respuesta tapada para que lo intentes.'
 rotulo: RETO
 marco: pizarra
-resplandor: true
+resplandor: false
 colores:
-  fondo: '#0A1612'
-  panel: '#11221B'
-  borde: '#24463A'
-  titulos: '#F5F7FA'
-  texto: '#F5F7FA'
-  formulas: '#F5F7FA'
-  tenue: '#8FA89C'
-  acento: '#4ADE80'
-  exito: '#22C55E'
-  cuadricula: '#4ADE80'
-  error: '#EF4444'
-materias: {matematica: '#4ADE80', fisica: '#4ADE80', ingenieria: '#4ADE80'}
+  fondo: '#0F1411'
+  panel: '#18221D'
+  borde: '#2D4036'
+  titulos: '#ECEFF3'
+  texto: '#E4E7EB'
+  formulas: '#F2F4F7'
+  tenue: '#8FA096'
+  acento: '#7DB894'
+  exito: '#7DB894'
+  cuadricula: '#7DB894'
+  error: '#D27A72'
+materias: {matematica: '#7DB894', fisica: '#7DB894', ingenieria: '#7DB894'}
 tipografia:
   titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
   texto: {familia: Montserrat, grosor: SEMIBOLD}
 nota: {rol: texto, escala: 1.0, color: acento}
 formulas_negrita: true
-fondo: {tipo: imagen, imagen: tiza_verde, degradado: ['#12302A', '#091A16']}
+fondo: {tipo: degradado, degradado: ['#151C18', '#0B0F0D']}
 subtitulos:
   fuente: Montserrat Black
-  tamano: 88
+  tamano: 84
   color: '#FFFFFF'
-  color_activo: '#4ADE80'
-  borde: 8
-  sombra: 6
+  color_activo: '#7DB894'
+  borde: 6
+  sombra: 2
   posicion_y: 0.82  # con el panel abajo, el motor la sube sola por encima de él
   mayusculas: true
   max_palabras: 3
@@ -48,4 +49,4 @@ gramatica:
   panel: true
   mapa_color: true
   micro: true
-  paleta_pasos: ['#4ADE80', '#FFC72C', '#38BDF8', '#A78BFA', '#F472B6', '#FB923C']
+  paleta_pasos: ['#7DB894', '#6FA8DC', '#D4B26A', '#A399C9', '#C98FA7', '#D29A6E']

@@ -1,36 +1,38 @@
-# Familia Consola neón · ERROR (molde «Tres errores» y guiones que corrigen un error típico).
-# La reja de Neón sobre reja en rojo, la ✗ roja de profe y el contador «✗ 1 de 3» de los tres errores.
+# Familia Consola · ERROR (molde Tres errores y guiones con error: true).
+# Versión sobria (12-11-2026): fondo grafito liso con un degradado suave, sin rejas ni viñetas, sin
+# brillo neón y con un solo acento apagado por variante. Se conservan la estructura (pasos
+# numerados, panel, mapa de color), el plumón y los subtítulos de 3 palabras.
 nombre: Consola · Error
-descripcion: 'Reja neón en rojo: el error se tacha y la forma correcta queda numerada en su paso.'
+descripcion: 'Grafito con un rojo ladrillo: el error se tacha sin gritar y la forma correcta queda numerada.'
 rotulo: ERROR
 marco: pizarra
-resplandor: true
+resplandor: false
 colores:
-  fondo: '#0B0B12'
-  panel: '#17121A'
-  borde: '#3A2A34'
-  titulos: '#F5F7FA'
-  texto: '#F5F7FA'
-  formulas: '#F5F7FA'
-  tenue: '#8A94A6'
-  acento: '#FF4D5E'
-  exito: '#22C55E'
-  cuadricula: '#FF4D5E'
-  error: '#EF4444'
-materias: {matematica: '#FF4D5E', fisica: '#FF4D5E', ingenieria: '#FF4D5E'}
+  fondo: '#141012'
+  panel: '#211A1C'
+  borde: '#3E3134'
+  titulos: '#ECEFF3'
+  texto: '#E4E7EB'
+  formulas: '#F2F4F7'
+  tenue: '#A0918F'
+  acento: '#D27A72'
+  exito: '#7DB894'
+  cuadricula: '#D27A72'
+  error: '#D27A72'
+materias: {matematica: '#D27A72', fisica: '#D27A72', ingenieria: '#D27A72'}
 tipografia:
   titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
   texto: {familia: Montserrat, grosor: SEMIBOLD}
 nota: {rol: texto, escala: 1.0, color: acento}
 formulas_negrita: true
-fondo: {tipo: imagen, imagen: neon_reja, degradado: ['#05070D', '#131A45']}
+fondo: {tipo: degradado, degradado: ['#1B1517', '#0F0C0D']}
 subtitulos:
   fuente: Montserrat Black
-  tamano: 88
+  tamano: 84
   color: '#FFFFFF'
-  color_activo: '#FF4D5E'
-  borde: 8
-  sombra: 6
+  color_activo: '#D27A72'
+  borde: 6
+  sombra: 2
   posicion_y: 0.82  # con el panel abajo, el motor la sube sola por encima de él
   mayusculas: true
   max_palabras: 3
@@ -47,4 +49,4 @@ gramatica:
   panel: true
   mapa_color: true
   micro: true
-  paleta_pasos: ['#FF4D5E', '#FFC72C', '#38BDF8', '#22C55E', '#A78BFA', '#F472B6']
+  paleta_pasos: ['#D27A72', '#6FA8DC', '#D4B26A', '#A399C9', '#7DB894', '#C98FA7']

@@ -15,7 +15,6 @@ from tpi_videos.moldes import MOLDES
 from tpi_videos.temas import (
     ARCHIVO_DIR,
     FAMILIA,
-    FONDOS_DIR,
     TEMA_DE_ERROR,
     TEMA_DE_PASOS,
     TEMA_POR_MOLDE,
@@ -69,15 +68,13 @@ class FamiliaTest(unittest.TestCase):
         for clave in FAMILIA:
             t = cargar_tema(clave, marca)
             self.assertEqual(t.marco, "pizarra", clave)
-            self.assertTrue(t.resplandor, clave)
+            self.assertFalse(t.resplandor, clave)  # versión sobria: sin brillo neón
             self.assertEqual(t.animacion.titulos, "plumon", clave)
             self.assertEqual(t.tipografia.titulos.familia, "Montserrat", clave)
             self.assertEqual(t.subtitulos.fuente, "Montserrat Black", clave)
-            self.assertEqual(t.fondo.tipo, "imagen", clave)
+            self.assertEqual(t.fondo.tipo, "degradado", clave)  # grafito liso, sin rejas ni viñetas
             self.assertTrue(t.rotulo, clave)
             self.assertTrue(t.gramatica.mapa_color, clave)
-            # el fondo viaja con el motor: no puede vivir solo en mis_ajustes/ de un Mac
-            self.assertTrue((FONDOS_DIR / f"{t.fondo.imagen}.png").is_file(), clave)
 
     def test_cada_variante_tiene_su_propio_color(self):
         marca = cargar_marca()

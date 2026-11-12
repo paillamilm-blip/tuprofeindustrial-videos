@@ -1,39 +1,38 @@
-# Familia Consola neón · PASO A PASO (molde POV y guiones sin molde).
-# Lo mejor de cada estilo antiguo: la gramática XCris de Consola neón (pasos numerados, panel de
-# progreso, mapa de color, micro-movimiento), el brillo de Neón sobre reja, el plumón de la Hoja de
-# desarrollo, la reja cian de Neón cian y los subtítulos CapCut de 3 palabras. (La lámina de Plano
-# nocturno traía un cajetín dibujado que asomaba detrás del panel de progreso.)
+# Familia Consola · PASO A PASO (molde POV y guiones sin molde).
+# Versión sobria (12-11-2026): fondo grafito liso con un degradado suave, sin rejas ni viñetas, sin
+# brillo neón y con un solo acento apagado por variante. Se conservan la estructura (pasos
+# numerados, panel, mapa de color), el plumón y los subtítulos de 3 palabras.
 nombre: Consola · Paso a paso
-descripcion: 'Reja neón en cian: pasos numerados y panel que acumula, para seguir el desarrollo.'
+descripcion: 'Grafito azulado y un acento azul acero: pasos numerados y panel que acumula.'
 rotulo: PASO A PASO
 marco: pizarra
-resplandor: true
+resplandor: false
 colores:
-  fondo: '#0A1016'
-  panel: '#121A24'
-  borde: '#2A3A4C'
-  titulos: '#F5F7FA'
-  texto: '#F5F7FA'
-  formulas: '#F5F7FA'
-  tenue: '#8A94A6'
-  acento: '#38BDF8'
-  exito: '#22C55E'
-  cuadricula: '#38BDF8'
-  error: '#EF4444'
-materias: {matematica: '#38BDF8', fisica: '#38BDF8', ingenieria: '#38BDF8'}
+  fondo: '#0F141A'
+  panel: '#18212B'
+  borde: '#2C3A48'
+  titulos: '#ECEFF3'
+  texto: '#E4E7EB'
+  formulas: '#F2F4F7'
+  tenue: '#8C97A5'
+  acento: '#6FA8DC'
+  exito: '#7DB894'
+  cuadricula: '#6FA8DC'
+  error: '#D27A72'
+materias: {matematica: '#6FA8DC', fisica: '#6FA8DC', ingenieria: '#6FA8DC'}
 tipografia:
   titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
   texto: {familia: Montserrat, grosor: SEMIBOLD}
 nota: {rol: texto, escala: 1.0, color: acento}
 formulas_negrita: true
-fondo: {tipo: imagen, imagen: neon_cian, degradado: ['#060C12', '#082A2C']}
+fondo: {tipo: degradado, degradado: ['#151C24', '#0C1015']}
 subtitulos:
   fuente: Montserrat Black
-  tamano: 88
+  tamano: 84
   color: '#FFFFFF'
-  color_activo: '#38BDF8'
-  borde: 8
-  sombra: 6
+  color_activo: '#6FA8DC'
+  borde: 6
+  sombra: 2
   posicion_y: 0.82  # con el panel abajo, el motor la sube sola por encima de él
   mayusculas: true
   max_palabras: 3
@@ -50,4 +49,4 @@ gramatica:
   panel: true
   mapa_color: true
   micro: true
-  paleta_pasos: ['#38BDF8', '#FFC72C', '#A78BFA', '#22C55E', '#F472B6', '#FB923C']
+  paleta_pasos: ['#6FA8DC', '#D4B26A', '#A399C9', '#7DB894', '#C98FA7', '#D29A6E']

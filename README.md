@@ -14,8 +14,9 @@ Convierte un ejercicio de **Matemática, Física o Ingeniería** escrito en un a
   osciladores simulados, Mohr, vigas, engranajes, y piezas 3D que giran y se despiezan (tolva, tubería, eje).
   Se dibujan mientras suena ese paso. Lista completa: [docs/GUIA_GUIONES.md](docs/GUIA_GUIONES.md).
 - 🎨 **Una familia de estilos, una variante por forma de contenido**: todos los videos son de la familia
-  **Consola neón** (misma letra, fondo oscuro con textura, pasos numerados, panel de progreso y brillo neón) y
-  cada forma tiene su color: Paso a paso (cian), Error (rojo), Mito (violeta), Dato (ámbar) y Reto (verde).
+  **Consola** (misma letra, fondo grafito sobrio, pasos numerados y panel de progreso) y cada forma tiene
+  su acento apagado: Paso a paso (azul acero), Error (rojo ladrillo), Mito (lila), Dato (dorado mate) y
+  Reto (verde salvia).
   El motor elige la variante sola según el molde; se cambia en un solo lugar (QC). Los 20 estilos anteriores
   quedan archivados en `plantillas/temas/archivo/`: no se ofrecen, pero se pueden seguir pidiendo por su nombre.
 - 🤯 **Emojis 3D y «error típico»**: emojis que aparecen con un salto y un paso que muestra la forma
