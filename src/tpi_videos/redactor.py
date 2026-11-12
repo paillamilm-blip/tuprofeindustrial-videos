@@ -92,6 +92,7 @@ class PasoIA(BaseModel):
         "optica",
         "pendulo",
         "resorte",
+        "escala",
         "polea",
         "tanque",
         "viga",
@@ -111,7 +112,8 @@ class PasoIA(BaseModel):
         description=(
             'Dibujo de este paso: "", "grafico", "fuerzas", "circuito", "poligono", "proyectil", '
             '"circulo", "solido", "solido3d", "venn", "recta", "probabilidad", "torta", "barras", "onda", '
-            '"energia", "optica", "pendulo", "resorte", "polea", "tanque", "viga", "cercha", "bloques", '
+            '"energia", "optica", "pendulo", "resorte", "escala", "polea", "tanque", "viga", "cercha", '
+            '"bloques", '
             '"engranaje", "mohr", "oscilador", "pendulo_doble", "tolva", "tuberia", "eje", "calor" o '
             '"flujo" (máximo 1 en el guion)'
         ),
@@ -180,7 +182,8 @@ class PasoIA(BaseModel):
         default="",
         description=(
             'Con dibujo="poligono": cuánto mide un lado, con su unidad, ej. "12 cm"; '
-            'con dibujo="solido" y figura="cubo": la arista, ej. "4 cm"'
+            'con dibujo="solido" y figura="cubo": la arista, ej. "4 cm"; '
+            'con dibujo="escala": el lado del original, ej. "4 cm"'
         ),
     )
     velocidad: str = Field(
@@ -304,6 +307,11 @@ class PasoIA(BaseModel):
         default="", description='Con dibujo="resorte": constante con unidad, ej. "200 N/m"'
     )
     extension: str = Field(default="", description='Con dibujo="resorte": cuánto se estira, ej. "10 cm"')
+    factor: int = Field(default=0, description='Con dibujo="escala": cuántas veces crece el lado, 2 o 3')
+    dimension: int = Field(
+        default=0,
+        description='Con dibujo="escala": 2 si se compara el área (cuadrados), 3 el volumen (cubos)'
+    )
     masa_a: str = Field(default="", description='Con dibujo="polea": primera masa con su unidad, ej. "3 kg"')
     masa_b: str = Field(default="", description='Con dibujo="polea": segunda masa, distinta de la primera')
     capacidad: str = Field(default="", description='Con dibujo="tanque": cuánto entra, ej. "120 L"')
@@ -382,7 +390,8 @@ class PasoIA(BaseModel):
             'con "circulo", de "seno", "coseno", "tangente"; '
             'con "solido" o "solido3d", de "volumen", "area"; '
             'con "venn", "total"; con "probabilidad", "probabilidad"; con "onda", "velocidad"; '
-            'con "pendulo", "periodo"; con "resorte", "fuerza"; con "polea", "aceleracion" o "tension"; '
+            'con "pendulo", "periodo"; con "resorte", "fuerza"; con "escala", "contador" o "razon"; '
+            'con "polea", "aceleracion" o "tension"; '
             'con "tanque", "llenado" o "vaciado"; con "viga", "reacciones" o "momento"; '
             'con "cercha", "esfuerzo" o "angulo"; con "bloques", "lazo_cerrado"; '
             'con "engranaje", "velocidad" o "relacion"; con "mohr", "principales" o "cortante"; '
@@ -871,6 +880,7 @@ _DIBUJOS = {
     "optica": "optica",
     "pendulo": "pendulo",
     "resorte": "resorte",
+    "escala": "escala",
     "polea": "polea",
     "tanque": "tanque",
     "viga": "viga",
@@ -1024,6 +1034,13 @@ def _visual(p: PasoIA) -> dict[str, Any] | None:
             visual["extension"] = _texto(p.extension)
         if p.anotar:
             visual["anotar"] = [a.strip() for a in p.anotar if a.strip()]
+    elif tipo == "escala":
+        if _texto(p.lado):
+            visual["lado"] = _texto(p.lado)
+        visual["factor"] = p.factor if p.factor in (2, 3) else 2
+        visual["dimension"] = p.dimension if p.dimension in (2, 3) else 3
+        if marcas:
+            visual["anotar"] = marcas
     elif tipo == "polea":
         if p.masa_a:
             visual["masa_a"] = _texto(p.masa_a)

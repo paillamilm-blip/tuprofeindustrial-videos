@@ -52,6 +52,7 @@ from .visuales import (
     Cercha,
     Energia,
     Engranaje,
+    Escala,
     Funcion,
     Mohr,
     Onda,
@@ -1314,6 +1315,146 @@ def probabilidad(
     todo = VGroup(*puntos, parches, rótulos)
     _encajar(todo, ancho, alto)
     return Dibujo(mobs=todo, trazo=puntos, aparece=[*rótulos])
+
+
+# ------------------------------------------------------------------------------------------
+# 8b · La escala: el dibujo que demuestra (caben factor² cuadrados o factor³ cubos)
+# ------------------------------------------------------------------------------------------
+
+
+def _con_opacidad(pieza: VGroup, bases: list[float], a: float) -> None:
+    """Enciende una pieza (sus caras o su cuadrado) a la fracción ``a`` de su opacidad propia."""
+    for cara, base in zip(pieza, bases, strict=True):
+        cara.set_fill(opacity=base * a).set_stroke(opacity=a)
+
+
+def escala(
+    figura: Escala, marcas: list[str], col: Any, ancho: float, alto: float, papel: str = "#FFFFFF"
+) -> Dibujo:
+    """Agrandar el lado: las piezas del original entran de a una hasta llenar la figura grande.
+
+    No es una ilustración de la fórmula: es la prueba. Primero se ve que caben 8 cubos (o 4
+    cuadrados) y recién después la fórmula lo dice. La primera pieza es el original, con su medida.
+    """
+    k, n = figura.factor, figura.piezas
+    acento = ManimColor(col.acento)
+    oscuro = ManimColor(col.fondo)
+    piezas: list[VGroup] = []  # en el orden en que entran: la primera es el original
+    bases: list[list[float]] = []
+    contorno: list[Mobject] = []
+    parches, rótulos = VGroup(), VGroup()
+
+    if figura.dimension == 3:
+        s = 0.9 if k == 2 else 0.62
+        cx, cy = 0.866 * s, 0.5 * s
+
+        def iso(i: float, j: float, h: float) -> np.ndarray:
+            return np.array([(i - j) * cx, h * s - (i + j) * cy, 0.0])
+
+        celdas = [(i, j, h) for h in range(k) for i in range(k) for j in range(k)]
+        original = (k - 1, k - 1, 0)  # el de adelante y abajo: se ve entero desde el primer segundo
+        resto = sorted((x for x in celdas if x != original), key=lambda t: (t[2], t[0] + t[1]))
+        entrada = [original, *resto]
+        cubo: dict[tuple[int, int, int], VGroup] = {}
+        for i, j, h in celdas:
+            a1, b1 = i + 1, j + 1
+            arriba = Polygon(iso(i, j, h + 1), iso(a1, j, h + 1), iso(a1, b1, h + 1), iso(i, b1, h + 1))
+            derecha = Polygon(iso(a1, j, h), iso(a1, b1, h), iso(a1, b1, h + 1), iso(a1, j, h + 1))
+            izquierda = Polygon(iso(i, b1, h), iso(a1, b1, h), iso(a1, b1, h + 1), iso(i, b1, h + 1))
+            caras = VGroup(arriba, derecha, izquierda)
+            for cara, tono in zip(caras, (0.0, 0.35, 0.55), strict=True):
+                cara.set_fill(acento.interpolate(oscuro, tono), 1.0).set_stroke(papel, 2)
+            cubo[(i, j, h)] = caras
+        for celda in entrada:
+            piezas.append(cubo[celda])
+            bases.append([0.97, 0.97, 0.97])
+        tapa = [iso(*e) for e in ((0, 0, k), (k, 0, k), (k, k, k), (0, k, k))]
+        for p, q in zip(tapa, tapa[1:] + tapa[:1], strict=True):
+            contorno.append(DashedLine(p, q, dash_length=0.12).set_stroke(col.tenue, 2.5))
+        aristas = (
+            ((k, 0, k), (k, 0, 0)), ((k, k, k), (k, k, 0)), ((0, k, k), (0, k, 0)),  # las verticales
+            ((k, 0, 0), (k, k, 0)), ((0, k, 0), (k, k, 0)),  # el pie
+        )  # fmt: skip
+        for p, q in aristas:
+            contorno.append(DashedLine(iso(*p), iso(*q), dash_length=0.12).set_stroke(col.tenue, 2.5))
+        # orden de pintado: lo de atrás primero, así cada cubo tapa al que tiene detrás
+        pintado = [cubo[t] for t in sorted(celdas, key=lambda t: (t[0] + t[1] + t[2], t[2]))]
+        donde_a = (iso(k, k - 1, 0) + iso(k, k, 0)) / 2 + np.array([0.55, -0.3, 0.0])
+        donde_ka = (iso(0, k, 0) + iso(k, k, 0)) / 2 + np.array([-0.7, -0.3, 0.0])
+        borde_derecho = iso(k, 0, k)[0]
+        techo = iso(0, 0, k)[1]
+    else:
+        s = 1.0 if k == 2 else 0.75
+        base = -(k * s) / 2
+
+        def esquina(i: float, j: float) -> np.ndarray:
+            return np.array([base + i * s, base + j * s, 0.0])
+
+        celdas2 = [(i, j) for j in range(k) for i in range(k)]
+        cuadro: dict[tuple[int, int], VGroup] = {}
+        for i, j in celdas2:
+            q = Polygon(esquina(i, j), esquina(i + 1, j), esquina(i + 1, j + 1), esquina(i, j + 1))
+            q.set_fill(acento, 0.9).set_stroke(papel, 3)
+            cuadro[(i, j)] = VGroup(q)
+        for celda in celdas2:  # el original es el de abajo a la izquierda; después, fila por fila
+            piezas.append(cuadro[celda])
+            bases.append([0.9])
+        borde = [esquina(0, 0), esquina(k, 0), esquina(k, k), esquina(0, k)]
+        for p, q in zip(borde, borde[1:] + borde[:1], strict=True):
+            contorno.append(DashedLine(p, q, dash_length=0.12).set_stroke(col.tenue, 2.5))
+        pintado = [cuadro[c2] for c2 in celdas2]
+        donde_a = (esquina(0, 0) + esquina(1, 0)) / 2 + np.array([0.0, -0.32, 0.0])
+        donde_ka = (esquina(0, 0) + esquina(0, k)) / 2 + np.array([-0.95, 0.0, 0.0])
+        borde_derecho = esquina(k, k)[0]
+        techo = esquina(k, k)[1]
+
+    unidad = f" {figura.unidad}" if figura.unidad else ""
+    _cartela(col, papel, parches, rótulos, f"a = {_numero_latex(figura.lado)}{unidad}", donde_a, 18)
+    grande = f"{k}a = {_numero_latex(figura.lado_grande)}{unidad}"
+    _cartela(col, papel, parches, rótulos, grande, donde_ka, 18)
+
+    # El contador y la razón los enciende ``vivo``: no entran con el resto de los rótulos.
+    contadores: list[VGroup] = []
+    x_lado = borde_derecho + 1.05
+    if "contador" in marcas:
+        for numero in range(1, n + 1):
+            texto = c.texto(f"{numero} de {n}", 22, SEMIBOLD, col.texto)
+            texto.move_to([x_lado, techo - 0.2, 0.0])
+            contadores.append(VGroup(*_parche(texto, papel, 0.12)))
+    razon: VGroup | None = None
+    if "razon" in marcas:
+        signo = c.texto(f"×{n}", 44, SEMIBOLD, col.acento).move_to([x_lado, techo - 1.0, 0.0])
+        razon = VGroup(*_parche(signo, papel, 0.14))
+
+    todo = VGroup(*contorno, *pintado, parches, rótulos, *contadores, *([razon] if razon is not None else []))
+    _fijo, desplazamiento = _encaje(todo, ancho, alto)
+
+    inicio, fin = 0.08, 0.86  # la primera pieza ya está; las demás entran repartidas en este tramo
+    tramo = (fin - inicio) / max(n - 1, 1)
+
+    def vivo(p: float) -> None:
+        encendidas = 1
+        for indice, (pieza, opacidades) in enumerate(zip(piezas, bases, strict=True)):
+            if indice == 0:
+                a = 1.0
+            else:
+                a = min(max((p - inicio - (indice - 1) * tramo) / (tramo * 0.8), 0.0), 1.0)
+                encendidas += a >= 0.5
+            _con_opacidad(pieza, opacidades, a)
+        for numero, rotulo in enumerate(contadores, 1):
+            visible = 1.0 if numero == encendidas else 0.0
+            rotulo[0].set_fill(opacity=visible)
+            rotulo[1].set_fill(opacity=visible)
+        if razon is not None:
+            a = min(max((p - 0.9) / 0.08, 0.0), 1.0)
+            razon[0].set_fill(opacity=a)
+            razon[1].set_fill(opacity=a)
+
+    vivo(1.0)  # la miniatura del panel muestra la figura llena
+    return Dibujo(
+        mobs=todo, trazo=contorno, aparece=[*rótulos], vivo=vivo, duracion=SEGUNDOS_RECORRIDO,
+        fisico=False, desplazamiento=desplazamiento,
+    )  # fmt: skip
 
 
 # ------------------------------------------------------------------------------------------
@@ -3121,6 +3262,8 @@ def _dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str
         return pendulo(visual.pendulo(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "resorte":
         return resorte(visual.resorte(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "escala":
+        return escala(visual.escala(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "polea":
         return polea(visual.polea(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "tanque":

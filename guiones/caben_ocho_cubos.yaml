@@ -1,0 +1,66 @@
+# Primer guion «el dibujo demuestra, no decora» (12-11-2026).
+# El mismo tema que ocho_veces_mas_pesado.yaml, para comparar: allá la fórmula va primero y el
+# dibujo acompaña; acá se ve caber 8 cubos ANTES de escribir la regla, y la fórmula sale de contar.
+
+titulo: "Duplica la arista: ¿cuántos cubos caben?"
+materia: matematica
+nivel: "1° medio"
+molde: nadie_te_enseno
+
+gancho:
+  texto: "Duplica la arista de un cubo. ¿Cuántos del original caben adentro?"
+  voz: "Duplica la arista de un cubo. ¿Cuántos del original caben adentro?"
+  emoji: "🤔"
+
+enunciado:
+  texto: "Un cubo tiene 4 cm de arista. Si hacemos otro con 8 cm de arista, ¿cuántos cubos de 4 cm caben en el grande?"
+  voz: "Un cubo de cuatro centímetros. Hacemos otro de ocho. ¿Cuántos chicos caben en el grande?"
+  destacar: ["4 cm", "8 cm"]
+
+datos:
+  - tex: 'a = 4\ \text{cm}'
+    voz: "El chico mide cuatro centímetros de arista."
+  - tex: '2a = 8\ \text{cm}'
+    voz: "El grande, el doble: ocho."
+
+pasos:
+  - nota: "Primero, míralo"
+    tex: '2 \cdot 2 \cdot 2 = 8'
+    voz: "Llenemos el grande con cubos chicos. <break time=\"1.5s\"/> Dos de largo, dos de ancho y dos de alto: caben ocho."
+    emoji: "👀"
+    visual:
+      tipo: escala
+      lado: "4 cm"
+      factor: 2
+      dimension: 3
+      anotar: [contador, razon]
+  - nota: "Y en cada cara"
+    tex: '2 \cdot 2 = 4'
+    voz: "Una cara del grande se llena con cuatro caras del chico. <break time=\"1s\"/> El área crece cuatro veces, no ocho."
+    visual:
+      tipo: escala
+      lado: "4 cm"
+      factor: 2
+      dimension: 2
+      anotar: [contador, razon]
+  - nota: "La regla sale de contar"
+    tex: 'V_2 = (2a)^3 = 2^3 \cdot a^3 = 8\,a^3'
+    voz: "Ese ocho es dos al cubo: por eso la fórmula eleva el dos a la tres."
+    destacar: ['8\,a^3']
+  - nota: "Con los números"
+    tex: 'V_2 = 8 \cdot 64 = 512\ \text{cm}^3'
+    voz: "El chico tiene sesenta y cuatro centímetros cúbicos; el grande, ocho veces eso."
+
+resultado:
+  tex: 'V_2 = 512\ \text{cm}^3'
+  voz: "Caben ocho cubos: quinientos doce centímetros cúbicos."
+  emoji: "✅"
+
+verificacion:
+  texto: "8 × 8 × 8 = 512, y 512 ÷ 64 = 8. Lo que contaste es lo que da la cuenta."
+  voz: "Ocho por ocho por ocho da quinientos doce, y eso es ocho veces sesenta y cuatro."
+
+reto:
+  texto: "Si triplicas la arista, ¿cuántos cubos del original caben?"
+  voz: "Y si la triplicas, ¿cuántos caben?"
+  emoji: "✍️"

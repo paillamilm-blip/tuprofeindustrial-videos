@@ -27,6 +27,7 @@ SEGUNDOS_VISUAL = {
     "venn": 3.0,
     "recta": 2.5,
     "probabilidad": 3.0,
+    "escala": 3.5,  # las piezas entran de a una y se cuentan: es la demostración, no se apura
     "torta": 3.0,
     "barras": 2.5,
     "onda": 3.0,
@@ -91,6 +92,8 @@ MARCAS_ONDA = ("velocidad",)
 # Lo que se puede anotar en cada máquina: la óptica no lleva marcas (sus dos ángulos van siempre).
 MARCAS_PENDULO = ("periodo", "velocidad")
 MARCAS_RESORTE = ("fuerza",)
+# La escala: el contador de piezas mientras entran y la razón final («×8»).
+MARCAS_ESCALA = ("contador", "razon")
 MARCAS_POLEA = ("aceleracion", "tension")
 
 # Lo que se puede anotar en un tanque con llave y fisura, una viga apoyada y una cercha.
@@ -260,6 +263,8 @@ CAMPOS: dict[str, CampoVisual] = {
         CampoVisual("angulo_incidence", "Ángulo de incidencia (desde la normal)", "numero", "30"),
         CampoVisual("longitud", "Longitud", "texto", "1 m"),
         CampoVisual("constante", "Constante del resorte", "texto", "200 N/m"),
+        CampoVisual("factor", "Cuántas veces crece el lado (2 o 3)", "numero", "2"),
+        CampoVisual("dimension", "Qué se compara: 2 = área (cuadrados), 3 = volumen (cubos)", "numero", "3"),
         CampoVisual("extension", "Extensión", "texto", "10 cm"),
         CampoVisual("masa_a", "Masa A", "texto", "3 kg"),
         CampoVisual("masa_b", "Masa B", "texto", "2 kg"),
@@ -482,6 +487,15 @@ VISUALES: dict[str, TipoVisual] = {
             ("constante", "extension", "anotar"),
             MARCAS_RESORTE,
             ejemplo={"constante": "200 N/m", "extension": "10 cm", "anotar": ["fuerza"]},
+        ),
+        TipoVisual(
+            "escala",
+            "Escala (caben N piezas)",
+            "matematica",
+            "🧊",
+            ("lado", "factor", "dimension", "anotar"),
+            MARCAS_ESCALA,
+            ejemplo={"lado": "4 cm", "factor": 2, "dimension": 3, "anotar": ["contador", "razon"]},
         ),
         TipoVisual(
             "oscilador",
@@ -1478,6 +1492,40 @@ def analizar_resorte(constante: str, extension: str) -> Resorte:
     x, uni_x = _medida_solido(extension, "extensión")
     x_m = _a_metros(x, uni_x)
     return Resorte(k, x_m, k * x_m)
+
+
+@dataclass
+class Escala:
+    """Agrandar el lado «factor» veces: caben factor² cuadrados o factor³ cubos del original.
+
+    Es el dibujo que demuestra: las piezas entran de a una y se cuentan antes de la fórmula.
+    """
+
+    lado: float
+    unidad: str
+    factor: int
+    dimension: int  # 2 = área (cuadrados), 3 = volumen (cubos)
+
+    @property
+    def piezas(self) -> int:
+        return self.factor**self.dimension
+
+    @property
+    def lado_grande(self) -> float:
+        return self.lado * self.factor
+
+
+def analizar_escala(lado: str, factor: int | float, dimension: int | float) -> Escala:
+    a, unidad = _medida_solido(lado, "lado")
+    if float(factor) != int(factor) or int(factor) not in (2, 3):
+        raise ValueError(
+            f"el factor de la escala va de 2 a 3 (el lado crece 2 o 3 veces), y leí «{factor}»"
+        )
+    if float(dimension) != int(dimension) or int(dimension) not in (2, 3):
+        raise ValueError(
+            f"la dimensión de la escala es 2 (área, cuadrados) o 3 (volumen, cubos), y leí «{dimension}»"
+        )
+    return Escala(a, unidad, int(factor), int(dimension))
 
 
 @dataclass
