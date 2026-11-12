@@ -120,7 +120,9 @@ class HerenciaGanchosTest(unittest.TestCase):
         datos = self._datos()
         datos.pop("tema")
         clips = self._correr(datos)
-        self.assertEqual([clip["estilo"] for clip in clips], ["Cuaderno con sello", "Plano azul", "Cuaderno con sello"])
+        # el guion completo corrige un error: todas las variantes salen en «Error», aunque el gancho
+        # de una traiga un circuito (en la familia Consola neón el dibujo ya no cambia el estilo)
+        self.assertEqual([clip["estilo"] for clip in clips], ["Consola · Error"] * 3)
 
     def test_los_clips_heredan_el_tono_de_ajustes(self):
         self.assertEqual([clip["tono"] for clip in self._correr()], ["+25Hz"] * 3)
@@ -166,7 +168,7 @@ class HerenciaGanchosTest(unittest.TestCase):
         self.assertEqual([clip["voz"] for clip in clips], ["es-CL-LorenzoNeural"] * 3)
         self.assertEqual([clip["velocidad"] for clip in clips], ["+5%"] * 3)
         self.assertEqual([clip["tono"] for clip in clips], ["+25Hz"] * 3)
-        self.assertEqual(clips[0]["estilo"], "Neón cian")
+        self.assertEqual(clips[0]["estilo"], "Consola · Paso a paso")  # una idea suelta: paso a paso
 
 
 if __name__ == "__main__":
