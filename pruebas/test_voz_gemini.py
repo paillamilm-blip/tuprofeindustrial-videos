@@ -108,7 +108,7 @@ class ServicioTest(unittest.TestCase):
             self.assertEqual(datos["input_data"]["service"], "gemini-tts")
             self.assertEqual(datos["input_data"]["config"]["voice"], "Charon")
             marcas = datos["word_boundaries"]
-            self.assertEqual(len(marcas), 6)
+            self.assertEqual(len(marcas), 7)  # una marca por palabra
             self.assertLess(marcas[-1]["audio_offset"] / RESOLUCION, 2.0)  # dentro del audio real
 
 
