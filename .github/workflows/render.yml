@@ -64,7 +64,7 @@ jobs:
         # guardan 3 cuadros para mirarlos en la pestaña Actions.
         run: |
           mkdir -p muestras
-          for par in "pasos:guiones/calculando_el_iva_de_una_boleta.yaml" "error:guiones/f_3_mas_1_no_es_10.yaml" "mito:guiones/el_mito_del_doble_descuento.yaml" \
+          for par in "pasos:guiones/calculando_el_iva_de_una_boleta.yaml" "error:guiones/f_3_mas_1_no_es_10.yaml" "mito:guiones/el_mito_del_doble_descuento_2.yaml" \
                      "dato:guiones/por_que_sen_30_vale_medio.yaml" "reto:guiones/reto_de_apotema_y_centro.yaml"; do
             variante=${par%%:*}; guion=${par#*:}
             tpi crear "$guion" --borrador --voz silencio --salida salida/familia
