@@ -1,9 +1,13 @@
 import unittest
 
 from tpi_videos import componentes as c
+from tpi_videos.entorno import latex_disponible
 from tpi_videos.temas import Tema
 
+LATEX = all(latex_disponible())  # macOS/Windows en CI no traen TeX: lo que dibuja fórmulas se salta
 
+
+@unittest.skipUnless(LATEX, "LaTeX no está instalado")
 class PanelPersistenteTest(unittest.TestCase):
     def setUp(self):
         self.token = c.usar_estilo(Tema(nombre="prueba"))
