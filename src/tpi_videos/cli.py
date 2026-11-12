@@ -653,6 +653,7 @@ def cmd_ganchos(args: argparse.Namespace) -> int:
             consola.print("   El video se recrea con: ./tpi crear " + _ruta_amigable(ruta) + " --borrador")
         return 0
 
+    guion_base = None
     if args.idea_json:
         datos = _json_de(args.idea_json)
         idea = Idea.model_validate(datos.get("idea", datos))
@@ -661,7 +662,8 @@ def cmd_ganchos(args: argparse.Namespace) -> int:
         from .guion import cargar_guion
 
         ruta_guion = Path(args.guion)
-        idea = idea_desde_guion(cargar_guion(ruta_guion))
+        guion_base = cargar_guion(ruta_guion)
+        idea = idea_desde_guion(guion_base)
     else:
         raise ErrorMotor(
             "Dime qué ganchos probar.",
@@ -674,6 +676,7 @@ def cmd_ganchos(args: argparse.Namespace) -> int:
     sin_voz = args.sin_voz or proveedor == "silencio"
     manifiesto = renderizar_ganchos(
         idea,
+        guion_base=guion_base,
         calidad="borrador",
         proveedor=proveedor,
         voz=voz,
