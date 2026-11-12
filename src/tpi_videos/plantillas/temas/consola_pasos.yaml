@@ -1,9 +1,10 @@
 # Familia Consola neón · PASO A PASO (molde POV y guiones sin molde).
 # Lo mejor de cada estilo antiguo: la gramática XCris de Consola neón (pasos numerados, panel de
 # progreso, mapa de color, micro-movimiento), el brillo de Neón sobre reja, el plumón de la Hoja de
-# desarrollo, la retícula de Plano nocturno y los subtítulos CapCut de 3 palabras.
+# desarrollo, la reja cian de Neón cian y los subtítulos CapCut de 3 palabras. (La lámina de Plano
+# nocturno traía un cajetín dibujado que asomaba detrás del panel de progreso.)
 nombre: Consola · Paso a paso
-descripcion: 'Retícula técnica en cian: pasos numerados y panel que acumula, para seguir el desarrollo.'
+descripcion: 'Reja neón en cian: pasos numerados y panel que acumula, para seguir el desarrollo.'
 rotulo: PASO A PASO
 marco: pizarra
 resplandor: true
@@ -25,7 +26,7 @@ tipografia:
   texto: {familia: Montserrat, grosor: SEMIBOLD}
 nota: {rol: texto, escala: 1.0, color: acento}
 formulas_negrita: true
-fondo: {tipo: imagen, imagen: plano_noche, degradado: ['#10141A', '#07090D']}
+fondo: {tipo: imagen, imagen: neon_cian, degradado: ['#060C12', '#082A2C']}
 subtitulos:
   fuente: Montserrat Black
   tamano: 88

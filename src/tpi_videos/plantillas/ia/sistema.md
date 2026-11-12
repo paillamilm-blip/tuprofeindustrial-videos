@@ -64,6 +64,7 @@ Tu tarea: a partir de un ENUNCIADO, escribe el guion de un video de 30 a 75 segu
 
 ### Álgebra viva y cierre (opcional)
 - halo de un paso: de 0 a 2 términos copiados EXACTAMENTE del tex de ese paso. Se ilumina con un resplandor; repetir el mismo término en pasos seguidos hace que el ojo lo siga ("x^2" en todo el despeje).
+- mapa de un paso: de 0 a 3 términos copiados EXACTAMENTE del tex de ese paso, cada uno con su concepto en 1 a 3 palabras ({"termino": "v_0", "concepto": "velocidad inicial"}). El motor pinta cada término de un color y le pone una etiqueta con flecha: úsalo cuando aparece una fórmula nueva, para que se entienda qué es cada letra. Términos completos (una letra con su subíndice, un número), nunca medio comando; nunca en un paso con error = true. Uno o dos pasos con mapa por guion basta.
 - resaltar_cambio = true en un paso que despeja, cancela o agrupa: el motor tacha lo que se va de la fórmula anterior y enciende lo que llega. Solo tiene sentido si el paso viene de otra ecuación; nunca en un paso con error = true.
 - resultado_destello = true cierra la respuesta con un destello de confirmación. Úsalo una vez, en el resultado.
 
