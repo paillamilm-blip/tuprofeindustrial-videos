@@ -13,8 +13,11 @@ Convierte un ejercicio de **Matemática, Física o Ingeniería** escrito en un a
 - ✏️ **33 dibujos que se trazan solos**: gráficos con tangente y área en vivo, fuerzas, circuitos, péndulos y
   osciladores simulados, Mohr, vigas, engranajes, y piezas 3D que giran y se despiezan (tolva, tubería, eje).
   Se dibujan mientras suena ese paso. Lista completa: [docs/GUIA_GUIONES.md](docs/GUIA_GUIONES.md).
-- 🎨 **El estilo justo para cada video**: el motor lo sugiere según el molde, los dibujos y la materia (19 estilos),
-  y se cambia en un solo lugar.
+- 🎨 **Una familia de estilos, una variante por forma de contenido**: todos los videos son de la familia
+  **Consola neón** (misma letra, fondo oscuro con textura, pasos numerados, panel de progreso y brillo neón) y
+  cada forma tiene su color: Paso a paso (cian), Error (rojo), Mito (violeta), Dato (ámbar) y Reto (verde).
+  El motor elige la variante sola según el molde; se cambia en un solo lugar (QC). Los 20 estilos anteriores
+  quedan archivados en `plantillas/temas/archivo/`: no se ofrecen, pero se pueden seguir pidiendo por su nombre.
 - 🤯 **Emojis 3D y «error típico»**: emojis que aparecen con un salto y un paso que muestra la forma
   equivocada y la tacha con una ✗ roja («¿Resuelves así?»).
 - 🗣️ **Voz sintética chilena** (manim-voiceover + voces neurales `es-CL`), sincronizada con cada animación.
@@ -252,7 +255,7 @@ Al elegir, el motor hace **todo solo** (es lo mismo que `./tpi producir`):
 ./tpi producir "Un electricista apoyará una escalera a 1,5 m de la pared para llegar a 4 m de altura. ¿Qué largo mínimo necesita?" --materia matematica --nivel "técnico en electricidad" --abrir
 ```
 
-Sirven las mismas opciones de `crear` y `redactar`: `--borrador`, `--estilo pizarra_nocturna`,
+Sirven las mismas opciones de `crear` y `redactar`: `--borrador`, `--estilo consola_dato`,
 `--voz es-CL-CatalinaNeural`, `--sin-kit`, `--sin-revision`, y `--segundos 45` para exigir la duración
 de la tarjeta (el panel lo pasa solo al presionar «Hacer este video»).
 
@@ -358,7 +361,7 @@ una materia, toca **«Pedírselo a la IA»**, o completa todo desde la Terminal:
 | `./tpi revisar GUION.yaml` | Revisa el guion sin crear el video |
 | `./tpi crear GUION.yaml` | Crea el video final (1080×1920, 30 fps) |
 | `./tpi crear GUION.yaml --borrador` | Versión rápida para revisar (540×960) |
-| `./tpi crear GUION.yaml --tema pizarra_nocturna` | Con otro estilo visual (ver `./tpi temas`) |
+| `./tpi crear GUION.yaml --tema consola_mito` | Con otro estilo visual (ver `./tpi temas`) |
 | `./tpi crear GUION.yaml --voz es-CL-CatalinaNeural` | Otra voz (ver `./tpi voces`) |
 | `./tpi crear GUION.yaml --voz silencio` | Sin voz y sin internet: para revisar el diseño |
 | `./tpi crear GUION.yaml --sin-subtitulos` | Sin subtítulos quemados |
@@ -367,7 +370,7 @@ una materia, toca **«Pedírselo a la IA»**, o completa todo desde la Terminal:
 | `./tpi publicar VIDEO.mp4` | Kit de publicación: portada + título, descripción y hashtags (`--sin-ia` para la plantilla) |
 | `./tpi subtitular VIDEO.mp4` | Subtítulos estilo CapCut para **cualquier** video (por ejemplo, uno grabado por ti) |
 | `./tpi temas` | Lista los estilos visuales (⭐ = el que se usa por defecto) |
-| `./tpi vista-previa --tema pizarra_nocturna` | 3 cuadros de muestra de un estilo, en segundos |
+| `./tpi vista-previa --tema consola_reto` | 3 cuadros de muestra de un estilo, en segundos |
 | `./tpi emojis` | Lista los emojis 3D y tus stickers |
 | `./tpi voces` | Lista las voces en español |
 

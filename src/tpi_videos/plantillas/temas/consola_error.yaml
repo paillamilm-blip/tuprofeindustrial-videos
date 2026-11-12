@@ -1,0 +1,50 @@
+# Familia Consola neón · ERROR (molde «Tres errores» y guiones que corrigen un error típico).
+# La reja de Neón sobre reja en rojo, la ✗ roja de profe y el contador «✗ 1 de 3» de los tres errores.
+nombre: Consola · Error
+descripcion: 'Reja neón en rojo: el error se tacha y la forma correcta queda numerada en su paso.'
+rotulo: ERROR
+marco: pizarra
+resplandor: true
+colores:
+  fondo: '#0B0B12'
+  panel: '#17121A'
+  borde: '#3A2A34'
+  titulos: '#F5F7FA'
+  texto: '#F5F7FA'
+  formulas: '#F5F7FA'
+  tenue: '#8A94A6'
+  acento: '#FF4D5E'
+  exito: '#22C55E'
+  cuadricula: '#FF4D5E'
+  error: '#EF4444'
+materias: {matematica: '#FF4D5E', fisica: '#FF4D5E', ingenieria: '#FF4D5E'}
+tipografia:
+  titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
+  texto: {familia: Montserrat, grosor: SEMIBOLD}
+nota: {rol: texto, escala: 1.0, color: acento}
+formulas_negrita: true
+fondo: {tipo: imagen, imagen: neon_reja, degradado: ['#05070D', '#131A45']}
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 88
+  color: '#FFFFFF'
+  color_activo: '#FF4D5E'
+  borde: 8
+  sombra: 6
+  posicion_y: 0.82  # con el panel abajo, el motor la sube sola por encima de él
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 18
+  resaltar: true
+animacion: {titulos: plumon}
+emojis: true
+layout:
+  banda_subtitulo: 0.28
+  banda_panel: 1.6
+  y_zona_pasos: -2.2
+gramatica:
+  tabs: true
+  panel: true
+  mapa_color: true
+  micro: true
+  paleta_pasos: ['#FF4D5E', '#FFC72C', '#38BDF8', '#22C55E', '#A78BFA', '#F472B6']

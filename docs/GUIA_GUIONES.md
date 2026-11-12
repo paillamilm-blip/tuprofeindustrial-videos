@@ -34,7 +34,7 @@ categoria: fisica                                # la escribe el motor: sale de 
 nivel: "2° medio"                                # opcional: "1° medio"… "4° medio" o "1° año ingeniería"… "4° año ingeniería"
 carrera: electrica                               # opcional (universidad): industrial | electrica | obras_civiles
 molde: reto                                      # opcional: la estructura del video (sección 8)
-tema: pizarra_nocturna                           # opcional: si falta, el motor sugiere uno (se elige en QC)
+tema: consola_dato                               # opcional: si falta, el molde elige la variante (se cambia en QC)
 camara: suave                                    # opcional: quieta | suave (por defecto) | fuerte
 voz: "es-CL-CatalinaNeural"                      # opcional: otra voz solo para este video
 velocidad: "+10%"                                # opcional

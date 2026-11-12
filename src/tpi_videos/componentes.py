@@ -761,24 +761,43 @@ def activar_tab(tabs: VGroup, activo: int) -> None:
 
 def panel_persistente(
     total: int, cerrados: list[str], paleta: list[str], ancho: float, relleno: str, borde: str,
-    *, completados: int | None = None,
+    *, completados: int | None = None, alto_max: float | None = None,
 ) -> VGroup:
     """El segundo panel de XCris: contador de paso, barra de progreso y las últimas fórmulas cerradas.
 
     Se reconstruye en cada paso con la lista acumulada (no se resetea): el contenido vive en ``panel[1]``
     (``[0]`` contador, ``[1]`` barra, ``[2]`` mini-fórmulas), porque ``tarjeta`` envuelve el contenido.
+
+    Con ``alto_max`` (la banda del panel) entran solo las fórmulas que caben, de la más nueva hacia
+    atrás: el panel nunca crece. Si creciera, la escena lo achicaría entero para meterlo en la banda y
+    en cada paso se vería más chico, hasta no poder leerse.
     """
     k = len(cerrados) if completados is None else completados
     color = paleta[min(k, max(0, total - 1)) % len(paleta)] if paleta else "#FFFFFF"
-    contador = texto(f"paso {min(k + 1, total)} de {total}", 16, ULTRABOLD, color)
-    pista = Rectangle(width=ancho - 1.2, height=0.12).set_fill(borde, 0.5).set_stroke(width=0)
-    lleno = Rectangle(width=max(0.02, pista.width * (k / total if total else 0.0)), height=0.12)
-    lleno.set_fill(color, 0.95).set_stroke(width=0)
-    lleno.align_to(pista, LEFT).align_to(pista, UP)
-    mini = VGroup(*[ecuacion(t, 20, "#FFFFFF", ancho_max=ancho - 1.2) for t in cerrados[-3:]])
-    mini.arrange(DOWN, buff=0.12, aligned_edge=LEFT)
-    contenido = VGroup(contador, VGroup(pista, lleno), mini).arrange(DOWN, buff=0.16, aligned_edge=LEFT)
-    return tarjeta(contenido, ancho, relleno, borde)
+
+    def armar(formulas: list[str], alto_mini: float | None = None) -> VGroup:
+        contador = texto(f"paso {min(k + 1, total)} de {total}", 16, ULTRABOLD, color)
+        pista = Rectangle(width=ancho - 1.2, height=0.12).set_fill(borde, 0.5).set_stroke(width=0)
+        lleno = Rectangle(width=max(0.02, pista.width * (k / total if total else 0.0)), height=0.12)
+        lleno.set_fill(color, 0.95).set_stroke(width=0)
+        lleno.align_to(pista, LEFT).align_to(pista, UP)
+        mini = VGroup(*[ecuacion(t, 22, "#FFFFFF", ancho_max=ancho - 1.2) for t in formulas])
+        mini.arrange(DOWN, buff=0.12, aligned_edge=LEFT)
+        if alto_mini is not None and len(mini) and mini.height > alto_mini:
+            mini.scale_to_fit_height(alto_mini)
+        contenido = VGroup(contador, VGroup(pista, lleno), mini).arrange(DOWN, buff=0.14, aligned_edge=LEFT)
+        return tarjeta(contenido, ancho, relleno, borde, margen=0.25 if alto_max is not None else 0.4)
+
+    ultimas = cerrados[-3:]
+    panel = armar(ultimas)
+    while alto_max is not None and panel.height > alto_max and len(ultimas) > 1:
+        ultimas = ultimas[1:]  # sale la más antigua: la recién cerrada es la que importa
+        panel = armar(ultimas)
+    if alto_max is not None and panel.height > alto_max and ultimas:
+        # Ni la recién cerrada entra a su tamaño (una fracción alta): se achica solo ella, no el panel.
+        libre = alto_max - armar([]).height - 0.14
+        panel = armar(ultimas, alto_mini=libre) if libre > 0.12 else armar([])
+    return panel
 
 
 def mapa_de_color(eq: MathTex, mapa: list, paleta: list[str]) -> VGroup:

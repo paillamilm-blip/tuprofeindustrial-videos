@@ -1,7 +1,10 @@
 """Temas visuales: todo lo que define cómo se ve un video (marco, colores, letras, fondo, subtítulos).
 
-- Los temas incluidos están en ``plantillas/temas/``: ``hoja_de_desarrollo`` (por defecto) y
-  ``pizarra_nocturna`` (el estilo original del motor).
+- Los temas incluidos están en ``plantillas/temas/``: la familia Consola neón, una variante por cada
+  forma de contenido (paso a paso, error, mito, dato y reto). Cada forma elige la suya sola.
+- Los 20 estilos anteriores viven en ``plantillas/temas/archivo/``: no se listan ni se sugieren, pero
+  siguen funcionando si algo los pide por su nombre (un guion con ``tema:``, ``--tema`` o un video viejo
+  que se rehace). Para volver a usar uno, basta con moverlo de vuelta a ``plantillas/temas/``.
 - Los temas propios (creados en el panel) viven en ``mis_ajustes/temas/``. Git ignora esa carpeta, así
   que actualizar el motor nunca choca con ellos. Si un tema propio tiene el mismo nombre que uno
   incluido, se usa el propio.
@@ -22,58 +25,48 @@ from .errores import ErrorMotor
 from .tipografia import existe
 
 TEMAS_DIR = PLANTILLAS_DIR / "temas"
+ARCHIVO_DIR = TEMAS_DIR / "archivo"  # los estilos retirados: se cargan por nombre, no se ofrecen
 FONDOS_DIR = PAQUETE / "assets" / "fondos"
-TEMA_POR_DEFECTO = "hoja_de_desarrollo"
+TEMA_POR_DEFECTO = "consola_pasos"
 
 # ------------------------------------------------------------------------------------------
 # El estilo sugerido: el ÚNICO lugar del motor que decide cómo se ve un video que nadie eligió.
 # Lo usan el render, la vista previa, el QC y la tarjeta «Así está armado». Solo estilos que ya
 # existen en plantillas/temas/ (una prueba lo exige): estas tablas eligen, no crean nada.
+#
+# Regla de la familia Consola neón: la FORMA de entregar el contenido decide el estilo. La materia
+# y los dibujos ya no cambian la apariencia: todos los videos comparten letra, fondo oscuro y
+# estructura, y solo el color y las herramientas dicen qué tipo de video es.
 # ------------------------------------------------------------------------------------------
 
-# 3° La materia: la identidad de cada asignatura.
-TEMA_POR_CATEGORIA: dict[str, str] = {
-    "matematicas": "pizarra_nocturna",
-    "fisica": "neon_cian",
-    "ingenieria": "plano_noche",
-}
 NOMBRE_CATEGORIA = {"matematicas": "Matemáticas", "fisica": "Física", "ingenieria": "Ingeniería"}
 
-# 1° El molde: la forma del video manda sobre la materia (un reto se ve como reto en cualquier ramo).
-# «Nadie te enseñó esto» no está: es el dato sorpresa de cualquier ramo y debe lucir su materia.
+# 1° El molde: cada forma de contenido tiene su variante.
 TEMA_POR_MOLDE: dict[str, str] = {
-    "reto": "neon_reja",
-    "mito_realidad": "vineta_cine",
-    "tres_errores": "rotulador",
-    "pov": "kraft_tiza",
+    "pov": "consola_pasos",
+    "tres_errores": "consola_error",
+    "mito_realidad": "consola_mito",
+    "nadie_te_enseno": "consola_dato",
+    "reto": "consola_reto",
 }
 MOTIVO_POR_MOLDE = {
-    "reto": "Un reto pide neón: se lee como desafío.",
-    "mito_realidad": "El contraste mito/realidad funciona en cine.",
-    "tres_errores": "Tres errores seguidos se siguen mejor en papel.",
-    "pov": "Un POV se siente en cuaderno, no en pantalla.",
+    "pov": "Un paso a paso: pasos numerados y panel que acumula, en cian.",
+    "tres_errores": "Tres errores: se tachan en rojo y el contador lleva la cuenta.",
+    "mito_realidad": "Mito vs realidad: tablero partido en violeta, sin pasos numerados.",
+    "nadie_te_enseno": "Un dato sorpresa: limpio, en ámbar, con la respuesta tapada.",
+    "reto": "Un reto: pasos numerados en verde y la respuesta tapada para que lo intentes.",
 }
 
-# 2° Lo que se dibuja: cuando el dibujo pide su propio papel.
-DIBUJOS_INDUSTRIALES = frozenset(
-    {
-        "tolva_3d",
-        "tuberia_3d",
-        "eje_3d",
-        "engranaje",
-        "mohr",
-        "viga",
-        "cercha",
-        "gradiente_termico",
-        "perfil_flujo",
-    }
-)
-TEMA_POR_DIBUJO: tuple[tuple[frozenset[str], str, str], ...] = (
-    (frozenset({"circuito"}), "plano_azul", "Tiene un circuito: se lee mejor en lámina de ingeniería."),
-    (DIBUJOS_INDUSTRIALES, "plano_noche", "Tiene piezas industriales: lucen en el plano nocturno."),
-)
-TEMA_DE_ERROR = "cuaderno_con_sello"
-MOTIVO_DE_ERROR = "Corrige un error típico: el rojo de profe del cuaderno lo marca."
+# 2° Sin molde, si corrige un error típico.
+TEMA_DE_ERROR = "consola_error"
+MOTIVO_DE_ERROR = "Corrige un error típico: el rojo de la familia lo marca."
+
+# 3° Sin molde ni error: es un ejercicio paso a paso.
+TEMA_DE_PASOS = "consola_pasos"
+MOTIVO_DE_PASOS = "Un ejercicio paso a paso: pasos numerados y panel que acumula."
+
+# Las cinco variantes, en el orden en que se muestran (catálogo, QC y ./tpi temas).
+FAMILIA: tuple[str, ...] = ("consola_pasos", "consola_error", "consola_mito", "consola_dato", "consola_reto")
 
 
 class EstiloSugerido(BaseModel):
@@ -83,7 +76,7 @@ class EstiloSugerido(BaseModel):
 
     clave: str
     razon: str
-    origen: Literal["guion", "molde", "dibujo", "error", "materia", "marca"]
+    origen: Literal["guion", "molde", "error", "forma"]
 
 
 def sugerir_tema(
@@ -94,25 +87,18 @@ def sugerir_tema(
     con_error: bool = False,
     de_siempre: str | None = None,
 ) -> EstiloSugerido:
-    """El estilo que mejor le queda a un video, según lo que se sabe de él (sin mirar el ``tema:``).
+    """El estilo que le toca a un video según su forma de contenido (sin mirar el ``tema:``).
 
-    1° su molde · 2° sus dibujos · 3° si corrige un error · 4° su materia · 5° ``de_siempre``
-    (el ``tema`` de marca.yaml).
+    1° su molde · 2° si corrige un error · 3° paso a paso. ``categoria``, ``dibujos`` y ``de_siempre``
+    se aceptan para no romper a quien los pasa, pero ya no cambian el estilo: en la familia Consola
+    neón la materia y los dibujos no deciden la apariencia.
     """
+    del categoria, dibujos, de_siempre
     if molde in TEMA_POR_MOLDE:
         return EstiloSugerido(clave=TEMA_POR_MOLDE[molde], razon=MOTIVO_POR_MOLDE[molde], origen="molde")
-    for tipos, clave, razon in TEMA_POR_DIBUJO:
-        if tipos & set(dibujos):
-            return EstiloSugerido(clave=clave, razon=razon, origen="dibujo")
     if con_error:
         return EstiloSugerido(clave=TEMA_DE_ERROR, razon=MOTIVO_DE_ERROR, origen="error")
-    if categoria in TEMA_POR_CATEGORIA:
-        clave = TEMA_POR_CATEGORIA[categoria]
-        return EstiloSugerido(
-            clave=clave, razon=f"Es de {NOMBRE_CATEGORIA[categoria]}: su estilo de materia.", origen="materia"
-        )
-    clave = (de_siempre or TEMA_POR_DEFECTO).strip()
-    return EstiloSugerido(clave=clave, razon="Tu estilo de siempre (marca.yaml).", origen="marca")
+    return EstiloSugerido(clave=TEMA_DE_PASOS, razon=MOTIVO_DE_PASOS, origen="forma")
 
 
 def sugerir_tema_de_guion(guion: Any, marca: Marca | None = None) -> EstiloSugerido:
@@ -144,14 +130,10 @@ def cuando_se_sugiere(clave: str) -> list[str]:
     from .moldes import nombre_molde
 
     casos = [f"molde {nombre_molde(m)}" for m, t in TEMA_POR_MOLDE.items() if t == clave]
-    casos += [
-        "circuitos" if "circuito" in tipos else "piezas industriales"
-        for tipos, t, _razon in TEMA_POR_DIBUJO
-        if t == clave
-    ]
     if clave == TEMA_DE_ERROR:
         casos.append("videos que corrigen un error")
-    casos += [NOMBRE_CATEGORIA[c] for c, t in TEMA_POR_CATEGORIA.items() if t == clave]
+    if clave == TEMA_DE_PASOS:
+        casos.append("ejercicios sin molde")
     return casos
 
 
@@ -159,8 +141,8 @@ def resolver_tema(manual: str | None, guion: Any | None, marca: Marca) -> str:
     """Qué estilo lleva un video, en cascada.
 
     1° Lo que se pidió en la llamada (``--tema`` en la Terminal). 2° El ``tema:`` del guion (lo que
-    se eligió en QC). 3° El sugerido para ese video (``sugerir_tema``: molde, dibujos, error, materia).
-    4° El ``tema:`` de marca.yaml.
+    se eligió en QC). 3° El sugerido para ese video (``sugerir_tema``: molde, error, paso a paso).
+    Sin guion (vista previa, subtitular un video externo): el ``tema:`` de marca.yaml.
     """
     if manual and str(manual).strip():
         return str(manual).strip()
@@ -298,6 +280,9 @@ class Tema(_Base):
     # El halo de los trazos brillantes que pone postproduccion.py al armar el video final
     resplandor: bool = False
     gramatica: Gramatica = Gramatica()
+    # El rótulo del rincón superior derecho («DATO», «MITO»…): dice qué tipo de video es desde el
+    # primer segundo. Vacío = el nombre de la materia, como siempre. Solo en el marco «pizarra».
+    rotulo: str = Field(default="", max_length=14)
 
 
 def temas_usuario_dir() -> Path:
@@ -318,7 +303,11 @@ def id_tema(nombre: str) -> str:
 def _rutas(identificador: str) -> list[Path]:
     if not _ID_VALIDO.fullmatch(identificador):  # nunca una ruta como «../otra_carpeta»
         return []
-    return [temas_usuario_dir() / f"{identificador}.yaml", TEMAS_DIR / f"{identificador}.yaml"]
+    return [
+        temas_usuario_dir() / f"{identificador}.yaml",
+        TEMAS_DIR / f"{identificador}.yaml",
+        ARCHIVO_DIR / f"{identificador}.yaml",  # retirado: no se ofrece, pero lo viejo sigue funcionando
+    ]
 
 
 def existe_tema(identificador: str) -> bool:
@@ -331,7 +320,9 @@ def listar_temas() -> list[tuple[str, Tema, bool]]:
     for carpeta, propio in ((TEMAS_DIR, False), (temas_usuario_dir(), True)):
         if not carpeta.exists():
             continue
-        for ruta in sorted(carpeta.glob("*.yaml")):
+        # La familia en su orden (paso a paso, error, mito, dato, reto); lo demás, alfabético.
+        orden = {clave: i for i, clave in enumerate(FAMILIA)}
+        for ruta in sorted(carpeta.glob("*.yaml"), key=lambda r: (orden.get(r.stem, len(orden)), r.stem)):
             try:
                 vistos[ruta.stem] = (ruta.stem, _leer(ruta), propio)
             except ErrorMotor:

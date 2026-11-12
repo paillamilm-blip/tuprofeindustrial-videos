@@ -12,7 +12,7 @@ jobs:
   render:
     # Fijo: «ubuntu-latest» pasará a Ubuntu 26 y cambiaría los paquetes de TeX sin avisar.
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
 
@@ -57,6 +57,37 @@ jobs:
           [ "$ancho" = "540" ] && [ "$alto" = "960" ] || { echo "❌ No es vertical 9:16 (540×960)."; exit 1; }
           awk "BEGIN { exit !($dur > 20) }" || { echo "❌ El video dura menos de 20 s: se cortó."; exit 1; }
           echo "✅ El render completo (LaTeX → Manim → subtítulos → volumen) sigue funcionando."
+
+      - name: Familia Consola neón (un borrador por variante)
+        # Las cinco variantes con guiones reales del repo: Paso a paso (POV, 8 pasos: prueba el panel),
+        # Error (tres errores, con el contador ✗), Mito (tablero partido), Dato y Reto. De cada uno se
+        # guardan 3 cuadros para mirarlos en la pestaña Actions.
+        run: |
+          mkdir -p muestras
+          for par in "pasos:guiones/calculando_el_iva_de_una_boleta.yaml" "error:guiones/f_3_mas_1_no_es_10.yaml" "mito:guiones/el_mito_del_doble_descuento.yaml" \
+                     "dato:guiones/por_que_sen_30_vale_medio.yaml" "reto:guiones/reto_de_apotema_y_centro.yaml"; do
+            variante=${par%%:*}; guion=${par#*:}
+            tpi crear "$guion" --borrador --voz silencio --salida salida/familia
+            nombre=$(basename "$guion" .yaml | tr '_' '-')
+            video="salida/familia/$nombre/${nombre}_borrador.mp4"
+            test -f "$video" || { echo "❌ La variante $variante no dejó $video"; exit 1; }
+            grep -q "\"tema_clave\": \"consola_$variante\"" "$(dirname "$video")/linea_de_tiempo.json" \
+              || { echo "❌ $guion no salió con consola_$variante"; exit 1; }
+            dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$video")
+            for n in 1 2 3; do
+              ffmpeg -v error -y -ss "$(awk "BEGIN { print $dur * $n / 4 }")" -i "$video" -frames:v 1 \
+                "muestras/${variante}_${n}.png"
+            done
+            echo "✅ consola_$variante: ${dur} s"
+          done
+
+      - name: Guardar los cuadros de muestra de la familia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: muestras-familia-consola
+          path: muestras/
+          if-no-files-found: ignore
 
       - name: Clip de gancho (campos «molde» y «gancho_variantes»)
         # Sin voz: los clips del laboratorio se prueban sin internet, igual que el render de arriba.

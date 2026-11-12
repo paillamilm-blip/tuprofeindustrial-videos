@@ -15,7 +15,7 @@ import yaml
 from tpi_videos import componentes, temas
 from tpi_videos.escena import Paisaje, franja_del_dibujo
 
-TEMAS = temas.TEMAS_DIR
+TEMAS = temas.ARCHIVO_DIR  # los 19 originales quedaron archivados, intactos
 TEMAS_ORIGINALES = (
     "comic_azul", "comic_semitono", "cuaderno_con_sello", "cuaderno_tinta_roja",
     "hoja_de_desarrollo", "kraft_claro", "kraft_tiza", "neon_cian", "neon_reja",

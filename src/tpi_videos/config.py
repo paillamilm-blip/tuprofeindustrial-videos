@@ -123,7 +123,7 @@ class Publico(_Base):
 class Marca(_Base):
     nombre: str = "Tu Profe Industrial"
     usuario: str = "@tuprofeindustrial"
-    tema: str = "hoja_de_desarrollo"  # estilo visual por defecto (ver ./tpi temas)
+    tema: str = "consola_pasos"  # estilo visual por defecto (ver ./tpi temas)
     publico: Publico = Publico()  # su materia, nivel y dificultad de siempre
     # Colores, materias y subtítulos del tema "pizarra_nocturna" (el estilo original del motor)
     colores: Colores = Colores()

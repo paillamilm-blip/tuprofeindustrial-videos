@@ -40,7 +40,7 @@ def _huella(visual: dict, tema: str) -> str:
     return hashlib.sha1(texto.encode("utf-8")).hexdigest()[:16]
 
 
-def ruta_miniatura(visual: dict, tema: str = "hoja_de_desarrollo") -> Path:
+def ruta_miniatura(visual: dict, tema: str = "consola_pasos") -> Path:
     tipo = str(visual.get("tipo") or "sin_tipo").replace("/", "_")
     return _carpeta() / f"{tipo}_{_huella(visual, tema)}.png"
 
@@ -62,7 +62,7 @@ def _como_oracion(texto: str) -> str:
     return texto
 
 
-def dibujar_miniatura(visual: dict, tema: str = "hoja_de_desarrollo", forzar: bool = False) -> Path:
+def dibujar_miniatura(visual: dict, tema: str = "consola_pasos", forzar: bool = False) -> Path:
     """Un PNG con el dibujo centrado y encuadrado. Lanza ErrorMotor si el tipo o los campos no valen."""
     destino = ruta_miniatura(visual, tema)
     if destino.exists() and not forzar:

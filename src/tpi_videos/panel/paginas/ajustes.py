@@ -20,10 +20,8 @@ from ...moldes import MOLDES, nombre_molde
 from ...niveles import NIVELES, PUBLICOS, publico_de
 from ...rodaje import NOMBRE_MANDO, QUE_HACE, RECETA_LIBRE, campos_de_receta, guardar_receta
 from ...temas import (
-    NOMBRE_CATEGORIA,
     TEMA_DE_ERROR,
-    TEMA_POR_CATEGORIA,
-    TEMA_POR_DIBUJO,
+    TEMA_DE_PASOS,
     TEMA_POR_MOLDE,
     listar_temas,
 )
@@ -264,15 +262,13 @@ def _seccion_tema() -> None:
 
     with _tarjeta(
         "Estilo de cada video",
-        "El motor sugiere uno para cada video según su molde, sus dibujos y su materia. "
+        "Todos los videos son de la familia Consola neón: la forma del contenido elige la variante. "
         "Lo ves y lo cambias en un solo lugar: Aprobación de Guiones (QC).",
     ):
         reglas = [
             ("1° El molde", ", ".join(f"{nombre_molde(m)} → {nombre(t)}" for m, t in TEMA_POR_MOLDE.items())),
-            ("2° Los dibujos", ", ".join(f"{('circuitos' if 'circuito' in d else 'piezas industriales')} → "
-                                         f"{nombre(t)}" for d, t, _r in TEMA_POR_DIBUJO)),  # fmt: skip
-            ("3° Si corrige un error", nombre(TEMA_DE_ERROR)),
-            ("4° La materia", ", ".join(f"{NOMBRE_CATEGORIA[c]} → {nombre(t)}" for c, t in TEMA_POR_CATEGORIA.items())),
+            ("2° Si corrige un error", nombre(TEMA_DE_ERROR)),
+            ("3° Todo lo demás", nombre(TEMA_DE_PASOS)),
         ]
         for regla, detalle in reglas:
             with ui.row().classes("w-full gap-3 no-wrap items-start"):

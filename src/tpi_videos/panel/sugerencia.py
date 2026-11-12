@@ -66,7 +66,7 @@ NOMBRE_MATERIA = {clave: nombre.capitalize() for clave, nombre in MATERIAS.items
 class Preferencias:
     """Lo que ya está guardado en Ajustes: el estilo y la voz de siempre, y su público de siempre."""
 
-    tema: str = "hoja_de_desarrollo"
+    tema: str = "consola_pasos"
     voz: str = "es-CL-LorenzoNeural"
     proveedor: str = "edge"
     voces: dict[str, str] = field(default_factory=dict)
@@ -282,7 +282,7 @@ def _una_tema(molde: str | None, materia: str | None, pref: Preferencias) -> Pie
         etiqueta=ETIQUETAS["tema"],
         valor=_nombre_tema(sugerido.clave),
         codigo=sugerido.clave,  # solo para la portada: «tema» no tiene bandera, no viaja al motor
-        razon=f"{sugerido.razon} Se afina con los dibujos del guion; se cambia en QC.",
+        razon=f"{sugerido.razon} Si el guion corrige un error, pasa a la variante Error; se cambia en QC.",
         destino="/qc",
     )
 

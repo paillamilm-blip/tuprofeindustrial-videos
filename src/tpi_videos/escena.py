@@ -491,7 +491,10 @@ def gramatica_de(tema, n_pasos: int) -> tuple[VGroup | None, VGroup | None]:
         if tabs is not None and tabs.width > c.ancho_util_de(tema):
             tabs.scale_to_fit_width(c.ancho_util_de(tema))
         panel = (
-            c.panel_persistente(n_pasos, [], paleta, c.ancho_util_de(tema), tema.colores.panel, tema.colores.borde)
+            c.panel_persistente(
+                n_pasos, [], paleta, c.ancho_util_de(tema), tema.colores.panel, tema.colores.borde,
+                alto_max=tema.layout.banda_panel or 1.6,
+            )
             if g.panel else None
         )
         return tabs, panel
@@ -952,8 +955,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self.tabs_gram, self.panel_gram = gramatica_de(self.tema, len(self.guion.pasos))
         self.cerrados_gram: list[str] = []
         if self.tabs_gram is not None:
-            if self.tabs_gram.height > 0.32:
-                self.tabs_gram.scale_to_fit_height(0.32)
+            # 0,36 de 16: más grandes que antes (0,32) y siempre por encima de y = 7,5
+            if self.tabs_gram.height > 0.36:
+                self.tabs_gram.scale_to_fit_height(0.36)
             self.tabs_gram.move_to([0, self.alto_cuadro / 2 - 0.12 - self.tabs_gram.height / 2, 0])
             self._fijar_gramatica(self.tabs_gram)
         if self.panel_gram is not None:
@@ -968,6 +972,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             nuevo = c.panel_persistente(
                 len(self.guion.pasos), self.cerrados_gram, self.tema.gramatica.paleta(self.col),
                 c.ancho_util_de(self.tema), self.col.panel, self.col.borde, completados=i,
+                alto_max=self.tema.layout.banda_panel or 1.6,
             )
             self._colocar_panel_gramatica(nuevo)
             animaciones.append(Transform(self.panel_gram, nuevo))
@@ -982,8 +987,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             # Transform conserva los tipos de origen: el panel vacío deja puntos en vez de MathTex.
             self.panel_gram.remove(*list(self.panel_gram))
             self.panel_gram.add(*nuevo)
-        if self.panel_gram is not None and self.tema.gramatica.micro and paso.tex and not paso.error:
-            self.play(c.micro_movimiento("cursor", self.panel_gram[1][2][-1]), run_time=0.2)
+        formulas = self.panel_gram[1][2] if self.panel_gram is not None else None
+        if formulas is not None and len(formulas) and self.tema.gramatica.micro and paso.tex and not paso.error:
+            self.play(c.micro_movimiento("cursor", formulas[-1]), run_time=0.2)
 
     def _cabecera(self) -> Group:
         if self.tema.marco == "hoja":
@@ -997,7 +1003,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         # Group, no VGroup: el logo es una imagen y un VGroup solo admite trazos.
         izquierda = Group(icono, nombre).arrange(RIGHT, buff=0.16)
         izquierda.move_to([0, c.Y_CABECERA, 0]).to_edge(LEFT, buff=0.6)
-        materia = c.chip(self.guion.etiqueta_materia, self.color_materia)
+        # El rótulo del tema («DATO», «MITO»…) dice qué tipo de video es; sin rótulo, la materia.
+        rotulo = str(getattr(self.tema, "rotulo", "") or "").strip()
+        materia = c.chip(rotulo or self.guion.etiqueta_materia, self.color_materia)
         materia.move_to([0, c.Y_CABECERA, 0]).to_edge(RIGHT, buff=0.6)
         return Group(izquierda, materia)
 
