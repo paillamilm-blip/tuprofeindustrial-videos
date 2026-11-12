@@ -90,7 +90,10 @@ class PersistenciaEnEscenaTest(unittest.TestCase):
             self.assertIs(self.video.panel_gram, panel)
             self.assertIn(panel, self.video.mobjects)
         self.assertEqual(self.video.cerrados_gram, ["x=1", "x=2"])
-        self.assertEqual(len(panel[1][2]), 2)
+        # en la banda de 1,6 entra la recién cerrada: el panel no crece (antes se achicaba entero)
+        self.assertGreaterEqual(len(panel[1][2]), 1)
+        self.assertEqual(panel[1][2][-1].tex_string, "x=2")
+        self.assertLessEqual(panel.height, 1.6 + 1e-6)
         self.assertTrue(all(getattr(formula, "tex_string", None) for formula in panel[1][2]))
         self.assertAlmostEqual(panel[1][1][0].width, panel[1][1][1].width)
 

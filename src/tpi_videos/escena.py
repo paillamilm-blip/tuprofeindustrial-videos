@@ -955,9 +955,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self.tabs_gram, self.panel_gram = gramatica_de(self.tema, len(self.guion.pasos))
         self.cerrados_gram: list[str] = []
         if self.tabs_gram is not None:
-            # 0,44 de 16: se leen en el celular y no tocan la cabecera (que va en y = 6,55)
-            if self.tabs_gram.height > 0.44:
-                self.tabs_gram.scale_to_fit_height(0.44)
+            # 0,38 de 16: lo más grande que cabe sobre y = 7,5 sin bajar hacia la cabecera
+            if self.tabs_gram.height > 0.38:
+                self.tabs_gram.scale_to_fit_height(0.38)
             self.tabs_gram.move_to([0, self.alto_cuadro / 2 - 0.12 - self.tabs_gram.height / 2, 0])
             self._fijar_gramatica(self.tabs_gram)
         if self.panel_gram is not None:
