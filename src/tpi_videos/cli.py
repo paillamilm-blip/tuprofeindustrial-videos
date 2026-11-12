@@ -9,7 +9,7 @@
 ./tpi revisar guiones/x.yaml         revisa el guion (duración, gancho, frases)
 ./tpi crear guiones/x.yaml           crea el video final
 ./tpi crear guiones/x.yaml --borrador    versión rápida para revisar
-./tpi crear guiones/x.yaml --tema pizarra_nocturna   con otro estilo visual
+./tpi crear guiones/x.yaml --tema consola_mito       con otra variante de la familia
 ./tpi subtitular video.mp4           subtítulos estilo CapCut para cualquier video
 ./tpi temas                          estilos visuales disponibles
 ./tpi emojis                         emojis 3D que puedes poner en el guion
@@ -1174,8 +1174,8 @@ def cmd_temas(args: argparse.Namespace) -> int:
         tabla.add_row(f"{identificador}{marca}", f"{tema.nombre}{origen}", tema.descripcion, style=estilo)
     consola.print(tabla)
     consola.print("⭐ = el que se usa por defecto (cámbialo con «tema:» en marca.yaml).")
-    consola.print("Para un solo video: ./tpi crear guiones/x.yaml --tema pizarra_nocturna")
-    consola.print("   o escribe «tema: pizarra_nocturna» en el guion.")
+    consola.print("Para un solo video: ./tpi crear guiones/x.yaml --tema consola_mito")
+    consola.print("   o escribe «tema: consola_mito» en el guion.")
     consola.print(f"Tus temas propios se guardan en {_ruta_amigable(temas_usuario_dir())}/")
     return 0
 
@@ -1395,7 +1395,7 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--modelo", default="base", help="modelo de Whisper: tiny, base, small, medium")
     s.add_argument("--salida", help="carpeta de salida (por defecto: salida/)")
-    s.add_argument("--tema", help="estilo visual, ej. pizarra_nocturna (ver ./tpi temas)")
+    s.add_argument("--tema", help="estilo visual, ej. consola_dato (ver ./tpi temas)")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_crear)
@@ -1462,7 +1462,7 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--ganchos", action="store_true", help="lista las 3–5 variantes de gancho de cada idea")
     s.add_argument("--borrador", action="store_true", help="crear un borrador rápido en vez del video final")
-    s.add_argument("--estilo", help="estilo visual del video, ej. pizarra_nocturna (ver ./tpi temas)")
+    s.add_argument("--estilo", help="estilo visual del video, ej. consola_dato (ver ./tpi temas)")
     s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
     s.add_argument("--sin-kit", action="store_true", help="no armar el kit de publicación")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
@@ -1507,7 +1507,7 @@ def construir_parser() -> argparse.ArgumentParser:
         "--sin-revision", action="store_true", help="no pedir la segunda revisión a la IA (más rápido)"
     )
     s.add_argument("--borrador", action="store_true", help="crea un borrador rápido en vez del video final")
-    s.add_argument("--estilo", help="estilo visual del video, ej. pizarra_nocturna (ver ./tpi temas)")
+    s.add_argument("--estilo", help="estilo visual del video, ej. consola_dato (ver ./tpi temas)")
     s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
     s.add_argument("--velocidad", help="velocidad de la voz, ej. +10%% o -5%%")
     s.add_argument(
@@ -1580,7 +1580,7 @@ def construir_parser() -> argparse.ArgumentParser:
         ),
     )
     s.add_argument("--borrador", action="store_true", help="los 3 como borradores rápidos (en vez del final)")
-    s.add_argument("--estilo", help="estilo visual de los videos, ej. pizarra_nocturna (ver ./tpi temas)")
+    s.add_argument("--estilo", help="estilo visual de los videos, ej. consola_dato (ver ./tpi temas)")
     s.add_argument("--voz", help="edge | gtts | silencio, o el nombre de una voz (ver ./tpi voces)")
     s.add_argument("--velocidad", help="velocidad de la voz, ej. +10%% o -5%%")
     s.add_argument("--sin-subtitulos", action="store_true", help="no quemar subtítulos")

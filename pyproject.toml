@@ -39,7 +39,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 tpi_videos = [
     "assets/fuentes/*", "assets/fuentes/licencias/*", "assets/emojis/*", "assets/fondos/*", "assets/icono/*",
-    "plantillas/*.yaml", "plantillas/ia/*.md", "plantillas/temas/*.yaml",
+    "plantillas/*.yaml", "plantillas/ia/*.md", "plantillas/temas/*.yaml", "plantillas/temas/archivo/*.yaml",
 ]
 
 [tool.ruff]

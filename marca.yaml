@@ -4,14 +4,13 @@
 nombre: "Tu Profe Industrial"
 usuario: "@tuprofeindustrial"
 
-# Estilo de respaldo (ver ./tpi temas). Casi nunca se usa: cada video lleva el estilo que el motor le sugiere
-# según su molde, dibujos y materia, o el que elijas en Aprobación de Guiones (QC). Este solo vale si no hay nada más.
-#   hoja_de_desarrollo → tu estilo de Instagram: hoja cuadriculada, títulos de cómic, subtítulos Bangers
-#   pizarra_nocturna   → el estilo original: pizarra azul noche (usa los colores y subtítulos de abajo)
-tema: hoja_de_desarrollo
+# Estilo de respaldo (ver ./tpi temas). Casi nunca se usa: cada video lleva la variante de la familia
+# Consola neón que le toca por su forma de contenido (paso a paso, error, mito, dato o reto), o la que
+# elijas en Aprobación de Guiones (QC). Este solo vale cuando no hay guion (vista previa, ./tpi subtitular).
+tema: consola_pasos
 
-# ── Colores y subtítulos del tema «pizarra_nocturna» ──────────────────────────────────────────
-# (El tema «hoja_de_desarrollo» trae sus propios colores, letras y subtítulos.)
+# ── Colores y subtítulos del tema archivado «pizarra_nocturna» ────────────────────────────────
+# (Las variantes de Consola neón traen sus propios colores, letras y subtítulos.)
 colores:            # formato #RRGGBB
   fondo: "#0B1220"       # azul noche (pizarra)
   panel: "#121B2F"       # tarjetas

@@ -1,0 +1,51 @@
+# Familia Consola neón · RETO (molde «Reto»).
+# La pizarra de liceo de Tiza verde, con neón verde. Pasos numerados y panel para seguir el
+# intento; el resultado sale tapado (receta de rodaje del reto) para invitar a resolverlo.
+nombre: Consola · Reto
+descripcion: 'Pizarra verde de liceo con neón: pasos numerados y la respuesta tapada para que lo intentes.'
+rotulo: RETO
+marco: pizarra
+resplandor: true
+colores:
+  fondo: '#0A1612'
+  panel: '#11221B'
+  borde: '#24463A'
+  titulos: '#F5F7FA'
+  texto: '#F5F7FA'
+  formulas: '#F5F7FA'
+  tenue: '#8FA89C'
+  acento: '#4ADE80'
+  exito: '#22C55E'
+  cuadricula: '#4ADE80'
+  error: '#EF4444'
+materias: {matematica: '#4ADE80', fisica: '#4ADE80', ingenieria: '#4ADE80'}
+tipografia:
+  titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
+  texto: {familia: Montserrat, grosor: SEMIBOLD}
+nota: {rol: texto, escala: 1.0, color: acento}
+formulas_negrita: true
+fondo: {tipo: imagen, imagen: tiza_verde, degradado: ['#12302A', '#091A16']}
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 88
+  color: '#FFFFFF'
+  color_activo: '#4ADE80'
+  borde: 8
+  sombra: 6
+  posicion_y: 0.82  # con el panel abajo, el motor la sube sola por encima de él
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 18
+  resaltar: true
+animacion: {titulos: plumon}
+emojis: true
+layout:
+  banda_subtitulo: 0.28
+  banda_panel: 1.6
+  y_zona_pasos: -2.2
+gramatica:
+  tabs: true
+  panel: true
+  mapa_color: true
+  micro: true
+  paleta_pasos: ['#4ADE80', '#FFC72C', '#38BDF8', '#A78BFA', '#F472B6', '#FB923C']

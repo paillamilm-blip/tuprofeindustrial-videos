@@ -737,7 +737,7 @@ class PaginaUnVideo:
     def _portada(self, su: sugerencia.Sugerencia) -> None:
         """El cuadro que sale de esta familia, al lado de lo que la receta hace pasar en pantalla."""
         clave_tema = next((p.codigo for p in su.piezas if p.clave == "tema"), None)
-        tema = clave_tema or "hoja_de_desarrollo"
+        tema = clave_tema or "consola_pasos"
         destino, error = None, None
         try:
             visual = formatos_ui.visual_de_portada(su.clave_familia)

@@ -23,12 +23,15 @@ class EscenaGramaticaTest(unittest.TestCase):
         self.assertEqual(len(tabs), 3)
         self.assertIsNotNone(panel)
 
-    def test_consola_neon_se_lista_y_activa_gramatica(self):
-        t = cargar_tema("consola_neon", Marca())
+    def test_consola_paso_a_paso_se_lista_y_activa_gramatica(self):
+        t = cargar_tema("consola_pasos", Marca())
         self.assertTrue(t.gramatica.tabs)
         self.assertTrue(t.gramatica.panel)
         self.assertTrue(t.resplandor)
-        self.assertIn("consola_neon", [clave for clave, _, _ in listar_temas()])
+        self.assertIn("consola_pasos", [clave for clave, _, _ in listar_temas()])
+        # la Consola neón original queda archivada: ya no se ofrece, pero se sigue pudiendo pedir
+        self.assertNotIn("consola_neon", [clave for clave, _, _ in listar_temas()])
+        self.assertTrue(cargar_tema("consola_neon", Marca()).gramatica.tabs)
 
     def test_tabs_caben_con_muchos_pasos(self):
         t = Tema(nombre="g", gramatica={"tabs": True})

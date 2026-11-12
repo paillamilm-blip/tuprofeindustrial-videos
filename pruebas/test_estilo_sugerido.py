@@ -7,16 +7,22 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
+from tpi_videos.config import cargar_marca
 from tpi_videos.entorno import PLANTILLAS_DIR
 from tpi_videos.errores import ErrorMotor
 from tpi_videos.guion import Guion, cargar_guion, fijar_tema
+from tpi_videos.moldes import MOLDES
 from tpi_videos.temas import (
+    ARCHIVO_DIR,
+    FAMILIA,
+    FONDOS_DIR,
     TEMA_DE_ERROR,
-    TEMA_POR_CATEGORIA,
-    TEMA_POR_DIBUJO,
+    TEMA_DE_PASOS,
     TEMA_POR_MOLDE,
+    cargar_tema,
     cuando_se_sugiere,
     estilo_del_guion,
+    listar_temas,
     resolver_tema,
     sugerir_tema,
     sugerir_tema_de_guion,
@@ -24,7 +30,7 @@ from tpi_videos.temas import (
 from tpi_videos.visuales import VISUALES
 
 RAIZ = Path(__file__).resolve().parents[1]
-MARCA = SimpleNamespace(tema="hoja_de_desarrollo")
+MARCA = SimpleNamespace(tema="consola_pasos")
 
 
 def _visual(tipo: str) -> dict:
@@ -52,58 +58,106 @@ def _guion(materia="matematica", molde=None, tema=None, dibujo=None, error=False
     return Guion.model_validate(datos)
 
 
+class FamiliaTest(unittest.TestCase):
+    """Todo video es de la familia Consola neón: la forma del contenido elige la variante."""
+
+    def test_el_catalogo_es_solo_la_familia_y_en_su_orden(self):
+        self.assertEqual(tuple(clave for clave, _t, propio in listar_temas() if not propio), FAMILIA)
+
+    def test_cada_variante_comparte_la_base_y_dice_que_es(self):
+        marca = cargar_marca()
+        for clave in FAMILIA:
+            t = cargar_tema(clave, marca)
+            self.assertEqual(t.marco, "pizarra", clave)
+            self.assertTrue(t.resplandor, clave)
+            self.assertEqual(t.animacion.titulos, "plumon", clave)
+            self.assertEqual(t.tipografia.titulos.familia, "Montserrat", clave)
+            self.assertEqual(t.subtitulos.fuente, "Montserrat Black", clave)
+            self.assertEqual(t.fondo.tipo, "imagen", clave)
+            self.assertTrue(t.rotulo, clave)
+            self.assertTrue(t.gramatica.mapa_color, clave)
+            # el fondo viaja con el motor: no puede vivir solo en mis_ajustes/ de un Mac
+            self.assertTrue((FONDOS_DIR / f"{t.fondo.imagen}.png").is_file(), clave)
+
+    def test_cada_variante_tiene_su_propio_color(self):
+        marca = cargar_marca()
+        acentos = {cargar_tema(clave, marca).colores.acento for clave in FAMILIA}
+        self.assertEqual(len(acentos), len(FAMILIA))
+
+    def test_el_panel_va_donde_hay_pasos_que_seguir(self):
+        marca = cargar_marca()
+        con_panel = {clave for clave in FAMILIA if cargar_tema(clave, marca).gramatica.panel}
+        self.assertEqual(con_panel, {"consola_pasos", "consola_error", "consola_reto"})
+        for clave in con_panel:
+            self.assertGreater(cargar_tema(clave, marca).layout.banda_panel, 0, clave)
+
+    def test_los_estilos_archivados_siguen_funcionando_por_su_nombre(self):
+        marca = cargar_marca()
+        archivados = sorted(r.stem for r in ARCHIVO_DIR.glob("*.yaml"))
+        self.assertEqual(len(archivados), 20)
+        for clave in archivados:
+            self.assertTrue(cargar_tema(clave, marca).nombre, clave)
+        self.assertNotIn("hoja_de_desarrollo", {c for c, _t, _p in listar_temas()})
+
+
 class ReglaTest(unittest.TestCase):
-    def test_todo_lo_que_se_sugiere_es_un_estilo_que_ya_existe(self):
-        sugeridos = {
-            *TEMA_POR_MOLDE.values(),
-            *TEMA_POR_CATEGORIA.values(),
-            *(t for _d, t, _r in TEMA_POR_DIBUJO),
-            TEMA_DE_ERROR,
-        }
+    def test_todo_lo_que_se_sugiere_es_de_la_familia(self):
+        sugeridos = {*TEMA_POR_MOLDE.values(), TEMA_DE_ERROR, TEMA_DE_PASOS}
+        self.assertEqual(sugeridos, set(FAMILIA))
         for clave in sugeridos:
             self.assertTrue((PLANTILLAS_DIR / "temas" / f"{clave}.yaml").is_file(), clave)
 
-    def test_el_orden_molde_dibujo_error_materia_marca(self):
+    def test_cada_molde_tiene_su_variante(self):
+        self.assertEqual(set(TEMA_POR_MOLDE), set(MOLDES))
+        self.assertEqual(sugerir_tema(molde="pov").clave, "consola_pasos")
+        self.assertEqual(sugerir_tema(molde="tres_errores").clave, "consola_error")
+        self.assertEqual(sugerir_tema(molde="mito_realidad").clave, "consola_mito")
+        self.assertEqual(sugerir_tema(molde="nadie_te_enseno").clave, "consola_dato")
+        self.assertEqual(sugerir_tema(molde="reto").clave, "consola_reto")
+
+    def test_el_orden_molde_error_paso_a_paso(self):
         todo = {"molde": "reto", "categoria": "fisica", "dibujos": {"circuito"}, "con_error": True}
         self.assertEqual(sugerir_tema(**todo).origen, "molde")
-        self.assertEqual(sugerir_tema(**{**todo, "molde": None}).origen, "dibujo")
-        self.assertEqual(sugerir_tema(**{**todo, "molde": None, "dibujos": set()}).origen, "error")
-        sin_nada = {"categoria": "fisica"}
-        self.assertEqual(sugerir_tema(**sin_nada).clave, "neon_cian")
-        self.assertEqual(sugerir_tema(de_siempre="kraft_claro").clave, "kraft_claro")
-        self.assertEqual(sugerir_tema().origen, "marca")
+        self.assertEqual(sugerir_tema(**{**todo, "molde": None}).clave, TEMA_DE_ERROR)
+        self.assertEqual(sugerir_tema(**{**todo, "molde": None, "con_error": False}).clave, TEMA_DE_PASOS)
+        self.assertEqual(sugerir_tema().origen, "forma")
+
+    def test_la_materia_los_dibujos_y_la_marca_ya_no_cambian_el_estilo(self):
+        for extra in ({"categoria": "fisica"}, {"dibujos": {"tuberia_3d"}}, {"de_siempre": "kraft_claro"}):
+            self.assertEqual(sugerir_tema(**extra).clave, TEMA_DE_PASOS, extra)
 
     def test_cada_sugerencia_dice_por_que(self):
         for s in (
-            sugerir_tema(molde="pov"),
-            sugerir_tema(dibujos={"tuberia_3d"}),
+            *(sugerir_tema(molde=m) for m in MOLDES),
             sugerir_tema(con_error=True),
-            sugerir_tema(categoria="ingenieria"),
+            sugerir_tema(),
         ):
             self.assertTrue(s.razon.endswith("."), s)
 
 
 class GuionTest(unittest.TestCase):
-    def test_lee_los_dibujos_los_errores_y_la_materia_del_guion(self):
-        self.assertEqual(
-            sugerir_tema_de_guion(_guion("ingenieria", dibujo="tuberia_3d")).clave, "plano_noche"
-        )
-        self.assertEqual(sugerir_tema_de_guion(_guion("fisica", dibujo="circuito")).clave, "plano_azul")
+    def test_lee_el_molde_y_los_errores_del_guion(self):
+        self.assertEqual(sugerir_tema_de_guion(_guion("ingenieria", dibujo="tuberia_3d")).clave, TEMA_DE_PASOS)
+        self.assertEqual(sugerir_tema_de_guion(_guion("fisica", dibujo="circuito")).clave, TEMA_DE_PASOS)
         self.assertEqual(sugerir_tema_de_guion(_guion("matematica", error=True)).clave, TEMA_DE_ERROR)
-        self.assertEqual(sugerir_tema_de_guion(_guion("fisica")).clave, "neon_cian")
-        self.assertEqual(sugerir_tema_de_guion(_guion("fisica", molde="reto", error=True)).clave, "neon_reja")
+        self.assertEqual(sugerir_tema_de_guion(_guion("fisica", molde="reto", error=True)).clave, "consola_reto")
 
     def test_lo_elegido_en_qc_le_gana_a_la_sugerencia(self):
         g = _guion("fisica", tema="kraft_claro")
         self.assertEqual(estilo_del_guion(g).origen, "guion")
-        self.assertEqual(sugerir_tema_de_guion(g).clave, "neon_cian")  # la sugerencia no mira el «tema:»
-        self.assertEqual(resolver_tema(None, g, MARCA), "kraft_claro")
+        self.assertEqual(sugerir_tema_de_guion(g).clave, TEMA_DE_PASOS)  # la sugerencia no mira el «tema:»
+        self.assertEqual(resolver_tema(None, g, MARCA), "kraft_claro")  # un archivado, pedido por nombre
         self.assertEqual(resolver_tema("tiza_verde", g, MARCA), "tiza_verde")  # --tema en la Terminal
 
+    def test_sin_guion_queda_el_de_la_marca(self):
+        self.assertEqual(resolver_tema(None, None, MARCA), "consola_pasos")
+        self.assertEqual(resolver_tema(None, None, SimpleNamespace(tema="")), "consola_pasos")
+
     def test_el_catalogo_dice_cuando_se_sugiere_cada_estilo(self):
-        self.assertIn("Física", cuando_se_sugiere("neon_cian"))
-        self.assertIn("piezas industriales", cuando_se_sugiere("plano_noche"))
-        self.assertIn("circuitos", cuando_se_sugiere("plano_azul"))
+        self.assertIn("videos que corrigen un error", cuando_se_sugiere("consola_error"))
+        self.assertIn("ejercicios sin molde", cuando_se_sugiere("consola_pasos"))
+        for clave in FAMILIA:
+            self.assertTrue(cuando_se_sugiere(clave), clave)
         self.assertEqual(cuando_se_sugiere("comic_azul"), [])
 
 
@@ -182,11 +236,11 @@ class CambiarEnQcTest(unittest.TestCase):
         from tpi_videos.panel import qc
 
         f = qc.ficha(self.guion)
-        self.assertEqual(f.sugerido.clave, "plano_noche")  # ingeniería con el círculo de Mohr
-        self.assertEqual(f.estilo.origen, "dibujo")
+        self.assertEqual(f.sugerido.clave, "consola_pasos")  # ejercicio sin molde: paso a paso
+        self.assertEqual(f.estilo.origen, "forma")
         self.assertEqual(qc.cambiar_estilo(self.guion, "kraft_claro").origen, "guion")
         self.assertEqual(cargar_guion(self.guion).tema, "kraft_claro")
-        self.assertEqual(qc.cambiar_estilo(self.guion, "plano_noche").origen, "dibujo")
+        self.assertEqual(qc.cambiar_estilo(self.guion, "consola_pasos").origen, "forma")
         self.assertIsNone(cargar_guion(self.guion).tema)  # el sugerido no se escribe: queda automático
 
     def test_todos_al_sugerido_de_una_vez(self):

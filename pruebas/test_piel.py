@@ -75,8 +75,6 @@ class BordeSubtituloTest(unittest.TestCase):
 
     def test_los_temas_de_papel_claro_no_usan_borde_negro(self):
         """Seis temas tienen el fondo claro y el subtítulo oscuro: ahí el negro embarra."""
-        from tpi_videos.temas import listar_temas
-
         claros = {
             "comic_azul",
             "cuaderno_con_sello",
@@ -85,11 +83,10 @@ class BordeSubtituloTest(unittest.TestCase):
             "rotulador",
             "rotulador_fucsia",
         }
-        for ident, _, _ in listar_temas():
-            if ident in claros:
-                tema = cargar_tema(ident, cargar_marca())
-                self.assertNotEqual(tema.subtitulos.color_borde, "#000000", ident)
-                self.assertEqual(tema.subtitulos.color_borde.upper(), tema.colores.fondo.upper(), ident)
+        for ident in sorted(claros):  # archivados: ya no se listan, pero se siguen cargando por nombre
+            tema = cargar_tema(ident, cargar_marca())
+            self.assertNotEqual(tema.subtitulos.color_borde, "#000000", ident)
+            self.assertEqual(tema.subtitulos.color_borde.upper(), tema.colores.fondo.upper(), ident)
 
 
 class LetrasTest(unittest.TestCase):

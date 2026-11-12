@@ -997,7 +997,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         # Group, no VGroup: el logo es una imagen y un VGroup solo admite trazos.
         izquierda = Group(icono, nombre).arrange(RIGHT, buff=0.16)
         izquierda.move_to([0, c.Y_CABECERA, 0]).to_edge(LEFT, buff=0.6)
-        materia = c.chip(self.guion.etiqueta_materia, self.color_materia)
+        # El rótulo del tema («DATO», «MITO»…) dice qué tipo de video es; sin rótulo, la materia.
+        rotulo = str(getattr(self.tema, "rotulo", "") or "").strip()
+        materia = c.chip(rotulo or self.guion.etiqueta_materia, self.color_materia)
         materia.move_to([0, c.Y_CABECERA, 0]).to_edge(RIGHT, buff=0.6)
         return Group(izquierda, materia)
 

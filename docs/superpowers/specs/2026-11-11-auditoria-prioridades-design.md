@@ -68,6 +68,9 @@ Manim. La escena solo mide alturas y aplica el resultado. Mismo resultado y mism
 No se tocan cámara, fórmulas ni dibujos. Separar más queda para otra fase, si el dueño lo pide.
 
 ### 6 · Grupos de estilos (solo presentación)
+
+> **Reemplazado (12-11-2026)** por `2026-11-12-familia-consola-design.md`: los 20 estilos se
+> archivaron y quedó una sola familia con cinco variantes, así que ya no hay nada que agrupar.
 - Se agrega `GRUPOS_DE_ESTILO` en `temas.py`, una tabla en código, junto a las demás `TEMA_POR_*`.
 - **No** se usa la palabra «familia», que ya significa formatos y tipografías.
 - **No** se tocan `sugerir_tema` ni `resolver_tema`, ni ningún YAML de `plantillas/temas/`.

@@ -31,7 +31,7 @@ from tpi_videos.panel.sugerencia import (
 )
 from tpi_videos.rodaje import RECETA_LIBRE, rodaje_para
 
-PREF = Preferencias(tema="hoja_de_desarrollo", voz="es-CL-LorenzoNeural", voces={"es-CL-LorenzoNeural": "Lorenzo (Chile)"})
+PREF = Preferencias(tema="consola_pasos", voz="es-CL-LorenzoNeural", voces={"es-CL-LorenzoNeural": "Lorenzo (Chile)"})
 SIN_IDEA = ""  # fmt: skip
 
 
@@ -236,7 +236,8 @@ class PiezasTest(unittest.TestCase):
         """Nada de listas copiadas a mano: si aparece un molde, aparece en «cambiar»."""
         self.assertEqual(set(opciones("molde")), set(MOLDES))
         self.assertIn("datos", opciones("familia"))
-        self.assertIn("pizarra_nocturna", opciones("tema"))
+        self.assertIn("consola_pasos", opciones("tema"))
+        self.assertNotIn("pizarra_nocturna", opciones("tema"))  # archivado: no se ofrece
 
     def test_solo_se_muestran_las_banderas_reales(self):
         self.assertEqual(
@@ -284,28 +285,28 @@ class PiezasTest(unittest.TestCase):
 class EstiloPorMoldeTest(unittest.TestCase):
     """El estilo visual también se recomienda: cada molde se ve mejor en un tema distinto."""
 
-    def test_un_reto_se_recomienda_en_neon(self) -> None:
+    def test_un_reto_se_recomienda_en_su_variante(self) -> None:
         s = armar("apotema de un hexágono", {}, PREF, {"molde": "reto", "titulo": "El reto"})
         estilo = s.pieza("tema")
-        self.assertEqual(estilo.codigo, "neon_reja")
+        self.assertEqual(estilo.codigo, "consola_reto")
         self.assertFalse(estilo.tocada)
         self.assertIn("reto", estilo.razon.lower())
 
     def test_los_moldes_con_estilo_propio_no_se_repiten(self) -> None:
         """Las 3 ideas de un lote traen moldes distintos: los estilos salen distintos solos.
 
-        «Nadie te enseñó esto» es el dato sorpresa de cualquier ramo: luce el estilo de su materia.
+        Cada molde es una forma de contenido y tiene su variante de la familia Consola neón.
         """
         from tpi_videos.temas import TEMA_POR_MOLDE
 
-        self.assertEqual(set(TEMA_POR_MOLDE), set(MOLDES) - {"nadie_te_enseno"})
+        self.assertEqual(set(TEMA_POR_MOLDE), set(MOLDES))
         codigos = {
             armar("porcentajes", {}, PREF, {"molde": clave, "titulo": "La idea"}).pieza("tema").codigo
             for clave in TEMA_POR_MOLDE
         }
         self.assertEqual(len(codigos), len(TEMA_POR_MOLDE))
         dato = armar("porcentajes", {"materia": "fisica"}, PREF, {"molde": "nadie_te_enseno", "titulo": "D"})
-        self.assertEqual(dato.pieza("tema").codigo, "neon_cian")
+        self.assertEqual(dato.pieza("tema").codigo, "consola_dato")  # la materia ya no cambia el estilo
         from tpi_videos.temas import listar_temas
 
         validos = {ident for ident, _tema, _propio in listar_temas()}
@@ -315,20 +316,16 @@ class EstiloPorMoldeTest(unittest.TestCase):
         """La tarjeta dice qué estilo saldrá, pero no lo manda: se elige en un solo lugar (QC)."""
         s = armar("porcentajes", {"tema": "pizarra_nocturna"}, PREF, {"molde": "reto", "titulo": "La idea"})
         estilo = s.pieza("tema")
-        self.assertEqual(estilo.codigo, "neon_reja")  # un cambio viejo guardado ya no manda
+        self.assertEqual(estilo.codigo, "consola_reto")  # un cambio viejo guardado ya no manda
         self.assertFalse(estilo.tocada)
         self.assertEqual(estilo.destino, "/qc")
         self.assertNotIn("--estilo", s.args)
 
-    def test_sin_molde_el_estilo_sale_de_la_materia(self) -> None:
-        s = armar("una frase que no delata nada", {"materia": "fisica"}, PREF)
-        self.assertEqual(s.pieza("tema").codigo, "neon_cian")
-        self.assertIn("Física", s.pieza("tema").razon)
-
-    def test_sin_molde_ni_materia_queda_el_de_siempre(self) -> None:
-        s = armar("una frase que no delata nada", {}, PREF)
-        self.assertEqual(s.pieza("tema").codigo, PREF.tema)
-        self.assertIn("Tu estilo de siempre", s.pieza("tema").razon)
+    def test_sin_molde_es_un_paso_a_paso_en_cualquier_materia(self) -> None:
+        for publico in ({"materia": "fisica"}, {}):
+            s = armar("una frase que no delata nada", publico, PREF)
+            self.assertEqual(s.pieza("tema").codigo, "consola_pasos", publico)
+            self.assertIn("paso a paso", s.pieza("tema").razon)
 
 
 class PublicoTest(unittest.TestCase):

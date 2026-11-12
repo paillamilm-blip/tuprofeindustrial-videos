@@ -1,0 +1,43 @@
+# Familia Consola neón · MITO / REALIDAD (molde «Mito vs realidad»).
+# La reja violeta de Neón uva. Sin pasos numerados ni panel: el tablero se parte en MITO arriba y
+# REALIDAD abajo (receta de rodaje «mitades»), y dos casilleros no necesitan numerarse.
+nombre: Consola · Mito
+descripcion: 'Reja neón violeta: el mito arriba, la realidad abajo y la respuesta tapada hasta que se dice.'
+rotulo: MITO
+marco: pizarra
+resplandor: true
+colores:
+  fondo: '#0E081A'
+  panel: '#1A1228'
+  borde: '#3A2C52'
+  titulos: '#F5F7FA'
+  texto: '#F5F7FA'
+  formulas: '#F5F7FA'
+  tenue: '#9A90AE'
+  acento: '#A78BFA'
+  exito: '#22C55E'
+  cuadricula: '#A78BFA'
+  error: '#EF4444'
+materias: {matematica: '#A78BFA', fisica: '#A78BFA', ingenieria: '#A78BFA'}
+tipografia:
+  titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
+  texto: {familia: Montserrat, grosor: SEMIBOLD}
+nota: {rol: texto, escala: 1.0, color: acento}
+formulas_negrita: true
+fondo: {tipo: imagen, imagen: neon_uva, degradado: ['#0E081A', '#28103E']}
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 88
+  color: '#FFFFFF'
+  color_activo: '#C4B5FD'
+  borde: 8
+  sombra: 6
+  posicion_y: 0.74
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 18
+  resaltar: true
+animacion: {titulos: plumon}
+emojis: true
+gramatica:
+  mapa_color: true
