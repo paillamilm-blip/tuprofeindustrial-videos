@@ -51,6 +51,18 @@ Regla (`temas.sugerir_tema`): 1° el molde → su variante · 2° si corrige un 
 3° todo lo demás → Paso a paso. `TEMA_POR_CATEGORIA` y `TEMA_POR_DIBUJO` se eliminan.
 `formatos.yaml` apunta a las mismas variantes.
 
+## Versión sobria (12-11-2026, pedido del dueño)
+
+Tras ver el primer video, el dueño pidió colores y fondos más sobrios. Cambió solo la apariencia:
+- Fondo: grafito liso con un degradado suave y un tinte mínimo del color de la variante. Se quitan
+  las rejas neón, la viñeta dorada y la pizarra verde.
+- Sin brillo neón (`resplandor: false`).
+- Acentos apagados: azul acero `#6FA8DC` (paso a paso), rojo ladrillo `#D27A72` (error), lila
+  `#A399C9` (mito), dorado mate `#D4B26A` (dato) y verde salvia `#7DB894` (reto).
+- Subtítulos con borde y sombra más livianos.
+
+Se mantienen la estructura, las herramientas de cada forma, el plumón, el rótulo y la regla de elección.
+
 ## Lo que no se pudo llevar y por qué
 
 - Los fondos de papel claro (Rotulador, Cuadernos, Kraft claro, Cómic): mezclar claro y oscuro

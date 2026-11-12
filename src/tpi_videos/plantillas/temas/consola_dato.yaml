@@ -1,37 +1,38 @@
-# Familia Consola neón · DATO (molde «Nadie te enseñó esto»).
-# La sobriedad de cine de Viñeta dorada en ámbar. Sin pasos numerados ni panel: un dato tiene
-# uno o dos pasos y el panel solo quitaría espacio. El resultado sale tapado hasta que la voz lo dice.
+# Familia Consola · DATO (molde Nadie te enseñó esto).
+# Versión sobria (12-11-2026): fondo grafito liso con un degradado suave, sin rejas ni viñetas, sin
+# brillo neón y con un solo acento apagado por variante. Se conservan la estructura (pasos
+# numerados, panel, mapa de color), el plumón y los subtítulos de 3 palabras.
 nombre: Consola · Dato
-descripcion: 'Viñeta ámbar de cine: el dato sorpresa, grande y limpio, revelado en el momento justo.'
+descripcion: 'Grafito cálido con un dorado mate: el dato sorpresa, limpio y revelado en el momento justo.'
 rotulo: DATO
 marco: pizarra
-resplandor: true
+resplandor: false
 colores:
-  fondo: '#120E08'
-  panel: '#1E1810'
-  borde: '#4A3A20'
-  titulos: '#F5F7FA'
-  texto: '#F5F7FA'
-  formulas: '#F5F7FA'
-  tenue: '#A89A84'
-  acento: '#FFC72C'
-  exito: '#22C55E'
-  cuadricula: '#FFC72C'
-  error: '#EF4444'
-materias: {matematica: '#FFC72C', fisica: '#FFC72C', ingenieria: '#FFC72C'}
+  fondo: '#13110D'
+  panel: '#211D16'
+  borde: '#41392A'
+  titulos: '#ECEFF3'
+  texto: '#E4E7EB'
+  formulas: '#F2F4F7'
+  tenue: '#A39A88'
+  acento: '#D4B26A'
+  exito: '#7DB894'
+  cuadricula: '#D4B26A'
+  error: '#D27A72'
+materias: {matematica: '#D4B26A', fisica: '#D4B26A', ingenieria: '#D4B26A'}
 tipografia:
   titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
   texto: {familia: Montserrat, grosor: SEMIBOLD}
 nota: {rol: texto, escala: 1.0, color: acento}
 formulas_negrita: true
-fondo: {tipo: imagen, imagen: vineta_dorada, degradado: ['#1A140C', '#090705']}
+fondo: {tipo: degradado, degradado: ['#1A1712', '#0E0C09']}
 subtitulos:
   fuente: Montserrat Black
-  tamano: 88
+  tamano: 84
   color: '#FFFFFF'
-  color_activo: '#FFC72C'
-  borde: 8
-  sombra: 6
+  color_activo: '#D4B26A'
+  borde: 6
+  sombra: 2
   posicion_y: 0.74
   mayusculas: true
   max_palabras: 3
