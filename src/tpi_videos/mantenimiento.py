@@ -1,4 +1,5 @@
-"""Poda de cachés temporales: dibujos 3D ya renderizados y audios de la voz.
+"""Poda de cachés temporales: dibujos 3D, audios de la voz, borradores de la vista previa y los trozos
+que Manim ya unió.
 
 Todo lo que se borra acá se puede volver a generar (el PNG con la misma cámara, el audio con el mismo
 texto), así que la poda nunca toca videos, guiones ni kits. Se borra sólo dentro de las carpetas de
@@ -8,6 +9,7 @@ caché y se respeta la fecha de modificación: lo que se está usando tiene mtim
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -117,6 +119,101 @@ def _podar_voz(raiz: Path, limite: float) -> list[Path]:
     return candidatos
 
 
+def _sin_enlaces(ruta: Path, base: Path) -> bool:
+    """Ni la ruta ni ninguna carpeta entre ella y ``base`` es un enlace simbólico: nunca se sigue uno."""
+    try:
+        relativa = ruta.relative_to(base)
+    except ValueError:
+        return False
+    actual = base
+    for parte in relativa.parts:
+        actual = actual / parte
+        if actual.is_symlink():
+            return False
+    return True
+
+
+def _archivos_si_todo_es_viejo(carpeta: Path, limite: float) -> list[Path] | None:
+    """Todos los archivos de la carpeta si todos son viejos; None si hay algo reciente o un enlace."""
+    archivos: list[Path] = []
+    for raiz, carpetas, nombres in os.walk(carpeta, followlinks=False):
+        for nombre in carpetas + nombres:
+            if (Path(raiz) / nombre).is_symlink():
+                return None
+        for nombre in nombres:
+            ruta = Path(raiz) / nombre
+            if ruta.stat().st_mtime >= limite:
+                return None
+            archivos.append(ruta)
+    return archivos
+
+
+def _podar_vistas(base: Path, limite: float) -> list[Path]:
+    """El video borrador de cada vista previa (``salida/_vistas/<estilo>/<video>/``).
+
+    Se conservan los 3 PNG y ``huella.txt`` de cada estilo: es todo lo que necesita
+    ``vista_previa.en_cache``, así que la vista previa guardada sigue apareciendo en el panel.
+    """
+    vistas = base / "salida" / "_vistas"
+    if not vistas.is_dir() or not _sin_enlaces(vistas, base):
+        return []
+    candidatos: list[Path] = []
+    for estilo in sorted(vistas.iterdir()):
+        if not estilo.is_dir() or estilo.is_symlink():
+            continue
+        for video in sorted(estilo.iterdir()):
+            if video.is_dir() and not video.is_symlink():
+                candidatos += _archivos_si_todo_es_viejo(video, limite) or []
+    return candidatos
+
+
+def _podar_trozos(base: Path, limite: float) -> list[Path]:
+    """Los trozos que Manim ya unió en ``animacion.mp4`` (``.../manim/videos/*/partial_movie_files/``).
+
+    ``animacion.mp4`` no se toca: ``linea_de_tiempo.json`` lo usa para la miniatura y la portada.
+    """
+    candidatos: list[Path] = []
+    for trozos in sorted(base.glob("salida/**/manim/videos/*/partial_movie_files")):
+        if not trozos.is_dir() or not _sin_enlaces(trozos, base):
+            continue
+        for raiz, _carpetas, nombres in os.walk(trozos, followlinks=False):
+            for nombre in nombres:
+                ruta = Path(raiz) / nombre
+                if _es_archivo(ruta) and ruta.stat().st_mtime < limite:
+                    candidatos.append(ruta)
+    return candidatos
+
+
+def _tope(ruta: Path, base: Path) -> Path | None:
+    """Hasta dónde se pueden quitar carpetas vacías: ``_vistas/<estilo>`` (se queda con sus PNG) o
+    la carpeta que contiene ``partial_movie_files``. None para todo lo demás (3D, voz): ahí no se toca."""
+    vistas = base / "salida" / "_vistas"
+    if vistas in ruta.parents:
+        return vistas / ruta.relative_to(vistas).parts[0]
+    partes = ruta.parts
+    if "partial_movie_files" in partes:
+        return Path(*partes[: partes.index("partial_movie_files")])
+    return None
+
+
+def _quitar_carpetas_vacias(borrados: list[Path], base: Path) -> None:
+    carpetas: set[Path] = set()
+    for ruta in borrados:
+        tope = _tope(ruta, base)
+        if tope is None:
+            continue
+        for padre in ruta.parents:
+            if padre == tope or tope not in padre.parents:
+                break
+            carpetas.add(padre)
+    for carpeta in sorted(carpetas, key=lambda c: len(c.parts), reverse=True):
+        try:
+            if carpeta.is_dir() and not carpeta.is_symlink() and not any(carpeta.iterdir()):
+                carpeta.rmdir()
+        except OSError:
+            continue
+
+
 def podar_temporales(
     dias: int = 7,
     max_tamano_mb: int = 500,
@@ -125,7 +222,9 @@ def podar_temporales(
     aplicar: bool = True,
     ahora: float | None = None,
 ) -> Poda:
-    """Limpia `salida/_3d` y los audios de voz no referenciados.
+    """Limpia `salida/_3d`, los audios de voz no referenciados, los borradores de la vista previa
+    (`salida/_vistas/<estilo>/<video>/`, si todo lo de adentro es viejo) y los trozos que Manim ya unió.
+    Nunca toca videos finales ni borradores, subtítulos, kits, portadas ni `linea_de_tiempo.json`.
 
     ``dias`` es la edad mínima para borrar; ``max_tamano_mb`` es la cuota de `salida/_3d` (si se pasa,
     se borran los PNG/JSON más viejos primero). Con ``aplicar=False`` sólo devuelve lo que borraría.
@@ -136,6 +235,8 @@ def podar_temporales(
 
     candidatos = _podar_3d(base / "salida" / "_3d", limite, cuota)
     candidatos += _podar_voz(base, limite)
+    candidatos += _podar_vistas(base, limite)
+    candidatos += _podar_trozos(base, limite)
 
     vistos: list[Path] = []
     for ruta in candidatos:
@@ -154,4 +255,5 @@ def podar_temporales(
             continue
         borrados.append(ruta)
         liberados += tamano
+    _quitar_carpetas_vacias(borrados, base)
     return Poda(archivos=borrados, bytes=liberados)

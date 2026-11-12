@@ -17,7 +17,7 @@
 ./tpi panel                          abre el panel de control en el navegador (solo en este Mac)
 ./tpi icono                          crea el ícono del panel en el Escritorio y te lo muestra en Finder
 ./tpi publicar salida/x/x.mp4        portada + título, descripción y hashtags para publicar
-./tpi podar                          borra cachés temporales viejos (dibujos 3D y audios de voz)
+./tpi podar                          borra cachés temporales viejos (dibujos 3D, voz, vistas previas y trozos de Manim)
 ./tpi vista-previa --tema X          3 cuadros de muestra de un estilo
 """
 
@@ -1243,7 +1243,7 @@ def cmd_podar(args: argparse.Namespace) -> int:
         return 0
     megas = vista.bytes / (1024 * 1024)
     consola.print(f"\n[bold]🧹 {len(vista.archivos)} archivo(s) temporales[/] · {megas:.1f} MB")
-    consola.print("   Son dibujos 3D y audios de voz que se pueden volver a generar.")
+    consola.print("   Son dibujos 3D, audios de voz, borradores de vista previa y trozos de animación: todo se puede volver a generar.")
     if not args.si:
         try:
             respuesta = input("¿Los borro? [s/N] ").strip().lower()
@@ -1653,7 +1653,7 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_publicar)
 
-    s = sub.add_parser("podar", help="borra cachés temporales viejos (dibujos 3D y audios de voz)")
+    s = sub.add_parser("podar", help="borra cachés temporales viejos (dibujos 3D, voz, vistas previas y trozos de Manim)")
     s.add_argument("--dias", type=int, default=7, help="edad mínima para borrar (por defecto 7 días)")
     s.add_argument("--max-mb", type=int, default=500, help="cuota de salida/_3d en MB (por defecto 500)")
     s.add_argument("--si", action="store_true", help="borra sin preguntar")

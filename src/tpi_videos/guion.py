@@ -1729,6 +1729,11 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
         if b.get("visual"):
             lineas.append("  visual:")
             lineas.extend(_visual_yaml(b["visual"], "    "))
+        # El rótulo de la tarjeta del enunciado: solo si no es el de fábrica, para no ensuciar los
+        # guiones de siempre. Sin esto, reescribir el guion lo devolvía a «PROBLEMA».
+        etiqueta = str(b.get("etiqueta") or "").strip()
+        if etiqueta and etiqueta != "PROBLEMA":
+            lineas.append(f"  etiqueta: {_dobles(etiqueta)}")
 
     bloque("gancho", guion["gancho"])
     if guion.get("gancho_variantes"):
