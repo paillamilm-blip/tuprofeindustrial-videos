@@ -102,6 +102,24 @@ jobs:
           print("✅ cuadros de la demostración listos")
           PY
 
+      - name: El dibujo que se mueve se queda a la vista (proyectil)
+        # Antes el proyectil caía y el paso siguiente lo borraba al instante. Cuadros a mitad del vuelo,
+        # al final de la voz y 0,8 s / 1,6 s después: en los dos últimos el tiro tiene que seguir ahí.
+        run: |
+          tpi crear guiones/el_tiro_que_nunca_cae_donde_apuntas.yaml --borrador --voz silencio --salida salida/sostener
+          python - <<'PY'
+          import json, subprocess
+          carpeta = "salida/sostener/el-tiro-que-nunca-cae-donde-apuntas"
+          linea = json.load(open(f"{carpeta}/linea_de_tiempo.json", encoding="utf-8"))
+          video = f"{carpeta}/el-tiro-que-nunca-cae-donde-apuntas_borrador.mp4"
+          b = next(x for x in linea["bloques"] if x["seccion"] == "paso 2")
+          fin = b["inicio"] + b["duracion"]
+          for n, t in enumerate((b["inicio"] + b["duracion"] * 0.5, fin - 0.2, fin + 0.8, fin + 1.6), 1):
+              subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{t:.2f}", "-i", video,
+                              "-frames:v", "1", f"muestras/sostener_{n}.png"], check=True)
+          print("✅ cuadros del proyectil listos; silencio de lectura:", linea.get("silencio_de_lectura"))
+          PY
+
       - name: Guardar los cuadros de muestra de la familia
         if: always()
         uses: actions/upload-artifact@v4
