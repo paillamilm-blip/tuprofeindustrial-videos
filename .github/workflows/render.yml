@@ -59,12 +59,12 @@ jobs:
           echo "✅ El render completo (LaTeX → Manim → subtítulos → volumen) sigue funcionando."
 
       - name: Familia Consola neón (un borrador por variante)
-        # El render de arriba ya cubre «Paso a paso» (guion sin molde). Acá van las otras cuatro, con
-        # guiones reales del repo: Error (tres errores, con el contador ✗), Mito (tablero partido),
-        # Dato y Reto. De cada uno se guardan 3 cuadros para mirarlos en la pestaña Actions.
+        # Las cinco variantes con guiones reales del repo: Paso a paso (POV, 8 pasos: prueba el panel),
+        # Error (tres errores, con el contador ✗), Mito (tablero partido), Dato y Reto. De cada uno se
+        # guardan 3 cuadros para mirarlos en la pestaña Actions.
         run: |
           mkdir -p muestras
-          for par in "error:guiones/f_3_mas_1_no_es_10.yaml" "mito:guiones/el_mito_del_doble_descuento.yaml" \
+          for par in "pasos:guiones/calculando_el_iva_de_una_boleta.yaml" "error:guiones/f_3_mas_1_no_es_10.yaml" "mito:guiones/el_mito_del_doble_descuento.yaml" \
                      "dato:guiones/por_que_sen_30_vale_medio.yaml" "reto:guiones/reto_de_apotema_y_centro.yaml"; do
             variante=${par%%:*}; guion=${par#*:}
             tpi crear "$guion" --borrador --voz silencio --salida salida/familia

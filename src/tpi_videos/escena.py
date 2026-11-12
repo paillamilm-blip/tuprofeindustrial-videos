@@ -491,7 +491,10 @@ def gramatica_de(tema, n_pasos: int) -> tuple[VGroup | None, VGroup | None]:
         if tabs is not None and tabs.width > c.ancho_util_de(tema):
             tabs.scale_to_fit_width(c.ancho_util_de(tema))
         panel = (
-            c.panel_persistente(n_pasos, [], paleta, c.ancho_util_de(tema), tema.colores.panel, tema.colores.borde)
+            c.panel_persistente(
+                n_pasos, [], paleta, c.ancho_util_de(tema), tema.colores.panel, tema.colores.borde,
+                alto_max=tema.layout.banda_panel or 1.6,
+            )
             if g.panel else None
         )
         return tabs, panel
@@ -952,8 +955,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self.tabs_gram, self.panel_gram = gramatica_de(self.tema, len(self.guion.pasos))
         self.cerrados_gram: list[str] = []
         if self.tabs_gram is not None:
-            if self.tabs_gram.height > 0.32:
-                self.tabs_gram.scale_to_fit_height(0.32)
+            # 0,44 de 16: se leen en el celular y no tocan la cabecera (que va en y = 6,55)
+            if self.tabs_gram.height > 0.44:
+                self.tabs_gram.scale_to_fit_height(0.44)
             self.tabs_gram.move_to([0, self.alto_cuadro / 2 - 0.12 - self.tabs_gram.height / 2, 0])
             self._fijar_gramatica(self.tabs_gram)
         if self.panel_gram is not None:
@@ -968,6 +972,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             nuevo = c.panel_persistente(
                 len(self.guion.pasos), self.cerrados_gram, self.tema.gramatica.paleta(self.col),
                 c.ancho_util_de(self.tema), self.col.panel, self.col.borde, completados=i,
+                alto_max=self.tema.layout.banda_panel or 1.6,
             )
             self._colocar_panel_gramatica(nuevo)
             animaciones.append(Transform(self.panel_gram, nuevo))

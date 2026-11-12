@@ -42,6 +42,21 @@ class PanelPersistenteTest(unittest.TestCase):
         self.assertEqual(panel[1][0].get_color().to_hex(), "#A78BFA")
         self.assertEqual(panel[1][1][1].get_fill_color().to_hex(), "#A78BFA")
 
+    def test_con_alto_maximo_el_panel_nunca_crece_ni_se_achica(self):
+        """Antes, cada fórmula cerrada lo hacía más alto y la escena lo achicaba entero: ilegible."""
+        tope = 1.6
+        paneles = [
+            c.panel_persistente(4, cerrados, ["#FFC72C"], 6.0, "#141A24", "#2A3444", alto_max=tope)
+            for cerrados in ([], ["x = 1"], ["x = 1", "y = 2"], ["x = 1", "y = 2", "z = 3"])
+        ]
+        for panel in paneles:
+            self.assertLessEqual(panel.height, tope + 1e-6)
+            self.assertAlmostEqual(panel.width, paneles[0].width, places=3)
+        # la recién cerrada es la que se queda cuando no caben todas
+        ultima = paneles[-1][1][2]
+        self.assertGreaterEqual(len(ultima), 1)
+        self.assertIn("z", ultima[-1].tex_string)
+
     def test_barra_crece_con_pasos(self):
         vacio = self._panel([])
         lleno = self._panel(["a", "b"])
