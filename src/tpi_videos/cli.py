@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import platform
+import re
 import subprocess
 import sys
 import time
@@ -150,7 +151,9 @@ def cmd_nuevo(args: argparse.Namespace) -> int:
         )
     plantilla = (PLANTILLAS_DIR / "guion_base.yaml").read_text(encoding="utf-8")
     destino.parent.mkdir(parents=True, exist_ok=True)
-    destino.write_text(plantilla.replace("materia: fisica", f"materia: {args.materia}"), encoding="utf-8")
+    # La línea «materia:» de la plantilla, sea cual sea su valor (un replace fijo fallaba en silencio)
+    texto = re.sub(r"^materia:[^\n]*$", f"materia: {args.materia}", plantilla, count=1, flags=re.MULTILINE)
+    destino.write_text(texto, encoding="utf-8")
     consola.print(f"[green]✅ Creado {_ruta_amigable(destino)}[/]")
     consola.print("Siguiente: edítalo con tu ejercicio y luego:")
     consola.print(f"  ./tpi revisar {_ruta_amigable(destino)}")
