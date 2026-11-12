@@ -15,6 +15,7 @@ from typing import Any
 from .errores import ErrorMotor
 
 MODELO_TTS = "gemini-3.8-flash-tts"
+SEGUNDOS_DE_ESPERA = 45  # por frase: más que esto es que Gemini no está respondiendo
 VOZ_POR_DEFECTO = "Charon"  # «Informative»: la que más suena a profesor explicando
 
 # Las 30 voces de estudio de Gemini y su carácter (docs: Text-to-speech · Voice options).
@@ -86,12 +87,16 @@ def cliente_tts() -> Any:
 
     from .ia import clave_obligatoria
 
+    # Una frase se sintetiza en segundos: si Gemini no responde en 45 s, algo pasa. Con 2 intentos, el
+    # peor caso es ~1,5 min de espera antes del aviso, no los 15 que daban 3 intentos de 5 min.
     reintentos = types.HttpRetryOptions(
-        attempts=3, initial_delay=2.0, max_delay=20.0, http_status_codes=[429, 500, 502, 503, 504]
+        attempts=2, initial_delay=2.0, max_delay=10.0, http_status_codes=[429, 500, 502, 503, 504]
     )
     return genai.Client(
         api_key=clave_obligatoria(),
-        http_options=types.HttpOptions(api_version="v1beta", timeout=5 * 60 * 1000, retry_options=reintentos),
+        http_options=types.HttpOptions(
+            api_version="v1beta", timeout=SEGUNDOS_DE_ESPERA * 1000, retry_options=reintentos
+        ),
     )
 
 
