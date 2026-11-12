@@ -1299,7 +1299,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 .set_stroke(self.col.borde, 2.5)
                 .move_to([0, centro_y, 0])
             )
-            dibujo.mobs.add(caja)
+            # Al fondo del grupo: los dibujos que se mueven se agregan enteros a la escena (self.add de
+            # dibujo.mobs) y una tarjeta al final del grupo se pintaba ENCIMA, tapándolos al 94 %.
+            dibujo.mobs.add_to_back(caja)
             self.add(caja)
         restante = max(self._restante(tr) - 0.5, 1.0)
         if self.receta.partida == "mitades":
