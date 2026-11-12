@@ -365,7 +365,7 @@ una materia, toca **«Pedírselo a la IA»**, o completa todo desde la Terminal:
 | `./tpi crear GUION.yaml --voz es-CL-CatalinaNeural` | Otra voz (ver `./tpi voces`) |
 | `./tpi crear GUION.yaml --voz silencio` | Sin voz y sin internet: para revisar el diseño |
 | `./tpi crear GUION.yaml --sin-subtitulos` | Sin subtítulos quemados |
-| `./tpi podar` | Borra cachés temporales viejos (dibujos 3D y audios de voz) para liberar espacio |
+| `./tpi podar` | Borra cachés temporales viejos (dibujos 3D, voz, borradores de vista previa y trozos de Manim) para liberar espacio |
 | `./tpi cuota` | Muestra cuánto te queda de la cuota gratuita de Gemini |
 | `./tpi publicar VIDEO.mp4` | Kit de publicación: portada + título, descripción y hashtags (`--sin-ia` para la plantilla) |
 | `./tpi subtitular VIDEO.mp4` | Subtítulos estilo CapCut para **cualquier** video (por ejemplo, uno grabado por ti) |

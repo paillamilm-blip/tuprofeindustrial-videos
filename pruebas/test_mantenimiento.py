@@ -145,3 +145,64 @@ class PodaTemporalesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PodaDeVistasYTrozosTest(unittest.TestCase):
+    """El punto 8 de la auditoría: ~1,1 GB en salida/_vistas y los trozos que Manim ya unió."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.raiz = Path(self.tmp.name)
+        self.estilo = self.raiz / "salida" / "_vistas" / "consola_dato"
+        self.borrador = self.estilo / "vista-previa"
+        (self.borrador / "manim").mkdir(parents=True)
+        self.guardados = [self.estilo / n for n in ("1_gancho.png", "2_paso.png", "3_resultado.png", "huella.txt")]
+        self.del_borrador = [self.borrador / "vista-previa_borrador.mp4", self.borrador / "manim" / "animacion.mp4"]
+        for ruta in self.guardados + self.del_borrador:
+            ruta.write_bytes(b"x")
+            _viejo(ruta)
+        self.video = self.raiz / "salida" / "mi-video"
+        self.trozos = self.video / "manim" / "videos" / "1080p30" / "partial_movie_files" / "VideoEjercicio"
+        self.trozos.mkdir(parents=True)
+        self.trozo = self.trozos / "trozo_0001.mp4"
+        self.animacion = self.video / "manim" / "videos" / "1080p30" / "animacion.mp4"
+        self.final = self.video / "mi-video.mp4"
+        for ruta in (self.trozo, self.animacion, self.final):
+            ruta.write_bytes(b"x")
+            _viejo(ruta)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_borra_el_borrador_y_los_trozos_pero_no_lo_que_se_usa(self) -> None:
+        poda = podar_temporales(dias=7, raiz=self.raiz)
+        for ruta in self.del_borrador + [self.trozo]:
+            self.assertFalse(ruta.exists(), ruta)
+            self.assertIn(ruta, poda.archivos)
+        for ruta in self.guardados + [self.animacion, self.final]:
+            self.assertTrue(ruta.exists(), ruta)  # la vista previa guardada sigue sirviendo
+        self.assertFalse(self.borrador.exists())  # sin nada adentro, la carpeta también se va
+        self.assertFalse((self.video / "manim" / "videos" / "1080p30" / "partial_movie_files").exists())
+        self.assertTrue(self.estilo.is_dir())
+
+    def test_un_borrador_con_algo_reciente_se_queda_entero(self) -> None:
+        _nuevo(self.del_borrador[1])
+        podar_temporales(dias=7, raiz=self.raiz)
+        for ruta in self.del_borrador:
+            self.assertTrue(ruta.exists(), ruta)
+
+    def test_simular_no_borra_nada(self) -> None:
+        poda = podar_temporales(dias=7, raiz=self.raiz, aplicar=False)
+        self.assertIn(self.trozo, poda.archivos)
+        self.assertTrue(self.trozo.exists())
+        self.assertTrue(self.del_borrador[0].exists())
+
+    def test_nunca_sigue_un_enlace(self) -> None:
+        afuera = Path(self.tmp.name) / "afuera"
+        afuera.mkdir()
+        importante = afuera / "importante.mp4"
+        importante.write_bytes(b"x")
+        _viejo(importante)
+        (self.estilo / "enlace").symlink_to(afuera, target_is_directory=True)
+        podar_temporales(dias=7, raiz=self.raiz)
+        self.assertTrue(importante.exists())

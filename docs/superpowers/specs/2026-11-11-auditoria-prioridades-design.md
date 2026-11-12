@@ -20,6 +20,16 @@ porque el sandbox no tenía PyPI.
 | 7 | 8 copias archivadas en `_promovidos` | Pendiente. **La carpeta no está en el repo**: vive en el Mac del dueño. |
 | 8 | 1,1 GB en `salida/_vistas` dentro de unos 3,7 GB generados | Pendiente. `tpi podar` hoy no toca `_vistas`. |
 
+## Estado al 12-11-2026
+
+- **2 · Etiqueta:** ✅ `a_yaml` escribe `etiqueta` cuando no es «PROBLEMA».
+- **5a · Una sola regla de voz:** ✅ el clip del gancho usa la voz, la velocidad y el tono del guion y de
+  la marca, igual que el video final (rama `fix/gancho-hereda-ajustes`).
+- **5b y 5c:** quedan para después. Son reordenamientos internos que no cambian ningún video.
+- **6 · Grupos de estilos:** reemplazado por la familia Consola neón (`2026-11-12-familia-consola-design.md`).
+- **7 · `_promovidos`:** sigue siendo un paso manual en el Mac.
+- **8 · Poda de `_vistas` y de los trozos de Manim:** ✅ `./tpi podar` los incluye.
+
 ## Objetivo
 
 Cerrar el punto 2 y resolver los puntos 5 a 8 **sin reconstruir nada**. Cada cambio es chico,

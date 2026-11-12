@@ -357,8 +357,8 @@ def crear_clip_gancho(
         proveedor, voz = "silencio", "silencio"
     else:
         proveedor = proveedor or marca.voz.proveedor
-        voz = voz or marca.voz.nombre
-    velocidad = velocidad or marca.voz.velocidad
+        voz = voz or guion.voz or marca.voz.nombre
+    velocidad = velocidad or guion.velocidad or marca.voz.velocidad
     destino = salida or entorno.raiz_proyecto() / "salida" / "ganchos" / slug(guion.titulo) / "gancho.mp4"
     destino.parent.mkdir(parents=True, exist_ok=True)
     if calidad not in CALIDADES:
@@ -371,7 +371,7 @@ def crear_clip_gancho(
     crudo, _ = renderizar_manim(
         guion, marca, estilo, calidad, proveedor, voz, velocidad, destino.parent,
         progreso=por_bloque if progreso else None, solo_gancho=True,
-        piso=0.0,  # el laboratorio compara ganchos seguidos: el silencio del piso ahí estorba
+        piso=0.0, tono=marca.voz.tono,  # el laboratorio compara ganchos seguidos: el silencio del piso ahí estorba
     )  # fmt: skip
     shutil.copyfile(crudo, destino)
     if progreso:
