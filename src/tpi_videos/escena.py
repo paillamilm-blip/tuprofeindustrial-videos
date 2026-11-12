@@ -185,6 +185,10 @@ def plan_de_movimiento(duracion: float, restante: float) -> tuple[float, float, 
 # a la otra, y como además entra, la letra sale del mismo tamaño que en el plano general de siempre.
 ANCHO_CASILLERO = 3.9
 
+# Lo mínimo que el dibujo terminado queda a la vista antes del paso siguiente (s): el proyectil que
+# cae, los cubos llenos o la traza del péndulo se tienen que poder mirar, no solo ver pasar.
+PISO_DIBUJO = 2.0
+
 # Los dibujos que son la prueba de la idea (no su ilustración): se trazan antes que la fórmula del paso.
 DIBUJOS_QUE_DEMUESTRAN = frozenset({"escala"})
 AIRE_CASILLERO = 0.5
@@ -520,6 +524,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self.bloques_voz: list[dict[str, Any]] = []
         # Cuántos segundos esperó el piso de lectura en total: lo que el panel perdona de la promesa.
         self.silencio_de_lectura = 0.0
+        self._dibujo_listo_en: float | None = None  # cuándo quedó completo el dibujo del paso en curso
         self._pendientes: list[Animation] = []  # transiciones para el próximo bloque de voz
         self._total_bloques = len(guion.textos_de_voz(marca.cierre.voz))
         # El molde decide las palabras; la receta de rodaje, cómo se filman esos pasos.
@@ -1316,6 +1321,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             camara = []  # el gancho se mira entero desde el reposo: acá la cámara no se mueve
         if dibujo.vivo is not None and dibujo.duracion:
             self._mover_dibujo(dibujo, dibujo.duracion, restante, camara)
+            self._dibujo_listo_en = self.renderer.time  # desde acá se ve completo (el proyectil ya cayó)
             return dibujo
         # El dibujo termina antes que la voz: lo que queda es el rato que se mira ya completo.
         if dibujo.trazo:
@@ -1331,7 +1337,30 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 *camara,
                 run_time=restante * 0.32,
             )
+        self._dibujo_listo_en = self.renderer.time
         return dibujo
+
+    def _sostener_dibujo(self, tr: Any) -> None:
+        """Deja el dibujo terminado a la vista al menos ``PISO_DIBUJO`` segundos antes de seguir.
+
+        El movimiento llena la voz del paso, así que el cuadro final (el proyectil que cae, los ocho
+        cubos llenos) duraba medio segundo y el paso siguiente lo borraba: «llegó y desapareció».
+        Si la voz ya da ese rato, no se agrega nada; si no, se espera en silencio, como el piso de
+        lectura de las fórmulas (con el piso en 0 el ritmo queda como antes).
+        """
+        listo = getattr(self, "_dibujo_listo_en", None)
+        self._dibujo_listo_en = None
+        if listo is None or self.op.piso_lectura <= 0:
+            return
+        fin = tr.start_t + tr.duration
+        objetivo = listo + PISO_DIBUJO
+        if objetivo <= max(fin, self.renderer.time) + 1 / config.frame_rate:
+            return
+        self.hasta(tr, tr.duration)  # la voz termina primero; el silencio va después
+        espera = objetivo - self.renderer.time
+        if espera > 1 / config.frame_rate:
+            self.silencio_de_lectura += espera
+            self.wait(espera)
 
     def _pasos(self) -> None:
         """La cadena de pasos, como diga la receta de rodaje del molde.
@@ -1388,6 +1417,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     if c.gramatica_activa(self.tema):
                         self.hasta(tr, max(0.0, tr.duration - 0.6))
                         self._cerrar_paso_gramatica(i, paso)
+                    self._sostener_dibujo(tr)
                     continue
 
                 terminos_mapa = [m.termino for m in paso.mapa] if self.tema.gramatica.mapa_color else []
@@ -1605,6 +1635,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 if c.gramatica_activa(self.tema):
                     self.hasta(tr, max(0.0, tr.duration - 0.6))
                     self._cerrar_paso_gramatica(i, paso)
+                self._sostener_dibujo(tr)
 
         self.pila, self.resaltes, self.ultima = pila, resaltes + halos_vivos, ultima
         if self._chip_vivo is not None:
