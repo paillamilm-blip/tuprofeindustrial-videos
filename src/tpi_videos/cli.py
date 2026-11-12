@@ -152,7 +152,7 @@ def cmd_nuevo(args: argparse.Namespace) -> int:
     plantilla = (PLANTILLAS_DIR / "guion_base.yaml").read_text(encoding="utf-8")
     destino.parent.mkdir(parents=True, exist_ok=True)
     # La línea «materia:» de la plantilla, sea cual sea su valor (un replace fijo fallaba en silencio)
-    texto = re.sub(r"^materia:[^\n]*$", f"materia: {args.materia}", plantilla, count=1, flags=re.MULTILINE)
+    texto = re.sub(r"^(materia:\s*)\S+", rf"\g<1>{args.materia}", plantilla, count=1, flags=re.MULTILINE)
     destino.write_text(texto, encoding="utf-8")
     consola.print(f"[green]✅ Creado {_ruta_amigable(destino)}[/]")
     consola.print("Siguiente: edítalo con tu ejercicio y luego:")
