@@ -75,6 +75,8 @@ class Voz(_Base):
     nombre: str = "es-CL-LorenzoNeural"
     velocidad: str = "+5%"
     tono: str = "+0Hz"
+    # Solo con proveedor «gemini»: cómo tiene que sonar, en palabras (vacío = el del motor)
+    estilo: str = ""
 
     _tono = field_validator("tono")(classmethod(lambda cls, v: _validar_tono(v)))
 

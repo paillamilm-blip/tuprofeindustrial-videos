@@ -1,6 +1,8 @@
-# Primer guion «el dibujo demuestra, no decora» (12-11-2026).
-# El mismo tema que ocho_veces_mas_pesado.yaml, para comparar: allá la fórmula va primero y el
-# dibujo acompaña; acá se ve caber 8 cubos ANTES de escribir la regla, y la fórmula sale de contar.
+# «El dibujo demuestra, no decora» · versión 2 (12-11-2026), escrita con las reglas de enseñanza
+# sacadas de los videos de @xcris222: el porqué al inicio, la idea clave con nombre y con imagen
+# antes de la fórmula, pasos numerados en voz alta, qué se hace y para qué, conectores entre pasos,
+# una sola idea (sin desviarse al área) y el cierre con la idea central en palabras.
+# Se compara con ocho_veces_mas_pesado.yaml, que trata el mismo tema con la fórmula primero.
 
 titulo: "Duplica la arista: ¿cuántos cubos caben?"
 materia: matematica
@@ -8,25 +10,25 @@ nivel: "1° medio"
 molde: nadie_te_enseno
 
 gancho:
-  texto: "Duplica la arista de un cubo. ¿Cuántos del original caben adentro?"
-  voz: "Duplica la arista de un cubo. ¿Cuántos del original caben adentro?"
+  texto: "Si duplicas la arista de un cubo, ¿su volumen se duplica?"
+  voz: "Si duplicas la arista de un cubo, ¿su volumen también se duplica?"
   emoji: "🤔"
 
 enunciado:
-  texto: "Un cubo tiene 4 cm de arista. Si hacemos otro con 8 cm de arista, ¿cuántos cubos de 4 cm caben en el grande?"
-  voz: "Un cubo de cuatro centímetros. Hacemos otro de ocho. ¿Cuántos chicos caben en el grande?"
+  texto: "Un cubo tiene 4 cm de arista. Construimos otro con el doble de arista, 8 cm. ¿Cuántas veces más volumen tiene el grande?"
+  voz: "Tenemos un cubo de cuatro centímetros de arista y otro con el doble, ocho centímetros. La pregunta es cuántas veces más volumen tiene el grande."
   destacar: ["4 cm", "8 cm"]
 
 datos:
   - tex: 'a = 4\ \text{cm}'
-    voz: "El chico mide cuatro centímetros de arista."
+    voz: "La arista del cubo chico, que llamamos a, mide cuatro centímetros."
   - tex: '2a = 8\ \text{cm}'
-    voz: "El grande, el doble: ocho."
+    voz: "La del grande es el doble: dos a, ocho centímetros."
 
 pasos:
-  - nota: "Primero, míralo"
+  - nota: "Primero: lo llenamos"
     tex: '2 \cdot 2 \cdot 2 = 8'
-    voz: "Llenemos el grande con cubos chicos. <break time=\"1.5s\"/> Dos de largo, dos de ancho y dos de alto: caben ocho."
+    voz: "Primero, en vez de usar la fórmula, llenemos el cubo grande con cubos chicos. <break time=\"1.5s\"/> Caben dos a lo largo, dos a lo ancho y dos hacia arriba. En total, ocho cubos."
     emoji: "👀"
     visual:
       tipo: escala
@@ -34,33 +36,30 @@ pasos:
       factor: 2
       dimension: 3
       anotar: [contador, razon]
-  - nota: "Y en cada cara"
-    tex: '2 \cdot 2 = 4'
-    voz: "Una cara del grande se llena con cuatro caras del chico. <break time=\"1s\"/> El área crece cuatro veces, no ocho."
-    visual:
-      tipo: escala
-      lado: "4 cm"
-      factor: 2
-      dimension: 2
-      anotar: [contador, razon]
-  - nota: "La regla sale de contar"
-    tex: 'V_2 = (2a)^3 = 2^3 \cdot a^3 = 8\,a^3'
-    voz: "Ese ocho es dos al cubo: por eso la fórmula eleva el dos a la tres."
+  - nota: "Segundo: por qué ocho"
+    tex: 'V = a \cdot a \cdot a = a^3'
+    voz: "Segundo, veamos por qué. El volumen de un cubo es arista por arista por arista, porque se mide en las tres direcciones."
+    mapa:
+      - termino: 'a^3'
+        concepto: "tres direcciones"
+  - nota: "Tercero: duplicamos"
+    tex: '(2a)^3 = 2a \cdot 2a \cdot 2a = 8\,a^3'
+    voz: "Y tercero: si la arista se duplica, el dos aparece en cada una de las tres direcciones. Por eso se multiplica tres veces: dos por dos por dos, que es ocho."
     destacar: ['8\,a^3']
   - nota: "Con los números"
-    tex: 'V_2 = 8 \cdot 64 = 512\ \text{cm}^3'
-    voz: "El chico tiene sesenta y cuatro centímetros cúbicos; el grande, ocho veces eso."
+    tex: 'V_2 = 8 \cdot 4^3 = 8 \cdot 64 = 512\ \text{cm}^3'
+    voz: "Con los números: el chico tiene sesenta y cuatro centímetros cúbicos, así que el grande tiene ocho veces eso."
 
 resultado:
-  tex: 'V_2 = 512\ \text{cm}^3'
-  voz: "Caben ocho cubos: quinientos doce centímetros cúbicos."
+  tex: 'V_2 = 512\ \text{cm}^3 = 8\,V_1'
+  voz: "El cubo grande tiene quinientos doce centímetros cúbicos: ocho veces el volumen del chico, no el doble."
   emoji: "✅"
 
 verificacion:
-  texto: "8 × 8 × 8 = 512, y 512 ÷ 64 = 8. Lo que contaste es lo que da la cuenta."
-  voz: "Ocho por ocho por ocho da quinientos doce, y eso es ocho veces sesenta y cuatro."
+  texto: "Duplicar la arista multiplica el volumen por 8, porque el cubo crece en las tres direcciones a la vez."
+  voz: "La idea es esta: duplicar la arista no duplica el volumen. Lo multiplica por ocho, porque el cubo crece en las tres direcciones a la vez."
 
 reto:
-  texto: "Si triplicas la arista, ¿cuántos cubos del original caben?"
-  voz: "Y si la triplicas, ¿cuántos caben?"
+  texto: "Si triplicas la arista, ¿cuántas veces crece el volumen?"
+  voz: "Y si la triplicas, ¿cuántas veces crece el volumen?"
   emoji: "✍️"

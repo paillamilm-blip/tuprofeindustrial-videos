@@ -118,7 +118,7 @@ class Idea(BaseModel):
     )
     emoji: str = Field(default="", description="1 emoji de la lista permitida (vacío = ninguno)")
     porque: str = Field(description="Una frase: por qué este video funciona en TikTok o Reels")
-    segundos: int = Field(description="Duración aproximada del video, entre 30 y 75 segundos")
+    segundos: int = Field(description="Duración aproximada del video, entre 45 y 100 segundos")
 
     @field_validator("molde", mode="before")
     @classmethod

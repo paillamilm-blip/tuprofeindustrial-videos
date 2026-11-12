@@ -1,7 +1,7 @@
 """Revisión del guion antes de renderizar (``tpi revisar``).
 
 Aplica reglas de guion para video corto (gancho en los primeros segundos, frases cortas, una
-idea por frase, duración ideal 30–75 s, un solo llamado a la acción) y de pedagogía (ejemplo
+idea por frase, duración ideal 45–100 s, un solo llamado a la acción) y de pedagogía (ejemplo
 resuelto paso a paso, unidades en el resultado, práctica de recuperación con un "reto" final).
 """
 
@@ -220,19 +220,20 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
     palabras = sum(len(sin_pausas(t).split()) for _, t in voces)
 
     # Duración total
-    if segundos > 90:
+    # Claro antes que corto: los divulgadores que mejor explican usan 90–115 s sin perder a nadie.
+    if segundos > 120:
         avisos.append(
             Aviso(
                 "advertencia",
                 "duración",
                 f"~{segundos:.0f} s es largo para un video corto; "
-                "lo ideal es 30–75 s. Considera dividirlo en 'Parte 1' y 'Parte 2'.",
+                "lo ideal es 45–100 s. Considera dividirlo en 'Parte 1' y 'Parte 2'.",
             )
         )
-    elif segundos > 75:
+    elif segundos > 100:
         avisos.append(
             Aviso(
-                "sugerencia", "duración", f"~{segundos:.0f} s está bien, pero bajo 75 s suele retener mejor."
+                "sugerencia", "duración", f"~{segundos:.0f} s está bien, pero bajo 100 s suele retener mejor."
             )
         )
     elif segundos < 25:

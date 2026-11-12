@@ -228,6 +228,20 @@ def diagnosticar(probar_red: bool = False) -> list[Chequeo]:
             )
         )
 
+    from .config import cargar_marca
+
+    voz = cargar_marca().voz
+    if voz.proveedor == "gemini":
+        # Con la voz de Gemini, la clave deja de ser opcional: sin ella no hay video con voz.
+        chequeos.append(
+            Chequeo(
+                "Voz de Gemini",
+                "ok" if clave else "falla",
+                f"{voz.nombre} · se oye en el primer video" if clave else "sin clave de Gemini",
+                None if clave else "Guarda tu clave con ./tpi clave, o vuelve a la voz gratis: --voz edge",
+            )
+        )
+
     if probar_red:
         ok, detalle = _probar_voz()
         chequeos.append(
