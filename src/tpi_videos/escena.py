@@ -892,7 +892,10 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         """Pega el sticker en la esquina superior derecha de ``caja``, montado sobre el borde pero
         sin tapar lo que hay adentro (el contenido tiene ~0,35 de margen), y sin salirse de la hoja."""
         sticker.rotate(giro).move_to(caja.get_corner(UR) + RIGHT * 0.15 + UP * 0.22)
-        exceso = sticker.get_right()[0] - (c.ANCHO_UTIL / 2 + 0.35)
+        # Montado en la esquina, no colgando afuera: cuando la cámara se acerca al recuadro, lo que
+        # sobresale de él es lo primero que corta el borde del cuadro.
+        tope = min(c.ANCHO_UTIL / 2 + 0.35, caja.get_right()[0] + 0.1)
+        exceso = sticker.get_right()[0] - tope
         if exceso > 0:
             sticker.shift(LEFT * exceso)
 
@@ -1404,8 +1407,10 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 if mitades:
                     mitad = "arriba" if paso.error else "abajo"
                     y_rotulo, y_linea, alto_max = casilleros[mitad]
-                    if nueva.width > ANCHO_CASILLERO:
-                        nueva.scale_to_fit_width(ANCHO_CASILLERO)
+                    # El emoji va al lado: la fila entera (fórmula + emoji) tiene que caber en el casillero,
+                    # porque la toma de la mitad se cierra a su ancho y cortaría lo que sobre.
+                    if nueva.width > ANCHO_CASILLERO - hueco:
+                        nueva.scale_to_fit_width(ANCHO_CASILLERO - hueco)
                     if nueva.height > alto_max:
                         nueva.scale_to_fit_height(alto_max)
                     nueva.move_to([0, y_linea, 0])
@@ -1660,11 +1665,15 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 self.add(barra)
                 aparecer.append(barra.animate.move_to(caja))
             self._con_pendientes(*[FadeOut(m) for m in salen], *self._tomar_aire(), *aparecer, run_time=0.9)
+            # La cámara entra al resultado, pero nunca tanto como para cortar el recuadro ni su sticker.
+            visible = Group(caja, *([emoji] if emoji is not None else []))
+            entero = (2 * max(abs(visible.get_left()[0]), abs(visible.get_right()[0])) + 2 * HOLGURA_ANCHO)
+            entero = min(1.0, entero / self.ancho_cuadro)
             golpe = self._animaciones_camara(
                 grupo.get_center()[1],
-                escala_del_resultado(self._camara_escala, self.modo_camara),
+                max(entero, escala_del_resultado(self._camara_escala, self.modo_camara)),
                 run_time=0.55,
-                pico=pico_del_golpe(self.paisaje, self.ancho_cuadro, self.modo_camara),
+                pico=max(entero, pico_del_golpe(self.paisaje, self.ancho_cuadro, self.modo_camara)),
             )
             self.play(
                 FadeIn(caja),

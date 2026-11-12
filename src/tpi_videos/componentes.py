@@ -546,25 +546,36 @@ def ecuacion(
     registro = logging.getLogger("manim")
     nivel = registro.level
     try:
+        eq = None
         if aislar:
-            tex = agrupar_argumentos(tex)
+            agrupada = agrupar_argumentos(tex)
             espacio = r"(?:\\[,;:!]|\\quad|\\qquad|\\ |\s)*"
             patrones = [espacio.join(re.escape(ch) for ch in _ESPACIOS_TEX.sub("", agrupar_argumentos(corregir_decimales(t))))
                         for t in sorted(set(aislar), key=len, reverse=True)]
             patron = re.compile("(?P<termino>" + "|".join(patrones) + r")|\\[a-zA-Z]+")
             segmentos: list[str] = []
             desde = 0
-            for match in patron.finditer(tex):
+            for match in patron.finditer(agrupada):
                 if match.group("termino") is None:
                     continue
                 if match.start() > desde:
-                    segmentos.append(tex[desde:match.start()])
+                    segmentos.append(agrupada[desde:match.start()])
                 segmentos.append(match.group())
                 desde = match.end()
-            if desde < len(tex):
-                segmentos.append(tex[desde:])
-            eq = MathTex(*segmentos, arg_separator="", font_size=tam, color=color)
-        elif len(piezas) > 1:
+            if desde < len(agrupada):
+                segmentos.append(agrupada[desde:])
+            # Un término que parte la fórmula a medias (dentro de un \frac, por ejemplo) no compila
+            # por separado: entonces la fórmula sale entera y el mapa de color se salta ese paso,
+            # en vez de botar el video completo.
+            registro.setLevel(logging.CRITICAL)
+            try:
+                eq = MathTex(*segmentos, arg_separator="", font_size=tam, color=color)
+                tex = agrupada
+            except Exception:
+                eq = None
+            finally:
+                registro.setLevel(nivel)
+        if eq is None and len(piezas) > 1:
             registro.setLevel(logging.CRITICAL)  # el primer intento puede fallar sin asustar a nadie
             try:
                 eq = MathTex(*piezas, font_size=tam, color=color)
@@ -572,8 +583,6 @@ def ecuacion(
                 eq = None
             finally:
                 registro.setLevel(nivel)
-        else:
-            eq = None
         if eq is None:
             eq = MathTex(tex, font_size=tam, color=color)
     except Exception as e:

@@ -56,6 +56,11 @@ class DatoIA(BaseModel):
     voz: str = Field(description="El dato dicho en palabras, sin cifras ni símbolos")
 
 
+class MapaIA(BaseModel):
+    termino: str = Field(description="Término copiado EXACTAMENTE del tex del paso, ej. v_0")
+    concepto: str = Field(description="Qué es ese término, de 1 a 3 palabras, ej. velocidad inicial")
+
+
 class PasoIA(BaseModel):
     nota: str = Field(description="Qué se hace en este paso, máximo 5 palabras")
     tex: str = Field(description="Ecuación completa del paso en LaTeX, sin $")
@@ -115,6 +120,13 @@ class PasoIA(BaseModel):
     halo: list[str] = Field(
         default_factory=list,
         description='0 a 2 términos copiados EXACTAMENTE del tex que se siguen con un resplandor, ej. ["x^2"]',
+    )
+    mapa: list[MapaIA] = Field(
+        default_factory=list,
+        description=(
+            "De 0 a 3 términos del tex de este paso, cada uno con su concepto en 1 a 3 palabras: el motor "
+            "los pinta de un color y les pone una etiqueta con una flecha. Vacío en un paso con error = true"
+        ),
     )
     resaltar_cambio: bool = Field(
         default=False,
@@ -455,6 +467,7 @@ EJEMPLO = GuionIA(
             nota="Caída libre",
             tex=r"h = \frac{1}{2} g t^2",
             voz="Como la piedra parte del reposo, usamos la ecuación de caída libre.",
+            mapa=[MapaIA(termino="h", concepto="altura"), MapaIA(termino="g", concepto="gravedad")],
             dibujo="grafico",
             funcion="-4.9t^2 + 20",
             eje_x="tiempo (s)",
@@ -875,6 +888,27 @@ _DIBUJOS = {
 }
 
 
+_ESPACIOS_DEL_TEX = re.compile(r"\\[,;:!]|\\quad|\\qquad|\\ |\s+")
+
+
+def _mapa(p: PasoIA, tex: str) -> list[dict[str, str]]:
+    """El mapa de color del paso, solo con términos que de verdad están en su fórmula.
+
+    Mismo criterio que la validación del guion (sin espacios de LaTeX): un término inventado se
+    descarta acá en vez de tirar el guion entero a otra ronda de corrección.
+    """
+    if p.error or not tex:
+        return []
+    formula = _ESPACIOS_DEL_TEX.sub("", tex)
+    mapa: list[dict[str, str]] = []
+    for m in p.mapa:
+        termino, concepto = limpiar_tex(m.termino), " ".join(m.concepto.split())[:28]
+        limpio = _ESPACIOS_DEL_TEX.sub("", termino)
+        if limpio and concepto and limpio in formula and all(x["termino"] != termino for x in mapa):
+            mapa.append({"termino": termino, "concepto": concepto})
+    return mapa[:3]
+
+
 def _visual(p: PasoIA) -> dict[str, Any] | None:
     """Los campos planos del paso, convertidos en el bloque "visual:" que valida el motor.
 
@@ -1137,6 +1171,8 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
         halo = [h.strip() for h in p.halo if h.strip() and limpiar_tex(h) in tex][:2]
         if halo and tex:
             paso["halo"] = [limpiar_tex(h) for h in halo]
+        if mapa := _mapa(p, tex):
+            paso["mapa"] = mapa
         if p.resaltar_cambio and tex and not p.error:
             paso["resaltar_cambio"] = True
         if (visual := _visual(p)) is not None:
