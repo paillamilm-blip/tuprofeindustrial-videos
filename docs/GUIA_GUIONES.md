@@ -145,8 +145,9 @@ Sin `angulo` el cuerpo está sobre una mesa horizontal.
       resistencias: ['4 Ω', '6 Ω', '12 Ω']   # de 2 a 4, cada una con su unidad
 ```
 
-Las reglas: **mejor uno o dos dibujos por video** (más se confunden en 60 segundos; el motor no lo
-prohíbe), los campos de otro tipo se pueden dejar fuera, y `./tpi revisar` avisa si la función no se
+Las reglas: **el dibujo acompaña cada paso que se puede ver**. Usa el mismo dibujo (mismo `tipo` y mismos números)
+en cada uno y cambia solo lo que muestra (`anotar`, `vista`, `corte`, `despiece`), como en `guiones/el_cubo_partido.yaml`. No mezcles
+tipos distintos en un ejercicio (eso sí confunde en 60 segundos), los campos de otro tipo se pueden dejar fuera, y `./tpi revisar` avisa si la función no se
 entiende o si falta un número. En el panel, el mismo dibujo se arma en cada tarjeta de paso, dentro de
 «Dibujo en el pie de la hoja». Ejemplo con los tres: `guiones/ejemplos/visuales_tres_tipos.yaml`.
 
@@ -181,7 +182,7 @@ uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra 
 | `tanque` | Tanque con llave y fisura | Ingeniería | capacidad, entrada, salida, anotar |
 | `viga` | Viga apoyada | Ingeniería | longitud, carga, repartida, anotar |
 | `cercha` | Cercha | Ingeniería | base, altura, carga, anotar |
-| `bloques` | Lazo de control | Ingeniería | adelante, retro, negativa, anotar |
+| `bloques` | Lazo de control | Ingeniería | adelante, retro, negativa, anotar (malla: escribe GH · lazo_cerrado: escribe T) |
 | `engranaje` | Pareja de engranajes | Ingeniería | dientes_a, dientes_b, rpm, anotar |
 | `mohr` | Círculo de Mohr | Ingeniería | sigma_x, sigma_y, cortante, anotar |
 | `tolva_3d` | Tolva en 3D | Ingeniería | radio, altura, radio_salida, altura_cono, vista, despiece, anotar |

@@ -325,7 +325,7 @@ mismo nivel y `--workers 2` para hacer dos videos a la vez (usa dos núcleos). C
 el botón «Aprobar» de QC).
 
 > 💡 Las ideas usan lo que el motor ya sabe dibujar (los 33 dibujos, incluidas las piezas 3D y las simulaciones).
-> Si el ejercicio se entiende mejor con un dibujo, la idea lo pide sola.
+> Si el ejercicio se entiende mejor con un dibujo, la idea lo pide sola. Y el dibujo **acompaña cada paso**: el mismo dibujo vuelve en cada paso que se puede ver, mostrando lo que dice esa voz (por ejemplo, la lata en 3D: la base, luego el volumen y al final las tapas y el manto separados). Para ver qué guiones tienen pasos sin su dibujo: `python3 scripts/dibujos_que_faltan.py`.
 
 ### Dos públicos: enseñanza media y universidad de ingeniería
 

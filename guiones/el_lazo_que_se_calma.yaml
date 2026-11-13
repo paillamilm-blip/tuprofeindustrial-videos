@@ -22,9 +22,15 @@ datos:
     voz: "La realimentación devuelve medio."
 
 pasos:
+  # El mismo lazo en los tres pasos: cada uno muestra lo que dice su voz (la malla, luego el lazo cerrado).
   - nota: "La malla"
     tex: 'GH = 8 \cdot 0{,}5 = 4'
     voz: "Primero multiplico los dos bloques. La malla vale cuatro."
+    visual:
+      tipo: bloques
+      adelante: '8'
+      retro: '0.5'
+      anotar: ['malla']
   - nota: "El lazo cerrado"
     tex: 'T = \frac{G}{1 + GH} = \frac{8}{1 + 4}'
     voz: "La realimentación negativa resta en el comparador. Por eso el denominador crece."
@@ -33,10 +39,15 @@ pasos:
       tipo: bloques
       adelante: '8'
       retro: '0.5'
-      anotar: ['lazo_cerrado']
+      anotar: ['malla', 'lazo_cerrado']
   - nota: "Resultado"
     tex: 'T = \frac{8}{5} = 1{,}6'
     voz: "Ocho entre cinco. La ganancia baja de ocho a uno coma seis."
+    visual:
+      tipo: bloques
+      adelante: '8'
+      retro: '0.5'
+      anotar: ['lazo_cerrado']
 
 resultado:
   tex: 'T = 1{,}6'

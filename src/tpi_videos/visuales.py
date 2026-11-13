@@ -102,7 +102,7 @@ MARCAS_VIGA = ("reacciones", "momento")
 MARCAS_CERCHA = ("esfuerzo", "angulo")
 
 # Lo que se puede anotar en el taller: el lazo cerrado, la vuelta del eje lento y los esfuerzos.
-MARCAS_BLOQUES = ("lazo_cerrado",)
+MARCAS_BLOQUES = ("malla", "lazo_cerrado")  # malla: G·H, lo que se mira antes de cerrar el lazo
 MARCAS_ENGRANAJE = ("velocidad", "relacion")
 MARCAS_MOHR = ("principales", "cortante")
 

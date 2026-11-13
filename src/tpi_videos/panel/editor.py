@@ -332,7 +332,7 @@ class EditorGuion:
             campos.append((tamano, True))
             ui.label(
                 f"{definicion.nombre} se dibuja en el pie de la hoja mientras suena la voz de este paso. "
-                "Con un dibujo en todo el video basta."
+                "Repite el mismo dibujo en cada paso que se pueda ver y cambia solo lo que muestra."
             ).classes("tpi-ayuda")
             zona = ui.column().classes("w-full items-center")
 

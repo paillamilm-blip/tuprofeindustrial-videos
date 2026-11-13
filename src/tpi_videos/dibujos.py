@@ -2490,6 +2490,17 @@ def bloques(
         np.array([x_sum - 0.10, y_lazo - 0.16, 0.0]),
         16,
     )
+    if "malla" in marcas:
+        # Lo que da la vuelta entera: la ganancia directa por la de vuelta, rotulada sobre la realimentación.
+        _cartela(
+            col,
+            papel,
+            parches,
+            rótulos,
+            f"GH = {_numero_latex(figura.adelante * figura.retro)}",
+            np.array([(x_sum + x_toma) / 2 + ancho * 0.04, y_retro - alto * 0.20, 0.0]),
+            17,
+        )
     if "lazo_cerrado" in marcas:
         _cartela(
             col,

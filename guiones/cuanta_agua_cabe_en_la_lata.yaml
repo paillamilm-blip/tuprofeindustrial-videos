@@ -23,21 +23,38 @@ datos:
     voz: "Y la lata mide cinco centímetros de alto."
 
 pasos:
+  # La misma lata en 3D en los tres pasos: la base vista desde arriba, el volumen en relieve y, al final,
+  # la lata desarmada en tapas y manto para ver el metal que la envuelve.
   - nota: "La base es un círculo"
     tex: 'A_{base} = \pi r^2 \approx 28{,}27\ \text{cm}^2'
     voz: "La base es un círculo: pi por tres al cuadrado da veintiocho coma veintisiete centímetros cuadrados."
+    visual:
+      tipo: solido_3d
+      figura: cilindro
+      radio: '3 cm'
+      altura: '5 cm'
+      vista: piso
   - nota: "El volumen apila la base cinco veces"
     tex: 'V = \pi r^2 h \approx 141{,}37\ \text{cm}^3'
     voz: "El volumen apila esa base cinco veces. Caben ciento cuarenta y un coma treinta y siete centímetros cúbicos."
     visual:
-      tipo: solido
+      tipo: solido_3d
       figura: cilindro
       radio: '3 cm'
       altura: '5 cm'
-      anotar: ['volumen', 'area']
+      vista: axonometrica
+      anotar: ['volumen']
   - nota: "El área envuelve la lata"
     tex: 'A = 2\pi r (r + h) \approx 150{,}8\ \text{cm}^2'
     voz: "Y el metal que la envuelve por fuera mide ciento cincuenta coma ocho centímetros cuadrados."
+    visual:
+      tipo: solido_3d
+      figura: cilindro
+      radio: '3 cm'
+      altura: '5 cm'
+      vista: axonometrica
+      despiece: true
+      anotar: ['area']
 
 resultado:
   tex: 'V \approx 141{,}37\ \text{cm}^3 \approx 141\ \text{ml}'

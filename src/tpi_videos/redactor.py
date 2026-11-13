@@ -118,7 +118,7 @@ class PasoIA(BaseModel):
             '"energia", "optica", "pendulo", "resorte", "escala", "polea", "tanque", "viga", "cercha", '
             '"bloques", '
             '"engranaje", "mohr", "oscilador", "pendulo_doble", "tolva", "tuberia", "eje", "calor" o '
-            '"flujo" (máximo 1 en el guion)'
+            '"flujo". En un ejercicio, el mismo en cada paso que se puede ver; cambia solo anotar o vista'
         ),
     )
     # Álgebra viva: lo que se ilumina en este paso.
@@ -396,7 +396,7 @@ class PasoIA(BaseModel):
             'con "pendulo", "periodo"; con "resorte", "fuerza"; con "escala", "contador" o "razon"; '
             'con "polea", "aceleracion" o "tension"; '
             'con "tanque", "llenado" o "vaciado"; con "viga", "reacciones" o "momento"; '
-            'con "cercha", "esfuerzo" o "angulo"; con "bloques", "lazo_cerrado"; '
+            'con "cercha", "esfuerzo" o "angulo"; con "bloques", "malla" o "lazo_cerrado"; '
             'con "engranaje", "velocidad" o "relacion"; con "mohr", "principales" o "cortante"; '
             'con "oscilador", "regimen", "periodo" o "decaimiento"; '
             'con "pendulo_doble", "energia" o "angulos"; '
