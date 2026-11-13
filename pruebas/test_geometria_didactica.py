@@ -12,9 +12,12 @@ from tempfile import TemporaryDirectory
 from pruebas.datos_didacticos import datos_concepto
 from tpi_videos.config import Marca, cargar_marca
 from tpi_videos.didactica import componer_tema
+from tpi_videos.entorno import latex_disponible
 from tpi_videos.guion import Guion
 from tpi_videos.render import subtitulos_de
 from tpi_videos.temas import Tema, cargar_tema
+
+LATEX = all(latex_disponible())  # macOS/Windows en CI no traen TeX: lo que dibuja fórmulas se salta
 
 try:
     from manim import tempconfig
@@ -61,7 +64,7 @@ def _banda_subtitulos(tema: Tema) -> tuple[float, float]:
     return centro - alto / 2, centro + alto / 2
 
 
-@unittest.skipUnless(escena is not None, "manim no está instalado")
+@unittest.skipUnless(escena is not None and LATEX, "manim o LaTeX no están instalados")
 class VerificacionTrasConclusionTest(unittest.TestCase):
     """La verificación sube la conclusión para hacerse lugar: nunca hasta tapar el título ni los datos."""
 
@@ -93,7 +96,7 @@ class VerificacionTrasConclusionTest(unittest.TestCase):
         self.assertLessEqual(medidas["arriba"], medidas["techo"] + 1e-6)
 
 
-@unittest.skipUnless(escena is not None, "manim no está instalado")
+@unittest.skipUnless(escena is not None and LATEX, "manim o LaTeX no están instalados")
 class GeometriaConclusionTest(unittest.TestCase):
     def _medir(self, tema: Tema, guion: Guion):
         compuesto = componer_tema(tema, guion)
