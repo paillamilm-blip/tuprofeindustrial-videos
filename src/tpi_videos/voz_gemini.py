@@ -20,6 +20,7 @@ SEGUNDOS_DE_ESPERA = 45  # por frase: más que esto es que Gemini no está respo
 # pocos segundos (o una conexión medio cerrada) no lo dispara nunca y el video queda colgado. Con 2
 # intentos de 45 s y sus pausas, 2 minutos sin audio ya es que no va a llegar.
 LIMITE_POR_FRASE = 120.0
+LIMITE_COMPLETO = 300.0  # la voz de un video entero en un solo pedido (voz_completa)
 VOZ_POR_DEFECTO = "Charon"  # «Informative»: la que más suena a profesor explicando
 
 # Las 30 voces de estudio de Gemini y su carácter (docs: Text-to-speech · Voice options).
@@ -106,7 +107,7 @@ def cliente_tts() -> Any:
 
 def sintetizar(
     texto: str, voz: str = VOZ_POR_DEFECTO, estilo: str = ESTILO_POR_DEFECTO,
-    modelo: str = MODELO_TTS, cliente: Any = None,
+    modelo: str = MODELO_TTS, cliente: Any = None, limite: float | None = None,
 ) -> bytes:  # fmt: skip
     """El audio WAV (24 kHz, mono) de ``texto`` dicho por ``voz`` con el tono de ``estilo``."""
     from . import ia
@@ -133,7 +134,7 @@ def sintetizar(
         )
 
     try:
-        respuesta = _con_limite(pedir, LIMITE_POR_FRASE)
+        respuesta = _con_limite(pedir, LIMITE_POR_FRASE if limite is None else limite)
     except ErrorMotor:
         raise
     except Exception as e:

@@ -161,23 +161,72 @@ class GeminiTTSService(SpeechService):
         self.modelo = modelo or MODELO_TTS
         self._cliente = cliente  # se crea recién al primer audio que no está en caché
 
-    def generate_from_text(self, text: str, cache_dir=None, path=None, **kwargs: Any) -> dict[str, Any]:
-        from .voz_gemini import cliente_tts, sintetizar
-
-        cache_dir = cache_dir or self.cache_dir
-        texto = remove_bookmarks(text)
-        input_data = {
+    def _datos(self, texto: str) -> dict[str, Any]:
+        return {
             "input_text": texto,
             "service": "gemini-tts",
             "config": {"voice": self.voz, "style": self.estilo, "model": self.modelo},
         }
-        en_cache = self.get_cached_result(input_data, cache_dir)
-        if en_cache is not None:
-            return en_cache
+
+    def _cliente_listo(self) -> Any:
+        from .voz_gemini import cliente_tts
 
         if self._cliente is None:
             self._cliente = cliente_tts()  # guardar la referencia: si se libera, cierra su conexión
-        audio = sintetizar(texto, self.voz, self.estilo, self.modelo, cliente=self._cliente)
+        return self._cliente
+
+    def precargar(self, textos: list[str], cache_dir=None) -> bool:
+        """Pide TODAS las frases que faltan en un solo pedido y deja cada una en la caché.
+
+        Como lo hace XCris: una llamada por video en vez de una por frase, así una frase que se traba
+        no traba el video. Si el pedido falla o el audio no se puede cortar con seguridad, devuelve
+        False y la escena pide frase por frase, como siempre.
+        """
+        from manim_voiceover.defaults import DEFAULT_VOICEOVER_CACHE_JSON_FILENAME
+        from manim_voiceover.services.cache import append_voiceover_cache_entry
+
+        from .voz_completa import cortar
+        from .voz_gemini import LIMITE_COMPLETO, sintetizar
+
+        cache_dir = cache_dir or self.cache_dir
+        faltan = [
+            t for t in dict.fromkeys(textos) if t and self.get_cached_result(self._datos(t), cache_dir) is None
+        ]
+        if len(faltan) < 2:
+            return False
+        estilo = f"{self.estilo} Lee cada párrafo como una frase aparte, con una pausa clara entre párrafos."
+        try:
+            audio = sintetizar(
+                "\n\n".join(faltan), self.voz, estilo, self.modelo,
+                cliente=self._cliente_listo(), limite=LIMITE_COMPLETO,
+            )  # fmt: skip
+        except ErrorMotor:
+            return False
+        piezas = cortar(audio, faltan)
+        if piezas is None:
+            return False
+        for texto, pieza in zip(faltan, piezas, strict=True):
+            datos = self._guardar(texto, pieza, cache_dir, None)
+            append_voiceover_cache_entry(
+                Path(cache_dir) / DEFAULT_VOICEOVER_CACHE_JSON_FILENAME,
+                {**datos, "final_audio": datos["original_audio"]},
+            )
+        return True
+
+    def generate_from_text(self, text: str, cache_dir=None, path=None, **kwargs: Any) -> dict[str, Any]:
+        from .voz_gemini import sintetizar
+
+        cache_dir = cache_dir or self.cache_dir
+        texto = remove_bookmarks(text)
+        en_cache = self.get_cached_result(self._datos(texto), cache_dir)
+        if en_cache is not None:
+            return en_cache
+        audio = sintetizar(texto, self.voz, self.estilo, self.modelo, cliente=self._cliente_listo())
+        return self._guardar(texto, audio, cache_dir, path, original=text)
+
+    def _guardar(self, texto: str, audio: bytes, cache_dir, path, original: str | None = None) -> dict[str, Any]:
+        input_data = self._datos(texto)
+        text = texto if original is None else original
         audio_path = self.get_audio_basename(input_data) + ".wav" if path is None else path_to_string(path)
         destino = Path(cache_dir) / audio_path
         destino.write_bytes(audio)
@@ -282,6 +331,22 @@ class ServicioConPausas(SpeechService):
             "original_audio": audio_path,
             "word_boundaries": marcas,
         }
+
+
+def _lo_que_pide(voz: str) -> list[str]:
+    """Los textos que la escena le pedirá a la voz de base por este bloque (igual que ServicioConPausas)."""
+    texto = " ".join(voz.split())
+    if tiene_pausas(texto):
+        return [t for t, _ in trozos(remove_bookmarks(texto)) if t]
+    return [remove_bookmarks(texto)]
+
+
+def precargar_voz(servicio: SpeechService, voces: list[str]) -> bool:
+    """La voz de todo el video en un solo pedido, si la voz lo permite (hoy: Gemini). True si lo hizo."""
+    base = getattr(servicio, "base", servicio)
+    if not isinstance(base, GeminiTTSService):
+        return False
+    return base.precargar([t for v in voces if v and v.strip() for t in _lo_que_pide(v)])
 
 
 def crear_servicio(proveedor: str, voz: str, velocidad: str, tono: str = "+0Hz") -> SpeechService:

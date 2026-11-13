@@ -77,7 +77,7 @@ from .guion import Bloque, Guion
 from .pausas import sin_pausas
 from .rodaje import rodaje_de_guion
 from .revision import PISO_LECTURA, espera_de_lectura
-from .voces import RESOLUCION, crear_servicio
+from .voces import RESOLUCION, crear_servicio, precargar_voz
 
 
 def dibuja_el_sticker(elegido: str | None, de_la_marca: bool, tema_emojis: bool) -> bool:
@@ -959,6 +959,13 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         c.usar_estilo(self.tema)
         servicio = crear_servicio(self.op.proveedor, self.op.voz, self.op.velocidad, self.op.tono)
         self.set_speech_service(servicio, create_subcaption=False)
+        # Toda la voz del video en un solo pedido (si la voz lo permite): una frase que se traba ya no
+        # traba el video. Si no se puede, cada bloque la pide como siempre.
+        if self.op.solo_gancho:
+            voces = [self.guion.gancho.voz_final]
+        else:
+            voces = [v for _, v in self.guion.textos_de_voz(self.marca.cierre.voz)]
+        precargar_voz(servicio, voces)
         self.fondo = c.fondo_tema(self.tema)
         self.add(self.fondo)
 
