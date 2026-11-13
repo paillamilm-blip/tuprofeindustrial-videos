@@ -21,6 +21,7 @@ from ...niveles import CARRERA_CORTA, NIVELES, PUBLICOS
 from .. import didactica_ui, qc
 from ..comun import abrir_en_mac, cabecera, confirmar, piel_de_la_pagina, url_medio
 from ..etapas import ACTIVA, ERROR, HECHA, Etapa, avance_total
+from ..herramientas import HERRAMIENTAS, herramienta_de
 from ..revision import AVISO, Chequeo, chequeos
 from ..supervision import (
     COMPLETADOS,
@@ -33,11 +34,6 @@ from ..supervision import (
 )
 from ..tareas import TAREAS
 
-PESTANAS = {
-    "cola": ("Cola de Producción", "dashboard"),
-    "qc": ("Aprobación de Guiones (QC)", "fact_check"),
-    "avanzado": ("Avanzado", "tune"),
-}
 MAXIMO_LISTOS_A_LA_VISTA = 4  # la sala muestra lo reciente; el resto se abre con «Ver los listos»
 
 
@@ -101,6 +97,13 @@ def _consola(clases: str = "") -> ui.card:
 
 def _rotulo(texto: str) -> None:
     ui.label(texto).classes("tpi-rotulo")
+
+
+def _volver_a_la_sala() -> None:
+    """El camino de vuelta a la sala, arriba de las pantallas que salen de ella."""
+    with ui.link(target="/cola").classes("tpi-enlace-cabecera self-start"):
+        ui.icon("arrow_back").classes("text-xl")
+        ui.label("Sala de producción")
 
 
 def _resumen_sala(haciendo: list, espera: list, problemas: list, listos: list) -> str:
@@ -820,6 +823,7 @@ class AprobacionDeGuiones:
 
     def render(self) -> None:
         with ui.column().classes("tpi-sala w-full mx-auto gap-6"):
+            _volver_a_la_sala()
             self.lista()
             self.lectura()
 
@@ -1374,25 +1378,6 @@ class VistaPrevia:
 # ------------------------------------------------------------------------------------------
 
 
-def _plegable(
-    titulo: str, icono: str, subtitulo: str, construir: Callable[[], None], abierto: bool = False
-) -> None:
-    caja = ui.expansion(titulo, icon=icono, caption=subtitulo, value=abierto).classes("tpi-plegable w-full")
-    hecho = {"listo": False}
-
-    def armar() -> None:
-        if hecho["listo"]:
-            return
-        hecho["listo"] = True
-        with caja:
-            with ui.column().classes("tpi-legado w-full gap-6 m-4").style("width: auto"):
-                construir()
-
-    caja.on_value_change(lambda e: armar() if e.value else None)
-    if abierto:
-        armar()
-
-
 def _fabrica_manual(modo: str, guion: str | None) -> None:
     from .crear import PaginaCrear, guion_permitido
     from .fabrica import PaginaFabrica
@@ -1459,39 +1444,71 @@ def _ajustes() -> None:
     ajustes.cuerpo()
 
 
-def avanzado(abrir: str | None = None, modo: str = "uno", guion: str | None = None) -> None:
-    _rotulo("Herramientas manuales · todo queda plegado hasta que lo necesites")
-    _plegable(
-        "Crear a mano",
-        "edit_note",
-        "Un video, lote de 3 o el editor paso a paso; incluye el laboratorio de ganchos",
-        lambda: _fabrica_manual(modo, guion),
-        abierto=abrir == "crear",
-    )
-    _plegable(
-        "Cola detallada por lote",
-        "view_list",
-        "Reanudar, reintentar o descartar un lote a mano",
-        _cola_detallada,
-        abierto=abrir == "cola",
-    )
-    _plegable(
-        "Biblioteca de videos",
-        "video_library",
-        "Todo lo que ya salió, con su kit",
-        _biblioteca,
-        abrir == "videos",
-    )
-    _plegable(
-        "Estilos visuales", "palette", "Plantillas de color, letra y fondo", _estilos, abrir == "estilos"
-    )
-    _plegable(
-        "Ajustes y diagnóstico",
-        "settings",
-        "Clave de Gemini, voz, marca, stickers y el chequeo del entorno (tpi doctor)",
-        _ajustes,
-        abrir == "ajustes",
-    )
+class Herramientas:
+    """«Avanzado» en una sola pantalla: cinco tarjetas y, al tocar una, esa herramienta sola (con su «volver»)."""
+
+    def __init__(self, abrir: str | None = None, modo: str = "uno", guion: str | None = None) -> None:
+        self.actual = herramienta_de(abrir)
+        self.modo, self.guion = modo, guion
+
+    def render(self) -> None:
+        with ui.column().classes("w-full gap-6"):
+            self.pantalla()
+
+    def _abrir(self, clave: str | None) -> None:
+        self.actual = clave
+        self.pantalla.refresh()
+
+    @ui.refreshable_method
+    def pantalla(self) -> None:
+        if self.actual is None:
+            self._tarjetas()
+        else:
+            self._herramienta(self.actual)
+
+    def _tarjetas(self) -> None:
+        with ui.column().classes("tpi-sala w-full mx-auto gap-6"):
+            _volver_a_la_sala()
+            with ui.column().classes("gap-1"):
+                ui.label("Herramientas").classes("tpi-sala-titulo")
+                ui.label("Lo manual, para cuando lo necesites.").classes("tpi-sobrio")
+            with (
+                ui.element("div")
+                .classes("w-full grid gap-4")
+                .style("grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))")
+            ):
+                for clave, (nombre, icono, ayuda) in HERRAMIENTAS.items():
+                    with (
+                        _clic(
+                            ui.column().classes("tpi-herramienta tpi-clic"),
+                            lambda c=clave: self._abrir(c),
+                            ayuda,
+                        )
+                        .props(f'tabindex=0 role=button aria-label="{nombre}. {ayuda}"')
+                        .on("keydown.enter", lambda _e, c=clave: self._abrir(c))
+                    ):
+                        ui.icon(icono).classes("tpi-ambar text-3xl")
+                        ui.label(nombre).classes("text-lg font-semibold")
+                        ui.label(ayuda).classes("tpi-sobrio text-sm")
+
+    def _herramienta(self, clave: str) -> None:
+        nombre = HERRAMIENTAS[clave][0]
+        with ui.row().classes("w-full items-center gap-3"):
+            ui.button(
+                color=None, text="Herramientas", icon="arrow_back", on_click=lambda: self._abrir(None)
+            ).props("flat no-caps").classes("tpi-sobrio")
+            ui.label(nombre).classes("text-xl font-semibold")
+        with ui.column().classes("tpi-legado w-full gap-6"):
+            if clave == "crear":
+                _fabrica_manual(self.modo, self.guion)
+            elif clave == "cola":
+                _cola_detallada()
+            elif clave == "videos":
+                _biblioteca()
+            elif clave == "estilos":
+                _estilos()
+            else:
+                _ajustes()
 
 
 # ------------------------------------------------------------------------------------------
@@ -1502,62 +1519,17 @@ def avanzado(abrir: str | None = None, modo: str = "uno", guion: str | None = No
 def tablero(
     pestana: str = "cola", abrir: str | None = None, modo: str = "uno", guion: str | None = None
 ) -> None:
+    """Las tres pantallas de la sala: producción («/cola»), aprobar guiones («/qc») y herramientas («/avanzado»).
+
+    Cada una es una sola pantalla, sin pestañas; las otras dos quedan a un clic.
+    """
     piel_de_la_pagina()
     cabecera(con_menu=False, al_estudio=True)
-    if pestana == "cola":
-        # La sala de producción: una sola pantalla. Aprobar guiones y lo avanzado quedan a un clic.
-        with ui.column().classes("tpi-tablero w-full max-w-7xl mx-auto px-8 py-10 gap-8"):
+    with ui.column().classes("tpi-tablero w-full max-w-7xl mx-auto px-8 py-10 gap-6"):
+        if pestana == "cola":
             ColaDeProduccion(lambda clave: ui.navigate.to(f"/{clave}")).render()
-        return
-    if pestana == "qc":
-        # Aprobar guiones: una sola pantalla, un guion a la vez. Volver a la sala queda a un clic.
-        with ui.column().classes("tpi-tablero w-full max-w-7xl mx-auto px-8 py-10 gap-6"):
-            with ui.link(target="/cola").classes("tpi-enlace-cabecera self-start"):
-                ui.icon("arrow_back").classes("text-xl")
-                ui.label("Sala de producción")
+            return
+        if pestana == "qc":
             AprobacionDeGuiones(lambda: None, abrir=guion).render()
-        return
-    with ui.column().classes("tpi-tablero w-full max-w-7xl mx-auto px-8 py-10 gap-8"):
-        pestanas = ui.tabs(value=pestana).props("align=left no-caps inline-label").classes("tpi-pestanas")
-        with pestanas:
-            for clave, (nombre, icono) in PESTANAS.items():
-                ui.tab(clave, label=nombre, icon=icono)
-        paneles = (
-            ui.tab_panels(pestanas, value=pestana)
-            .props("animated keep-alive")
-            .classes("w-full bg-transparent")
-        )
-        construidos: set[str] = set()
-        cajas: dict[str, ui.column] = {}
-
-        def ir_a(clave: str) -> None:
-            pestanas.set_value(clave)
-
-        def refrescar_cola() -> None:
-            if "cola" in construidos:
-                cola_vista.firma = ()
-
-        cola_vista = ColaDeProduccion(ir_a)
-        qc_vista = AprobacionDeGuiones(refrescar_cola, abrir=guion if pestana == "qc" else None)
-
-        def construir(clave: str) -> None:
-            if clave in construidos:
-                if clave == "qc":
-                    qc_vista.lista.refresh()
-                    qc_vista.lectura.refresh()
-                return
-            construidos.add(clave)
-            with cajas[clave]:
-                if clave == "cola":
-                    cola_vista.render()
-                elif clave == "qc":
-                    qc_vista.render()
-                else:
-                    avanzado(abrir, modo, guion)
-
-        with paneles:
-            for clave in PESTANAS:
-                with ui.tab_panel(clave).classes("p-0 pt-2"):
-                    cajas[clave] = ui.column().classes("w-full gap-8")
-        pestanas.on_value_change(lambda e: construir(e.value))
-        construir(pestana)
+        else:
+            Herramientas(abrir, modo, guion).render()

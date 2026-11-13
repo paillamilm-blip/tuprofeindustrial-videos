@@ -80,9 +80,6 @@ body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
   color: {PIEL["tinta"]}; border-radius: 16px; padding: 24px;
 }}
 .tpi-cabecera {{ background: {PIEL["sala"]}; border-bottom: 1px solid {PIEL["linea_sala"]}; }}
-.tpi-pestanas .q-tab {{ color: {PIEL["tenue_sala"]}; text-transform: none; font-size: .95rem; padding: 0 20px; }}
-.tpi-pestanas .q-tab--active {{ color: {PIEL["texto_sala"]}; }}
-.tpi-pestanas .q-tab__indicator {{ background: {PIEL["ambar"]}; height: 3px; }}
 .tpi-consola {{ background: {PIEL["consola"]}; border-radius: 16px; box-shadow: none; color: {PIEL["texto_sala"]}; }}
 .tpi-ficha {{ background: {PIEL["consola_alta"]}; border-radius: 12px; color: {PIEL["texto_sala"]}; }}
 .tpi-ficha-activa {{ box-shadow: inset 3px 0 0 {PIEL["ambar"]}; }}
@@ -225,6 +222,11 @@ body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
 .tpi-total {{ font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 1.6rem; line-height: 1;
   color: {PIEL["ambar"]}; white-space: nowrap; }}
 .tpi-sala .q-linear-progress {{ color: {PIEL["ambar"]}; }}
+/* Avanzado: cinco tarjetas, cada una abre su herramienta. */
+.tpi-herramienta {{ background: {PIEL["consola"]}; border-radius: 16px; padding: 24px; min-height: 140px; gap: 8px;
+  cursor: pointer; }}
+.tpi-herramienta.tpi-clic:hover {{ background-color: {PIEL["consola"]}; box-shadow: 0 0 0 1px {PIEL["ambar"]}; }}
+.tpi-herramienta:focus-visible {{ outline: 2px solid {PIEL["ambar"]}; outline-offset: 2px; }}
 /* Aprobar guiones: un guion a la vez, con sus chequeos y la decisión siempre a la vista. */
 .tpi-posicion {{ font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 1rem; min-width: 64px;
   text-align: center; color: {PIEL["texto_sala"]}; }}

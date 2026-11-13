@@ -62,3 +62,14 @@ Botón «Borrar guion» a la izquierda de la barra fija, con confirmación. `qc.
 macOS (`biblioteca.enviar_a_papelera`, el mismo mecanismo que usa «Mis videos»; nunca borra de verdad). Solo guiones
 de `guiones/` (no ejemplos). Uno **aprobado** no se borra: está en la cola de producción; primero se quita su video
 de la Sala. `pruebas/test_borrar_guion.py` lo cubre con una Papelera simulada.
+
+## Avanzado → «Herramientas» (`/avanzado`)
+
+Antes: cinco plegables apilados («todo plegado hasta que lo necesites»). Ahora: **una pantalla con cinco tarjetas**
+(`panel/herramientas.py`): Crear a mano · Cola por lotes · Mis videos · Estilos visuales · Ajustes. Tocas una y esa
+herramienta se abre sola (con «← Herramientas» para volver); nunca hay dos a la vez. Las tarjetas se alcanzan con
+teclado (Tab y Enter). Las rutas antiguas (`/crear`, `/fabrica`, `/videos`, `/motor`, `/estilos`, `/ajustes`) abren
+directo su herramienta (`herramienta_de`). Los tres destinos (`/cola`, `/qc`, `/avanzado`) ya no tienen pestañas.
+
+**Pendiente (a propósito):** por dentro, las herramientas (editor, estilos, ajustes) conservan su piel clara y su
+contenido; rediseñarlas una por una es un paso aparte. `pruebas/test_herramientas.py` cubre las claves y las rutas.
