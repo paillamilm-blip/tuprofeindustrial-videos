@@ -221,6 +221,7 @@ def cmd_crear(args: argparse.Namespace) -> int:
         carpeta_salida=Path(args.salida) if args.salida else None,
         tema=getattr(args, "tema", None),
         piso=getattr(args, "piso_lectura", None),
+        musica=getattr(args, "musica", None),
         progreso=_progreso_json if json_activo else None,
     )
     publicacion, kit_aviso = (
@@ -1512,6 +1513,10 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--tema", help="estilo visual, ej. consola_dato (ver ./tpi temas)")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.add_argument("--kit", action="store_true", help="arma también el kit de publicación (portada y textos)")
+    s.add_argument(
+        "--musica", choices=["suave", "lofi", "sin"],
+        help="música de fondo de este video: suave, lofi (jazz hip hop) o sin; por defecto, la de tu marca",
+    )  # fmt: skip
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_crear)
 

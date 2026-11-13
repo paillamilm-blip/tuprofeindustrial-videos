@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
@@ -86,7 +87,8 @@ class Cama(_Base):
 
     activa: bool = True
     volumen: float = Field(default=0.18, ge=0.0, le=1.0)  # respecto a la voz (1 = igual de fuerte)
-    archivo: str = ""  # un bucle propio (mp3/wav); vacío = el pad libre de derechos que genera el motor
+    archivo: str = ""  # un bucle propio (mp3/wav); vacío = la música libre de derechos que genera el motor
+    estilo: Literal["suave", "lofi"] = "suave"  # la que genera el motor: suave o lofi jazz hip hop
 
 
 class Cierre(_Base):

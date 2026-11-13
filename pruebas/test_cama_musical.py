@@ -201,3 +201,74 @@ class MezclaQueSeApartaTest(unittest.TestCase):
         filtro = cadena[cadena.index("-filter_complex") + 1]
         self.assertIn("sidechaincompress", filtro)
         self.assertIn("asplit", filtro)
+
+
+class MusicaLofiTest(unittest.TestCase):
+    """Lofi jazz hip hop: acordes de jazz, batería con swing y el crujido del vinilo."""
+
+    def _lofi(self, segundos=None):
+        from tpi_videos import musica
+
+        with tempfile.TemporaryDirectory() as carpeta:
+            ruta = musica.bucle_cama(Path(carpeta) / "lofi.wav", segundos, estilo="lofi")
+            with wave.open(str(ruta)) as w:
+                fr = w.getframerate()
+                x = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(float) / 32768
+        return x, fr
+
+    def test_bucle_de_cuatro_compases_a_tempo_lofi(self):
+        from tpi_videos import musica
+
+        x, fr = self._lofi()
+        self.assertAlmostEqual(len(x) / fr, 16 * 60 / musica.PULSO_LOFI, delta=0.05)
+        self.assertGreater(_rms(x), 0.02)
+
+    def test_empalma_sin_salto(self):
+        x, _ = self._lofi()
+        self.assertLess(abs(x[-1] - x[0]), 0.05)
+
+    def test_hay_bombo_y_caja(self):
+        """Graves fuertes en los tiempos 1 y 3 (bombo) y golpes de ruido en 2 y 4 (caja)."""
+        from tpi_videos import musica
+
+        x, fr = self._lofi()
+        tiempo = 60 / musica.PULSO_LOFI
+        graves = np.fft.irfft(np.fft.rfft(x) * (np.fft.rfftfreq(len(x), 1 / fr) < 120), n=len(x))
+
+        def energia(t):
+            i = int(t * fr)
+            return float(np.sqrt(np.mean(graves[i : i + int(0.08 * fr)] ** 2)))
+
+        en_bombo = np.mean([energia(c * 4 * tiempo) for c in range(4)])
+        entre = np.mean([energia(c * 4 * tiempo + 0.5 * tiempo) for c in range(4)])
+        self.assertGreater(en_bombo, 2 * entre)
+
+    def test_suena_distinto_de_la_musica_suave(self):
+        from tpi_videos import musica
+
+        suave = musica.componer(4.0)
+        lofi = musica.componer(4.0, estilo="lofi")
+        self.assertFalse(np.allclose(suave[: len(lofi)], lofi[: len(suave)]))
+
+    def test_estilo_desconocido_avisa(self):
+        from tpi_videos import musica
+        from tpi_videos.errores import ErrorMotor
+
+        with tempfile.TemporaryDirectory() as carpeta, self.assertRaises(ErrorMotor):
+            musica.bucle_cama(Path(carpeta) / "x.wav", estilo="reggaeton")
+
+
+class MusicaEnLaTerminalTest(unittest.TestCase):
+    def test_crear_acepta_musica(self):
+        from tpi_videos import cli
+
+        args = cli.construir_parser().parse_args(["crear", "g.yaml", "--musica", "lofi"])
+        self.assertEqual(args.musica, "lofi")
+        args = cli.construir_parser().parse_args(["crear", "g.yaml"])
+        self.assertIsNone(args.musica)
+
+    def test_marca_trae_estilo_suave_por_defecto(self):
+        from tpi_videos.config import Cama
+
+        self.assertEqual(Cama().estilo, "suave")
+        self.assertEqual(Cama(estilo="lofi").estilo, "lofi")
