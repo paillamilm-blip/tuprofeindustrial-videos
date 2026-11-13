@@ -45,3 +45,13 @@ Antes: lista lateral con vistas previas + seis tarjetas apiladas. Ahora, una sol
 4. Barra fija abajo: **Rechazar o editar** y **Aprobar y enviar a la cola**. Al aprobar pasa solo al siguiente.
 
 Sin hashtags es un aviso (el kit los escribe), no un error. `pruebas/test_revision.py` cubre los chequeos.
+
+## Borrar un video desde la sala
+
+Cada tarjeta lleva un tacho (nunca en un video que está produciéndose: ahí va «Detener»), siempre con confirmación:
+
+- **En espera / con problemas:** «Quitar de la cola» → `cola.descartar_video`. Saca solo ese video; los demás de su
+  lote siguen. Los archivos que ya salieron no se tocan.
+- **Listos:** «Enviar a la Papelera» → `biblioteca.borrar` (Papelera de macOS, recuperable desde Finder) y después
+  `descartar_video`. Fuera de macOS el motor lo explica y no borra nada.
+- El botón no abre el detalle de la tarjeta (`click.stop`). `pruebas/test_descartar_video.py` cubre la cola.

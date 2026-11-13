@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from nicegui import background_tasks, ui
+from nicegui import background_tasks, run, ui
 
 from ... import cola
 from ...errores import ErrorMotor
@@ -537,6 +537,8 @@ class ColaDeProduccion:
                     ui.label(texto).classes("tpi-rojo text-sm" if f.fallo else "tpi-sobrio text-sm")
                 if activo:
                     ui.label(f"{avance_total(f.etapas)} %").classes("tpi-total")
+                else:
+                    self._boton_borrar(lambda: self._quitar(f), "Quitar de la cola")
             if activo:
                 ui.linear_progress(value=avance_total(f.etapas) / 100, show_value=False, color=None).props(
                     "rounded size=4px"
@@ -557,14 +559,15 @@ class ColaDeProduccion:
                 with ui.column().classes("gap-0"):
                     ui.label(f.titulo).classes("font-semibold leading-snug")
                     ui.label(f"Listo · {f.tema}" if f.tema else "Listo").classes("tpi-sobrio text-xs")
-            if f.video is not None:
-                with ui.row().classes("gap-1 no-wrap"):
+            with ui.row().classes("gap-1 no-wrap items-center"):
+                if f.video is not None:
                     ui.button(color=None, text="Ver", icon="play_circle").props("flat dense no-caps").classes(
                         "tpi-verde"
                     ).on("click.stop", lambda _e, v=f.video: _ver(v))
                     ui.button(color=None, text="Carpeta", icon="folder_open").props(
                         "flat dense no-caps"
                     ).classes("tpi-sobrio").on("click.stop", lambda _e, v=f.video: abrir_en_mac(v, True))
+                self._boton_borrar(lambda: self._a_la_papelera(f), "Enviar a la Papelera")
 
     def _lista_de(self, nombre: str, fichas: list[Any]) -> None:
         with (
@@ -674,16 +677,59 @@ class ColaDeProduccion:
         self.firma = ()
 
     def _quitar(self, f: Any) -> None:
+        """Saca ESTE video de la cola (los demás de su lote siguen). Los archivos que ya salieron no se tocan."""
+
         def si() -> None:
             try:
-                cola.descartar_lote(f.lote_id)
+                cola.descartar_video(f.video_id)
             except ErrorMotor as e:
                 ui.notify(e.mensaje, type="warning")
                 return
             ui.notify("Quitado de la cola. Los archivos que ya salieron no se borran.", type="info")
             self.firma = ()
 
-        confirmar(f"¿Quitar «{f.titulo}» (y su lote, «{f.tema}») de la cola?", si, "Sí, quitar")
+        confirmar(f"¿Quitar «{f.titulo}» de la cola?", si, "Sí, quitar")
+
+    def _a_la_papelera(self, f: Any) -> None:
+        """Un video terminado: sus archivos van a la Papelera (se recuperan desde Finder) y sale de la sala."""
+        from .. import biblioteca
+
+        if f.video is None:  # la cola lo recuerda pero los archivos ya no están: solo se quita de la lista
+            self._quitar(f)
+            return
+        carpeta = f.video.parent.resolve()
+        video = next((v for v in biblioteca.videos() if v.carpeta.resolve() == carpeta), None)
+        if video is None:
+            ui.notify("No encuentro los archivos de este video.", type="warning")
+            return
+
+        async def si() -> None:
+            if TAREAS.ocupado():
+                ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
+                return
+            try:
+                await run.io_bound(biblioteca.borrar, video)
+            except ErrorMotor as e:
+                ui.notify(e.mensaje, type="negative")
+                return
+            try:
+                cola.descartar_video(f.video_id)
+            except ErrorMotor:
+                pass  # los archivos ya están en la Papelera; la sala lo saca en cuanto la cola quede libre
+            ui.notify("Video enviado a la Papelera. Puedes recuperarlo desde Finder.", type="positive")
+            self.firma = ()
+
+        confirmar(
+            f"¿Enviar «{f.titulo}» y todos sus archivos a la Papelera? Puedes recuperarlos desde Finder.",
+            si,
+            "Enviar a la Papelera",
+        )
+
+    def _boton_borrar(self, accion: Callable[[], None], ayuda: str) -> None:
+        """El tacho de un video: sin tocar la tarjeta (no abre el detalle) y siempre con confirmación."""
+        ui.button(color=None, icon="delete").props(f'flat round dense aria-label="{ayuda}"').classes(
+            "tpi-borrar tpi-sobrio"
+        ).tooltip(ayuda).on("click.stop", lambda _e: accion())
 
     def _lanzar(self) -> None:
         if TAREAS.ocupado():

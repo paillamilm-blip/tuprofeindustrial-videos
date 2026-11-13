@@ -221,6 +221,7 @@ body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
 .tpi-etapa-activa .tpi-etapa-pct {{ color: {PIEL["ambar"]}; }}
 .tpi-etapa-error .tpi-etapa-pct {{ color: {PIEL["rojo_sala"]}; }}
 .tpi-etapa-espera .tpi-etapa-nombre {{ color: {PIEL["tenue_sala"]}; }}
+.tpi-borrar:hover {{ color: {PIEL["rojo_sala"]}; }}
 .tpi-total {{ font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 1.6rem; line-height: 1;
   color: {PIEL["ambar"]}; white-space: nowrap; }}
 .tpi-sala .q-linear-progress {{ color: {PIEL["ambar"]}; }}
