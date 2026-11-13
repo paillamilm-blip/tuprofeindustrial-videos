@@ -29,6 +29,8 @@ NOMBRES: dict[str, str] = {
 _PISO_DEL_MARCO = {"pizarra": -2.4, "hoja": -3.55}
 _PISO_CON_PANEL = -2.2
 _BANDA_PANEL = 1.6
+# Aire mínimo (unidades de pantalla) entre lo escrito, el subtítulo y el resumen.
+SEPARACION = 0.3
 
 
 @dataclass(frozen=True)
@@ -115,6 +117,13 @@ def es_explicito(guion: Guion) -> bool:
     return guion.recursos is not None and any(getattr(guion.recursos, c) is not None for c in RECURSOS)
 
 
+def decisiones_para_registro(guion: Guion, tema: Tema) -> list[dict[str, Any]] | None:
+    """Las cuatro decisiones para la línea de tiempo; None si el guion no decide nada propio."""
+    if not es_explicito(guion):
+        return None
+    return [d.a_dict() for d in recursos_del_guion(guion, tema)]
+
+
 def componer_tema(tema: Tema, guion: Guion) -> Tema:
     """Una copia del tema con las herramientas de este guion; la apariencia no cambia."""
     copia = tema.model_copy(deep=True)
@@ -125,14 +134,49 @@ def componer_tema(tema: Tema, guion: Guion) -> Tema:
         return copia
     copia.gramatica = copia.gramatica.model_copy(update=finales)
     if finales["panel"] and not tema.gramatica.panel:
-        # Resumen recién encendido: se le reserva su banda y la pila de pasos se detiene antes.
-        y_actual = tema.layout.y_zona_pasos
-        if y_actual is None:
-            y_actual = _PISO_DEL_MARCO[tema.marco]
-        copia.layout = copia.layout.model_copy(
-            update={
-                "banda_panel": tema.layout.banda_panel or _BANDA_PANEL,
-                "y_zona_pasos": max(y_actual, _PISO_CON_PANEL),
-            }
-        )
+        _reservar_resumen(tema, copia)
     return copia
+
+
+def piso_de_lectura(tema: Tema) -> float:
+    """Lo más bajo (en pantalla, de -8 a 8) donde puede terminar lo escrito sin tocar el subtítulo.
+
+    Toma el subtítulo efectivo (el mismo de ``render.subtitulos_de``), de dos líneas, más el aire.
+    """
+    from .render import subtitulos_de
+
+    estilo = subtitulos_de(tema)
+    return 8.0 - estilo.posicion_y * 16.0 + alto_subtitulo(estilo.tamano) / 2 + SEPARACION
+
+
+def alto_subtitulo(tamano: int, lineas: int = 2) -> float:
+    """Alto (unidades del cuadro de 16) de un subtítulo de ``lineas`` líneas con letra ``tamano`` px."""
+    return lineas * 1.25 * tamano / 1920 * 16.0
+
+
+def _reservar_resumen(tema: Tema, copia: Tema) -> None:
+    """Resumen recién encendido: banda para él, subtítulo encima con aire y pasos por encima de ambos.
+
+    ``render.subtitulos_de`` sube el subtítulo una banda entera cuando hay resumen (lo necesitan los
+    estilos con subtítulo bajo). Acá se sube solo lo justo para dejar ``SEPARACION`` sobre el resumen:
+    una hoja con el subtítulo ya alto no pierde zona de trabajo. Solo afecta a esta copia.
+    """
+    banda = tema.layout.banda_panel or _BANDA_PANEL
+    techo_resumen = -8.0 + 0.25 + banda
+    medio = alto_subtitulo(tema.subtitulos.tamano) / 2
+    centro = max(8.0 - tema.subtitulos.posicion_y * 16.0, techo_resumen + SEPARACION + medio)
+    posicion = min(0.9, (8.0 - centro) / 16.0 + banda / 16.0)  # subtitulos_de le restará banda/16
+    centro = 8.0 - (posicion - banda / 16.0) * 16.0
+    techo_subtitulo = centro + medio + SEPARACION
+    y_actual = tema.layout.y_zona_pasos
+    if y_actual is None:
+        y_actual = _PISO_DEL_MARCO[tema.marco]
+    copia.subtitulos = copia.subtitulos.model_copy(update={"posicion_y": round(posicion, 4)})
+    copia.layout = copia.layout.model_copy(
+        update={
+            "banda_panel": banda,
+            "y_zona_pasos": max(y_actual, _PISO_CON_PANEL, techo_subtitulo),
+            # la cámara deja lo escrito por encima del subtítulo (fracción del alto, desde abajo)
+            "banda_subtitulo": max(tema.layout.banda_subtitulo, round((techo_subtitulo + 8.0) / 16.0, 4)),
+        }
+    )

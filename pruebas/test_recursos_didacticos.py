@@ -168,6 +168,25 @@ class ComposicionTest(unittest.TestCase):
         self.assertEqual(compuesto.layout.banda_panel, 1.2)
         self.assertEqual(compuesto.layout.y_zona_pasos, -1.8)
 
+    def test_panel_nuevo_sube_el_subtitulo_solo_lo_justo(self):
+        from tpi_videos.didactica import SEPARACION, alto_subtitulo
+
+        marca = cargar_marca()
+        g = _con_pasos(3, recursos={"panel": True})
+        for tema in (Tema(nombre="Hoja", marco="hoja"), cargar_tema("consola_mito", marca)):
+            with self.subTest(tema=tema.nombre):
+                compuesto = componer_tema(tema, g)
+                efectivo = subtitulos_de(compuesto)
+                centro = 8.0 - efectivo.posicion_y * 16.0
+                medio = alto_subtitulo(efectivo.tamano) / 2
+                techo_resumen = -8.0 + 0.25 + compuesto.layout.banda_panel
+                self.assertGreaterEqual(centro - medio - techo_resumen, SEPARACION - 1e-6)
+                # nunca más arriba de donde estaba sin resumen, salvo lo necesario
+                original = 8.0 - tema.subtitulos.posicion_y * 16.0
+                self.assertAlmostEqual(centro, max(original, techo_resumen + SEPARACION + medio), places=3)
+                self.assertGreaterEqual(compuesto.layout.banda_subtitulo, tema.layout.banda_subtitulo)
+                self.assertGreaterEqual(compuesto.layout.y_zona_pasos, centro + medio + SEPARACION - 1e-6)
+
     def test_composicion_repetida_no_acumula(self):
         g = _con_pasos(3, recursos={"panel": True})
         una = componer_tema(Tema(nombre="T", marco="hoja"), g)

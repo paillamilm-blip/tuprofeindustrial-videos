@@ -1347,7 +1347,8 @@ def errores_latex(guion: Guion) -> list[str]:
     formulas = [("gancho", guion.gancho.tex)] if guion.gancho.tex else []
     formulas += [(f"dato {i}", d.tex) for i, d in enumerate(guion.datos, 1)]
     formulas += [(f"paso {i}", p.tex) for i, p in enumerate(guion.pasos, 1) if p.tex]
-    formulas.append(("resultado", guion.resultado.tex))
+    if guion.resultado.tex.strip():  # una conclusión solo en texto no tiene fórmula que compilar
+        formulas.append(("resultado", guion.resultado.tex))
     problemas = []
     registro = logging.getLogger("manim")
     nivel = registro.level

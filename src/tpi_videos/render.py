@@ -11,6 +11,7 @@ from pathlib import Path
 
 from . import entorno
 from .config import CALIDADES, Marca, cargar_marca
+from .didactica import componer_tema, decisiones_para_registro
 from .errores import ErrorMotor
 from .guion import Guion, cargar_guion, sin_tildes
 from .temas import Tema, cargar_tema, resolver_tema
@@ -127,6 +128,7 @@ def renderizar_manim(
     solo_gancho: bool = False,
     piso: float | None = None,
     tono: str = "+0Hz",
+    didactica: list[dict] | None = None,
 ) -> tuple[Path, dict]:
     entorno.preparar()
     entorno.registrar_fuentes()
@@ -169,6 +171,7 @@ def renderizar_manim(
                 solo_gancho=solo_gancho,
                 piso_lectura=PISO_LECTURA if piso is None else piso,
                 tono=tono,
+                didactica=didactica,
             ),
         )
         escena.render()
@@ -213,7 +216,11 @@ def crear_video(
     guion = cargar_guion(ruta_guion)
     marca = cargar_marca()
     tema_usado = resolver_tema(tema, guion, marca)
-    estilo_video = cargar_tema(tema_usado, marca)
+    # Una sola composición: el tema del estilo + las herramientas de este guion. La usan la escena,
+    # los subtítulos y la recodificación; el tema cargado no se modifica.
+    estilo_base = cargar_tema(tema_usado, marca)
+    estilo_video = componer_tema(estilo_base, guion)
+    didactica = decisiones_para_registro(guion, estilo_base)
     verificar_requisitos(subtitulos)
     avisar("preparando", 0.02, estilo_video.nombre)
 
@@ -241,7 +248,7 @@ def crear_video(
 
     video_manim, linea = renderizar_manim(
         guion, marca, estilo_video, calidad, proveedor, voz, velocidad, carpeta,
-        progreso=por_bloque if progreso else None, piso=piso, tono=tono,
+        progreso=por_bloque if progreso else None, piso=piso, tono=tono, didactica=didactica,
     )  # fmt: skip
     final = carpeta / (f"{nombre}.mp4" if calidad == "final" else f"{nombre}_{calidad}.mp4")
     # Para «Mis videos» del panel (rehacer con otro estilo) y para el kit de publicación
@@ -364,7 +371,8 @@ def crear_clip_gancho(
     import shutil
 
     marca = cargar_marca()
-    estilo = cargar_tema(resolver_tema(None, guion, marca), marca)
+    estilo_base = cargar_tema(resolver_tema(None, guion, marca), marca)
+    estilo = componer_tema(estilo_base, guion)
     verificar_requisitos(subtitulos=False)
     if proveedor == "silencio" or voz == "silencio":
         proveedor, voz = "silencio", "silencio"
@@ -386,6 +394,7 @@ def crear_clip_gancho(
         guion, marca, estilo, calidad, proveedor, voz, velocidad, destino.parent,
         progreso=por_bloque if progreso else None, solo_gancho=True,
         piso=0.0, tono=marca.voz.tono,  # el laboratorio compara ganchos seguidos: el silencio del piso ahí estorba
+        didactica=decisiones_para_registro(guion, estilo_base),
     )  # fmt: skip
     shutil.copyfile(crudo, destino)
     if progreso:
