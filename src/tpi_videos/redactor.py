@@ -27,7 +27,7 @@ from . import ia
 from .emojis import lista_para_ia, normalizar_para_ia, quitar_emojis
 from .entorno import PLANTILLAS_DIR, escribir_atomico, raiz_proyecto
 from .errores import ErrorMotor
-from .guion import Gancho, Guion, a_yaml, cargar_guion, explicar_errores, sin_tildes
+from .guion import Contenido, Gancho, Guion, a_yaml, cargar_guion, explicar_errores, sin_tildes
 from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
 
 RONDAS_DE_CORRECCION = 2
@@ -63,7 +63,10 @@ class MapaIA(BaseModel):
 
 class PasoIA(BaseModel):
     nota: str = Field(description="Qué se hace en este paso, máximo 5 palabras")
-    tex: str = Field(description="Ecuación completa del paso en LaTeX, sin $")
+    tex: str = Field(
+        default="",
+        description="Ecuación completa del paso en LaTeX, sin $; vacía si el paso es una demostración visual sin cálculo",
+    )
     voz: str = Field(description="Por qué se hace este paso, en palabras, sin cifras ni símbolos")
     destacar: list[str] = Field(default_factory=list, description="0 o 1 fragmento copiado del tex")
     emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida (vacío = ninguno)")
@@ -424,8 +427,17 @@ class GanchoAltIA(BaseModel):
 
 
 class GuionIA(BaseModel):
-    es_ejercicio: bool = Field(description="false si no es un ejercicio resoluble")
-    motivo: str = Field(default="", description="Solo si es_ejercicio es false: por qué")
+    es_contenido_educativo: bool = Field(
+        description=(
+            "false si el pedido no es de matemática, física o ingeniería, o no trae lo suficiente para "
+            "explicarlo sin inventar (un dato, mito o error de esas materias SÍ es contenido educativo)"
+        )
+    )
+    motivo: str = Field(default="", description="Solo si es_contenido_educativo es false: por qué")
+    contenido: Contenido | None = Field(
+        default=None,
+        description="Qué enseña: intenciones (dato, mito, error, ejercicio) y objetivo en una frase",
+    )
     # Se piensan ANTES que el resto del guion (por eso van primero): todo lo demás les sirve.
     idea_central: str = Field(
         default="", description="La UNA idea que el estudiante se lleva, en una frase sin fórmulas"
@@ -451,7 +463,13 @@ class GuionIA(BaseModel):
     enunciado_destacar: list[str]
     datos: list[DatoIA]
     pasos: list[PasoIA]
-    resultado_tex: str
+    resultado_tex: str = Field(
+        default="", description="Fórmula final en LaTeX; obligatoria si hay ejercicio, vacía si no la hay"
+    )
+    resultado_texto: str = Field(
+        default="",
+        description="Conclusión en palabras (dato, mito o error), una o dos frases sin fórmulas; vacía si no hace falta",
+    )
     resultado_voz: str
     resultado_emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida")
     resultado_destello: bool = Field(
@@ -474,7 +492,7 @@ class RevisionIA(BaseModel):
 
 
 EJEMPLO = GuionIA(
-    es_ejercicio=True,
+    es_contenido_educativo=True,
     idea_central="El tiempo de caída no depende de la masa: solo de la altura y de la gravedad.",
     confusion_tipica="Creer que lo más pesado cae más rápido, o despejar t olvidando la raíz.",
     titulo="Caída libre: ¿cuánto tarda en caer?",
@@ -552,7 +570,7 @@ EJEMPLO = GuionIA(
 # defecto de cada paso y del resultado, que es donde están los dibujos que se mueven.
 EJEMPLOS_DINAMICOS: dict[str, GuionIA] = {
     "Ingeniería · tolva con despiece": GuionIA(
-        es_ejercicio=True,
+        es_contenido_educativo=True,
         titulo="Balance de masa en la tolva",
         materia="ingenieria",
         nivel="Técnico profesional",
@@ -632,7 +650,7 @@ EJEMPLOS_DINAMICOS: dict[str, GuionIA] = {
         ),
     ),
     "Física · tiro parabólico con la tangente en movimiento": GuionIA(
-        es_ejercicio=True,
+        es_contenido_educativo=True,
         titulo="Tiro parabólico: la altura máxima",
         materia="fisica",
         nivel="3° medio",
@@ -708,7 +726,7 @@ EJEMPLOS_DINAMICOS: dict[str, GuionIA] = {
         ),
     ),
     "Matemática · despeje con halo": GuionIA(
-        es_ejercicio=True,
+        es_contenido_educativo=True,
         titulo="Despejar x al cuadrado sin perder una raíz",
         materia="matematica",
         nivel="1° medio",
@@ -1200,7 +1218,9 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
     pasos = []
     for p in g.pasos:
         tex = limpiar_tex(p.tex)
-        paso: dict[str, Any] = {"nota": _texto(p.nota) or None, "tex": tex, "voz": _texto(p.voz)}
+        paso: dict[str, Any] = {"nota": _texto(p.nota) or None, "voz": _texto(p.voz)}
+        if tex:  # un paso que solo demuestra (sin cálculo) no lleva tex vacío
+            paso["tex"] = tex
         destacar = [d.strip() for d in p.destacar if d.strip() and d.strip() in tex][:1]
         if destacar:
             paso["destacar"] = destacar
@@ -1224,6 +1244,7 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
     gancho |= _emoji(g.gancho_emoji)
     guion: dict[str, Any] = {
         "titulo": _texto(g.titulo),
+        **({"contenido": g.contenido.model_dump()} if g.contenido is not None else {}),
         "materia": g.materia,
         "nivel": _texto(g.nivel) or None,
         "gancho": gancho,
@@ -1235,6 +1256,7 @@ def a_guion(g: GuionIA) -> dict[str, Any]:
         "datos": [{"tex": limpiar_tex(d.tex), "voz": _texto(d.voz)} for d in g.datos],
         "pasos": pasos,
         "resultado": {"tex": limpiar_tex(g.resultado_tex), "voz": _texto(g.resultado_voz)}
+        | ({"texto": _texto(g.resultado_texto)} if _texto(g.resultado_texto) else {})
         | _emoji(g.resultado_emoji)
         | ({"destello": True} if g.resultado_destello else {}),
     }
@@ -1558,6 +1580,7 @@ def redactar(
     gancho_variantes: list[dict[str, Any]] | None = None,
     avisar=lambda mensaje: None,
     carrera: str | None = None,
+    contenido: Contenido | None = None,
 ) -> ResultadoRedaccion:
     from .malla import pista_para_la_ia
     from .niveles import normalizar
@@ -1588,6 +1611,11 @@ def redactar(
     if molde:
         m = MOLDES[molde]
         pistas.append(f"MOLDE «{m.nombre}»: {m.estructura}. {m.pista}")
+    if contenido is not None:
+        pistas.append(
+            f"CONTENIDO ELEGIDO: intenciones {', '.join(contenido.intenciones)}; objetivo: "
+            f"«{contenido.objetivo}». Úsalo tal cual en contenido y escribe el guion para cumplirlo."
+        )
     if gancho_variante:
         texto = str(gancho_variante.get("texto") or "").strip()
         if texto:
@@ -1616,10 +1644,11 @@ def redactar(
     revisado = False
     mejor: tuple[Guion, dict[str, Any], Any, list[str]] | None = None  # el último guion que sí validó
     while True:
-        if not respuesta.es_ejercicio:
+        if not respuesta.es_contenido_educativo:
             raise ErrorMotor(
-                f"Gemini dice que esto no es un ejercicio que pueda resolver: {respuesta.motivo or 'sin motivo'}",
-                ayuda="Revisa el enunciado (¿está completo y se lee bien en la foto?).",
+                "No hay contenido educativo suficiente para redactar un guion: "
+                f"{respuesta.motivo or 'sin motivo'}",
+                ayuda="Revisa el pedido: ¿es de matemática, física o ingeniería y está completo (o se lee bien en la foto)?",
             )
         problemas: list[str] = []
         # Sin variantes de una idea elegida, las alternativas son las que propuso el mismo guionista:
@@ -1633,6 +1662,8 @@ def redactar(
             datos["nivel"] = nivel
         if carrera:
             datos["carrera"] = carrera
+        if contenido is not None:  # lo elegido por la persona manda sobre lo que infiere la IA
+            datos["contenido"] = contenido.model_dump()
         try:
             guion = Guion.model_validate(datos)
         except ValidationError as e:

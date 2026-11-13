@@ -13,7 +13,7 @@ from typing import Any
 from tpi_videos.redactor import EJEMPLOS_DINAMICOS, DatoIA, GuionIA, MetadatosIA, PasoIA
 
 DERIVADA = GuionIA(
-    es_ejercicio=True,
+    es_contenido_educativo=True,
     titulo="La derivada de una cuadrática",
     materia="matematica",
     nivel="4° medio",
@@ -86,7 +86,7 @@ DERIVADA = GuionIA(
 
 
 TUBERIA = GuionIA(
-    es_ejercicio=True,
+    es_contenido_educativo=True,
     titulo="¿Laminar o turbulento en la tubería?",
     materia="ingenieria",
     nivel="Técnico profesional",
@@ -167,6 +167,51 @@ TUBERIA = GuionIA(
 )
 
 
+TANGENTE = GuionIA(
+    es_contenido_educativo=True,
+    contenido={"intenciones": ["dato"], "objetivo": "Distinguir la curva de la recta que representa su pendiente local."},
+    idea_central="La tangente muestra la pendiente de la curva en un punto, no la curva entera.",
+    confusion_tipica="Creer que la recta tangente es la curva o que vale para todos los puntos.",
+    titulo="La tangente no es la curva",
+    materia="matematica",
+    nivel="4° medio",
+    gancho_texto="¿Esta recta es la curva?",
+    gancho_voz="¿Esta recta es la curva?",
+    enunciado_texto="Una tangente describe la pendiente de una curva en un punto.",
+    enunciado_voz="Compara la curva con la recta que la toca en un solo punto.",
+    enunciado_destacar=["en un punto"],
+    datos=[],
+    pasos=[
+        PasoIA(
+            nota="Pendiente local",
+            voz="Mira la recta recorrer la curva. Su inclinación cambia en cada punto: la pendiente es local.",
+            dibujo="grafico",
+            funcion="x^2",
+            rango=[-2, 2],
+            eje_x="x",
+            eje_y="y",
+            movimiento="tangente",
+            desde=-1,
+            hasta=1,
+        ),
+        PasoIA(nota="Fuera del punto", voz="Lejos del punto de contacto, la recta y la curva se separan."),
+    ],
+    resultado_texto="La tangente muestra la pendiente en un punto.",
+    resultado_voz="La recta no reemplaza a la curva. Describe cómo cambia justo en ese punto.",
+    verificacion_texto="",
+    verificacion_voz="",
+    reto_texto="",
+    reto_voz="",
+    supuestos=[],
+    metadatos=MetadatosIA(
+        titulo="¿La tangente es la curva? 🤔",
+        descripcion="La recta tangente describe la pendiente en un punto. ¿Lo sabías?",
+        hashtags=["#tuprofeindustrial", "#matematica", "#derivadas", "#estudiantes", "#sabiasque", "#paes",
+                  "#calculo", "#aprendeentiktok"],
+    ),
+)
+
+
 def _ejemplo(clave: str) -> GuionIA:
     return next(g for titulo, g in EJEMPLOS_DINAMICOS.items() if titulo.startswith(clave))
 
@@ -220,6 +265,8 @@ def respuesta(sistema: str, texto: str) -> str:
         guion = _ejemplo("Ingeniería")
     elif "parab" in bajo or "proyectil" in bajo:
         guion = _ejemplo("Física")
+    elif "tangente" in bajo:
+        guion = TANGENTE
     elif "deriv" in bajo:
         guion = DERIVADA
     else:
