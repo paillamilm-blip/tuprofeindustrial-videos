@@ -173,6 +173,20 @@ def componer_lofi(segundos: float | None = None) -> np.ndarray:
     return salida * 0.5
 
 
+VOLUMEN_PROMEDIO = 0.42  # RMS del bucle: así ``cama.volumen`` significa lo mismo en todos los estilos
+
+
+def _a_volumen_parejo(x: np.ndarray) -> np.ndarray:
+    """Ajusta la música por su volumen PROMEDIO, no por su golpe más fuerte.
+
+    Ajustar por el pico dejaba el lofi casi mudo: el bombo pega mucho más que el resto, así que todo lo
+    demás quedaba bajísimo. Un limitador suave (tanh) redondea los golpes en vez de cortarlos.
+    """
+    rms = float(np.sqrt(np.mean(x**2))) or 1.0
+    y = x * (VOLUMEN_PROMEDIO / rms)
+    return np.tanh(y * 1.2) / 1.2 * 0.98
+
+
 def bucle_cama(destino: Path, segundos: float | None = None, estilo: str = "suave") -> Path:
     """Escribe el WAV mono del bucle; empalma consigo mismo para repetirse sin que se note."""
     from .errores import ErrorMotor
@@ -181,6 +195,7 @@ def bucle_cama(destino: Path, segundos: float | None = None, estilo: str = "suav
         raise ErrorMotor(f"No conozco la música «{estilo}».", ayuda=f"Opciones: {', '.join(ESTILOS)}.")
     destino = Path(destino)
     musica = componer_lofi(segundos) if estilo == "lofi" else componer(segundos or SEGUNDOS_POR_DEFECTO)
+    musica = _a_volumen_parejo(musica)
     destino.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(destino), "wb") as wav:
         wav.setnchannels(1)

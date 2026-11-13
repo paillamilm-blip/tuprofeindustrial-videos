@@ -272,3 +272,43 @@ class MusicaEnLaTerminalTest(unittest.TestCase):
 
         self.assertEqual(Cama().estilo, "suave")
         self.assertEqual(Cama(estilo="lofi").estilo, "lofi")
+
+
+def _audio_de(video: Path) -> np.ndarray:
+    crudo = subprocess.run(
+        [FFMPEG, "-v", "error", "-i", str(video), "-ac", "1", "-ar", "16000", "-f", "s16le", "-"],
+        capture_output=True, check=True,
+    ).stdout  # fmt: skip
+    return np.frombuffer(crudo, np.int16).astype(float) / 32768
+
+
+@unittest.skipUnless(FFMPEG, "ffmpeg no esta instalado")
+class MusicaSeEscuchaTest(unittest.TestCase):
+    """La música se oye: bajo la voz, pero no 36 dB abajo (eso es inaudible)."""
+
+    def _niveles(self, estilo):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            entrada = _video_con_hueco(tmp / "entrada.mp4")
+            cama = musica.bucle_cama(tmp / "cama.wav", estilo=estilo)
+            recodificar(entrada, tmp / "con.mp4", CALIDADES["borrador"], cama=cama, volumen_cama=0.18)
+            recodificar(entrada, tmp / "sin.mp4", CALIDADES["borrador"])
+            con, sin = _audio_de(tmp / "con.mp4"), _audio_de(tmp / "sin.mp4")
+        n = min(len(con), len(sin))
+        con, sin = con[:n], sin[:n]
+        voz = slice(int(0.2 * 16000), int(0.8 * 16000))  # el primer segundo trae voz
+        g = float(con[voz] @ sin[voz] / (sin[voz] @ sin[voz]))
+        resto = con - g * sin
+        nivel_voz = _rms(g * sin[voz])
+        bajo_voz = 20 * np.log10(_rms(resto[voz]) / nivel_voz)
+        en_pausa = 20 * np.log10(_rms(con[int(1.4 * 16000) : int(2.6 * 16000)]) / nivel_voz)
+        return bajo_voz, en_pausa
+
+    def test_se_escucha_bajo_la_voz_y_en_las_pausas(self):
+        for estilo in ("suave", "lofi"):
+            with self.subTest(estilo=estilo):
+                bajo_voz, en_pausa = self._niveles(estilo)
+                self.assertGreater(bajo_voz, -28, f"{estilo}: la música queda {bajo_voz:.1f} dB bajo la voz")
+                self.assertLess(bajo_voz, -10, f"{estilo}: la música tapa la voz ({bajo_voz:.1f} dB)")
+                self.assertGreater(en_pausa, bajo_voz, f"{estilo}: en las pausas la música debe volver a subir")
+                self.assertGreater(en_pausa, -24, f"{estilo}: en las pausas casi no se oye ({en_pausa:.1f} dB)")
