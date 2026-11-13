@@ -541,6 +541,7 @@ class EditorGuion:
             with ui.row().classes("w-full items-start gap-3 no-wrap"):
                 with ui.column().classes("flex-1 gap-0"):
                     self._formula(r, "tex", "Fórmula del resultado", "t \\approx 2,02\\ \\text{s}")
+                    self._texto(r, "texto", "Conclusión en texto (opcional)", "Para un dato, mito o error sin fórmula final")
                 self._emoji(r)
             self._texto(r, "voz", "Lo que se escucha", "La piedra tarda unos dos segundos.", largo=True)
 
