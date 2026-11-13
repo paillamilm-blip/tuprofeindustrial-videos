@@ -173,7 +173,7 @@ def componer_lofi(segundos: float | None = None) -> np.ndarray:
     return salida * 0.5
 
 
-VOLUMEN_PROMEDIO = 0.42  # RMS del bucle: así ``cama.volumen`` significa lo mismo en todos los estilos
+VOLUMEN_PROMEDIO = 0.26  # RMS del bucle: así ``cama.volumen`` significa lo mismo en todos los estilos
 
 
 def _a_volumen_parejo(x: np.ndarray) -> np.ndarray:
