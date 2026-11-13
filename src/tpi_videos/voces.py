@@ -203,6 +203,8 @@ class GeminiTTSService(SpeechService):
         except ErrorMotor:
             return False
         piezas = cortar(audio, faltan)
+        if piezas is None:  # sin silencios claros: dónde empieza cada palabra, según Whisper
+            piezas = self._cortar_con_whisper(audio, faltan, cache_dir)
         if piezas is None:
             return False
         for texto, pieza in zip(faltan, piezas, strict=True):
@@ -212,6 +214,24 @@ class GeminiTTSService(SpeechService):
                 {**datos, "final_audio": datos["original_audio"]},
             )
         return True
+
+    @staticmethod
+    def _cortar_con_whisper(audio: bytes, textos: list[str], cache_dir) -> list[bytes] | None:
+        """El audio completo, cortado según dónde oye Whisper cada palabra; None si no se puede."""
+        import hashlib
+
+        from . import whisper_sync
+        from .voz_completa import cortar_por_palabras
+
+        if not whisper_sync.disponible():
+            return None
+        ruta = Path(cache_dir) / f"voz-completa-{hashlib.sha1(audio).hexdigest()[:12]}.wav"
+        try:
+            ruta.write_bytes(audio)
+            reconocidas = whisper_sync.transcribir(ruta, prompt=" ".join(textos)[:800])
+        except (ErrorMotor, OSError):
+            return None
+        return cortar_por_palabras(audio, textos, reconocidas)
 
     def generate_from_text(self, text: str, cache_dir=None, path=None, **kwargs: Any) -> dict[str, Any]:
         from .voz_gemini import sintetizar
