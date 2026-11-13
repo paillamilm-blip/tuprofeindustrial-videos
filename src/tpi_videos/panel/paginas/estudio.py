@@ -210,6 +210,9 @@ class Estudio:
     async def _escribir(self) -> None:
         if self.escribiendo:
             return
+        # El botón que lanzó esto vive dentro de composer: al refrescarlo se borra, y con él el contexto
+        # de NiceGUI. Se guarda el cliente ANTES, para seguir usando la pantalla después.
+        cliente = ui.context.client
         nivel = None if self.nivel == NIVEL_IA else self.nivel
         try:
             contenido = estudio.contenido_pedido(self.intenciones, self.objetivo)
@@ -239,16 +242,17 @@ class Estudio:
             self.error_idea = e
         finally:
             self.escribiendo = False
-        self.composer.refresh()
-        if hallado.get("guion"):
-            self._cargar(Path(str(hallado["guion"])))
-            pendientes = hallado.get("pendientes") or []
-            if pendientes:
-                ui.notify(
-                    f"La IA dejó {len(pendientes)} observación(es): revísalas antes del video.",
-                    type="warning",
-                )
-            self.revision.refresh()
+        with cliente:
+            self.composer.refresh()
+            if hallado.get("guion"):
+                self._cargar(Path(str(hallado["guion"])))
+                pendientes = hallado.get("pendientes") or []
+                if pendientes:
+                    ui.notify(
+                        f"La IA dejó {len(pendientes)} observación(es): revísalas antes del video.",
+                        type="warning",
+                    )
+                self.revision.refresh()
 
     # ----------------------------------------------------------------------------------
     # ② Revisa el guion
@@ -465,17 +469,19 @@ class Estudio:
     async def _redibujar(self, n: int, dibujo: str) -> None:
         if self.ruta is None or self.ocupado_paso is not None:
             return
+        cliente = ui.context.client  # el botón se borra al refrescar revision (ver _escribir)
         self.ocupado_paso = n
         self.revision.refresh()
-        try:
-            await consultar(estudio.args_redibujar(self.ruta, n, dibujo), segundos=300)
-            self.guion = cargar_guion(self.ruta)
-            ui.notify(f"Paso {n}: dibujo nuevo.", type="positive")
-        except ErrorMotor as e:
-            ui.notify(f"{e.mensaje} {e.ayuda or ''}".strip(), type="negative", multi_line=True)
-        finally:
-            self.ocupado_paso = None
-        self.revision.refresh()
+        with cliente:
+            try:
+                await consultar(estudio.args_redibujar(self.ruta, n, dibujo), segundos=300)
+                self.guion = cargar_guion(self.ruta)
+                ui.notify(f"Paso {n}: dibujo nuevo.", type="positive")
+            except ErrorMotor as e:
+                ui.notify(f"{e.mensaje} {e.ayuda or ''}".strip(), type="negative", multi_line=True)
+            finally:
+                self.ocupado_paso = None
+            self.revision.refresh()
 
     def _editar_paso(self, n: int) -> None:
         if self.guion is None:
