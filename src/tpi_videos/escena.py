@@ -473,6 +473,9 @@ class OpcionesEscena:
     didactica: list[dict] | None = None
 
 
+ALTO_MAX_CONCLUSION = 4.4  # fórmula + párrafo dentro de la caja de la conclusión
+
+
 def _partes_resultado(r: Any, tema: Any) -> tuple[VGroup, RoundedRectangle, Mobject | None, Mobject, VGroup]:
     """Cabeza «CONCLUSIÓN», caja, fórmula (o None) y párrafo de una conclusión con texto.
 
@@ -485,6 +488,10 @@ def _partes_resultado(r: Any, tema: Any) -> tuple[VGroup, RoundedRectangle, Mobj
     tam = c.TAM_CUERPO if eq is not None else c.TAM_CUERPO + 5
     parrafo = c.parrafo(r.texto, tam, SEMIBOLD, col.texto, ancho_max=ancho - 0.3, max_lineas=4)
     cuerpo = VGroup(*([eq] if eq is not None else []), parrafo).arrange(DOWN, buff=0.35)
+    # Alto máximo fijo: la letra mide un poco distinto en Mac, Linux y Windows, y una conclusión
+    # larga no debe depender de eso para caber (la revisión ya sugiere acortarla).
+    if cuerpo.height > ALTO_MAX_CONCLUSION:
+        cuerpo.scale_to_fit_height(ALTO_MAX_CONCLUSION)
     cuerpo.set_z_index(1)
     caja = RoundedRectangle(corner_radius=0.22, width=cuerpo.width + 0.9, height=cuerpo.height + 0.7)
     caja.set_fill(col.acento, 0.12).set_stroke(col.acento, 5)

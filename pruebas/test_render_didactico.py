@@ -76,6 +76,17 @@ class ResultadoTextualTest(unittest.TestCase):
         self.assertLessEqual(objeto.width, 7.0 + 1e-6)
         self.assertLess(objeto.height, 6.0)
 
+    def test_conclusion_muy_larga_tiene_alto_maximo_fijo(self):
+        """No depende de cuánto mida la letra en cada sistema (en el CI de Linux medía más)."""
+        datos = datos_concepto()
+        datos["resultado"]["tex"] = "V_2 = 8\\,V_1"
+        datos["resultado"]["texto"] = " ".join(["La longitud crece una vez y el volumen tres veces."] * 10)
+        g = Guion.model_validate(datos)
+        with tempconfig({"frame_width": 9, "frame_height": 16}):
+            objeto = componente_resultado(g, Tema(nombre="Concepto", marco="hoja"))
+        self.assertLessEqual(objeto[2].height, escena.ALTO_MAX_CONCLUSION + 1e-6)
+        self.assertLess(objeto.height, 6.0)
+
     def test_restablece_el_estilo(self):
         antes = c.estilo_activo()
         with tempconfig({"frame_width": 9, "frame_height": 16}):
