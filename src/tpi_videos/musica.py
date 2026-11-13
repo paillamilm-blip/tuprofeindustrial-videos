@@ -47,8 +47,10 @@ def _sin_agudos(x: np.ndarray, corte: float) -> np.ndarray:
     return np.fft.irfft(espectro, n=len(x))
 
 
-def componer(segundos: float = SEGUNDOS_POR_DEFECTO) -> np.ndarray:
+def componer(segundos: float = SEGUNDOS_POR_DEFECTO, estilo: str = "suave") -> np.ndarray:
     """La base musical del bucle (mono, -1..1)."""
+    if estilo == "lofi":
+        return componer_lofi(segundos)
     n = int(round(segundos * FRECUENCIA))
     salida = np.zeros(n)
     compas = n / len(ACORDES)
@@ -79,10 +81,106 @@ def componer(segundos: float = SEGUNDOS_POR_DEFECTO) -> np.ndarray:
     return salida * 0.5
 
 
-def bucle_cama(destino: Path, segundos: float = SEGUNDOS_POR_DEFECTO) -> Path:
+# ------------------------------------------------------------------------------------------
+# Lofi jazz hip hop: acordes de jazz en piano eléctrico, bajo, batería con swing y vinilo
+# ------------------------------------------------------------------------------------------
+
+PULSO_LOFI = 78  # el tempo típico del lofi: relajado, con cabeceo
+# Dm9 → G13 → Cmaj9 → Am7 (ii–V–I–vi): el giro de jazz que suena a «lofi para estudiar»
+ACORDES_LOFI = ((50, 53, 57, 60, 64), (43, 53, 59, 64), (48, 52, 55, 59, 62), (45, 52, 55, 60))
+CORTE_LOFI = 2800.0  # Hz: el lofi es cálido y apagado, como un casete
+ESTILOS = ("suave", "lofi")
+
+
+def _rhodes(frecuencia: float, segundos: float) -> np.ndarray:
+    """Piano eléctrico: tono redondo, un brillo metálico que se apaga rápido y un leve vaivén."""
+    t = np.arange(int(segundos * FRECUENCIA)) / FRECUENCIA
+    cuerpo = np.sin(2 * np.pi * frecuencia * t) + 0.18 * np.sin(4 * np.pi * frecuencia * t)
+    campana = 0.25 * np.sin(2 * np.pi * frecuencia * 3.5 * t) * np.exp(-t / 0.08)
+    vaiven = 1.0 + 0.12 * np.sin(2 * np.pi * 4.5 * t)
+    envolvente = np.minimum(1.0, t / 0.008) * np.exp(-t / 1.1)
+    return (cuerpo + campana) * vaiven * envolvente
+
+
+def _bombo(segundos: float = 0.45) -> np.ndarray:
+    t = np.arange(int(segundos * FRECUENCIA)) / FRECUENCIA
+    frecuencia = 50 + 70 * np.exp(-t / 0.04)  # el «pum»: el tono cae rápido
+    fase = 2 * np.pi * np.cumsum(frecuencia) / FRECUENCIA
+    return np.sin(fase) * np.exp(-t / 0.13) * np.minimum(1.0, t / 0.002)
+
+
+def _caja(azar: np.random.Generator, segundos: float = 0.25) -> np.ndarray:
+    t = np.arange(int(segundos * FRECUENCIA)) / FRECUENCIA
+    ruido = azar.standard_normal(len(t))
+    ruido = np.convolve(ruido, np.ones(6) / 6, mode="same")  # ruido algo apagado, no un siseo
+    return (0.7 * ruido * np.exp(-t / 0.07) + 0.5 * np.sin(2 * np.pi * 185 * t) * np.exp(-t / 0.05)) * np.minimum(
+        1.0, t / 0.001
+    )
+
+
+def _platillo(azar: np.random.Generator, segundos: float = 0.06) -> np.ndarray:
+    t = np.arange(int(segundos * FRECUENCIA)) / FRECUENCIA
+    ruido = azar.standard_normal(len(t))
+    ruido = ruido - np.convolve(ruido, np.ones(4) / 4, mode="same")  # solo lo agudo
+    return ruido * np.exp(-t / 0.018)
+
+
+def _vinilo(n: int, azar: np.random.Generator) -> np.ndarray:
+    """El crujido del disco: un soplido muy bajo y chasquidos sueltos."""
+    soplido = np.convolve(azar.standard_normal(n), np.ones(40) / 40, mode="same") * 0.15
+    chasquidos = np.zeros(n)
+    for i in azar.integers(0, n, size=max(1, n // FRECUENCIA * 6)):
+        largo = min(60, n - i)
+        chasquidos[i : i + largo] += azar.choice((-1, 1)) * np.exp(-np.arange(largo) / 8) * azar.uniform(0.3, 1.0)
+    return soplido + chasquidos
+
+
+def componer_lofi(segundos: float | None = None) -> np.ndarray:
+    tiempo = 60 / PULSO_LOFI
+    segundos = segundos or 16 * tiempo
+    n = int(round(segundos * FRECUENCIA))
+    azar = np.random.default_rng(7)  # siempre el mismo bucle: el video se rehace igual
+    salida = np.zeros(n)
+    t_compas = segundos / len(ACORDES_LOFI)
+
+    def poner(en_segundos: float, sonido: np.ndarray, volumen: float) -> None:
+        _sumar_circular(salida, int(round(en_segundos * FRECUENCIA)) % n, sonido * volumen)
+
+    swing = tiempo * (2 / 3)  # la segunda corchea llega tarde: eso es el swing
+    for k, acorde in enumerate(ACORDES_LOFI):
+        inicio = k * t_compas
+        # Piano eléctrico: el acorde en el 1 y un golpe corto en el «y» del 2
+        for nota in acorde:
+            poner(inicio, _rhodes(_hz(nota), min(t_compas, 2.8)), 0.13)
+            poner(inicio + tiempo + swing, _rhodes(_hz(nota + 12 if nota < 52 else nota), 0.9), 0.05)
+        # Bajo: la raíz en el 1 y en el «y» del 2
+        raiz = _hz(acorde[0] - 12 if acorde[0] >= 48 else acorde[0])
+        for cuando in (0.0, tiempo + swing):
+            tb = np.arange(int(0.5 * FRECUENCIA)) / FRECUENCIA
+            poner(inicio + cuando, np.sin(2 * np.pi * raiz * tb) * np.exp(-tb / 0.18) * np.minimum(1, tb / 0.01), 0.35)
+        # Batería: bombo en 1 y 3, caja en 2 y 4, platillo en corcheas con swing
+        for golpe in range(4):
+            momento = inicio + golpe * tiempo
+            if golpe in (0, 2):
+                poner(momento, _bombo(), 0.9)
+            else:
+                poner(momento, _caja(azar), 0.35)
+            poner(momento, _platillo(azar), 0.12)
+            poner(momento + swing, _platillo(azar), 0.07)
+    salida += _vinilo(n, azar) * 0.025
+    salida = _sin_agudos(salida, CORTE_LOFI)
+    salida /= np.max(np.abs(salida)) or 1.0
+    return salida * 0.5
+
+
+def bucle_cama(destino: Path, segundos: float | None = None, estilo: str = "suave") -> Path:
     """Escribe el WAV mono del bucle; empalma consigo mismo para repetirse sin que se note."""
+    from .errores import ErrorMotor
+
+    if estilo not in ESTILOS:
+        raise ErrorMotor(f"No conozco la música «{estilo}».", ayuda=f"Opciones: {', '.join(ESTILOS)}.")
     destino = Path(destino)
-    musica = componer(segundos)
+    musica = componer_lofi(segundos) if estilo == "lofi" else componer(segundos or SEGUNDOS_POR_DEFECTO)
     destino.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(destino), "wb") as wav:
         wav.setnchannels(1)

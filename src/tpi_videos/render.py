@@ -201,6 +201,7 @@ def crear_video(
     tema: str | None = None,
     progreso: Progreso | None = None,
     piso: float | None = None,
+    musica: str | None = None,
 ) -> ResultadoVideo:
     """Crea el video. Estilo: ``tema`` o ``tema:`` del guion > el de su categoría > ``tema:`` de marca.yaml."""
     from .postproduccion import duracion, quemar_subtitulos, recodificar
@@ -233,15 +234,17 @@ def crear_video(
     carpeta = (carpeta_salida or entorno.raiz_proyecto() / "salida") / nombre
     carpeta.mkdir(parents=True, exist_ok=True)
     cama = None
-    if marca.cama.activa:
-        if marca.cama.archivo:
+    if musica == "sin":
+        pass  # sin música de fondo en este video
+    elif marca.cama.activa or musica:
+        if marca.cama.archivo and not musica:
             cama = Path(marca.cama.archivo).expanduser()
             if not cama.is_absolute():
                 cama = entorno.raiz_proyecto() / cama
         else:
-            from . import musica
+            from . import musica as musica_
 
-            cama = musica.bucle_cama(carpeta / "cama.wav")
+            cama = musica_.bucle_cama(carpeta / "cama.wav", estilo=musica or marca.cama.estilo)
 
     def por_bloque(actual: int, total: int, seccion: str) -> None:
         avisar("animacion", 0.04 + 0.8 * (actual - 1) / max(total, 1), seccion)
