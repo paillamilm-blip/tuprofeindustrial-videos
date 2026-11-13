@@ -224,6 +224,13 @@ body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
 .tpi-total {{ font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 1.6rem; line-height: 1;
   color: {PIEL["ambar"]}; white-space: nowrap; }}
 .tpi-sala .q-linear-progress {{ color: {PIEL["ambar"]}; }}
+/* Aprobar guiones: un guion a la vez, con sus chequeos y la decisión siempre a la vista. */
+.tpi-posicion {{ font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 1rem; min-width: 64px;
+  text-align: center; color: {PIEL["texto_sala"]}; }}
+.tpi-chequeo {{ padding: 6px 12px; border-radius: 999px; background: {PIEL["consola_alta"]}; font-size: .85rem;
+  color: {PIEL["texto_sala"]}; }}
+.tpi-barra-accion {{ position: sticky; bottom: 0; z-index: 2; padding: 14px 0; background: {PIEL["sala"]};
+  border-top: 1px solid {PIEL["linea_sala"]}; }}
 .tpi-entra {{ animation: tpi-entra .22s cubic-bezier(0.23, 1, 0.32, 1); }}
 @keyframes tpi-entra {{ from {{ opacity: 0; transform: translateY(6px); }} to {{ opacity: 1; transform: none; }} }}
 @media (hover: hover) and (pointer: fine) {{

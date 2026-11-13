@@ -21,6 +21,7 @@ from ...niveles import CARRERA_CORTA, NIVELES, PUBLICOS
 from .. import didactica_ui, qc
 from ..comun import abrir_en_mac, cabecera, confirmar, piel_de_la_pagina, url_medio
 from ..etapas import ACTIVA, ERROR, HECHA, Etapa, avance_total
+from ..revision import AVISO, Chequeo, chequeos
 from ..supervision import (
     COMPLETADOS,
     EN_RENDER,
@@ -114,6 +115,21 @@ def _resumen_sala(haciendo: list, espera: list, problemas: list, listos: list) -
     if listos:
         partes.append(f"{len(listos)} listo" + ("" if len(listos) == 1 else "s"))
     return " · ".join(partes)
+
+
+def _chequeos(marcas: tuple[Chequeo, ...]) -> None:
+    """Las marcas de un guion en una fila: verde si está bien, ámbar si conviene mirarlo, rojo si falla."""
+    iconos = {HECHA: ("check_circle", "tpi-verde"), AVISO: ("error_outline", "tpi-ambar")}
+    with ui.row().classes("w-full gap-2"):
+        for m in marcas:
+            icono, color = iconos.get(m.estado, ("cancel", "tpi-rojo"))
+            with (
+                ui.row()
+                .classes("tpi-chequeo items-center no-wrap gap-2")
+                .props(f'role="img" aria-label="{m.aria}"')
+            ):
+                ui.icon(icono).classes(f"{color} text-lg")
+                ui.label(m.texto)
 
 
 def _etapas(etapas: tuple[Etapa, ...]) -> None:
@@ -750,66 +766,112 @@ class AprobacionDeGuiones:
         self.al_aprobar = al_aprobar
         self.elegido: Path | None = None
         self.todos = False
+        self.abiertos: set[str] = set()  # los plegables que la persona abrió
         # /qc?guion=…: otra pantalla («Mis videos», el editor) manda a elegir el estilo de un guion.
         if abrir and qc.guion_revisable(Path(abrir)):
             self.elegido = Path(abrir).resolve()
             self.todos = qc.estado(self.elegido) != qc.POR_REVISAR
 
     def render(self) -> None:
-        with (
-            ui.element("div")
-            .classes("w-full grid gap-6")
-            .style("grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); align-items: start")
-        ):
-            with ui.column().classes("w-full gap-3"):
-                self.lista()
-            with ui.column().classes("w-full gap-6"):
-                self.lectura()
+        with ui.column().classes("tpi-sala w-full mx-auto gap-6"):
+            self.lista()
+            self.lectura()
 
     @ui.refreshable_method
     def lista(self) -> None:
-        rutas = qc.guiones(incluir_decididos=self.todos)
-        rutas = [r.resolve() for r in rutas]
+        """El encabezado: cuántos hay, cuál toca leer y cómo moverse entre ellos."""
+        rutas = [r.resolve() for r in qc.guiones(incluir_decididos=self.todos)]
         if self.elegido is None or self.elegido not in rutas:
             self.elegido = rutas[0] if rutas else None
-        with ui.row().classes("w-full items-center justify-between"):
-            _rotulo(f"{len(rutas)} {'guiones' if self.todos else 'por revisar'}")
+        with ui.row().classes("w-full items-center justify-between gap-4 flex-wrap"):
+            with ui.column().classes("gap-1"):
+                ui.label("Aprobar guiones").classes("tpi-sala-titulo")
+                if not rutas:
+                    resumen = "Todo al día."
+                elif self.todos:
+                    resumen = f"{len(rutas)} guion" + ("" if len(rutas) == 1 else "es")
+                else:
+                    resumen = "1 por revisar" if len(rutas) == 1 else f"{len(rutas)} por revisar"
+                ui.label(resumen).classes("tpi-sobrio")
             ui.switch("Ver todos", value=self.todos, on_change=self._cambiar_filtro).props(
                 "dense color=amber"
             )
         propios = len(qc.con_estilo_propio())
         if propios:
-            with _clic(
-                ui.row().classes("tpi-ficha w-full p-3 gap-2 no-wrap items-center"),
-                lambda: confirmar(
+            ui.button(
+                color=None,
+                text=f"{propios} con estilo propio · Todos al sugerido",
+                icon="auto_awesome",
+                on_click=lambda: confirmar(
                     f"¿Pasar los {propios} guiones con estilo propio al estilo sugerido para cada uno?",
                     self._todos_al_sugerido,
                     boton="Sí, todos al sugerido",
                 ),
-                "Cada guion queda con el estilo que le sugiere el motor (molde, dibujos, error, materia)",
-            ):
-                ui.icon("auto_awesome").classes("tpi-ambar")
-                ui.label(f"{propios} con estilo propio · Todos al sugerido").classes("tpi-ambar text-sm")
+            ).props("flat no-caps").classes("tpi-ambar self-start").tooltip(
+                "Cada guion queda con el estilo que le sugiere el motor (molde, dibujos, error, materia)"
+            )
         if not rutas:
-            with _clic(_consola(), lambda: ui.navigate.to("/crear"), "Escribir un guion a mano"):
-                ui.label("No hay guiones esperando aprobación.").classes("font-semibold")
-                ui.label("Los que escribe ./tpi redactar aparecen acá solos.").classes("tpi-sobrio text-sm")
-        for ruta in rutas[:40]:
-            estado = qc.estado(ruta)
-            elegida = "tpi-ficha-elegida" if ruta == self.elegido else ""
-            titulo, categoria = _resumen_de(ruta)
-            with (
-                ui.column()
-                .classes(f"tpi-ficha tpi-clic {elegida} w-full p-4 gap-2 cursor-pointer")
-                .on("click", lambda r=ruta: self._elegir(r))
-            ):
-                if categoria:
-                    ui.label(NOMBRES_CATEGORIA[categoria]).classes(f"tpi-insignia tpi-insignia-{categoria}")
-                ui.label(titulo).classes("font-semibold leading-snug")
-                color = {qc.APROBADO: "tpi-verde", qc.RECHAZADO: "tpi-rojo"}.get(estado, "tpi-celeste")
-                ui.label(qc.NOMBRES[estado]).classes(f"{color} text-xs")
-                if estado == qc.POR_REVISAR:
-                    VistaPrevia(ruta).render()
+            self._al_dia()
+            return
+        posicion = rutas.index(self.elegido)
+        with ui.row().classes("w-full items-center justify-between gap-3"):
+            with ui.row().classes("items-center gap-1"):
+                anterior = ui.button(
+                    color=None, icon="chevron_left", on_click=lambda: self._elegir(rutas[posicion - 1])
+                ).props('flat round aria-label="Guion anterior"')
+                anterior.classes("tpi-sobrio")
+                if posicion == 0:
+                    anterior.disable()
+                ui.label(f"{posicion + 1} de {len(rutas)}").classes("tpi-posicion")
+                siguiente = ui.button(
+                    color=None, icon="chevron_right", on_click=lambda: self._elegir(rutas[posicion + 1])
+                ).props('flat round aria-label="Guion siguiente"')
+                siguiente.classes("tpi-sobrio")
+                if posicion == len(rutas) - 1:
+                    siguiente.disable()
+            ui.button(
+                color=None, text="Ver la lista", icon="list", on_click=lambda: self._dialogo_lista(rutas)
+            ).props("flat no-caps").classes("tpi-sobrio")
+
+    def _al_dia(self) -> None:
+        with ui.column().classes("tpi-video items-center gap-3 py-12"):
+            ui.icon("task_alt").classes("tpi-verde text-4xl")
+            ui.label("No hay guiones esperando aprobación").classes("text-lg font-semibold")
+            ui.label("Los que escribe el Estudio o ./tpi redactar aparecen acá solos.").classes("tpi-sobrio")
+            ui.button(
+                color=None,
+                text="Volver a la sala",
+                icon="dashboard",
+                on_click=lambda: ui.navigate.to("/cola"),
+            ).classes("tpi-boton-principal")
+
+    def _dialogo_lista(self, rutas: list[Path]) -> None:
+        with (
+            ui.dialog() as dialogo,
+            ui.card().props("flat").classes("tpi-consola p-8 gap-4 w-[560px] max-w-[95vw]"),
+        ):
+            with ui.row().classes("w-full items-center justify-between"):
+                ui.label("Guiones").classes("text-lg font-semibold")
+                ui.button(color=None, icon="close", on_click=dialogo.close).props(
+                    'flat round aria-label="Cerrar"'
+                ).classes("tpi-sobrio")
+            for ruta in rutas[:40]:
+                estado = qc.estado(ruta)
+                titulo, categoria = _resumen_de(ruta)
+                elegida = " tpi-ficha-elegida" if ruta == self.elegido else ""
+                with _clic(
+                    ui.column().classes(f"tpi-ficha w-full p-4 gap-1{elegida}"),
+                    lambda r=ruta: (dialogo.close(), self._elegir(r)),
+                    "Leer este guion",
+                ):
+                    if categoria:
+                        ui.label(NOMBRES_CATEGORIA[categoria]).classes(
+                            f"tpi-insignia tpi-insignia-{categoria}"
+                        )
+                    ui.label(titulo).classes("font-semibold leading-snug")
+                    color = {qc.APROBADO: "tpi-verde", qc.RECHAZADO: "tpi-rojo"}.get(estado, "tpi-celeste")
+                    ui.label(qc.NOMBRES[estado]).classes(f"{color} text-xs")
+        dialogo.open()
 
     def _todos_al_sugerido(self) -> None:
         cambiados = qc.todos_al_sugerido()
@@ -827,73 +889,65 @@ class AprobacionDeGuiones:
         self.lista.refresh()
         self.lectura.refresh()
 
+    def _caja(self, clave: str, titulo: str, icono: str, subtitulo: str | None = None) -> ui.expansion:
+        """Un plegable que recuerda si estaba abierto: al refrescar la lectura no se vuelve a cerrar."""
+        caja = ui.expansion(titulo, icon=icono, caption=subtitulo, value=clave in self.abiertos).classes(
+            "tpi-plegable w-full"
+        )
+        caja.on_value_change(lambda e, c=clave: self.abiertos.add(c) if e.value else self.abiertos.discard(c))
+        return caja
+
     @ui.refreshable_method
     def lectura(self) -> None:
         if self.elegido is None:
             return
         f = qc.ficha(self.elegido)
-        with _clic(_consola(), lambda: _abrir_editor(f.ruta), "Abrir este guion en el editor"):
-            _rotulo(" · ".join(x for x in (f.materia, f.carrera, f.nivel, qc.NOMBRES[f.estado]) if x))
-            ui.label(f.titulo).classes("text-2xl font-semibold leading-tight")
+        temas = _temas()
+        _, categoria = _resumen_de(f.ruta)
+        marcas = chequeos(
+            error=f.error,
+            voces=len(f.voces),
+            tiene_metadatos=bool(f.metadatos),
+            estilo_disponible=None if f.estilo is None else f.estilo.clave in temas,
+            observaciones=len(f.observaciones),
+        )
+        with ui.column().classes("tpi-video gap-5"):
+            with ui.row().classes("w-full items-start justify-between no-wrap gap-4"):
+                with ui.column().classes("gap-2"):
+                    with ui.row().classes("items-center gap-3"):
+                        if categoria:
+                            ui.label(NOMBRES_CATEGORIA[categoria]).classes(
+                                f"tpi-insignia tpi-insignia-{categoria}"
+                            )
+                        _rotulo(" · ".join(x for x in (f.carrera, f.nivel, qc.NOMBRES[f.estado]) if x))
+                    ui.label(f.titulo).classes("text-2xl font-semibold leading-tight")
+                _clic(
+                    ui.button(color=None, icon="edit").props('flat round aria-label="Abrir en el editor"'),
+                    lambda: _abrir_editor(f.ruta),
+                    "Abrir este guion en el editor",
+                ).classes("tpi-sobrio")
             if f.error:
                 ui.label(f"Este guion no pasa la validación: {f.error}").classes("tpi-rojo text-sm")
             for nota in f.observaciones:
                 ui.label(f"⚠ {nota}").classes("tpi-ambar text-sm")
+            _chequeos(marcas)
+            self._voz(f)
+            if f.estado == qc.POR_REVISAR:
+                VistaPrevia(f.ruta).render()
+            if f.estilo is not None:
+                self._estilo(f)
         if f.estilo is not None:
-            with _consola():
-                didactica_ui.tarjeta_contenido(f.contenido)
-            with _consola():
-                didactica_ui.tarjeta_herramientas(f.ruta, f.recursos, self.lectura.refresh)
-            self._estilo(f)
-        with _consola():
-            _rotulo("Para redes · toca para copiar")
-            if f.metadatos:
-                m = f.metadatos
-                _clic(
-                    ui.label(m["titulo"]).classes("text-lg font-semibold rounded-lg px-2 -mx-2"),
-                    lambda: _copiar(m["titulo"], "Título"),
-                    "Copiar el título",
-                )
-                _clic(
-                    ui.label(m["descripcion"]).classes("tpi-voz rounded-lg px-2 -mx-2"),
-                    lambda: _copiar(m["descripcion"], "Descripción"),
-                    "Copiar la descripción",
-                )
-                with ui.row().classes("gap-2"):
-                    for etiqueta in m["hashtags"]:
-                        _clic(
-                            ui.label(etiqueta).classes("tpi-hashtag rounded-lg px-2"),
-                            lambda e=etiqueta: _copiar(e, "Hashtag"),
-                            "Copiar este hashtag",
-                        )
-                    _clic(
-                        ui.label("copiar todos").classes("tpi-sobrio text-xs rounded-lg px-2"),
-                        lambda: _copiar(" ".join(m["hashtags"]), "Hashtags"),
-                        "Copiar los hashtags juntos",
-                    )
-            else:
-                _clic(
-                    ui.label(
-                        "Este guion no trae título ni hashtags: el kit los escribirá al publicar."
-                    ).classes("tpi-sobrio text-sm rounded-lg px-2 -mx-2"),
-                    lambda: _abrir_editor(f.ruta),
-                    "Abrir el guion para agregarlos",
-                )
-        with _consola():
-            _rotulo("Lo que dice la voz")
-            for voz in f.voces:
-                with _clic(
-                    ui.row().classes("w-full gap-6 no-wrap items-start rounded-lg px-2 py-1 -mx-2"),
-                    lambda v=voz: _copiar(v.texto, "Texto de la voz"),
-                    "Copiar lo que dice esta voz",
-                ):
-                    ui.label(voz.seccion.capitalize()).classes("tpi-sobrio text-xs w-24 shrink-0 pt-1")
-                    with ui.row().classes("gap-1 items-center"):
-                        ui.label(voz.texto).classes("tpi-voz")
-                        for pausa in voz.pausas:
-                            ui.label(f"pausa {pausa:g} s".replace(".", ",")).classes("tpi-pausa")
-        with ui.expansion("Detalles técnicos", icon="code").classes("w-full tpi-plegable").props("dense"):
-            with ui.column().classes("w-full gap-2 p-2"):
+            with self._caja(
+                "ensena", "Qué enseña y herramientas", "school", "Contenido y recursos didácticos"
+            ):
+                with ui.column().classes("w-full gap-4 p-4"):
+                    with _consola():
+                        didactica_ui.tarjeta_contenido(f.contenido)
+                    with _consola():
+                        didactica_ui.tarjeta_herramientas(f.ruta, f.recursos, self.lectura.refresh)
+        self._redes(f)
+        with self._caja("tecnico", "Detalles técnicos", "code"):
+            with ui.column().classes("w-full gap-2 p-4"):
                 for linea in f.tecnico:
                     _clic(
                         ui.label(linea).classes("tpi-sobrio text-sm font-mono rounded-lg px-2"),
@@ -901,15 +955,65 @@ class AprobacionDeGuiones:
                         "Copiar",
                     )
                 ui.code(f.yaml, language="yaml").classes("tpi-codigo w-full text-xs")
-        with ui.row().classes("w-full justify-end gap-4 pt-2"):
+        with ui.row().classes("tpi-barra-accion w-full items-center justify-end gap-4"):
             ui.button(
-                color=None, text="Rechazar / Editar", icon="close", on_click=lambda: self._rechazar(f)
+                color=None, text="Rechazar o editar", icon="close", on_click=lambda: self._rechazar(f)
             ).classes("tpi-rechazar")
             aprobar = ui.button(
-                color=None, text="Aprobar y Enviar a Cola", icon="check", on_click=lambda: self._aprobar(f)
+                color=None, text="Aprobar y enviar a la cola", icon="check", on_click=lambda: self._aprobar(f)
             ).classes("tpi-aprobar")
             if not f.aprobable or f.estado == qc.APROBADO:
                 aprobar.disable()
+
+    def _voz(self, f: qc.Ficha) -> None:
+        _rotulo("Lo que dice la voz · toca una línea para copiarla")
+        for voz in f.voces:
+            with _clic(
+                ui.row().classes("w-full gap-6 no-wrap items-start rounded-lg px-2 py-1 -mx-2"),
+                lambda v=voz: _copiar(v.texto, "Texto de la voz"),
+                "Copiar lo que dice esta voz",
+            ):
+                ui.label(voz.seccion.capitalize()).classes("tpi-sobrio text-xs w-24 shrink-0 pt-1")
+                with ui.row().classes("gap-1 items-center"):
+                    ui.label(voz.texto).classes("tpi-voz")
+                    for pausa in voz.pausas:
+                        ui.label(f"pausa {pausa:g} s".replace(".", ",")).classes("tpi-pausa")
+
+    def _redes(self, f: qc.Ficha) -> None:
+        with self._caja("redes", "Para redes", "share", "Título, descripción y hashtags · toca para copiar"):
+            with ui.column().classes("w-full gap-3 p-4"):
+                if f.metadatos:
+                    m = f.metadatos
+                    _clic(
+                        ui.label(m["titulo"]).classes("text-lg font-semibold rounded-lg px-2 -mx-2"),
+                        lambda: _copiar(m["titulo"], "Título"),
+                        "Copiar el título",
+                    )
+                    _clic(
+                        ui.label(m["descripcion"]).classes("tpi-voz rounded-lg px-2 -mx-2"),
+                        lambda: _copiar(m["descripcion"], "Descripción"),
+                        "Copiar la descripción",
+                    )
+                    with ui.row().classes("gap-2"):
+                        for etiqueta in m["hashtags"]:
+                            _clic(
+                                ui.label(etiqueta).classes("tpi-hashtag rounded-lg px-2"),
+                                lambda e=etiqueta: _copiar(e, "Hashtag"),
+                                "Copiar este hashtag",
+                            )
+                        _clic(
+                            ui.label("copiar todos").classes("tpi-sobrio text-xs rounded-lg px-2"),
+                            lambda: _copiar(" ".join(m["hashtags"]), "Hashtags"),
+                            "Copiar los hashtags juntos",
+                        )
+                else:
+                    _clic(
+                        ui.label(
+                            "Este guion no trae título ni hashtags: el kit los escribirá al publicar."
+                        ).classes("tpi-sobrio text-sm rounded-lg px-2 -mx-2"),
+                        lambda: _abrir_editor(f.ruta),
+                        "Abrir el guion para agregarlos",
+                    )
 
     # ── El estilo del video: el único lugar del panel donde se elige ───────────────────────
 
@@ -917,25 +1021,23 @@ class AprobacionDeGuiones:
         estilo, sugerido = f.estilo, f.sugerido
         temas = _temas()
         elegido = estilo.origen == "guion"
-        with _clic(_consola(), lambda: self._dialogo_estilo(f), "Elegir otro estilo para este video"):
-            with ui.row().classes("w-full items-center justify-between"):
-                _rotulo("Estilo del video · toca para cambiarlo")
-                ui.label("elegido por ti" if elegido else "★ sugerido").classes(
-                    "tpi-ambar text-xs" if elegido else "tpi-verde text-xs"
-                )
-            with ui.row().classes("w-full items-center gap-5 no-wrap"):
-                _muestra(estilo.clave, temas, ancho=72)
-                with ui.column().classes("gap-1 min-w-0"):
-                    ui.label(_nombre_estilo(estilo.clave, temas)).classes("text-xl font-semibold")
-                    ui.label(estilo.razon).classes("tpi-sobrio text-sm")
-                    if elegido and sugerido is not None and sugerido.clave != estilo.clave:
-                        ui.label(
-                            f"El sugerido sería {_nombre_estilo(sugerido.clave, temas)}: {sugerido.razon}"
-                        ).classes("tpi-sobrio text-xs")
-                    if estilo.clave not in temas:
-                        ui.label("Ese estilo no está en este equipo: el video no se podrá crear.").classes(
-                            "tpi-rojo text-xs"
-                        )
+        with ui.row().classes("tpi-ficha w-full p-3 gap-4 no-wrap items-center"):
+            _muestra(estilo.clave, temas, ancho=48)
+            with ui.column().classes("gap-0 min-w-0 grow"):
+                _rotulo("Estilo del video · " + ("elegido por ti" if elegido else "★ sugerido"))
+                ui.label(_nombre_estilo(estilo.clave, temas)).classes("font-semibold")
+                ui.label(estilo.razon).classes("tpi-sobrio text-xs")
+                if elegido and sugerido is not None and sugerido.clave != estilo.clave:
+                    ui.label(
+                        f"El sugerido sería {_nombre_estilo(sugerido.clave, temas)}: {sugerido.razon}"
+                    ).classes("tpi-sobrio text-xs")
+                if estilo.clave not in temas:
+                    ui.label("Ese estilo no está en este equipo: el video no se podrá crear.").classes(
+                        "tpi-rojo text-xs"
+                    )
+            ui.button(
+                color=None, text="Cambiar", icon="palette", on_click=lambda: self._dialogo_estilo(f)
+            ).props("flat no-caps").classes("tpi-ambar")
 
     def _dialogo_estilo(self, f: qc.Ficha) -> None:
         temas = _temas()
@@ -1329,6 +1431,14 @@ def tablero(
         # La sala de producción: una sola pantalla. Aprobar guiones y lo avanzado quedan a un clic.
         with ui.column().classes("tpi-tablero w-full max-w-7xl mx-auto px-8 py-10 gap-8"):
             ColaDeProduccion(lambda clave: ui.navigate.to(f"/{clave}")).render()
+        return
+    if pestana == "qc":
+        # Aprobar guiones: una sola pantalla, un guion a la vez. Volver a la sala queda a un clic.
+        with ui.column().classes("tpi-tablero w-full max-w-7xl mx-auto px-8 py-10 gap-6"):
+            with ui.link(target="/cola").classes("tpi-enlace-cabecera self-start"):
+                ui.icon("arrow_back").classes("text-xl")
+                ui.label("Sala de producción")
+            AprobacionDeGuiones(lambda: None, abrir=guion).render()
         return
     with ui.column().classes("tpi-tablero w-full max-w-7xl mx-auto px-8 py-10 gap-8"):
         pestanas = ui.tabs(value=pestana).props("align=left no-caps inline-label").classes("tpi-pestanas")

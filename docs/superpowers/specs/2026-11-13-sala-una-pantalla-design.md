@@ -32,3 +32,16 @@ en botones). `/qc`, `/avanzado` y las rutas antiguas siguen igual.
 ## Pruebas
 
 `pruebas/test_etapas.py`: etapas por estado, fallo, hitos tras reiniciar, límites, redondeo y `columnas()`.
+
+## Aprobar guiones (`/qc`): el mismo lenguaje
+
+Antes: lista lateral con vistas previas + seis tarjetas apiladas. Ahora, una sola columna y **un guion a la vez**:
+
+1. Encabezado: «Aprobar guiones», cuántos faltan, «Ver todos», flechas «1 de N» y «Ver la lista» (diálogo).
+2. Tarjeta del guion: insignia, título, **chequeos** (`panel/revision.py`: guion válido, texto para la voz,
+   título y hashtags, estilo listo, dudas de la IA), lo que dice la voz, Vista Previa Rápida y el estilo en una
+   línea con «Cambiar» (sigue siendo el único lugar donde se elige el estilo).
+3. Plegados (recuerdan si estaban abiertos): Qué enseña y herramientas · Para redes · Detalles técnicos.
+4. Barra fija abajo: **Rechazar o editar** y **Aprobar y enviar a la cola**. Al aprobar pasa solo al siguiente.
+
+Sin hashtags es un aviso (el kit los escribe), no un error. `pruebas/test_revision.py` cubre los chequeos.

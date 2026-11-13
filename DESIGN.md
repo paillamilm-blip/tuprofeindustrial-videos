@@ -2,8 +2,8 @@
 
 El panel es una **sala de producción**: una pantalla oscura de supervisión y un solo acento ámbar. «/cola» es **una
 sola pantalla** (sin pestañas): una lista donde cada video muestra sus cuatro etapas (Guion, Animación, Video y Kit),
-cada una con su porcentaje y su check (verde = lista, anillo ámbar con su % = trabajando, «!» rojo = falló). Aprobar
-guiones y Avanzado quedan a un clic, en «/qc» y «/avanzado». Lo manual (Crear a mano: Un video, Lote de 3, Paso a
+cada una con su porcentaje y su check (verde = lista, anillo ámbar con su % = trabajando, «!» rojo = falló). «/qc» (Aprobar guiones) es también una sola pantalla: un guion a la vez, con chequeos
+(verde, ámbar, rojo) y la decisión fija abajo. Avanzado queda a un clic en «/avanzado». Lo manual (Crear a mano: Un video, Lote de 3, Paso a
 paso) vive plegado dentro de Avanzado y conserva su piel clara de **muro + hoja crema**.
 
 Todos los colores viven en `src/tpi_videos/panel/comun.py` → `PIEL`. Las páginas leen de ahí; **ninguna página
