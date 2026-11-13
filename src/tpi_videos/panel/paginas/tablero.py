@@ -1001,7 +1001,17 @@ class AprobacionDeGuiones:
                         "Copiar",
                     )
                 ui.code(f.yaml, language="yaml").classes("tpi-codigo w-full text-xs")
-        with ui.row().classes("tpi-barra-accion w-full items-center justify-end gap-4"):
+        with ui.row().classes("tpi-barra-accion w-full items-center gap-4"):
+            borrar = (
+                ui.button(color=None, text="Borrar guion", icon="delete", on_click=lambda: self._borrar(f))
+                .props("flat no-caps")
+                .classes("tpi-borrar tpi-sobrio mr-auto")
+            )
+            if f.estado == qc.APROBADO:
+                borrar.disable()
+                borrar.tooltip("Ya está en la cola: quita su video de la Sala de producción primero.")
+            else:
+                borrar.tooltip("Lo manda a la Papelera. Puedes recuperarlo desde Finder.")
             ui.button(
                 color=None, text="Rechazar o editar", icon="close", on_click=lambda: self._rechazar(f)
             ).classes("tpi-rechazar")
@@ -1160,6 +1170,27 @@ class AprobacionDeGuiones:
         self.lista.refresh()
         self.lectura.refresh()
         self.al_aprobar()
+
+    def _borrar(self, f: qc.Ficha) -> None:
+        """Manda el guion a la Papelera (recuperable desde Finder) y pasa al siguiente."""
+
+        async def si() -> None:
+            try:
+                await run.io_bound(qc.borrar_guion, f.ruta)
+            except ErrorMotor as e:
+                ui.notify(e.mensaje, type="negative")
+                return
+            ui.notify("Guion enviado a la Papelera. Puedes recuperarlo desde Finder.", type="positive")
+            self.elegido = None
+            self.lista.refresh()
+            self.lectura.refresh()
+            self.al_aprobar()
+
+        confirmar(
+            f"¿Enviar el guion «{f.titulo}» a la Papelera? Puedes recuperarlo desde Finder.",
+            si,
+            "Enviar a la Papelera",
+        )
 
     def _rechazar(self, f: qc.Ficha) -> None:
         with ui.dialog() as dialogo, ui.card().props("flat").classes("tpi-consola p-8 gap-4 w-[520px]"):

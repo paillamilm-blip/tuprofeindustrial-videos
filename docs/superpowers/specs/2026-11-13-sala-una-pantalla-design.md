@@ -55,3 +55,10 @@ Cada tarjeta lleva un tacho (nunca en un video que está produciéndose: ahí va
 - **Listos:** «Enviar a la Papelera» → `biblioteca.borrar` (Papelera de macOS, recuperable desde Finder) y después
   `descartar_video`. Fuera de macOS el motor lo explica y no borra nada.
 - El botón no abre el detalle de la tarjeta (`click.stop`). `pruebas/test_descartar_video.py` cubre la cola.
+
+## Borrar un guion en «Aprobar guiones»
+
+Botón «Borrar guion» a la izquierda de la barra fija, con confirmación. `qc.borrar_guion` lo manda a la Papelera de
+macOS (`biblioteca.enviar_a_papelera`, el mismo mecanismo que usa «Mis videos»; nunca borra de verdad). Solo guiones
+de `guiones/` (no ejemplos). Uno **aprobado** no se borra: está en la cola de producción; primero se quita su video
+de la Sala. `pruebas/test_borrar_guion.py` lo cubre con una Papelera simulada.
