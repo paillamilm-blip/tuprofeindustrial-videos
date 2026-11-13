@@ -49,7 +49,8 @@ def _argumentos_cama(cama: Path, volumen: float) -> list[str]:
     cadena = (
         f"[0:a]{formato},asplit=2[voz][llave];"
         f"[1:a]{formato},volume={volumen}[cama0];"
-        "[cama0][llave]sidechaincompress=threshold=0.02:ratio=4:attack=30:release=500:makeup=1[cama];"
+        # suave: cuando hablas baja unos pocos dB (antes bajaba tanto que desaparecía)
+        "[cama0][llave]sidechaincompress=threshold=0.06:ratio=2:attack=60:release=450:makeup=1[cama];"
         "[voz][cama]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[mezcla];"
         "[mezcla]loudnorm=I=-14:TP=-1.5:LRA=11[aout]"
     )
