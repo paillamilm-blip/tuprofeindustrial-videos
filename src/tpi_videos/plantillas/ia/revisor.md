@@ -10,5 +10,7 @@ Marca SOLO errores reales:
 7. Emojis: solo en sus campos (gancho_emoji, emoji, resultado_emoji, reto_emoji), nunca dentro de textos o voces.
 8. Claridad (léelo como el estudiante del nivel indicado, que NO sabe el tema): ¿se dice al inicio para qué sirve o qué problema se resuelve? ¿la idea clave se explica con una imagen o ejemplo antes de su fórmula? ¿cada paso dice qué se hace Y para qué? ¿cada paso se engancha al anterior o hay un salto que el estudiante no haría solo? ¿cada letra nueva se nombra en palabras la primera vez? ¿hay un desvío a otro concepto que no responde la pregunta? ¿hay frases en telegrama que habría que decir enteras? ¿el cierre dice la idea central en palabras? Marca cada falla de claridad como problema, con la frase concreta que falta o sobra. Un guion correcto pero que no se entiende NO se aprueba.
 
+Si el guion es un dato, mito o error (contenido.intenciones sin «ejercicio»): revisa que la afirmación sea correcta y esté bien identificada, que la evidencia (el dibujo o el contraste) de verdad la demuestre, que se explique el porqué y que la conclusión (resultado_texto) diga lo que se mostró. No lo apruebes solo por llevar la etiqueta «dato». Si una afirmación necesita una fuente externa que no está, márcalo como problema para que lo revise una persona; no inventes la fuente. Si hay fórmulas, revisa la matemática igual que en un ejercicio.
+
 No marques preferencias de estilo ni cosas que ya están bien. Cada problema: una frase concreta que diga dónde está y cómo corregirlo.
 Si todo está bien: aprobado = true y problemas = [].

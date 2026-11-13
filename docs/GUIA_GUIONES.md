@@ -375,6 +375,33 @@ Escribe las fórmulas **siempre entre comillas simples** `'…'` (con comillas d
 | "un paso con «error: true» necesita la fórmula equivocada" | Agrega `tex:` a ese paso |
 | "el último paso es un error típico" | Agrega después un paso con la forma correcta |
 
+## 7b. Qué enseña: dato, mito, error o ejercicio (opcional)
+
+Un guion puede decir **qué enseña**. Sin este bloque, el guion es un ejercicio y todo funciona como siempre.
+
+```yaml
+contenido:
+  intenciones: [mito, ejercicio]   # dato, mito, error, ejercicio (una o varias, sin repetir)
+  objetivo: "Demostrar que duplicar la arista multiplica el volumen por ocho, no por dos."
+
+recursos:          # las herramientas de la explicación; lo que no pongas, lo sugiere el contenido
+  panel: true      # resumen de fórmulas abajo
+  micro: false     # énfasis continuo (pequeños movimientos)
+  # tabs: contador de pasos arriba · mapa_color: relaciones por color
+
+resultado:
+  tex: 'V_2 = 8\,V_1'                                          # obligatoria si hay «ejercicio»
+  texto: "Duplicar la arista multiplica el volumen por ocho."   # la conclusión en palabras
+  voz: "El grande tiene ocho veces el volumen, no el doble."
+```
+
+- **Sin «ejercicio»** (dato, mito o error), el resultado puede cerrar solo con `texto`, sin fórmula. Un paso sin `tex` es una demostración hablada o dibujada.
+- **Con «ejercicio»**, `resultado.tex` sigue siendo obligatoria; `texto` la interpreta debajo.
+- **Recursos:** `true` = encendido, `false` = apagado a propósito, sin poner = sugerido. Con `contenido`, la sugerencia sale del guion (3 o más pasos → contador; 2 o más fórmulas correctas → resumen; algún `mapa:` → colores; el énfasis queda apagado). Sin `contenido`, se hereda del estilo. Los colores y letras del estilo no cambian.
+- Contenido, molde y estilo son cosas distintas: el **contenido** es qué aprende la persona, el **molde** cómo se cuenta y el **estilo** cómo se ve.
+- En el panel: Estudio tiene «Qué enseña» junto a la idea; «Revisa el guion» y la ficha de QC muestran las tarjetas «Qué enseña» y «Herramientas de la explicación» (botón Cambiar). El estilo se sigue eligiendo solo en QC.
+- En la Terminal: `./tpi redactar "idea" --contenido-json '{"intenciones": ["dato"], "objetivo": "..."}'` (también sirve en `producir` e `ideas`).
+
 ## 8. Moldes y ganchos alternativos (opcional)
 
 `molde:` elige una estructura probada: `mito_realidad` (lo que todos creen contra lo que es),

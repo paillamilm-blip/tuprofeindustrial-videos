@@ -25,7 +25,7 @@ from nicegui import background_tasks, run, ui
 from ...errores import ErrorMotor
 from ...guion import Guion, cargar_guion
 from ...niveles import NIVELES
-from .. import biblioteca, estudio, miniaturas
+from .. import biblioteca, didactica_ui, estudio, miniaturas, qc
 from ..comun import cabecera, piel_de_la_pagina, url_medio
 from ..tareas import TAREAS, consultar
 
@@ -85,6 +85,8 @@ class Estudio:
         self.idea = ""
         self.nivel = atajos["nivel"] or NIVEL_IA
         self.tipo = atajos["tipo"]
+        self.intenciones: list[str] = []  # «Qué enseña»; vacío = lo decide la IA
+        self.objetivo = ""
         self.recientes: list[dict[str, Any]] = atajos["recientes"]
         self.escribiendo = False
         self.error_idea: ErrorMotor | None = None
@@ -151,6 +153,15 @@ class Estudio:
                             f'flat no-caps role="radio" aria-checked="{str(activo).lower()}"'
                         ).classes("tpi-chip-tipo" + (" activo" if activo else ""))
                 ui.label(estudio.TIPOS[self.tipo].ayuda).classes("tpi-sobrio text-sm")
+            with ui.row().classes("w-full items-end gap-4 wrap"):
+                ui.select(
+                    estudio.INTENCIONES_UI, label="Qué enseña (opcional)", multiple=True, value=self.intenciones
+                ).props("outlined dark color=amber options-dark use-chips").classes("w-64").bind_value(
+                    self, "intenciones"
+                )
+                ui.input(
+                    "Qué aprenderá (si eliges qué enseña)", placeholder="Ej. que el volumen crece por 8"
+                ).props("outlined dark color=amber").classes("grow").bind_value(self, "objetivo")
 
             if self.recientes:
                 with ui.column().classes("w-full gap-2"):
@@ -201,7 +212,8 @@ class Estudio:
             return
         nivel = None if self.nivel == NIVEL_IA else self.nivel
         try:
-            args = estudio.args_redactar(self.idea, nivel, self.tipo)
+            contenido = estudio.contenido_pedido(self.intenciones, self.objetivo)
+            args = estudio.args_redactar(self.idea, nivel, self.tipo, contenido)
         except ErrorMotor as e:
             ui.notify(e.mensaje, type="warning")
             return
@@ -288,10 +300,18 @@ class Estudio:
                 ui.label(g.titulo).classes("text-xl font-semibold")
                 detalle = " · ".join(p for p in (tipo.nombre, g.nivel or "", g.etiqueta_materia) if p)
                 ui.label(f"{detalle} · {len(g.pasos)} pasos").classes("tpi-sobrio text-sm")
+            ficha = qc.ficha(self.ruta)
+            didactica_ui.tarjeta_contenido(ficha.contenido)
+            didactica_ui.tarjeta_herramientas(self.ruta, ficha.recursos, self._recargar_didactica)
             self._ganchos(g)
             self._pasos(g)
             self._cierres(g, tipo)
             self._hacer_video(g)
+
+    def _recargar_didactica(self) -> None:
+        if self.ruta is not None:
+            self._cargar(self.ruta, con_url=False)
+        self.revision.refresh()
 
     def _ganchos(self, g: Guion) -> None:
         with ui.column().classes("w-full gap-2"):

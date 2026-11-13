@@ -120,8 +120,25 @@ def crear_portada(carpeta: Path, linea: dict[str, Any]) -> Path:
     return extraer_cuadro(_video_sin_subtitulos(carpeta, linea), momento, carpeta / "portada.png")
 
 
+def es_ejercicio(guion: Guion) -> bool:
+    """¿El video resuelve un ejercicio? Sin ``contenido`` (guiones de antes), sí: su copy no cambia."""
+    return guion.contenido is None or "ejercicio" in guion.contenido.intenciones
+
+
 def textos_de_plantilla(guion: Guion) -> TextosPublicacion:
     reto = f"\n\n✍️ Ahora tú: {guion.reto.texto}" if guion.reto else ""
+    if not es_ejercicio(guion):
+        # Un dato, mito o error: el copy sale de lo que enseña, sin «lo resolvemos» ni «ejercicios».
+        objetivo = guion.contenido.objetivo
+        etiquetas = [*HASHTAGS_MATERIA.get(guion.materia, []), *HASHTAGS_BASE]
+        return TextosPublicacion(
+            titulo_youtube=guion.titulo[:70],
+            descripcion_youtube=f"{guion.gancho.texto}\n{objetivo}\n\n{SUSCRIBETE_CONTENIDO}",
+            texto_tiktok=f"{guion.gancho.texto} {LLAMADOS_DE_SIEMPRE[0]}"[:150],
+            texto_instagram=f"{guion.gancho.texto}\n\n{guion.enunciado.texto}\n{objetivo}{reto}"
+            f"\n\n{LLAMADOS_DE_SIEMPRE[0]}",
+            hashtags=[h for h in etiquetas if h not in _DE_EJERCICIO],
+        )
     return TextosPublicacion(
         titulo_youtube=guion.titulo[:70],
         descripcion_youtube=f"{guion.gancho.texto}\n{guion.enunciado.texto}. Lo resolvemos paso a paso."
@@ -150,6 +167,28 @@ def textos_de_metadatos(guion: Guion) -> TextosPublicacion | None:
 
 LLAMADOS_DE_SIEMPRE = ("Te leo en los comentarios 👇", "¿Lo resolviste igual? 👇")
 SUSCRIBETE = "Suscríbete para más ejercicios resueltos."
+SUSCRIBETE_CONTENIDO = "Suscríbete para entender más matemática, física e ingeniería."
+_DE_EJERCICIO = {"#ejerciciosresueltos"}
+
+
+def segun_contenido(textos: TextosPublicacion, guion: Guion) -> TextosPublicacion:
+    """Un dato, mito o error no se anuncia como ejercicio resuelto (vale también para la IA)."""
+    if es_ejercicio(guion):
+        return textos
+
+    def limpio(texto: str) -> str:
+        return texto.replace(LLAMADOS_DE_SIEMPRE[1], LLAMADOS_DE_SIEMPRE[0]).replace(
+            SUSCRIBETE, SUSCRIBETE_CONTENIDO
+        )
+
+    return textos.model_copy(
+        update={
+            "descripcion_youtube": limpio(textos.descripcion_youtube),
+            "texto_tiktok": limpio(textos.texto_tiktok),
+            "texto_instagram": limpio(textos.texto_instagram),
+            "hashtags": [h for h in textos.hashtags if h.lower() not in _DE_EJERCICIO],
+        }
+    )
 
 
 def _sin_llamado_de_siempre(texto: str) -> str:
@@ -186,8 +225,9 @@ def aplicar_llamado(textos: TextosPublicacion, llamado: str | None) -> TextosPub
         tiktok = tiktok[:LARGO_TIKTOK_SIN_AVISO]
     youtube = textos.descripcion_youtube
     if llamado.casefold() not in youtube.casefold():
-        if SUSCRIBETE in youtube:
-            youtube = youtube.replace(SUSCRIBETE, f"{llamado}\n\n{SUSCRIBETE}")
+        cierre = next((x for x in (SUSCRIBETE, SUSCRIBETE_CONTENIDO) if x in youtube), None)
+        if cierre:
+            youtube = youtube.replace(cierre, f"{llamado}\n\n{cierre}")
         else:
             youtube = f"{youtube.rstrip()}\n\n{llamado}"
     return textos.model_copy(
@@ -300,7 +340,8 @@ def crear_kit(
             avisos.append(f"No se pudo usar la IA ({e}); los textos se armaron con una plantilla.")
     aviso = " ".join(avisos) or None
     con_ia_real = textos is not None and guion.metadatos is None
-    textos = _limpiar(aplicar_llamado(textos or textos_de_plantilla(guion), guion.llamado))
+    textos = textos or textos_de_plantilla(guion)
+    textos = _limpiar(segun_contenido(aplicar_llamado(textos, guion.llamado), guion))
 
     archivo = carpeta / "publicacion.md"
     escribir_atomico(archivo, _markdown(textos, guion))

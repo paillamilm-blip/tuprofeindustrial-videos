@@ -404,6 +404,7 @@ def cmd_redactar(args: argparse.Namespace) -> int:
         if estado is not None:
             estado.update(mensaje)
 
+    _contenido_de(getattr(args, "contenido_json", None))  # un JSON malo avisa antes de llamar a la IA
     with consola.status("Preparando…") as estado:
         resultado = redactar(
             " ".join(args.enunciado),  # sin comillas, la terminal lo separa en palabras
@@ -416,6 +417,7 @@ def cmd_redactar(args: argparse.Namespace) -> int:
             revisar_con_ia=not args.sin_revision,
             molde=getattr(args, "molde", None),
             avisar=lambda mensaje: avisar(mensaje, estado),
+            contenido=_contenido_de(getattr(args, "contenido_json", None)),
         )
     if json_activo:
         _emitir(etapa="guion", avance=1.0, guion=resultado.ruta, supuestos=resultado.supuestos,
@@ -465,8 +467,12 @@ def _producir(
     molde: str | None = None,
     gancho_variante: dict | None = None,
     gancho_variantes: list[dict] | None = None,
+    contenido: Any = None,
 ) -> int:
-    """Guion revisado + video + kit de publicación en un solo paso, y lo muestra."""
+    """Guion revisado + video + kit de publicación en un solo paso, y lo muestra.
+
+    ``contenido``: el de la idea elegida. Lo que la persona pide con ``--contenido-json`` le gana.
+    """
     from .ia import MODELO_POR_DEFECTO
     from .ideas import producir
     from .redactor import promesa_incumplida
@@ -480,6 +486,8 @@ def _producir(
     variantes = (
         gancho_variantes if gancho_variantes is not None else _json_de(getattr(args, "ganchos_json", None))
     )
+    pedido = _contenido_de(getattr(args, "contenido_json", None))
+    contenido = pedido if pedido is not None else contenido
 
     def avisar(mensaje: str) -> None:
         if json_activo:
@@ -517,6 +525,7 @@ def _producir(
         gancho_variantes=variantes,
         avisar=avisar,
         progreso=progreso if json_activo else None,
+        contenido=contenido,
     )
 
     if json_activo:
@@ -601,6 +610,7 @@ def cmd_ideas(args: argparse.Namespace) -> int:
     from .ideas import proponer_ideas
 
     json_activo = _modo_json(args)
+    _contenido_de(getattr(args, "contenido_json", None))  # un JSON malo avisa antes de llamar a la IA
     tema = " ".join(args.tema).strip() or None
     modelo = args.modelo or MODELO_POR_DEFECTO
     evitadas: list[str] = list(args.evitar or [])
@@ -665,7 +675,36 @@ def cmd_ideas(args: argparse.Namespace) -> int:
             molde=elegida.molde or None,
             gancho_variante=elegida.ganchos[0].model_dump() if elegida.ganchos else None,
             gancho_variantes=[g.model_dump() for g in elegida.ganchos] or None,
+            contenido=elegida.contenido,
         )
+
+
+def _contenido_de(valor: str | None) -> Any:
+    """``--contenido-json``: el JSON (o un archivo con él) validado en el borde; vacío = automático."""
+    from pydantic import ValidationError
+
+    from .guion import Contenido, explicar_errores
+
+    if not valor or not str(valor).strip():
+        return None
+    texto = str(valor)
+    if not texto.lstrip().startswith("{"):
+        ruta = Path(texto).expanduser()
+        if not ruta.is_file():
+            raise ErrorMotor(
+                "No entendí el contenido pedido.",
+                ayuda='Usa un JSON, ej. {"intenciones": ["mito"], "objetivo": "Qué se aprende"}, o la ruta a un archivo con él.',
+            )
+        texto = ruta.read_text(encoding="utf-8")
+    datos = _json_de(texto)
+    try:
+        return Contenido.model_validate(datos)
+    except ValidationError as e:
+        detalle = "; ".join(explicar_errores(e))
+        raise ErrorMotor(
+            f"El contenido pedido no sirve: {detalle}",
+            ayuda="intenciones: dato, mito, error o ejercicio (sin repetir); objetivo: una frase.",
+        ) from e
 
 
 def _json_de(valor: str | None) -> Any:
@@ -1008,6 +1047,7 @@ def _idea_de_guion(guion) -> Any:
         segundos=45,
         emoji=guion.gancho.emoji or "",
         molde=guion.molde or "",
+        contenido=guion.contenido,
     )
 
 
@@ -1521,6 +1561,11 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--crear", action="store_true", help="crea también el video borrador al terminar")
     s.add_argument("--abrir", action="store_true", help="con --crear: abre el video al terminar")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
+    s.add_argument(
+        "--contenido-json",
+        help='qué enseña (dato, mito, error, ejercicio): JSON o archivo, ej. \'{"intenciones": ["mito"], '
+        '"objetivo": "..."}\'',
+    )
     s.set_defaults(func=cmd_redactar)
 
     s = sub.add_parser(
@@ -1551,6 +1596,11 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--sin-kit", action="store_true", help="no armar el kit de publicación")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
+    s.add_argument(
+        "--contenido-json",
+        help='qué enseña (dato, mito, error, ejercicio): JSON o archivo, ej. \'{"intenciones": ["mito"], '
+        '"objetivo": "..."}\'',
+    )
     s.set_defaults(func=cmd_ideas)
 
     s = sub.add_parser(
@@ -1609,6 +1659,11 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--sin-kit", action="store_true", help="no armar el kit de publicación")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
+    s.add_argument(
+        "--contenido-json",
+        help='qué enseña (dato, mito, error, ejercicio): JSON o archivo, ej. \'{"intenciones": ["mito"], '
+        '"objetivo": "..."}\'',
+    )
     s.set_defaults(func=cmd_producir)
 
     s = sub.add_parser(

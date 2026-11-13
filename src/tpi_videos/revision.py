@@ -300,8 +300,17 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
                 "deja solo lo esencial (los datos se muestran aparte).",
             )
         )
+    if guion.resultado.texto and len(guion.resultado.texto) > 160:
+        avisos.append(
+            Aviso(
+                "sugerencia",
+                "resultado",
+                "la conclusión es larga para leerla en un celular: déjala en una o dos frases.",
+            )
+        )
     if (
         guion.materia in ("fisica", "ingenieria")
+        and guion.resultado.tex.strip()  # una conclusión en palabras no lleva unidades
         and "\\text" not in guion.resultado.tex
         and "\\mathrm" not in guion.resultado.tex
     ):
@@ -457,6 +466,8 @@ def _textos_visibles(guion: Guion) -> list[tuple[str, str]]:
     """(sección, texto) de lo que se escribe en pantalla con letras."""
     textos = [("título", guion.titulo), ("gancho", guion.gancho.texto), ("enunciado", guion.enunciado.texto)]
     textos += [(f"paso {i}", p.nota) for i, p in enumerate(guion.pasos, 1) if p.nota]
+    if guion.resultado.texto:
+        textos.append(("resultado", guion.resultado.texto))
     for campo, seccion in (("verificacion", "verificación"), ("reto", "reto"), ("cierre", "cierre")):
         bloque = getattr(guion, campo)
         if bloque is not None:

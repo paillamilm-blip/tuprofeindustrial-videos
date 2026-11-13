@@ -340,3 +340,28 @@ class LlamadoEnLaPublicacionTest(_ConRaiz):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ContenidoEnEstudioTest(unittest.TestCase):
+    def test_contenido_viaja_antes_del_separador(self):
+        import json as _json
+
+        from tpi_videos.guion import Contenido
+        from tpi_videos.panel import estudio as e
+
+        c = Contenido(intenciones=["mito"], objetivo="Desarmar el mito.")
+        args = e.args_redactar("Duplicar la arista duplica el volumen", None, next(iter(e.TIPOS)), c)
+        i = args.index("--contenido-json")
+        self.assertLess(i, args.index("--"))
+        self.assertEqual(Contenido.model_validate(_json.loads(args[i + 1])), c)
+        self.assertEqual(args[-1], "Duplicar la arista duplica el volumen")
+        self.assertNotIn("--contenido-json", e.args_redactar("Una idea cualquiera de física", None, next(iter(e.TIPOS))))
+
+    def test_contenido_pedido(self):
+        from tpi_videos.errores import ErrorMotor
+        from tpi_videos.panel import estudio as e
+
+        self.assertIsNone(e.contenido_pedido([], ""))
+        self.assertEqual(e.contenido_pedido(["dato"], " Ver la pendiente ").objetivo, "Ver la pendiente")
+        with self.assertRaises(ErrorMotor):
+            e.contenido_pedido(["dato"], "  ")

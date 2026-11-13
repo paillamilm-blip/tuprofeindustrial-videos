@@ -25,7 +25,7 @@ from . import ia
 from .emojis import lista_para_ia, normalizar_para_ia, quitar_emojis
 from .entorno import PLANTILLAS_DIR
 from .errores import ErrorMotor
-from .guion import Gancho, Guion, Visual, sin_tildes
+from .guion import Contenido, Gancho, Guion, Visual, sin_tildes
 from .moldes import moldes_para_ia, normalizar_molde
 from .redactor import ResultadoRedaccion, pedir_json, redactar
 
@@ -106,8 +106,8 @@ class Idea(BaseModel):
         default="", description="Molde narrativo (ver moldes.py); las 3 ideas usan moldes DISTINTOS"
     )
     enunciado: str = Field(
-        description="El ejercicio completo, resuelto con números concretos y todos sus datos: "
-        "de 60 a 260 caracteres"
+        description="La premisa del video: el ejercicio completo y resoluble con números concretos (si hay "
+        "ejercicio) o la afirmación concreta que se demuestra (dato, mito o error): de 60 a 260 caracteres"
     )
     materia: Literal["matematica", "fisica", "ingenieria"]
     nivel: str = Field(description="Curso al que va, ej. '2° medio' o 'técnico en electricidad'")
@@ -119,6 +119,11 @@ class Idea(BaseModel):
     emoji: str = Field(default="", description="1 emoji de la lista permitida (vacío = ninguno)")
     porque: str = Field(description="Una frase: por qué este video funciona en TikTok o Reels")
     segundos: int = Field(description="Duración aproximada del video, entre 45 y 100 segundos")
+    # Qué enseña (dato, mito, error, ejercicio). Obligatorio en ideas nuevas (lo exige
+    # proponer_ideas); opcional acá para que las ideas guardadas de antes sigan cargando.
+    contenido: Contenido | None = Field(
+        default=None, description="Qué enseña: intenciones (dato, mito, error, ejercicio) y objetivo"
+    )
 
     @field_validator("molde", mode="before")
     @classmethod
@@ -195,7 +200,11 @@ def _idea(idea: Idea, materia: str | None, nivel: str | None, dificultad: str | 
 
 
 def _limpiar(
-    ideas: Iterable[Idea], materia: str | None, nivel: str | None, dificultad: str | None = None
+    ideas: Iterable[Idea],
+    materia: str | None,
+    nivel: str | None,
+    dificultad: str | None = None,
+    exigir_contenido: bool = False,
 ) -> list[Idea]:
     """Ideas normales, sin repetidas y con un enunciado que sí se puede resolver."""
     limpia: list[Idea] = []
@@ -209,6 +218,8 @@ def _limpiar(
         if len(nueva.ganchos) < 3 or len({g.estilo for g in nueva.ganchos}) < 2:
             continue
         if not nueva.molde or nueva.molde in moldes_vistos:
+            continue
+        if exigir_contenido and nueva.contenido is None:  # una idea nueva dice qué enseña
             continue
         vistos.add(clave)
         moldes_vistos.add(nueva.molde)
@@ -254,7 +265,7 @@ def proponer_ideas(
 
     avisar("Gemini está pensando 3 ideas de video (unos segundos)…")
     respuesta = pedir_json(ia.cliente(), modelo, sistema, contenido, PropuestaIA, "low")
-    ideas = _limpiar(respuesta.ideas, materia, nivel, forzada or None)
+    ideas = _limpiar(respuesta.ideas, materia, nivel, forzada or None, exigir_contenido=True)
     if len(ideas) < IDEAS_PETICION:
         raise ErrorMotor(
             f"Gemini devolvió {len(ideas)} idea(s) aprovechable(s) en vez de {IDEAS_PETICION}.",
@@ -313,6 +324,7 @@ def producir(
     progreso: Callable[[str, float, str], None] | None = None,
     reanudar: dict[str, Any] | None = None,
     hito: Callable[[str, dict[str, Any]], None] | None = None,
+    contenido: Contenido | None = None,
 ) -> ResultadoProduccion:
     """Guion revisado + video + kit de publicación, en un solo llamado.
 
@@ -374,6 +386,7 @@ def producir(
             gancho_variante=gancho_variante,
             gancho_variantes=gancho_variantes,
             avisar=avisar,
+            contenido=contenido,
         )
         if hito:
             hito(

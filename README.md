@@ -264,6 +264,10 @@ de la tarjeta (el panel lo pasa solo al presionar «Hacer este video»).
 *Ley de Ohm* o *Caída libre*), ves las 3 tarjetas, presionas **«Otras 3 ideas»** si no te convencen y en la que
 eliges presionas **«Hacer este video»**. Ahí mismo ves el avance: el guion, el video y el kit.
 
+### Dato, mito, error o ejercicio
+
+No todo video tiene que ser un ejercicio. En Estudio elige **Qué enseña** (dato, mito, error o ejercicio) y escribe qué aprenderá la persona; la IA escribe el guion para eso, sin cálculos de relleno. Un dato o un mito puede cerrar con una conclusión en palabras. Las herramientas de la explicación (contador de pasos, resumen de fórmulas, colores, énfasis) se sugieren solas y se cambian con «Cambiar», sin tocar el estilo. Detalles en `docs/GUIA_GUIONES.md`, sección 7b.
+
 ### Probar los ganchos antes de grabar el video entero
 
 El gancho es lo que decide si el video se ve o se pasa de largo. En vez de grabar 45 s para descubrirlo, el

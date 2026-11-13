@@ -18,7 +18,7 @@ from nicegui import background_tasks, ui
 from ... import cola
 from ...errores import ErrorMotor
 from ...niveles import CARRERA_CORTA, NIVELES, PUBLICOS
-from .. import qc
+from .. import didactica_ui, qc
 from ..comun import abrir_en_mac, cabecera, confirmar, piel_de_la_pagina, url_medio
 from ..supervision import (
     COLUMNAS,
@@ -757,6 +757,10 @@ class AprobacionDeGuiones:
             for nota in f.observaciones:
                 ui.label(f"⚠ {nota}").classes("tpi-ambar text-sm")
         if f.estilo is not None:
+            with _consola():
+                didactica_ui.tarjeta_contenido(f.contenido)
+            with _consola():
+                didactica_ui.tarjeta_herramientas(f.ruta, f.recursos, self.lectura.refresh)
             self._estilo(f)
         with _consola():
             _rotulo("Para redes · toca para copiar")

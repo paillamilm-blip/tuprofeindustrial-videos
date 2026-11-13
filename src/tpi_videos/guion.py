@@ -1160,13 +1160,58 @@ class Paso(_Base):
 
 
 class Resultado(_Base):
-    tex: str = Field(min_length=1)
+    # La fórmula final. Vacía solo cuando el contenido no es un ejercicio (ver Guion._resultado_visible).
+    tex: str = ""
+    # La conclusión en palabras, para un dato, mito o error que no termina en una fórmula (opcional).
+    texto: str | None = None
     voz: str = Field(min_length=1)
     emoji: str | None = None
     destello: StrictBool = False  # un destello de confirmación sale del recuadro al cerrar la respuesta
 
     _tex = field_validator("tex")(classmethod(lambda cls, v: _validar_tex(v)))
     _pausas = field_validator("voz")(classmethod(lambda cls, v: validar_pausas(v)))
+    _texto = field_validator("texto")(classmethod(lambda cls, v: v or None))  # «» = sin conclusión
+
+
+INTENCIONES: dict[str, str] = {
+    "dato": "Dato",
+    "mito": "Mito",
+    "error": "Error",
+    "ejercicio": "Ejercicio",
+}
+
+
+class Contenido(_Base):
+    """Qué enseña el video: la intención educativa (dato, mito, error, ejercicio) y su objetivo.
+
+    No es el molde (cómo se cuenta) ni el estilo (cómo se ve). Opcional: sin él, el guion es un ejercicio.
+    """
+
+    intenciones: list[Literal["dato", "mito", "error", "ejercicio"]] = Field(min_length=1, max_length=4)
+    objetivo: str = Field(min_length=1, max_length=260)
+
+    @field_validator("intenciones")
+    @classmethod
+    def _sin_repetir(cls, valor: list[str]) -> list[str]:
+        if len(valor) != len(set(valor)):
+            raise ValueError("No repitas intenciones del contenido.")
+        return valor
+
+    @field_validator("objetivo")
+    @classmethod
+    def _objetivo_con_texto(cls, valor: str) -> str:
+        if not valor.strip():
+            raise ValueError("El objetivo necesita texto.")
+        return valor
+
+
+class RecursosDidacticos(_Base):
+    """Las herramientas de la explicación, por guion: true activa, false apaga, sin valor = sugerido."""
+
+    tabs: StrictBool | None = None
+    panel: StrictBool | None = None
+    mapa_color: StrictBool | None = None
+    micro: StrictBool | None = None
 
 
 class Metadatos(_Base):
@@ -1230,6 +1275,19 @@ class Guion(_Base):
     # creías? Cuéntame 👇». Vacío = el de siempre del kit.
     llamado: str | None = Field(default=None, max_length=150)
     metadatos: Metadatos | None = None  # título, descripción y hashtags para publicar (opcional)
+    # Qué enseña (dato, mito, error, ejercicio) y con qué herramientas; los dos opcionales.
+    contenido: Contenido | None = None
+    recursos: RecursosDidacticos | None = None
+
+    @model_validator(mode="after")
+    def _resultado_visible(self) -> Guion:
+        """Un ejercicio cierra con su fórmula; un dato, mito o error puede cerrar con una conclusión."""
+        intenciones = self.contenido.intenciones if self.contenido else ["ejercicio"]
+        if "ejercicio" in intenciones and not self.resultado.tex.strip():
+            raise ValueError("Un ejercicio necesita la fórmula final en resultado.tex.")
+        if not (self.resultado.tex.strip() or (self.resultado.texto or "").strip()):
+            raise ValueError("El resultado necesita una fórmula o una conclusión visible.")
+        return self
 
     @field_validator("materia", mode="before")
     @classmethod
@@ -1755,6 +1813,20 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
     for clave in ("tema", "voz", "velocidad"):
         if guion.get(clave):
             lineas.append(f"{clave}: {_dobles(guion[clave])}")
+    # Qué enseña y con qué herramientas: solo si vienen. En recursos se omite lo vacío (= sugerido),
+    # nunca un false (= apagado a propósito).
+    if contenido := guion.get("contenido"):
+        objetivo = " ".join(str(contenido["objetivo"]).split())
+        lineas += [
+            "",
+            "contenido:",
+            f"  intenciones: [{', '.join(contenido['intenciones'])}]",
+            f"  objetivo: {_dobles(objetivo)}",
+        ]
+    recursos = {k: v for k, v in (guion.get("recursos") or {}).items() if v is not None}
+    if recursos:
+        lineas += ["", "recursos:"]
+        lineas += [f"  {clave}: {'true' if valor else 'false'}" for clave, valor in recursos.items()]
 
     def bloque(nombre: str, b: dict[str, Any]) -> None:
         lineas.extend(["", f"{nombre}:", f"  texto: {_dobles(b['texto'])}"])
@@ -1831,8 +1903,12 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
             lineas += _visual_yaml(p["visual"])
         if p.get("error"):
             lineas.append("    error: true   # error típico: se muestra tachado")
-    lineas += ["", "resultado:", f"  tex: {_simples(guion['resultado']['tex'])}",
-               f"  voz: {_dobles(guion['resultado']['voz'])}"]  # fmt: skip
+    lineas += ["", "resultado:"]
+    if str(guion["resultado"].get("tex") or "").strip():
+        lineas.append(f"  tex: {_simples(guion['resultado']['tex'])}")
+    if str(guion["resultado"].get("texto") or "").strip():
+        lineas.append(f"  texto: {_dobles(guion['resultado']['texto'])}")
+    lineas.append(f"  voz: {_dobles(guion['resultado']['voz'])}")
     if guion["resultado"].get("emoji"):
         lineas.append(f"  emoji: {_dobles(guion['resultado']['emoji'])}")
     if guion["resultado"].get("destello"):

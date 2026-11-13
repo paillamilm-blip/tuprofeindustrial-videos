@@ -160,8 +160,28 @@ def revisar_idea(idea: str) -> str | None:
 # ------------------------------------------------------------------------------------------
 
 
-def args_redactar(idea: str, nivel: str | None, tipo: str) -> list[str]:
-    """``tpi redactar`` con el molde del tipo. La idea va al final, tras «--» (puede empezar con «-»)."""
+INTENCIONES_UI = {"dato": "Dato", "mito": "Mito", "error": "Error", "ejercicio": "Ejercicio"}
+
+
+def contenido_pedido(intenciones: list[str], objetivo: str):
+    """Lo que la persona eligió en «Qué enseña». Sin intenciones = automático (lo decide la IA)."""
+    from ..guion import Contenido
+
+    if not intenciones:
+        return None
+    objetivo = " ".join((objetivo or "").split())
+    if not objetivo:
+        raise ErrorMotor("Escribe qué aprenderá la persona.", ayuda="Una frase, ej. «Que el volumen crece por 8».")
+    try:
+        return Contenido(intenciones=list(intenciones), objetivo=objetivo)
+    except ValueError as e:
+        raise ErrorMotor("Revisa «Qué enseña».", ayuda=str(e).splitlines()[-1]) from e
+
+
+def args_redactar(idea: str, nivel: str | None, tipo: str, contenido=None) -> list[str]:
+    """``tpi redactar`` con el molde del tipo. La idea va al final, tras «--» (puede empezar con «-»).
+
+    ``contenido`` (qué enseña) viaja aparte del tipo: el tipo elige el molde, no la intención."""
     problema = revisar_idea(idea)
     if problema:
         raise ErrorMotor(problema)
@@ -173,6 +193,8 @@ def args_redactar(idea: str, nivel: str | None, tipo: str) -> list[str]:
         if nivel not in NIVELES:
             raise ErrorMotor(f"No conozco el nivel «{nivel}».", ayuda="Elige uno de la lista.")
         args += ["--nivel", nivel]
+    if contenido is not None:
+        args += ["--contenido-json", contenido.model_dump_json()]
     return [*args, "--", " ".join(idea.split())]
 
 

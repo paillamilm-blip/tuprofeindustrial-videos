@@ -468,6 +468,41 @@ class OpcionesEscena:
     # Segundos que toda fórmula debe llevar completa y quieta antes de que entre el paso siguiente.
     piso_lectura: float = PISO_LECTURA
     tono: str = "+0Hz"  # pitch de la voz (edge-tts): acerca o aleja el timbre sin cambiar de voz
+    # Las decisiones de herramientas (didactica.recursos_del_guion) para el registro; None = guion
+    # heredado sin contenido ni recursos propios (el registro no cambia).
+    didactica: list[dict] | None = None
+
+
+def _partes_resultado(r: Any, tema: Any) -> tuple[VGroup, RoundedRectangle, Mobject | None, Mobject, VGroup]:
+    """Cabeza «CONCLUSIÓN», caja, fórmula (o None) y párrafo de una conclusión con texto.
+
+    La fórmula, si la hay, es la pieza principal; el texto la interpreta debajo. Usa el estilo
+    activo (``c.usar_estilo``): quien llama lo fija y lo restablece.
+    """
+    col = tema.colores
+    ancho = c.ANCHO_UTIL - 1.0
+    eq = c.ecuacion(r.tex, c.TAM_RESULTADO, col.formulas, ancho_max=ancho) if r.tex.strip() else None
+    tam = c.TAM_CUERPO if eq is not None else c.TAM_CUERPO + 5
+    parrafo = c.parrafo(r.texto, tam, SEMIBOLD, col.texto, ancho_max=ancho - 0.3, max_lineas=4)
+    cuerpo = VGroup(*([eq] if eq is not None else []), parrafo).arrange(DOWN, buff=0.35)
+    cuerpo.set_z_index(1)
+    caja = RoundedRectangle(corner_radius=0.22, width=cuerpo.width + 0.9, height=cuerpo.height + 0.7)
+    caja.set_fill(col.acento, 0.12).set_stroke(col.acento, 5)
+    cuerpo.move_to(caja)
+    cabeza = VGroup(c.visto(col.exito), c.texto("CONCLUSIÓN", c.TAM_ETIQUETA + 2, ULTRABOLD, col.exito))
+    cabeza.arrange(RIGHT, buff=0.2)
+    VGroup(cabeza, VGroup(caja, cuerpo)).arrange(DOWN, buff=0.32)
+    return cabeza, caja, eq, parrafo, cuerpo
+
+
+def componente_resultado(guion: Guion, tema: Any) -> VGroup:
+    """La conclusión en texto tal como se dibuja (para medirla sin renderizar el video)."""
+    token = c.usar_estilo(tema)
+    try:
+        cabeza, caja, _, _, cuerpo = _partes_resultado(guion.resultado, tema)
+        return VGroup(cabeza, caja, cuerpo)
+    finally:
+        c.restablecer_estilo(token)
 
 
 @dataclass
@@ -537,6 +572,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self.alto_cuadro = float(config.frame_height)
         self.ancho_cuadro = float(config.frame_width)
         self._camara_escala = 1.0
+        self._con_conclusion = False  # el resultado cerró con una conclusión en texto
         self._camara_ancho = 1.0  # la escala que realmente está en pantalla (la deriva la respira)
         self._camara_centro = 0.0
         self._camara_centro_x = 0.0
@@ -1683,8 +1719,100 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         )
         return VGroup(nota, plegue).move_to(centro).set_z_index(2)
 
+    def _conclusion(self) -> None:
+        """Resultado con conclusión en texto (dato, mito, error): la fórmula, si la hay, va arriba."""
+        self._con_conclusion = True
+        r = self.guion.resultado
+        cabeza, caja, eq, parrafo, cuerpo = _partes_resultado(r, self.tema)
+        grupo = VGroup(cabeza, VGroup(caja, cuerpo))
+        grupo.move_to([0, (self.tope_pasos + c.Y_ZONA_INFERIOR) / 2 + 0.3, 0])
+        emoji = self._emoji(r.emoji, 1.0)
+        if emoji is not None:
+            self._pegar_en_esquina(emoji, caja, giro=-0.2)
+        salen: list[Mobject] = [*self.resaltes]
+        for linea in self.pila:
+            salen += [m for m in linea.mobs if m is not self.ultima]
+        with self.hablar(r.voz, "resultado") as tr:
+            mapa = c.coincidencias(self.ultima, eq) if (self.ultima is not None and eq is not None) else None
+            if mapa is not None:
+                aparecer = [TransformMatchingTex(self.ultima, eq, key_map=mapa)]
+            else:
+                aparecer = ([Write(eq)] if eq is not None else []) + (
+                    [FadeOut(self.ultima)] if self.ultima is not None else []
+                )
+            if aparecer or salen:
+                self._con_pendientes(*[FadeOut(m) for m in salen], *self._tomar_aire(), *aparecer, run_time=0.9)
+            visible = Group(caja, *([emoji] if emoji is not None else []))
+            entero = 2 * max(abs(visible.get_left()[0]), abs(visible.get_right()[0])) + 2 * HOLGURA_ANCHO
+            entero = min(1.0, entero / self.ancho_cuadro)
+            escala = max(entero, escala_del_resultado(self._camara_escala, self.modo_camara))
+            objetivo = self._encajar_conclusion(Group(grupo, *([emoji] if emoji is not None else [])), escala)
+            golpe = self._animaciones_camara(
+                objetivo,
+                escala,
+                run_time=0.55,
+                pico=max(entero, pico_del_golpe(self.paisaje, self.ancho_cuadro, self.modo_camara)),
+            )
+            self.play(
+                FadeIn(caja),
+                Create(cabeza[0]),
+                FadeIn(cabeza[1], shift=UP * 0.1),
+                FadeIn(parrafo, shift=UP * 0.1),
+                *golpe,
+                run_time=0.6,
+            )
+            completa_desde = self.renderer.time
+            self.play(
+                Circumscribe(VGroup(caja, cuerpo), color=self.col.acento, fade_out=True, time_width=0.5),
+                run_time=1.0,
+            )
+            if r.destello:
+                self.play(*self._destello(caja), run_time=0.7)
+            if emoji is not None:
+                self.play(self._rebote(emoji))
+            self._da_lectura(tr, completa_desde)
+        self.bloque_resultado = (
+            VGroup(cabeza, caja, cuerpo) if emoji is None else Group(cabeza, caja, cuerpo, emoji)
+        )
+
+    def _encajar_conclusion(self, bloque: Mobject, escala: float) -> float:
+        """Deja la conclusión entera entre el subtítulo y el techo, ya con la cámara acercada.
+
+        Mide en pantalla (lo que ve el celular): si no cabe se achica; si la cámara no puede ir más
+        allá del fondo, se corre el bloque. Devuelve el ``objetivo_y`` para la cámara.
+        """
+        from .didactica import SEPARACION, piso_de_lectura
+
+        margen = 0.1  # el pico del golpe y la deriva «en mano» se mueven un poco
+        piso = piso_de_lectura(self.tema) + margen
+        techo = (7.52 if self.tabs_gram is not None else 8.0) - SEPARACION - margen
+        quieta = self.modo_camara == "quieta"
+        if quieta:
+            s, cy = self.camera.frame.width / self.ancho_cuadro, float(self.camera.frame.get_center()[1])
+        else:
+            minima = ESCALAS.get(self.modo_camara, ESCALAS["suave"])["minima"]
+            s, _, _ = encuadre(0.0, escala, self.paisaje, self.alto_cuadro, self.ancho_cuadro, minima)
+        k = 1.0 / s
+        if bloque.height * k > techo - piso:
+            bloque.scale((techo - piso) / (bloque.height * k))
+        if not quieta:
+            arriba, abajo = bloque.get_top()[1], bloque.get_bottom()[1]
+            deseado = min(max(bloque.get_center()[1], arriba - techo / k), abajo - piso / k)
+            s, _, cy = encuadre(deseado, escala, self.paisaje, self.alto_cuadro, self.ancho_cuadro, minima)
+            k = 1.0 / s
+        abajo_pantalla = (bloque.get_bottom()[1] - cy) * k
+        arriba_pantalla = (bloque.get_top()[1] - cy) * k
+        if abajo_pantalla < piso:
+            bloque.shift(UP * (piso - abajo_pantalla) / k)
+        elif arriba_pantalla > techo:
+            bloque.shift(DOWN * (arriba_pantalla - techo) / k)
+        return cy
+
     def _resultado(self) -> None:
         r = self.guion.resultado
+        if r.texto:
+            self._conclusion()
+            return
         eq = c.ecuacion(r.tex, c.TAM_RESULTADO, self.col.formulas, ancho_max=c.ANCHO_UTIL - 1.0).set_z_index(
             1
         )
@@ -1765,12 +1893,36 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         cuerpo = c.parrafo(v.texto, 30, MEDIUM, self.col.texto, ancho_max=c.ANCHO_UTIL - 0.3)
         bloque = VGroup(etiqueta, cuerpo).arrange(DOWN, buff=0.2)
         bloque.next_to(self.bloque_resultado, DOWN, buff=0.55)
+        if self._con_conclusion:
+            self._verificacion_bajo_conclusion(v, etiqueta, bloque)
+            return
         subir = max(0.0, Y_SOBRE_SUBTITULOS - bloque.get_bottom()[1])
         emoji = self._emoji(v.emoji, 0.6)
         with self.hablar(v.voz_final, "verificación"):
             animaciones = [FadeIn(bloque.shift(UP * subir), shift=UP * 0.15)]
             if subir:
                 animaciones.append(self.bloque_resultado.animate.shift(UP * subir))
+            self.play(*animaciones, run_time=0.5)
+            if emoji is not None:
+                emoji.next_to(etiqueta, RIGHT, buff=0.15)
+                self.play(self._rebote(emoji))
+
+    def _verificacion_bajo_conclusion(self, v: Bloque, etiqueta: Mobject, bloque: Mobject) -> None:
+        """La verificación después de una conclusión en texto: las dos caben entre el techo de la zona
+        de trabajo (bajo el título y los datos) y el subtítulo; si no caben, se achican juntas."""
+        juntos = Group(self.bloque_resultado, bloque)
+        hueco = self.tope_pasos - Y_SOBRE_SUBTITULOS
+        factor = min(1.0, hueco / juntos.height)
+        arriba = juntos.get_top()
+        fondo = arriba[1] - juntos.height * factor  # el piso de las dos, ya achicadas
+        # lo justo para despegar del subtítulo, sin pasar el techo (si ya lo pasaba, baja)
+        subir = min(max(0.0, Y_SOBRE_SUBTITULOS - fondo), self.tope_pasos - arriba[1])
+        bloque.scale(factor, about_point=arriba).shift(UP * subir)
+        emoji = self._emoji(v.emoji, 0.6)
+        with self.hablar(v.voz_final, "verificación"):
+            animaciones = [FadeIn(bloque, shift=UP * 0.15)]
+            if factor < 1.0 or subir:
+                animaciones.append(self.bloque_resultado.animate.scale(factor, about_point=arriba).shift(UP * subir))
             self.play(*animaciones, run_time=0.5)
             if emoji is not None:
                 emoji.next_to(etiqueta, RIGHT, buff=0.15)
@@ -1868,6 +2020,11 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             "bloques": self.bloques_voz,
             "silencio_de_lectura": round(float(self.silencio_de_lectura), 2),
         }
+        # Solo para guiones que deciden algo propio: los renders heredados no reciben campos vacíos.
+        if self.guion.contenido is not None:
+            datos["contenido"] = self.guion.contenido.model_dump()
+        if self.op.didactica is not None:
+            datos["recursos_didacticos"] = self.op.didactica
         from .entorno import escribir_atomico
 
         escribir_atomico(self.op.linea_de_tiempo, json.dumps(datos, ensure_ascii=False, indent=2))
