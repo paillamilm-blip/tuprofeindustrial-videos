@@ -16,6 +16,10 @@ from .errores import ErrorMotor
 
 MODELO_TTS = "gemini-3.8-flash-tts"
 SEGUNDOS_DE_ESPERA = 45  # por frase: más que esto es que Gemini no está respondiendo
+# Límite de RELOJ por frase. El timeout del SDK es por lectura: una respuesta que gotea un byte cada
+# pocos segundos (o una conexión medio cerrada) no lo dispara nunca y el video queda colgado. Con 2
+# intentos de 45 s y sus pausas, 2 minutos sin audio ya es que no va a llegar.
+LIMITE_POR_FRASE = 120.0
 VOZ_POR_DEFECTO = "Charon"  # «Informative»: la que más suena a profesor explicando
 
 # Las 30 voces de estudio de Gemini y su carácter (docs: Text-to-speech · Voice options).
@@ -108,8 +112,9 @@ def sintetizar(
     from . import ia
 
     cliente = cliente or cliente_tts()
-    try:
-        respuesta = cliente.interactions.create(
+
+    def pedir() -> Any:
+        return cliente.interactions.create(
             model=modelo,
             input=[
                 {
@@ -126,6 +131,9 @@ def sintetizar(
             response_format={"type": "audio"},
             generation_config={"speech_config": [{"voice": voz}]},
         )
+
+    try:
+        respuesta = _con_limite(pedir, LIMITE_POR_FRASE)
     except ErrorMotor:
         raise
     except Exception as e:
@@ -133,3 +141,33 @@ def sintetizar(
         error.ayuda = (error.ayuda + " " if error.ayuda else "") + "Mientras tanto puedes usar --voz edge."
         raise error from e
     return _audio_de(respuesta)
+
+
+def _con_limite(funcion: Any, segundos: float) -> Any:
+    """Corre ``funcion`` en un hilo aparte y no la espera más de ``segundos``.
+
+    Si se pasa, avisa (ErrorMotor transitorio) en vez de colgar el video. El hilo colgado queda como
+    daemon: no impide que el proceso termine.
+    """
+    import threading
+
+    salida: dict[str, Any] = {}
+
+    def correr() -> None:
+        try:
+            salida["valor"] = funcion()
+        except BaseException as e:  # se relanza en el hilo principal
+            salida["error"] = e
+
+    hilo = threading.Thread(target=correr, name="voz-gemini", daemon=True)
+    hilo.start()
+    hilo.join(segundos)
+    if hilo.is_alive():
+        raise ErrorMotor(
+            f"La voz de Gemini no respondió en {segundos:.0f} s para una frase.",
+            ayuda="Repite el comando en un rato. Mientras tanto puedes usar --voz edge.",
+            transitorio=True,
+        )
+    if "error" in salida:
+        raise salida["error"]
+    return salida["valor"]

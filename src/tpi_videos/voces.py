@@ -286,6 +286,12 @@ class ServicioConPausas(SpeechService):
 
 def crear_servicio(proveedor: str, voz: str, velocidad: str, tono: str = "+0Hz") -> SpeechService:
     if proveedor == "edge":
+        from .config import Voz
+        from .voz_gemini import es_voz_de_gemini
+
+        # «--voz edge» con la marca en Gemini trae el nombre «Charon»: edge no lo conoce. Va la de siempre.
+        if es_voz_de_gemini(voz):
+            voz = Voz.model_fields["nombre"].default
         return ServicioConPausas(EdgeTTSService(voz=voz, velocidad=velocidad, tono=tono), "edge-tts")
     if proveedor == "gemini":
         from .config import cargar_marca

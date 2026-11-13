@@ -114,3 +114,59 @@ class ServicioTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VozColgadaTest(unittest.TestCase):
+    """Una frase que Gemini nunca termina de mandar no cuelga el video: corta con un aviso claro.
+
+    El timeout del SDK es por lectura: una respuesta que gotea un byte cada pocos segundos no lo
+    dispara nunca (se comprobó con el SDK real). Por eso hay un límite de reloj por frase.
+    """
+
+    def test_frase_colgada_corta_con_aviso(self):
+        import threading
+        import time
+        from unittest.mock import patch
+
+        from tpi_videos import voz_gemini
+        from tpi_videos.errores import ErrorMotor
+
+        nunca = threading.Event()
+
+        class Colgado:
+            class interactions:  # noqa: N801 — imita al SDK
+                @staticmethod
+                def create(**_kw):
+                    nunca.wait(30)
+
+        inicio = time.time()
+        with patch.object(voz_gemini, "LIMITE_POR_FRASE", 1.0), self.assertRaises(ErrorMotor) as e:
+            voz_gemini.sintetizar("Hola", cliente=Colgado())
+        nunca.set()
+        self.assertLess(time.time() - inicio, 5)
+        self.assertTrue(e.exception.transitorio)
+        self.assertIn("--voz edge", e.exception.ayuda)
+
+    def test_frase_normal_no_cambia(self):
+        from tpi_videos import voz_gemini
+
+        class Normal:
+            class interactions:  # noqa: N801
+                @staticmethod
+                def create(**_kw):
+                    return type("R", (), {"output_audio": type("A", (), {"data": b"RIFF"})()})()
+
+        self.assertEqual(voz_gemini.sintetizar("Hola", cliente=Normal()), b"RIFF")
+
+
+class EdgeConVozDeGeminiTest(unittest.TestCase):
+    """«--voz edge» con la marca en Gemini («Charon») usa la voz edge de siempre, no «Charon»."""
+
+    def test_edge_no_recibe_nombre_de_gemini(self):
+        try:
+            from tpi_videos import voces
+        except ModuleNotFoundError:
+            self.skipTest("manim no está instalado")
+
+        self.assertEqual(voces.crear_servicio("edge", "Charon", "+0%").base.voz, "es-CL-LorenzoNeural")
+        self.assertEqual(voces.crear_servicio("edge", "es-CL-CatalinaNeural", "+0%").base.voz, "es-CL-CatalinaNeural")
