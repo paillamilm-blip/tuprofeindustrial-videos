@@ -97,6 +97,7 @@ def _escribir(h: Hueco, avisar: Callable[[str], None]) -> Path:
         carrera=h.carrera,
         molde=idea.molde or None,
         avisar=avisar,
+        contenido=idea.contenido,
     )
     return resultado.ruta
 

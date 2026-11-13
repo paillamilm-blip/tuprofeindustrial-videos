@@ -72,6 +72,7 @@ def idea_desde_guion(guion: Guion) -> Idea:
         segundos=45,
         molde=guion.molde or "",
         ganchos=ganchos,
+        contenido=guion.contenido,
     )
 
 
@@ -93,6 +94,8 @@ def guion_de_vista_previa(idea: Idea, variante: GanchoIdea, guion_base: Guion | 
         "pasos": [{"voz": "Vista previa del gancho.", "nota": "Vista previa"}],
         "resultado": {"tex": "x", "voz": "Vista previa."},
     }
+    if idea.contenido is not None:
+        datos["contenido"] = idea.contenido.model_dump()
     vista = Guion.model_validate(datos)
     return guion_base.model_copy(update={"gancho": vista.gancho}) if guion_base is not None else vista
 

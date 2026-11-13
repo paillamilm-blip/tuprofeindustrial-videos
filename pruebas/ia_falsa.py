@@ -225,10 +225,10 @@ def _ideas(texto: str) -> str:
         "matematica",
     )
     ideas = []
-    for angulo, molde, estilos in (
-        ("error_tipico", "mito_realidad", ("error", "curiosidad", "dato")),
-        ("aplicacion_real", "pov", ("dolor", "curiosidad", "reto")),
-        ("reto", "reto", ("reto", "dato", "curiosidad")),
+    for angulo, molde, estilos, intenciones in (
+        ("error_tipico", "mito_realidad", ("error", "curiosidad", "dato"), ["mito", "ejercicio"]),
+        ("aplicacion_real", "pov", ("dolor", "curiosidad", "reto"), ["ejercicio"]),
+        ("reto", "reto", ("reto", "dato", "curiosidad"), ["ejercicio"]),
     ):
         ideas.append(
             {
@@ -247,6 +247,10 @@ def _ideas(texto: str) -> str:
                 "emoji": "",
                 "porque": "Es un tema que cuesta y se ve rápido.",
                 "segundos": 45,
+                "contenido": {
+                    "intenciones": intenciones,
+                    "objetivo": f"Entender {tema[:60]} con un caso concreto.",
+                },
             }
         )
     return json.dumps({"ideas": ideas}, ensure_ascii=False)

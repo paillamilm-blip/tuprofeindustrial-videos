@@ -590,6 +590,7 @@ def _una_idea(
         try:
             resultado = producir(
                 idea.enunciado,
+                contenido=idea.contenido,
                 materia=materia or idea.materia,
                 nivel=nivel or idea.nivel,
                 dificultad=dificultad or idea.dificultad or None,
