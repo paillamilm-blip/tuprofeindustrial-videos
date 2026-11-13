@@ -572,6 +572,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self.alto_cuadro = float(config.frame_height)
         self.ancho_cuadro = float(config.frame_width)
         self._camara_escala = 1.0
+        self._con_conclusion = False  # el resultado cerró con una conclusión en texto
         self._camara_ancho = 1.0  # la escala que realmente está en pantalla (la deriva la respira)
         self._camara_centro = 0.0
         self._camara_centro_x = 0.0
@@ -1720,6 +1721,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
 
     def _conclusion(self) -> None:
         """Resultado con conclusión en texto (dato, mito, error): la fórmula, si la hay, va arriba."""
+        self._con_conclusion = True
         r = self.guion.resultado
         cabeza, caja, eq, parrafo, cuerpo = _partes_resultado(r, self.tema)
         grupo = VGroup(cabeza, VGroup(caja, cuerpo))
@@ -1891,12 +1893,36 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         cuerpo = c.parrafo(v.texto, 30, MEDIUM, self.col.texto, ancho_max=c.ANCHO_UTIL - 0.3)
         bloque = VGroup(etiqueta, cuerpo).arrange(DOWN, buff=0.2)
         bloque.next_to(self.bloque_resultado, DOWN, buff=0.55)
+        if self._con_conclusion:
+            self._verificacion_bajo_conclusion(v, etiqueta, bloque)
+            return
         subir = max(0.0, Y_SOBRE_SUBTITULOS - bloque.get_bottom()[1])
         emoji = self._emoji(v.emoji, 0.6)
         with self.hablar(v.voz_final, "verificación"):
             animaciones = [FadeIn(bloque.shift(UP * subir), shift=UP * 0.15)]
             if subir:
                 animaciones.append(self.bloque_resultado.animate.shift(UP * subir))
+            self.play(*animaciones, run_time=0.5)
+            if emoji is not None:
+                emoji.next_to(etiqueta, RIGHT, buff=0.15)
+                self.play(self._rebote(emoji))
+
+    def _verificacion_bajo_conclusion(self, v: Bloque, etiqueta: Mobject, bloque: Mobject) -> None:
+        """La verificación después de una conclusión en texto: las dos caben entre el techo de la zona
+        de trabajo (bajo el título y los datos) y el subtítulo; si no caben, se achican juntas."""
+        juntos = Group(self.bloque_resultado, bloque)
+        hueco = self.tope_pasos - Y_SOBRE_SUBTITULOS
+        factor = min(1.0, hueco / juntos.height)
+        arriba = juntos.get_top()
+        fondo = arriba[1] - juntos.height * factor  # el piso de las dos, ya achicadas
+        # lo justo para despegar del subtítulo, sin pasar el techo (si ya lo pasaba, baja)
+        subir = min(max(0.0, Y_SOBRE_SUBTITULOS - fondo), self.tope_pasos - arriba[1])
+        bloque.scale(factor, about_point=arriba).shift(UP * subir)
+        emoji = self._emoji(v.emoji, 0.6)
+        with self.hablar(v.voz_final, "verificación"):
+            animaciones = [FadeIn(bloque, shift=UP * 0.15)]
+            if factor < 1.0 or subir:
+                animaciones.append(self.bloque_resultado.animate.scale(factor, about_point=arriba).shift(UP * subir))
             self.play(*animaciones, run_time=0.5)
             if emoji is not None:
                 emoji.next_to(etiqueta, RIGHT, buff=0.15)

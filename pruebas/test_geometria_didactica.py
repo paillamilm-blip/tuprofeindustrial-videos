@@ -62,6 +62,38 @@ def _banda_subtitulos(tema: Tema) -> tuple[float, float]:
 
 
 @unittest.skipUnless(escena is not None, "manim no está instalado")
+class VerificacionTrasConclusionTest(unittest.TestCase):
+    """La verificación sube la conclusión para hacerse lugar: nunca hasta tapar el título ni los datos."""
+
+    def test_mito_del_cubo_no_tapa_titulo_ni_datos(self):
+        from pruebas.datos_didacticos import datos_mito_cubo
+
+        from tpi_videos import entorno
+
+        entorno.registrar_fuentes()  # las letras del estilo Consola (lo hace renderizar_manim)
+        guion = Guion.model_validate(datos_mito_cubo())
+        tema = componer_tema(cargar_tema("consola_mito", cargar_marca()), guion)
+        medidas = {}
+
+        class Midiendo(escena.VideoEjercicio):
+            def _verificacion(self):
+                super()._verificacion()
+                medidas["arriba"] = self.bloque_resultado.get_top()[1]
+                medidas["techo"] = self.tope_pasos
+
+            def _reto(self):
+                pass
+
+            def _cierre(self):
+                pass
+
+        with TemporaryDirectory() as carpeta, tempconfig({**_CONFIG, "pixel_width": 540, "pixel_height": 960, "media_dir": carpeta}):
+            opciones = escena.OpcionesEscena("silencio", "", "+0%", Path(carpeta) / "t.json")
+            contextvars.copy_context().run(Midiendo(guion, Marca(), tema, opciones).construct)
+        self.assertLessEqual(medidas["arriba"], medidas["techo"] + 1e-6)
+
+
+@unittest.skipUnless(escena is not None, "manim no está instalado")
 class GeometriaConclusionTest(unittest.TestCase):
     def _medir(self, tema: Tema, guion: Guion):
         compuesto = componer_tema(tema, guion)
