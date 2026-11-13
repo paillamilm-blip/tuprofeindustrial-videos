@@ -197,6 +197,28 @@ def miniatura(video: Video) -> Path:
             return portada_de_reserva(video.titulo, fondo, texto, video.carpeta / "miniatura_fallback.png")
 
 
+def enviar_a_papelera(ruta: Path, que: str) -> Path:
+    """Manda un archivo o carpeta a la Papelera de macOS (se recupera desde Finder). Nunca borra de verdad.
+
+    ``que`` es lo que se nombra en los errores («el video», «el guion»). Fuera de macOS no hace nada y lo explica.
+    """
+    if platform.system() != "Darwin":
+        raise ErrorMotor(f"Enviar a la Papelera está disponible solo en macOS. No se borró {que}.")
+    try:
+        from Foundation import NSFileManager, NSURL
+    except ImportError as e:
+        raise ErrorMotor(f"No se pudo acceder a la Papelera de macOS. No se borró {que}.") from e
+    ok, destino, error = NSFileManager.defaultManager().trashItemAtURL_resultingItemURL_error_(
+        NSURL.fileURLWithPath_(str(ruta)),
+        None,
+        None,
+    )
+    if not ok or destino is None:
+        detalle = error.localizedDescription() if error else "macOS no confirmó el traslado."
+        raise ErrorMotor(f"No se pudo enviar {que} a la Papelera: {detalle}")
+    return Path(destino.path())
+
+
 def borrar(video: Video) -> Path:
     with _ARCHIVOS_VIDEO:
         salida = (raiz_proyecto() / "salida").resolve()
@@ -207,16 +229,4 @@ def borrar(video: Video) -> Path:
 
         if TAREAS.ocupado():
             raise ErrorMotor("Hay un trabajo en curso: espera a que termine. No se trasladó el video.")
-        if platform.system() != "Darwin":
-            raise ErrorMotor("Enviar a la Papelera está disponible solo en macOS. No se borró el video.")
-        try:
-            from Foundation import NSFileManager, NSURL
-        except ImportError as e:
-            raise ErrorMotor("No se pudo acceder a la Papelera de macOS. No se borró el video.") from e
-        ok, destino, error = NSFileManager.defaultManager().trashItemAtURL_resultingItemURL_error_(
-            NSURL.fileURLWithPath_(str(carpeta)), None, None,
-        )
-        if not ok or destino is None:
-            detalle = error.localizedDescription() if error else "macOS no confirmó el traslado."
-            raise ErrorMotor(f"No se pudo enviar el video a la Papelera: {detalle}")
-        return Path(destino.path())
+        return enviar_a_papelera(carpeta, "el video")
