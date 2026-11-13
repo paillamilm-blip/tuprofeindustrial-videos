@@ -104,6 +104,9 @@ class Dibujo:
     fisico: bool = True
     # Lo que ``place`` corre el dibujo: la pose lo consulta para no volver al origen.
     desplazamiento: list[np.ndarray] = field(default_factory=lambda: [np.zeros(3)], repr=False)
+    # Un cuerpo 3D: la vista (phi, theta) en la que termina. El paso siguiente, si es el mismo dibujo,
+    # parte de ahí (``desde_vista``) en vez de dar la vuelta de nuevo. None en los dibujos 2D.
+    vista_final: tuple[float, float] | None = None
 
     def place(self, x: float, y: float) -> Dibujo:
         delta = np.array([x, y, 0.0]) - self.mobs.get_center()
@@ -142,6 +145,9 @@ def afinar_trazo(mobs: VGroup, minimo: float = GROSOR_MINIMO) -> None:
 # None = «auto»: solo se achica lo que no cabe. Se fija en ``dibujar_visual`` mientras se construye.
 RELLENO = {"chico": 0.6, "mediano": 0.8, "grande": 1.0}
 _relleno: ContextVar[float | None] = ContextVar("relleno_del_dibujo", default=None)
+# Si el cuerpo 3D sigue del paso anterior, la vista (phi, theta) donde quedó: la órbita parte de ahí.
+# None = la órbita de siempre (75° antes de la vista pedida). La fija la escena mientras construye.
+desde_vista: ContextVar[tuple[float, float] | None] = ContextVar("desde_vista", default=None)
 
 
 def factor_de_encaje(ancho_dibujo: float, alto_dibujo: float, ancho: float, alto: float) -> float:

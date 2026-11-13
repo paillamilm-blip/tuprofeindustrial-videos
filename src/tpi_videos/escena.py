@@ -72,6 +72,7 @@ from manim_voiceover.helper import remove_bookmarks
 from . import componentes as c
 from . import dibujos as d
 from .config import Marca
+from .continuidad import campos_del_visual, emparejar, sigue
 from .errores import ErrorMotor
 from .guion import Bloque, Guion
 from .pausas import sin_pausas
@@ -147,6 +148,38 @@ def avance_de_movimiento(duracion: float, ventana: float) -> tuple[float, bool]:
     if duracion <= 0 or ventana >= duracion:
         return 1.0, False
     return max(ventana / duracion, 0.0), True
+
+
+def piezas_de(grupo: Mobject) -> list[Mobject]:
+    """Lo que se ve de un dibujo, pieza por pieza (trazos, letras, imágenes): lo que se compara entre pasos.
+
+    No solo las hojas: una flecha tiene su propia línea Y una punta hija, y la línea también cuenta.
+    """
+    return [
+        m
+        for m in grupo.get_family()
+        if isinstance(m, ImageMobject) or (isinstance(m, VMobject) and len(m.points) > 0)
+    ]
+
+
+def clave_de_pieza(m: Mobject) -> tuple:
+    """Cómo se reconoce una pieza idéntica en el paso siguiente: forma, sitio y color, redondeados.
+
+    ``+ 0.0`` convierte -0.0 en 0.0, que si no tendrían bytes distintos y no se reconocerían.
+    """
+    if isinstance(m, ImageMobject):
+        sitio = np.round(m.get_center(), 2) + 0.0
+        return ("imagen", m.pixel_array.shape, hash(m.pixel_array.tobytes()), sitio.tobytes(),
+                round(m.width, 2), round(m.height, 2))
+    puntos = np.round(np.asarray(m.points, dtype=float), 2) + 0.0
+    if not isinstance(m, VMobject):
+        return (type(m).__name__, puntos.shape, hash(puntos.tobytes()))
+    return (
+        type(m).__name__, puntos.shape, hash(puntos.tobytes()),
+        str(m.get_stroke_color()), str(m.get_fill_color()),
+        round(float(m.get_stroke_width()), 2), round(float(m.get_stroke_opacity()), 2),
+        round(float(m.get_fill_opacity()), 2),
+    )
 
 
 def movimiento_de(dibujo: d.Dibujo, avance: float) -> Animation:
@@ -1305,7 +1338,12 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         return fondo, centro, max(alto, 0.0)
 
     def _mover_dibujo(
-        self, dibujo: d.Dibujo, duracion: float, restante: float, camara: list[Animation]
+        self,
+        dibujo: d.Dibujo,
+        duracion: float,
+        restante: float,
+        camara: list[Animation],
+        previo: d.Dibujo | None = None,
     ) -> None:
         """Entra el dibujo con lo justo y después corre su física en el tiempo real.
 
@@ -1320,15 +1358,19 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         # La pose de partida antes de entrar: un dibujo puede construirse en su pose final (la que ve
         # la miniatura) y la escena siempre arranca el movimiento desde el principio.
         dibujo.vivo(0.0)
-        animaciones: list[Animation] = [Create(m) for m in dibujo.trazo]
-        if dibujo.aparece:
-            animaciones.append(
-                LaggedStart(*[FadeIn(m, shift=UP * 0.1) for m in dibujo.aparece], lag_ratio=0.12)
-            )
-        if animaciones:
-            self.play(*animaciones, *camara, run_time=entrada)
-        elif camara:
-            self.play(*camara, run_time=entrada)
+        if previo is not None:
+            # El mismo dibujo del paso anterior: no se vuelve a trazar, cambian solo sus piezas.
+            self._reemplazar_dibujo(previo, dibujo, camara, run_time=entrada)
+        else:
+            animaciones: list[Animation] = [Create(m) for m in dibujo.trazo]
+            if dibujo.aparece:
+                animaciones.append(
+                    LaggedStart(*[FadeIn(m, shift=UP * 0.1) for m in dibujo.aparece], lag_ratio=0.12)
+                )
+            if animaciones:
+                self.play(*animaciones, *camara, run_time=entrada)
+            elif camara:
+                self.play(*camara, run_time=entrada)
         if dibujo.estela is not None:
             self.add(dibujo.estela)
         # El dibujo entero es el que se anima: Manim congela en una imagen fija todo lo que no sea
@@ -1344,17 +1386,39 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         dibujo.vivo(avance)
 
     def _trazar_dibujo(
-        self, paso: Any, centro_y: float, alto: float, tr: Any, mover_camara: bool = True
+        self,
+        paso: Any,
+        centro_y: float,
+        alto: float,
+        tr: Any,
+        mover_camara: bool = True,
+        previo: d.Dibujo | None = None,
     ) -> d.Dibujo:
-        """Dibuja el visual del paso con lo que queda de su voz: primero el trazo, luego lo escrito."""
+        """Dibuja el visual del paso con lo que queda de su voz: primero el trazo, luego lo escrito.
+
+        Con ``previo`` (el mismo dibujo del paso anterior, que sigue en pantalla) no se traza de nuevo:
+        se alinea sobre el anterior y solo cambia lo que muestra (``_reemplazar_dibujo``).
+        """
         hoja = self.tema.marco == "hoja"
         # El color del papel es el de la hoja cuadriculada, o el de la tarjeta en la pizarra oscura.
         papel = self.tema.hoja.color if hoja else self.col.panel
         # Con el tablero partido el dibujo vive dentro de un casillero: si ocupara el ancho de la hoja,
         # la toma de la mitad lo cortaría por los lados.
         ancho = ANCHO_CASILLERO - 0.3 if self.receta.partida == "mitades" else c.ANCHO_UTIL
-        dibujo = d.dibujar_visual(paso.visual, self.col, ancho, alto, papel)
+        desde = previo.vista_final if previo is not None else None
+        marca = d.desde_vista.set(desde) if desde is not None else None
+        try:
+            dibujo = d.dibujar_visual(paso.visual, self.col, ancho, alto, papel)
+        finally:
+            if marca is not None:
+                d.desde_vista.reset(marca)
         dibujo.place(0, centro_y)
+        if previo is not None and dibujo.trazo and len(dibujo.trazo) == len(previo.trazo):
+            # Una marca nueva (un rótulo abajo) corre el centro del grupo: se alinea por la estructura
+            # (cajas, ejes, el cuerpo) para que lo que no cambia quede exactamente donde estaba.
+            delta = Group(*previo.trazo).get_center() - Group(*dibujo.trazo).get_center()
+            destino = dibujo.mobs.get_center() + delta
+            dibujo.place(float(destino[0]), float(destino[1]))
         if not hoja:  # en la pizarra el dibujo tiene su propia tarjeta, como los pasos
             caja = (
                 RoundedRectangle(corner_radius=0.28, width=ancho, height=alto)
@@ -1365,7 +1429,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             # Al fondo del grupo: los dibujos que se mueven se agregan enteros a la escena (self.add de
             # dibujo.mobs) y una tarjeta al final del grupo se pintaba ENCIMA, tapándolos al 94 %.
             dibujo.mobs.add_to_back(caja)
-            self.add(caja)
+            if previo is None:  # si el dibujo sigue, la tarjeta de antes ya está (la nueva lo taparía)
+                self.add(caja)
         restante = max(self._restante(tr) - 0.5, 1.0)
         if self.receta.partida == "mitades":
             camara = self._toma_de_casillero(dibujo.mobs, aire=0.0)
@@ -1374,8 +1439,12 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         else:
             camara = []  # el gancho se mira entero desde el reposo: acá la cámara no se mueve
         if dibujo.vivo is not None and dibujo.duracion:
-            self._mover_dibujo(dibujo, dibujo.duracion, restante, camara)
+            self._mover_dibujo(dibujo, dibujo.duracion, restante, camara, previo=previo)
             self._dibujo_listo_en = self.renderer.time  # desde acá se ve completo (el proyectil ya cayó)
+            return dibujo
+        if previo is not None:
+            self._reemplazar_dibujo(previo, dibujo, camara, run_time=float(np.clip(restante * 0.3, 0.5, 0.9)))
+            self._dibujo_listo_en = self.renderer.time
             return dibujo
         # El dibujo termina antes que la voz: lo que queda es el rato que se mira ya completo.
         if dibujo.trazo:
@@ -1393,6 +1462,26 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             )
         self._dibujo_listo_en = self.renderer.time
         return dibujo
+
+    def _reemplazar_dibujo(
+        self, previo: d.Dibujo, dibujo: d.Dibujo, camara: list[Animation], run_time: float
+    ) -> None:
+        """Del dibujo del paso anterior al de este: lo idéntico se queda quieto y solo cambia lo demás.
+
+        Lo que ya no va se desvanece y lo nuevo aparece en el mismo instante (un fundido cruzado solo de
+        las piezas distintas, así lo que no cambia no parpadea). Al final se cambia el grupo viejo por el
+        nuevo entre dos cuadros: las piezas que se quedan son idénticas, así que no se nota.
+        """
+        _, salen, entran = emparejar(
+            piezas_de(previo.mobs), piezas_de(dibujo.mobs), clave_de_pieza, clave_de_pieza
+        )
+        cambios: list[Animation] = [FadeOut(m) for m in salen] + [FadeIn(m) for m in entran]
+        if cambios or camara:
+            self.play(*cambios, *camara, run_time=run_time)
+        # Toda la familia, no solo el grupo: al desvanecer una pieza, Manim parte el grupo viejo en la
+        # escena y un ``remove(previo.mobs)`` dejaría pegados los pedazos que quedaron.
+        self.remove(*previo.mobs.get_family(), *entran)
+        self.add(dibujo.mobs)
 
     def _sostener_dibujo(self, tr: Any) -> None:
         """Deja el dibujo terminado a la vista al menos ``PISO_DIBUJO`` segundos antes de seguir.
@@ -1447,6 +1536,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         halos_vivos: list[VGroup] = []  # el resplandor del paso anterior: se va de golpe, no se desvanece
         extras_vivos: list[Mobject] = []  # emojis del paso anterior (salen en el siguiente)
         dibujo_vivo: d.Dibujo | None = None  # el dibujo del paso anterior (sale en el siguiente)
+        campos_vivos: dict[str, Any] | None = None  # sus campos: si el paso siguiente es igual, se queda
+        franja_viva: tuple[float, float] | None = None
         ultima: Any = None  # última ecuación CORRECTA (origen de la transformación)
 
         for i, paso in enumerate(self.guion.pasos, 1):
@@ -1459,13 +1550,25 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                         c.micro_movimiento("barra", self.panel_gram[1][1][1]), run_time=0.3,
                     )
                 fondo, centro_dibujo, alto_dibujo = self._franja_del_dibujo(paso, tope)
-                sale_dibujo = [FadeOut(dibujo_vivo.mobs)] if dibujo_vivo else []
+                # El mismo dibujo que el paso anterior, en la misma franja: se queda y cambia lo que muestra.
+                campos = campos_del_visual(paso.visual)
+                franja = (round(centro_dibujo, 3), round(alto_dibujo, 3))
+                continua = (
+                    dibujo_vivo is not None
+                    and not mitades
+                    and alto_dibujo > 0
+                    and franja == franja_viva
+                    and sigue(campos_vivos, campos)
+                )
+                previo = dibujo_vivo if continua else None
+                sale_dibujo = [FadeOut(dibujo_vivo.mobs)] if dibujo_vivo and not continua else []
                 dibujo_vivo = None
+                campos_vivos, franja_viva = campos, franja
                 if paso.tex is None:  # paso solo hablado
                     self._con_pendientes(*[FadeOut(x) for x in extras_vivos], *sale_dibujo, run_time=0.5)
                     extras_vivos = []
                     if paso.visual is not None and alto_dibujo > 0:
-                        dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
+                        dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr, previo=previo)
                     elif ultima is not None:
                         self.play(Indicate(ultima, color=self.col.acento, scale_factor=1.04), run_time=0.6)
                     if c.gramatica_activa(self.tema):
@@ -1614,7 +1717,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 if demuestra_primero:
                     if nota is not None:
                         self.play(aparecer.pop(0), run_time=0.6)
-                    dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
+                    dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr, previo=previo)
                 self.play(*aparecer, run_time=float(np.clip(tr.duration * 0.45, 0.8, 1.6)))
                 completa_desde = self.renderer.time  # desde acá la fórmula ya está completa en pantalla
                 if self.tema.gramatica.mapa_color and paso.mapa:
@@ -1626,7 +1729,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     self.play(FadeIn(halos, scale=1.08), run_time=0.4)
                     halos_vivos.append(halos)
                 if paso.visual is not None and alto_dibujo > 0 and not demuestra_primero:
-                    dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr)
+                    dibujo_vivo = self._trazar_dibujo(paso, centro_dibujo, alto_dibujo, tr, previo=previo)
 
                 linea_nueva = Linea(mobs=list(nueva), eq=eq)
                 if emoji is not None:

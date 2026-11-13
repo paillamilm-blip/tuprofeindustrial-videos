@@ -505,11 +505,19 @@ def _cuerpo_vivo(
     """
     phi_f, theta_f = VISTAS[vista]
     cabeceo = CABECEO_ORBITA if phi_f <= 60 else -CABECEO_ORBITA
+    # El mismo cuerpo del paso anterior: la cámara parte de donde quedó (por el lado corto) y no da la
+    # vuelta de nuevo; con la misma vista ni se mueve (solo se separan las piezas, si hay despiece).
+    desde = d.desde_vista.get()
+    if desde is not None:
+        giro_desde = ((desde[1] - theta_f + 180.0) % 360.0) - 180.0
+        cabeceo_desde = desde[0] - phi_f
 
     def momento(t: float) -> tuple[float, float, float]:
         """(phi, theta, separación 0..1) del instante t del recorrido."""
         orbita = d._suave(t / PARTE_ORBITA if separa else t)
         separacion = d._suave((t - PARTE_ORBITA) / (1 - PARTE_ORBITA)) if separa else 0.0
+        if desde is not None:
+            return phi_f + cabeceo_desde * (1 - orbita), theta_f + giro_desde * (1 - orbita), separacion
         return phi_f + cabeceo * (1 - orbita), theta_f + GIRO_ORBITA * (1 - orbita), separacion
 
     # La luz es del estudio, no de la cámara: al orbitar el brillo resbala por el cuerpo y se lee el
@@ -808,6 +816,7 @@ def _cuerpo_vivo(
         duracion=d.SEGUNDOS_RECORRIDO,
         fisico=False,
         desplazamiento=desplazamiento,
+        vista_final=(phi_f, theta_f),
     )
 
 
