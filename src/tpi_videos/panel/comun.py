@@ -59,9 +59,9 @@ PIEL = {
     "tinta_insignia": "#0D1117",  # el texto sobre la insignia clara (turquesa y naranja)
 }
 
-# Tres pestañas: supervisar, aprobar y, solo si hace falta, meter las manos.
+# Tres pestañas: supervisar, aprobar y, solo si hace falta, meter las manos. («/» es el Estudio.)
 PAGINAS = (
-    ("/", "Cola de Producción", "dashboard"),
+    ("/cola", "Cola de Producción", "dashboard"),
     ("/qc", "Aprobación de Guiones (QC)", "fact_check"),
     ("/avanzado", "Avanzado", "tune"),
 )
@@ -148,6 +148,62 @@ body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
   gap: 16px; align-items: start; }}
 @media (max-width: 900px) {{ .tpi-columnas {{ grid-template-columns: minmax(0, 1fr); }} }}
 .tpi-costado {{ position: sticky; top: 12px; }}
+/* El Estudio: una sola pantalla. Mismo mundo que la sala (oscuro, un acento ámbar). */
+.tpi-enlace-cabecera {{ display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 10px;
+  color: {PIEL["tenue_sala"]}; text-decoration: none; transition: background-color .15s ease, color .15s ease; }}
+.tpi-enlace-cabecera:hover {{ background-color: {PIEL["consola"]}; color: {PIEL["texto_sala"]}; }}
+.tpi-estudio .q-field__native, .tpi-estudio .q-field__input {{ color: {PIEL["texto_sala"]}; }}
+.tpi-estudio .q-field__label, .tpi-estudio .q-field__bottom {{ color: {PIEL["tenue_sala"]}; }}
+.tpi-estudio .q-field--outlined .q-field__control:before {{ border-color: {PIEL["linea_sala"]}; }}
+.tpi-estudio .q-field--outlined.q-field--focused .q-field__control:after {{ border-color: {PIEL["ambar"]}; }}
+.tpi-estudio .q-btn {{ text-transform: none; }}
+.tpi-estudio .q-linear-progress {{ color: {PIEL["ambar"]}; }}
+.tpi-idea textarea {{ font-size: 1.1rem; line-height: 1.55; }}
+.tpi-zona {{ display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+  border-radius: 999px; font-size: .8rem; font-weight: 700; color: {PIEL["ambar"]};
+  box-shadow: inset 0 0 0 1.5px {PIEL["ambar"]}; flex-shrink: 0; }}
+.tpi-zona-apagada {{ color: {PIEL["tenue_sala"]}; box-shadow: inset 0 0 0 1.5px {PIEL["linea_sala"]}; }}
+.tpi-chip-tipo {{ min-height: 44px; padding: 0 18px; border-radius: 999px; background: {PIEL["consola_alta"]};
+  color: {PIEL["texto_sala"]}; box-shadow: inset 0 0 0 1px {PIEL["linea_sala"]}; font-weight: 600;
+  transition: background-color .15s ease, box-shadow .15s ease; }}
+.tpi-chip-tipo.activo {{ background: {PIEL["ambar"]}; color: {PIEL["tinta_ambar"]}; box-shadow: none; }}
+.tpi-atajo {{ min-height: 36px; padding: 0 12px; border-radius: 10px; color: {PIEL["tenue_sala"]};
+  box-shadow: inset 0 0 0 1px {PIEL["linea_sala"]}; font-size: .85rem; }}
+.tpi-opcion {{ width: 100%; text-align: left; padding: 12px 14px; border-radius: 12px; background: {PIEL["consola_alta"]};
+  color: {PIEL["texto_sala"]}; box-shadow: inset 0 0 0 1px transparent; cursor: pointer;
+  transition: box-shadow .15s ease, background-color .15s ease; }}
+.tpi-opcion.elegida {{ box-shadow: inset 3px 0 0 {PIEL["ambar"]}, inset 0 0 0 1px {PIEL["ambar"]}; cursor: default; }}
+.tpi-sugerencia {{ min-height: 36px; padding: 0 12px; border-radius: 999px; font-size: .85rem;
+  color: {PIEL["texto_sala"]}; background: {PIEL["consola_alta"]}; box-shadow: inset 0 0 0 1px {PIEL["linea_sala"]}; }}
+.tpi-sugerencia.elegida {{ box-shadow: inset 0 0 0 1px {PIEL["ambar"]}; color: {PIEL["ambar"]}; }}
+.tpi-paso {{ display: grid; grid-template-columns: 28px minmax(0, 1fr) 92px; gap: 14px; align-items: start;
+  padding: 14px; border-radius: 12px; background: {PIEL["consola_alta"]}; }}
+@media (max-width: 600px) {{ .tpi-paso {{ grid-template-columns: 28px minmax(0, 1fr); }}
+  .tpi-paso .tpi-cuadro-paso {{ grid-column: 2; }} .tpi-paso .tpi-cuadro-paso.vacio {{ display: none; }} }}
+.tpi-paso-error {{ box-shadow: inset 3px 0 0 {PIEL["rojo_sala"]}; }}
+.tpi-num-paso {{ width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center;
+  justify-content: center; font-size: .8rem; font-weight: 700; background: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
+.tpi-cuadro-paso {{ width: 92px; aspect-ratio: 9 / 16; border-radius: 10px; overflow: hidden; background: {PIEL["sala"]};
+  box-shadow: inset 0 0 0 1px {PIEL["linea_sala"]}; display: flex; align-items: center; justify-content: center; }}
+.tpi-cuadro-paso.vacio {{ aspect-ratio: auto; height: 56px; background: transparent;
+  box-shadow: inset 0 0 0 1px {PIEL["linea_sala"]}; }}
+.tpi-cuadro-video {{ width: 72px; aspect-ratio: 9 / 16; border-radius: 8px; overflow: hidden; background: {PIEL["sala"]};
+  flex-shrink: 0; }}
+.tpi-cuadro-paso img, .tpi-cuadro-video img {{ width: 100%; height: 100%; object-fit: cover; }}
+.tpi-esqueleto {{ background: {PIEL["linea_sala"]}; border-radius: 8px; animation: tpi-latido 1.4s ease-in-out infinite; }}
+@keyframes tpi-latido {{ 0%, 100% {{ opacity: .55; }} 50% {{ opacity: 1; }} }}
+.tpi-aviso-error {{ border-radius: 12px; padding: 14px 16px; background: {PIEL["consola_alta"]};
+  box-shadow: inset 3px 0 0 {PIEL["rojo_sala"]}; }}
+.tpi-entra {{ animation: tpi-entra .22s cubic-bezier(0.23, 1, 0.32, 1); }}
+@keyframes tpi-entra {{ from {{ opacity: 0; transform: translateY(6px); }} to {{ opacity: 1; transform: none; }} }}
+@media (hover: hover) and (pointer: fine) {{
+  .tpi-chip-tipo:not(.activo):hover, .tpi-opcion:not(.elegida):hover, .tpi-sugerencia:hover, .tpi-atajo:hover {{
+    box-shadow: inset 0 0 0 1px {PIEL["ambar"]}; }}
+}}
+@media (prefers-reduced-motion: reduce) {{
+  .tpi-entra {{ animation: none; }}
+  .tpi-esqueleto {{ animation: none; }}
+}}
 """
 
 
@@ -207,14 +263,18 @@ def piel_de_la_pagina() -> None:
     )
 
 
-def cabecera(con_menu: bool = True) -> None:
-    """La barra de arriba, oscura y sin ruido: la marca, el estado del motor y (si toca) volver."""
+def cabecera(con_menu: bool = True, estudio: bool = False, al_estudio: bool = False) -> None:
+    """La barra de arriba, oscura y sin ruido: la marca, el estado del motor y (si toca) volver.
+
+    En el Estudio (``estudio=True``) lleva además la salida a la sala de producción y a los ajustes; en
+    la sala (``al_estudio=True``), el camino de vuelta al Estudio.
+    """
     with ui.header().classes("tpi-cabecera items-center justify-between px-8 py-3"):
         with ui.row().classes("items-center gap-3 cursor-pointer").on("click", lambda: ui.navigate.to("/")):
             ui.image("/marca/panel.png").classes("w-9 h-9").props('alt="" no-spinner no-transition')
             with ui.column().classes("gap-0"):
                 ui.label("TU PROFE INDUSTRIAL").classes("tpi-marca text-base leading-tight")
-                ui.label("Sala de producción").classes("tpi-sobrio text-xs")
+                ui.label("Estudio" if estudio else "Sala de producción").classes("tpi-sobrio text-xs")
         with ui.row().classes("items-center gap-4"):
             chip = (
                 ui.chip("", color=None, on_click=lambda: ui.navigate.to("/"))
@@ -223,8 +283,19 @@ def cabecera(con_menu: bool = True) -> None:
             )
             chip.set_visibility(False)
             ui.timer(0.7, lambda: _estado_tarea(chip))
-            if con_menu:
-                ui.link("← Volver al tablero", "/").classes("tpi-sobrio no-underline")
+            if estudio:
+                with ui.link(target="/cola").classes("tpi-enlace-cabecera").props('aria-label="Sala de producción"'):
+                    ui.icon("dashboard").classes("text-xl")
+                    ui.label("Sala de producción").classes("gt-xs")
+                with ui.link(target="/ajustes").classes("tpi-enlace-cabecera").props('aria-label="Ajustes"'):
+                    ui.icon("settings").classes("text-xl")
+                    ui.label("Ajustes").classes("gt-xs")
+            elif al_estudio:
+                with ui.link(target="/").classes("tpi-enlace-cabecera").props('aria-label="Volver al Estudio"'):
+                    ui.icon("edit_note").classes("text-xl")
+                    ui.label("Estudio")
+            elif con_menu:
+                ui.link("← Volver a la sala", "/cola").classes("tpi-sobrio no-underline")
 
 
 @contextmanager

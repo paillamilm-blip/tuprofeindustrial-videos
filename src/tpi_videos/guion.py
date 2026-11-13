@@ -1222,6 +1222,9 @@ class Guion(_Base):
     verificacion: Bloque | None = None
     reto: Bloque | None = None
     cierre: Bloque | None = None
+    # El llamado a la acción del TEXTO de la publicación (no se dice en el video): «¿Tú también lo
+    # creías? Cuéntame 👇». Vacío = el de siempre del kit.
+    llamado: str | None = Field(default=None, max_length=150)
     metadatos: Metadatos | None = None  # título, descripción y hashtags para publicar (opcional)
 
     @field_validator("materia", mode="before")
@@ -1829,6 +1832,9 @@ def a_yaml(guion: dict[str, Any], cabecera: list[str] | None = None) -> str:
     for nombre in ("verificacion", "reto", "cierre"):
         if guion.get(nombre):
             bloque(nombre, guion[nombre])
+    if str(guion.get("llamado") or "").strip():
+        llamado = _dobles(str(guion["llamado"]).strip())
+        lineas += ["", f"llamado: {llamado}  # el cierre del texto de la publicación"]
     if guion.get("metadatos"):
         m = guion["metadatos"]
         lineas += [

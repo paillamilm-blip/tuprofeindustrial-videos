@@ -223,10 +223,11 @@ def cmd_crear(args: argparse.Namespace) -> int:
         piso=getattr(args, "piso_lectura", None),
         progreso=_progreso_json if json_activo else None,
     )
+    publicacion = _kit_tras_crear(resultado.video, json_activo) if getattr(args, "kit", False) else None
     if json_activo:
         _emitir(etapa="resultado", avance=1.0, video=resultado.video, srt=resultado.srt, tema=resultado.tema,
                 portada=resultado.portada, duracion=round(resultado.duracion, 1), lectura=round(resultado.lectura, 1),
-                segundos=round(resultado.segundos_proceso))  # fmt: skip
+                segundos=round(resultado.segundos_proceso), publicacion=publicacion)  # fmt: skip
     nombres = {"voz": "marcas exactas de la voz", "whisper": "Whisper", "estimado": "tiempos estimados"}
     fuentes = ", ".join(nombres[f] for f in sorted(resultado.fuentes_tiempo)) or "sin subtítulos"
     ruta = _ruta_amigable(resultado.video)
@@ -242,6 +243,44 @@ def cmd_crear(args: argparse.Namespace) -> int:
     consola.print(f'   Para verlo: [bold]open "{ruta}"[/]')
     if args.abrir:
         _abrir(resultado.video)
+    return 0
+
+
+def _kit_tras_crear(video: Path, json_activo: bool) -> Path | None:
+    """El kit de publicación justo después del video. Si falla, el video ya hecho no se pierde."""
+    from .publicar import crear_kit
+
+    if json_activo:
+        _emitir(etapa="publicando", avance=0.99, detalle="Armando los textos para publicar…")
+    try:
+        kit = crear_kit(Path(video))
+    except Exception as e:  # el video está listo: el kit se puede repetir con ./tpi publicar
+        mensaje = e.mensaje if isinstance(e, ErrorMotor) else str(e)
+        consola.print(f"[yellow]⚠  El video quedó listo, pero el kit no: {mensaje}[/]")
+        return None
+    if kit.aviso:
+        consola.print(f"   [yellow]{kit.aviso}[/]")
+    consola.print(f"   Textos para publicar: {_ruta_amigable(kit.archivo)}")
+    return kit.archivo
+
+
+def cmd_redibujar(args: argparse.Namespace) -> int:
+    from .ia import MODELO_POR_DEFECTO
+    from .redactor import redibujar_paso
+
+    json_activo = _modo_json(args)
+
+    def avisar(mensaje: str) -> None:
+        if json_activo:
+            _emitir(etapa="redactando", avance=0.0, detalle=mensaje)
+        consola.print(f"[dim]→ {mensaje}[/dim]")
+
+    ruta = redibujar_paso(
+        args.guion, args.paso, args.tipo, modelo=args.modelo or MODELO_POR_DEFECTO, avisar=avisar
+    )
+    if json_activo:
+        _emitir(etapa="resultado", avance=1.0, guion=ruta, paso=args.paso, tipo=args.tipo)
+    consola.print(f"[green bold]✅ Paso {args.paso} con dibujo nuevo:[/] {_ruta_amigable(ruta)}")
     return 0
 
 
@@ -367,6 +406,7 @@ def cmd_redactar(args: argparse.Namespace) -> int:
             nombre=args.nombre,
             forzar=args.forzar,
             revisar_con_ia=not args.sin_revision,
+            molde=getattr(args, "molde", None),
             avisar=lambda mensaje: avisar(mensaje, estado),
         )
     if json_activo:
@@ -1423,8 +1463,17 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--salida", help="carpeta de salida (por defecto: salida/)")
     s.add_argument("--tema", help="estilo visual, ej. consola_dato (ver ./tpi temas)")
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
+    s.add_argument("--kit", action="store_true", help="arma también el kit de publicación (portada y textos)")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_crear)
+
+    s = sub.add_parser("redibujar", help="cambia el dibujo de un paso (la IA lo arma con los datos del ejercicio)")
+    s.add_argument("guion", help="ruta al .yaml")
+    s.add_argument("--paso", type=int, required=True, help="el número del paso, desde 1")
+    s.add_argument("--tipo", required=True, help="el dibujo nuevo, ej. proyectil, grafico, escala, fuerzas")
+    s.add_argument("--modelo", default=None, help="modelo de Gemini (por defecto gemini-3.8-flash)")
+    s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
+    s.set_defaults(func=cmd_redibujar)
 
     s = sub.add_parser("subtitular", help="subtítulos estilo CapCut para cualquier video (usa Whisper)")
     s.add_argument("video", help="ruta al video")
@@ -1460,6 +1509,7 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument(
         "--sin-revision", action="store_true", help="no pedir la segunda revisión a la IA (más rápido)"
     )
+    s.add_argument("--molde", choices=list(MOLDES), help="molde narrativo: tres_errores, mito_realidad, reto…")
     s.add_argument("--crear", action="store_true", help="crea también el video borrador al terminar")
     s.add_argument("--abrir", action="store_true", help="con --crear: abre el video al terminar")
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
