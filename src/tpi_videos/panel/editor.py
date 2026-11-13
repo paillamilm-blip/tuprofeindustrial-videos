@@ -33,7 +33,7 @@ VACIO: dict[str, Any] = {
     "enunciado": {"texto": "", "voz": "", "destacar": []},
     "datos": [],
     "pasos": [],
-    "resultado": {"tex": "", "voz": "", "emoji": ""},
+    "resultado": {"tex": "", "texto": "", "voz": "", "emoji": ""},
     "verificacion": dict(_BLOQUE), "reto": dict(_BLOQUE), "cierre": dict(_BLOQUE),
 }  # fmt: skip
 
@@ -181,6 +181,11 @@ def desde_formulario(datos: dict[str, Any]) -> dict[str, Any]:
     for opcional in ("verificacion", "reto", "cierre"):
         if not d.get(opcional, {}).get("texto"):
             d.pop(opcional, None)
+    # Recursos: un false (apagado a propósito) se conserva; sin ningún valor, el bloque sobra.
+    if not d.get("recursos"):
+        d.pop("recursos", None)
+    if "contenido" in d and not d["contenido"]:
+        d.pop("contenido")
     d["datos"] = [x for x in d.get("datos", []) if x.get("tex") or x.get("voz")]
     d["pasos"] = [p for p in d.get("pasos", []) if p.get("voz") or p.get("tex")]
     for p in d["pasos"]:
