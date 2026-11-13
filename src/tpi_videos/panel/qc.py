@@ -19,10 +19,12 @@ from typing import Any
 from ..config import cargar_marca
 from ..entorno import raiz_proyecto
 from ..errores import ErrorMotor
-from ..guion import Guion, cabecera_de, cargar_guion, fijar_tema
+from ..didactica import NOMBRES as NOMBRES_RECURSOS
+from ..didactica import RECURSOS, RecursoDidactico, recursos_del_guion
+from ..guion import Contenido, Guion, RecursosDidacticos, a_yaml, cabecera_de, cargar_guion, fijar_tema
 from ..niveles import nombre_carrera
 from ..pausas import sin_pausas, trozos
-from ..temas import EstiloSugerido, estilo_del_guion, sugerir_tema_de_guion
+from ..temas import EstiloSugerido, cargar_tema, estilo_del_guion, resolver_tema, sugerir_tema_de_guion
 
 POR_REVISAR, APROBADO, RECHAZADO = "por_revisar", "aprobado", "rechazado"
 NOMBRES = {POR_REVISAR: "Por revisar", APROBADO: "Aprobado", RECHAZADO: "Rechazado"}
@@ -145,6 +147,8 @@ class Ficha:
     estilo: EstiloSugerido | None = None  # con el que saldrá: el elegido acá o, si no, el sugerido
     sugerido: EstiloSugerido | None = None  # el que el motor le propone a este video
     carrera: str = ""  # el nombre de la carrera (universidad), vacío si no tiene
+    contenido: Contenido | None = None  # qué enseña (None = guion de antes: un ejercicio)
+    recursos: list[RecursoDidactico] = field(default_factory=list)  # las 4 herramientas, con su motivo
 
     @property
     def aprobable(self) -> bool:
@@ -192,6 +196,13 @@ def _tecnico(guion: Guion) -> list[str]:
             lineas.append(f"Paso {i}: " + " · ".join(partes))
     if guion.resultado.destello:
         lineas.append("Resultado con destello")
+    if guion.resultado.texto:
+        lineas.append(f"Conclusión en texto: {guion.resultado.texto}")
+    if guion.recursos is not None:
+        for clave in RECURSOS:
+            valor = getattr(guion.recursos, clave)
+            if valor is not None:
+                lineas.append(f"{NOMBRES_RECURSOS[clave]}: {'encendido' if valor else 'apagado'} (elegido)")
     return lineas
 
 
@@ -219,6 +230,7 @@ def ficha(ruta: Path) -> Ficha:
             continue
         voces.append(Voz(seccion, sin_pausas(voz), [p for _, p in trozos(voz) if p]))
     marca = cargar_marca()
+    tema_base = cargar_tema(resolver_tema(None, guion, marca), marca)
     return Ficha(
         ruta=ruta,
         titulo=guion.titulo,
@@ -233,6 +245,8 @@ def ficha(ruta: Path) -> Ficha:
         estilo=estilo_del_guion(guion, marca),
         sugerido=sugerir_tema_de_guion(guion, marca),
         carrera=nombre_carrera(guion.carrera),
+        contenido=guion.contenido,
+        recursos=recursos_del_guion(guion, tema_base),
     )
 
 
@@ -257,6 +271,55 @@ def cambiar_estilo(ruta: Path, clave: str) -> EstiloSugerido:
         datos["guiones"][_clave(ruta)]["huella"] = huella(ruta)
         _guardar(datos)
     return estilo_del_guion(guion, marca)
+
+
+# ------------------------------------------------------------------------------------------
+# Las herramientas de la explicación (contador, resumen, colores, énfasis)
+# ------------------------------------------------------------------------------------------
+
+
+def _normalizados(recursos: RecursosDidacticos | None) -> RecursosDidacticos | None:
+    """Sin ningún valor elegido es lo mismo que no tener el bloque: todo vuelve a lo sugerido."""
+    if recursos is None or all(getattr(recursos, c) is None for c in RECURSOS):
+        return None
+    return recursos
+
+
+def cambiar_recursos(ruta: Path, recursos: RecursosDidacticos | None) -> Guion:
+    """Guarda las herramientas elegidas para el guion; ``None`` (o todo vacío) vuelve a lo sugerido.
+
+    Las herramientas son parte de lo que se aprueba: un cambio real deja el guion «por revisar» (la
+    huella cambia). Sin cambios no se toca el archivo. Se valida antes de escribir y se reemplaza de
+    una vez: si algo falla, el original queda exacto. Un lote ya encolado no cambia.
+    """
+    if not guion_revisable(ruta) or ruta.is_symlink():
+        raise ErrorMotor("Ese archivo no es un guion de guiones/.", ayuda="Elige uno de la lista.")
+    ruta = ruta.resolve()
+    guion = cargar_guion(ruta)  # un YAML que no valida avisa acá y no se reescribe
+    nuevos = _normalizados(RecursosDidacticos.model_validate(recursos.model_dump()) if recursos else None)
+    if nuevos == _normalizados(guion.recursos):
+        return guion
+    datos = guion.model_dump(exclude_none=True)
+    datos.pop("recursos", None)
+    if nuevos is not None:
+        datos["recursos"] = nuevos.model_dump(exclude_none=True)
+    nuevo = Guion.model_validate(datos)
+    texto = a_yaml(nuevo.model_dump(exclude_none=True), cabecera_de(ruta))
+    temporal = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", dir=ruta.parent, prefix=f".{ruta.stem}.", suffix=".tmp", delete=False
+        ) as tmp:
+            temporal = Path(tmp.name)
+            tmp.write(texto)
+            tmp.flush()
+            os.fsync(tmp.fileno())
+        os.replace(temporal, ruta)
+        temporal = None
+    finally:
+        if temporal is not None:
+            temporal.unlink(missing_ok=True)
+    return cargar_guion(ruta)
 
 
 def con_estilo_propio() -> list[Path]:
