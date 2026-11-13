@@ -31,3 +31,27 @@ def datos_concepto():
         "voz": "La longitud y el volumen no crecen de la misma manera.",
     }
     return datos
+
+
+def datos_mito_cubo():
+    """El mito del cubo sobre los datos reales de guiones/caben_ocho_cubos.yaml (solo lectura).
+
+    Mito + ejercicio: «duplicar la arista duplica el volumen». Variante consola_mito con el resumen
+    de fórmulas encendido por elección (la variante sola no lo trae). La fórmula del guion real sigue
+    siendo la pieza principal del cierre; la conclusión en texto la interpreta.
+    """
+    from pathlib import Path
+
+    import yaml
+
+    ruta = Path(__file__).resolve().parents[1] / "guiones" / "caben_ocho_cubos.yaml"
+    datos = yaml.safe_load(ruta.read_text(encoding="utf-8"))
+    datos["titulo"] = "El mito del cubo: ¿doble arista, doble volumen?"
+    datos["tema"] = "consola_mito"
+    datos["contenido"] = {
+        "intenciones": ["mito", "ejercicio"],
+        "objetivo": "Demostrar que duplicar la arista multiplica el volumen por ocho, no por dos.",
+    }
+    datos["recursos"] = {"panel": True}
+    datos["resultado"]["texto"] = "Duplicar la arista multiplica el volumen por ocho."
+    return datos

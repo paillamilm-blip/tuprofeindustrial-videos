@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from ..config import cargar_marca
-from ..entorno import raiz_proyecto
+from ..entorno import escribir_atomico, raiz_proyecto
 from ..errores import ErrorMotor
 from ..didactica import NOMBRES as NOMBRES_RECURSOS
 from ..didactica import RECURSOS, RecursoDidactico, recursos_del_guion
@@ -304,21 +304,7 @@ def cambiar_recursos(ruta: Path, recursos: RecursosDidacticos | None) -> Guion:
     if nuevos is not None:
         datos["recursos"] = nuevos.model_dump(exclude_none=True)
     nuevo = Guion.model_validate(datos)
-    texto = a_yaml(nuevo.model_dump(exclude_none=True), cabecera_de(ruta))
-    temporal = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            "w", encoding="utf-8", dir=ruta.parent, prefix=f".{ruta.stem}.", suffix=".tmp", delete=False
-        ) as tmp:
-            temporal = Path(tmp.name)
-            tmp.write(texto)
-            tmp.flush()
-            os.fsync(tmp.fileno())
-        os.replace(temporal, ruta)
-        temporal = None
-    finally:
-        if temporal is not None:
-            temporal.unlink(missing_ok=True)
+    escribir_atomico(ruta, a_yaml(nuevo.model_dump(exclude_none=True), cabecera_de(ruta)))
     return cargar_guion(ruta)
 
 

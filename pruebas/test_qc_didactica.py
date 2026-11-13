@@ -78,10 +78,16 @@ class QCDidacticaTest(ConRaiz):
     def test_fallo_al_reemplazar_deja_el_original_exacto(self):
         self._escribir(datos_concepto())
         antes = self.guion.read_bytes()
-        with patch("tpi_videos.panel.qc.os.replace", side_effect=OSError("disco lleno")), self.assertRaises(OSError):
+        with patch("tpi_videos.entorno.os.replace", side_effect=OSError("disco lleno")), self.assertRaises(OSError):
             qc.cambiar_recursos(self.guion, RecursosDidacticos(panel=True))
         self.assertEqual(self.guion.read_bytes(), antes)
         self.assertEqual(sorted(p.name for p in self.guion.parent.iterdir() if p.is_file()), ["motor_vivo.yaml"])
+
+    def test_conserva_los_permisos_de_siempre(self):
+        self._escribir(datos_concepto())
+        self.guion.chmod(0o644)
+        qc.cambiar_recursos(self.guion, RecursosDidacticos(panel=True))
+        self.assertEqual(self.guion.stat().st_mode & 0o777, 0o644)
 
     def test_yaml_invalido_no_se_reescribe(self):
         self.guion.write_text("titulo: [roto\n", encoding="utf-8")
