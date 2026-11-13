@@ -223,11 +223,14 @@ def cmd_crear(args: argparse.Namespace) -> int:
         piso=getattr(args, "piso_lectura", None),
         progreso=_progreso_json if json_activo else None,
     )
-    publicacion = _kit_tras_crear(resultado.video, json_activo) if getattr(args, "kit", False) else None
+    publicacion, kit_aviso = (
+        _kit_tras_crear(resultado.video, json_activo) if getattr(args, "kit", False) else (None, None)
+    )
     if json_activo:
         _emitir(etapa="resultado", avance=1.0, video=resultado.video, srt=resultado.srt, tema=resultado.tema,
                 portada=resultado.portada, duracion=round(resultado.duracion, 1), lectura=round(resultado.lectura, 1),
-                segundos=round(resultado.segundos_proceso), publicacion=publicacion)  # fmt: skip
+                segundos=round(resultado.segundos_proceso), publicacion=publicacion,
+                kit_aviso=kit_aviso)  # fmt: skip
     nombres = {"voz": "marcas exactas de la voz", "whisper": "Whisper", "estimado": "tiempos estimados"}
     fuentes = ", ".join(nombres[f] for f in sorted(resultado.fuentes_tiempo)) or "sin subtítulos"
     ruta = _ruta_amigable(resultado.video)
@@ -246,8 +249,12 @@ def cmd_crear(args: argparse.Namespace) -> int:
     return 0
 
 
-def _kit_tras_crear(video: Path, json_activo: bool) -> Path | None:
-    """El kit de publicación justo después del video. Si falla, el video ya hecho no se pierde."""
+def _kit_tras_crear(video: Path, json_activo: bool) -> tuple[Path | None, str | None]:
+    """El kit de publicación justo después del video: ``(publicacion.md, aviso)``.
+
+    Si falla, el video ya hecho no se pierde y el aviso dice por qué (el panel lo muestra: antes solo
+    se escribía en la terminal y la pantalla decía «Listo» sin textos para publicar).
+    """
     from .publicar import crear_kit
 
     if json_activo:
@@ -256,12 +263,13 @@ def _kit_tras_crear(video: Path, json_activo: bool) -> Path | None:
         kit = crear_kit(Path(video))
     except Exception as e:  # el video está listo: el kit se puede repetir con ./tpi publicar
         mensaje = e.mensaje if isinstance(e, ErrorMotor) else str(e)
-        consola.print(f"[yellow]⚠  El video quedó listo, pero el kit no: {mensaje}[/]")
-        return None
+        aviso = f"El video quedó listo, pero los textos para publicar no: {mensaje}"
+        consola.print(f"[yellow]⚠  {aviso}[/]")
+        return None, aviso
     if kit.aviso:
         consola.print(f"   [yellow]{kit.aviso}[/]")
     consola.print(f"   Textos para publicar: {_ruta_amigable(kit.archivo)}")
-    return kit.archivo
+    return kit.archivo, kit.aviso
 
 
 def cmd_redibujar(args: argparse.Namespace) -> int:

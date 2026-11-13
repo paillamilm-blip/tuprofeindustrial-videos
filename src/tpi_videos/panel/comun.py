@@ -284,14 +284,20 @@ def cabecera(con_menu: bool = True, estudio: bool = False, al_estudio: bool = Fa
             chip.set_visibility(False)
             ui.timer(0.7, lambda: _estado_tarea(chip))
             if estudio:
-                with ui.link(target="/cola").classes("tpi-enlace-cabecera").props('aria-label="Sala de producción"'):
+                with (
+                    ui.link(target="/cola")
+                    .classes("tpi-enlace-cabecera")
+                    .props('aria-label="Sala de producción"')
+                ):
                     ui.icon("dashboard").classes("text-xl")
                     ui.label("Sala de producción").classes("gt-xs")
                 with ui.link(target="/ajustes").classes("tpi-enlace-cabecera").props('aria-label="Ajustes"'):
                     ui.icon("settings").classes("text-xl")
                     ui.label("Ajustes").classes("gt-xs")
             elif al_estudio:
-                with ui.link(target="/").classes("tpi-enlace-cabecera").props('aria-label="Volver al Estudio"'):
+                with (
+                    ui.link(target="/").classes("tpi-enlace-cabecera").props('aria-label="Volver al Estudio"')
+                ):
                     ui.icon("edit_note").classes("text-xl")
                     ui.label("Estudio")
             elif con_menu:

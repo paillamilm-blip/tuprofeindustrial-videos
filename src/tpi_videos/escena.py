@@ -525,6 +525,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         # Cuántos segundos esperó el piso de lectura en total: lo que el panel perdona de la promesa.
         self.silencio_de_lectura = 0.0
         self._dibujo_listo_en: float | None = None  # cuándo quedó completo el dibujo del paso en curso
+        self._titulo_oculto = False  # las dos mitades apagan el título mientras la cámara está en un casillero
         self._pendientes: list[Animation] = []  # transiciones para el próximo bloque de voz
         self._total_bloques = len(guion.textos_de_voz(marca.cierre.voz))
         # El molde decide las palabras; la receta de rodaje, cómo se filman esos pasos.
@@ -1091,6 +1092,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     self.play(Indicate(letras, color=self.col.acento, scale_factor=1.18), run_time=0.5)
             if g.visual is not None and alto_dibujo > 0:
                 dibujo = self._trazar_dibujo(g, centro_dibujo, alto_dibujo, tr, mover_camara=False)
+                # El gancho no sostiene su dibujo (se va con la pregunta): que su «listo» no lo herede
+                # el primer paso, que esperaría en silencio por un dibujo que ya no está.
+                self._dibujo_listo_en = None
             if emoji is not None and self._restante(tr) > 1.0:
                 self.play(Wiggle(emoji, scale_value=1.08, rotation_angle=0.05 * TAU), run_time=0.8)
             if formula is not None:
@@ -1426,13 +1430,15 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 if eq.height > c.ALTO_MAX_ECUACION:
                     eq.scale_to_fit_height(c.ALTO_MAX_ECUACION)
                 nota = self._nota(paso)
-                # El emoji va a la derecha de la nota (o de la fórmula si no hay nota): se le hace espacio
+                # El emoji va a la derecha de la fila entera (nota + fórmula), centrado en su alto: junto a
+                # la nota sola, un emoji más alto que ella se montaba sobre la fórmula de abajo y tapaba
+                # sus números («30·000», «= 15000 pesos»). Se le hace espacio a las dos líneas.
                 emoji = self._emoji(paso.emoji or ("alerta" if paso.error else None), 0.78)
-                ancla = nota if nota is not None else eq
                 hueco = emoji.width + 0.2 if emoji is not None else 0.0
                 # (la fórmula sola ya viene ajustada al ancho por c.ecuacion)
-                if (ancla is nota or emoji is not None) and ancla.width > c.ANCHO_UTIL - hueco + 1e-6:
-                    ancla.scale_to_fit_width(c.ANCHO_UTIL - hueco)  # una nota larga no se sale de la hoja
+                for linea_de_texto in (nota, eq if emoji is not None else None):
+                    if linea_de_texto is not None and linea_de_texto.width > c.ANCHO_UTIL - hueco + 1e-6:
+                        linea_de_texto.scale_to_fit_width(c.ANCHO_UTIL - hueco)  # nada se sale de la hoja
                 nueva = VGroup(*[m for m in (nota, eq) if m is not None]).arrange(DOWN, buff=0.16)
 
                 # —— Dónde cae cada línea ——————————————————————————————————————————
@@ -1477,8 +1483,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                         columna.scale_to_fit_height(alto_zona)
                     columna.move_to([0, (tope + fondo) / 2, 0])  # pizarra centrada
                 if emoji is not None:  # la fila [nota o fórmula + emoji] queda centrada
-                    ancla.shift(LEFT * hueco / 2)
-                    emoji.next_to(ancla, RIGHT, buff=0.2)
+                    nueva.shift(LEFT * hueco / 2)
+                    emoji.next_to(nueva, RIGHT, buff=0.2)
 
                 # El halo se apaga de golpe: la línea a la que pertenece sube y se achica en esta misma
                 # animación, y un halo que se desvanece se quedaría flotando en el sitio viejo.
@@ -1494,6 +1500,12 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     # el borde, y cada casillero ya trae su nota con lo que se usa.
                     previas.append(FadeOut(datos_vivos))
                     datos_vivos = None
+                titulo = getattr(self, "titulo", None)
+                if mitades and titulo is not None and not self._titulo_oculto and titulo in self.mobjects:
+                    # Lo mismo el título: la toma del casillero de arriba lo dejaba gigante y cortado
+                    # por los dos lados («O DEL DOBLE DESC»). Vuelve con el resultado, en el plano.
+                    previas.append(FadeOut(titulo))
+                    self._titulo_oculto = True
                 for linea in salen:
                     previas += [FadeOut(m, shift=UP * 0.5) for m in linea.mobs]
                 if not mitades:
@@ -1710,6 +1722,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             if barra is not None:
                 self.add(barra)
                 aparecer.append(barra.animate.move_to(caja))
+            if self._titulo_oculto:  # las mitades lo apagaron: el resultado se lee con su título
+                aparecer.append(FadeIn(self.titulo))
+                self._titulo_oculto = False
             self._con_pendientes(*[FadeOut(m) for m in salen], *self._tomar_aire(), *aparecer, run_time=0.9)
             # La cámara entra al resultado, pero nunca tanto como para cortar el recuadro ni su sticker.
             visible = Group(caja, *([emoji] if emoji is not None else []))
@@ -1853,5 +1868,6 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             "bloques": self.bloques_voz,
             "silencio_de_lectura": round(float(self.silencio_de_lectura), 2),
         }
-        self.op.linea_de_tiempo.parent.mkdir(parents=True, exist_ok=True)
-        self.op.linea_de_tiempo.write_text(json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8")
+        from .entorno import escribir_atomico
+
+        escribir_atomico(self.op.linea_de_tiempo, json.dumps(datos, ensure_ascii=False, indent=2))

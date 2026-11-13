@@ -32,6 +32,33 @@ CARPETAS_FFMPEG = (
 )
 
 
+def escribir_atomico(ruta: Path, texto: str | bytes, permisos: int | None = None) -> Path:
+    """Escribe el archivo entero o no lo toca: primero a un temporal en la misma carpeta y después
+    ``os.replace`` (atómico en Mac, Linux y Windows). Si se corta la luz o se llena el disco a mitad de
+    camino, el guion (o el kit, o la línea de tiempo) queda como estaba y no a medio escribir.
+
+    ``permisos`` (ej. ``0o600`` para la clave) se aplica al temporal ANTES de escribir: el archivo
+    nunca existe con permisos más abiertos, ni un instante.
+    """
+    import tempfile
+
+    ruta = Path(ruta)
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporal = tempfile.mkstemp(prefix=f".{ruta.name}.", suffix=".tmp", dir=ruta.parent)
+    try:
+        # mkstemp crea el temporal en 600: un guion o un kit quedan con los permisos de siempre (644).
+        os.chmod(temporal, 0o644 if permisos is None else permisos)
+        with os.fdopen(fd, "wb") as f:
+            f.write(texto.encode("utf-8") if isinstance(texto, str) else texto)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporal, ruta)
+    except BaseException:
+        Path(temporal).unlink(missing_ok=True)
+        raise
+    return ruta
+
+
 def raiz_proyecto() -> Path:
     """Carpeta raíz del repo (donde están marca.yaml, guiones/ y salida/)."""
     env = os.environ.get("TPI_RAIZ")

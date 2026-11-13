@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from . import ia
 from .emojis import lista_para_ia, normalizar_para_ia, quitar_emojis
-from .entorno import PLANTILLAS_DIR, raiz_proyecto
+from .entorno import PLANTILLAS_DIR, escribir_atomico, raiz_proyecto
 from .errores import ErrorMotor
 from .guion import Gancho, Guion, a_yaml, cargar_guion, explicar_errores, sin_tildes
 from .moldes import MOLDES, normalizar_molde, opciones_de_moldes
@@ -1480,7 +1480,7 @@ def pedir_json(
                 ),
                 transitorio=True,
             ) from errores[-1]
-        raise ia.explicar_error(errores[0], cadena[-1]) from errores[0]
+        raise ia.explicar_error(errores[0], cadena[0]) from errores[0]  # el error es del primer modelo
     texto = respuesta.text or ""
     if not texto.strip():
         candidato = (respuesta.candidates or [None])[0]
@@ -1701,7 +1701,7 @@ def redactar(
             "",
             "Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).",
         ]
-    destino.write_text(a_yaml(datos, cabecera), encoding="utf-8")
+    escribir_atomico(destino, a_yaml(datos, cabecera))
     guion_final = cargar_guion(destino)  # comprueba que el archivo escrito se lee igual
     return ResultadoRedaccion(
         ruta=destino,
@@ -1787,14 +1787,24 @@ def redibujar_paso(
         if visual is None:
             problema = "no llegó ningún dibujo"
             continue
-        datos = guion.model_dump()
+        anterior = guion.pasos[indice].visual
+        if anterior is not None and anterior.tamano != "auto":
+            visual["tamano"] = anterior.tamano  # el tamaño que eligió el profe vale también para el nuevo
+        # La IA tarda: mientras tanto el profe pudo cambiar el gancho o el cierre en el panel. Se vuelve
+        # a leer el archivo y solo se toca este dibujo, así nada de lo otro se pierde.
+        datos = cargar_guion(ruta).model_dump()
+        if len(datos["pasos"]) != len(guion.pasos):
+            raise ErrorMotor(
+                "El guion cambió de pasos mientras la IA armaba el dibujo.",
+                ayuda="Vuelve a pedir el dibujo nuevo.",
+            )
         datos["pasos"][indice]["visual"] = visual
         try:
             Guion.model_validate(datos)
         except ValidationError as e:
             problema = "; ".join(explicar_errores(e))[:400]
             continue
-        ruta.write_text(a_yaml(datos, cabecera_de(ruta)), encoding="utf-8")
+        escribir_atomico(ruta, a_yaml(datos, cabecera_de(ruta)))
         cargar_guion(ruta)  # comprueba que lo escrito se lee igual
         return ruta
     raise ErrorMotor(

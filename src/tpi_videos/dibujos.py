@@ -8,6 +8,7 @@ La matemática ya viene analizada en ``visuales.py``; aquí sólo se dibuja.
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -137,10 +138,26 @@ def afinar_trazo(mobs: VGroup, minimo: float = GROSOR_MINIMO) -> None:
             m.set_cap_style(CapStyleType.ROUND)
 
 
+# El tamaño que pidió el guion (``visual.tamano``): la fracción de la tarjeta que ocupa el dibujo.
+# None = «auto»: solo se achica lo que no cabe. Se fija en ``dibujar_visual`` mientras se construye.
+RELLENO = {"chico": 0.6, "mediano": 0.8, "grande": 1.0}
+_relleno: ContextVar[float | None] = ContextVar("relleno_del_dibujo", default=None)
+
+
+def factor_de_encaje(ancho_dibujo: float, alto_dibujo: float, ancho: float, alto: float) -> float:
+    """Cuánto se escala un dibujo de ese tamaño para su franja: achica lo que no cabe y, si el guion
+    pidió un tamaño, lo lleva justo a esa fracción (agrandándolo si hace falta)."""
+    excedido = max(ancho_dibujo / ancho, alto_dibujo / alto, 1e-9)
+    relleno = _relleno.get()
+    if relleno is None:
+        return 1.0 / excedido if excedido > 1.0 else 1.0
+    return relleno / excedido
+
+
 def _encajar(todo: VGroup, ancho: float, alto: float) -> VGroup:
-    """Si el dibujo se sale de la franja del pie, se encoge entero. Agrandarlo no sirve de nada."""
-    excedido = max(todo.width / ancho, todo.height / alto)
-    return todo if excedido <= 1.0 else todo.scale(1.0 / excedido)
+    """Si el dibujo se sale de la franja del pie, se encoge entero (o toma el tamaño que pidió el guion)."""
+    factor = factor_de_encaje(todo.width, todo.height, ancho, alto)
+    return todo if factor == 1.0 else todo.scale(factor)
 
 
 def _encaje(
@@ -153,9 +170,9 @@ def _encaje(
     nunca vuelve al origen cuando el dibujo ya cambió de sitio.
     """
     centro = todo.get_center().copy()
-    excedido = max(todo.width / ancho, todo.height / alto)
-    _encajar(todo, ancho, alto)
-    factor = 1.0 / excedido if excedido > 1.0 else 1.0
+    factor = factor_de_encaje(todo.width, todo.height, ancho, alto)
+    if factor != 1.0:
+        todo.scale(factor)
     desplazamiento = [np.zeros(3)]
 
     def fijo(p: np.ndarray) -> np.ndarray:
@@ -1464,7 +1481,14 @@ def escala(
 
 def _paleta(col: Any) -> list[str]:
     """Colores del tema, en un orden que se distingue bien uno del otro en la hoja."""
-    return [col.acento, col.cuadricula, col.exito, col.error, col.tenue, col.formulas]
+    from .temas import colores_distintos
+
+    # Sin repetir: en la familia Consola el acento puede ser el mismo verde del éxito (Reto) o el rojo
+    # del error (Error), y dos porciones del mismo color se leen como una sola.
+    return colores_distintos(
+        [col.acento, col.cuadricula, col.exito, col.error, col.tenue, col.formulas],
+        getattr(col, "panel", None),
+    )
 
 
 def _porcentaje(fraccion: float) -> str:
@@ -3200,7 +3224,11 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
     ``papel`` es el color sobre el que se dibuja: sirve para 'cortar' un cable con una caja del
     mismo color (resistencias, batería y las medidas del polígono) sin que se note el truco.
     """
-    dibujo = _dibujar_visual(visual, col, ancho, alto, papel)
+    marca = _relleno.set(RELLENO.get(getattr(visual, "tamano", "auto") or "auto"))
+    try:
+        dibujo = _dibujar_visual(visual, col, ancho, alto, papel)
+    finally:
+        _relleno.reset(marca)
     tecnico = visual.tipo == "tolva_3d" or (visual.tipo == "solido_3d" and visual.figura == "cubo")
     afinar_trazo(dibujo.mobs, minimo=1.5 if tecnico else GROSOR_MINIMO)
     return dibujo

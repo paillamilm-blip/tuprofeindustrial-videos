@@ -12,7 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from .entorno import raiz_proyecto
+from .entorno import escribir_atomico, raiz_proyecto
 from .errores import ErrorMotor
 from .guion import Guion, a_yaml, cabecera_de, cargar_guion, sin_tildes
 from .ideas import GanchoIdea, Idea
@@ -183,6 +183,6 @@ def elegir_gancho(ruta: str | Path, numero: int) -> Path:
     datos = guion.model_dump()
     datos["gancho"] = elegido.model_dump(exclude_none=True)
     datos["gancho_variantes"] = alternativas[:5]
-    ruta.write_text(a_yaml(datos, cabecera_de(ruta)), encoding="utf-8")
+    escribir_atomico(ruta, a_yaml(datos, cabecera_de(ruta)))
     cargar_guion(ruta)  # comprueba que lo escrito se lee igual
     return ruta

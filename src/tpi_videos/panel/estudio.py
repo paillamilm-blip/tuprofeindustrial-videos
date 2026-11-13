@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..entorno import raiz_proyecto
+from ..entorno import escribir_atomico, raiz_proyecto
 from ..errores import ErrorMotor
 from ..ganchos import elegir_gancho
 from ..guion import Guion, a_yaml, cabecera_de, cargar_guion, explicar_errores, sin_tildes
@@ -234,7 +234,7 @@ def recordar(idea: str, nivel: str | None, tipo: str) -> dict[str, Any]:
     }
     archivo = _archivo_atajos()
     archivo.parent.mkdir(parents=True, exist_ok=True)
-    archivo.write_text(json.dumps(atajos, ensure_ascii=False, indent=2), encoding="utf-8")
+    escribir_atomico(archivo, json.dumps(atajos, ensure_ascii=False, indent=2))
     return atajos
 
 
@@ -279,7 +279,7 @@ def guardar(ruta: Path, datos: dict[str, Any]) -> Guion:
     except Exception as e:
         detalle = "; ".join(explicar_errores(e)) if hasattr(e, "errors") else str(e)
         raise ErrorMotor("Ese cambio deja el guion incompleto.", ayuda=detalle[:300]) from e
-    ruta.write_text(a_yaml(guion.model_dump(), cabecera_de(ruta)), encoding="utf-8")
+    escribir_atomico(ruta, a_yaml(guion.model_dump(), cabecera_de(ruta)))
     return cargar_guion(ruta)  # comprueba que lo escrito se lee igual
 
 
@@ -355,6 +355,22 @@ def quitar_dibujo(ruta: Path, numero: int) -> Guion:
     i = _paso(guion, numero)
     datos = guion.model_dump()
     datos["pasos"][i]["visual"] = None
+    return guardar(ruta, datos)
+
+
+TAMANOS = {"auto": "Automático", "chico": "Chico", "mediano": "Mediano", "grande": "Grande"}
+
+
+def cambiar_tamano(ruta: Path, numero: int, tamano: str) -> Guion:
+    """Cuánto de su tarjeta ocupa el dibujo del paso: automático, chico, mediano o grande."""
+    if tamano not in TAMANOS:
+        raise ErrorMotor(f"No conozco el tamaño «{tamano}».", ayuda="Elige: " + ", ".join(TAMANOS.values()))
+    guion = cargar_guion(ruta)
+    i = _paso(guion, numero)
+    if guion.pasos[i].visual is None:
+        raise ErrorMotor(f"El paso {numero} no tiene dibujo.", ayuda="Agrégale uno primero.")
+    datos = guion.model_dump()
+    datos["pasos"][i]["visual"]["tamano"] = tamano
     return guardar(ruta, datos)
 
 

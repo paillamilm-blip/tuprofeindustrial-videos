@@ -32,6 +32,25 @@ ETAPAS = {
 }
 
 
+def detener_proceso(proceso: asyncio.subprocess.Process | None) -> None:
+    """Detiene el comando y lo que abrió (LaTeX, FFmpeg). En Mac y Linux, al grupo entero; Windows no
+    tiene grupos de procesos (``os.killpg`` no existe y lanzaba AttributeError): ahí, el proceso."""
+    if proceso is None or proceso.returncode is not None:
+        return
+    try:
+        if hasattr(os, "killpg"):
+            os.killpg(proceso.pid, signal.SIGTERM)
+        else:
+            proceso.terminate()
+    except (ProcessLookupError, PermissionError, OSError):
+        pass
+
+
+def _sesion_aparte() -> dict[str, Any]:
+    """Que el comando viva en su propio grupo (solo existe en Mac y Linux)."""
+    return {"start_new_session": True} if os.name != "nt" else {}
+
+
 @dataclass
 class Tarea:
     nombre: str
@@ -104,7 +123,7 @@ class Tareas:
             tarea.proceso = await asyncio.create_subprocess_exec(
                 sys.executable, "-m", "tpi_videos", *comando,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=entorno,
-                start_new_session=True,  # así se puede detener todo junto (LaTeX, FFmpeg)
+                **_sesion_aparte(),  # así se puede detener todo junto (LaTeX, FFmpeg)
                 limit=4 * 1024 * 1024,  # líneas largas (ej. un registro de LaTeX) no cortan la lectura
             )  # fmt: skip
         except OSError as e:
@@ -146,12 +165,10 @@ class Tareas:
             if tarea.error is None:  # si no, TAREAS.actual quedaría «en curso» para siempre y todo se tapa
                 tarea.error = {"mensaje": "El trabajo se cortó.", "ayuda": str(e)}
         finally:
-            if tarea.proceso is not None and tarea.proceso.returncode is None:
-                try:
-                    os.killpg(tarea.proceso.pid, signal.SIGTERM)
-                except (ProcessLookupError, PermissionError):
-                    pass
-            self._cerrar(tarea, al_cambiar)
+            try:
+                detener_proceso(tarea.proceso)
+            finally:  # pase lo que pase, la fila queda libre: si no, el panel se tranca hasta reiniciarlo
+                self._cerrar(tarea, al_cambiar)
         return tarea
 
     @staticmethod
@@ -202,10 +219,7 @@ class Tareas:
         if t is None or t.terminada or t.proceso is None:
             return
         t.cancelada = True
-        try:
-            os.killpg(t.proceso.pid, signal.SIGTERM)
-        except (ProcessLookupError, PermissionError):
-            pass
+        detener_proceso(t.proceso)
 
 
 async def consultar(
@@ -220,10 +234,24 @@ async def consultar(
     """
     proceso = await asyncio.create_subprocess_exec(
         sys.executable, "-m", "tpi_videos", args[0], "--progreso-json", *args[1:],
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
         env=dict(os.environ, PYTHONUNBUFFERED="1", NO_COLOR="1"), limit=4 * 1024 * 1024,
+        **_sesion_aparte(),
     )  # fmt: skip
     final: dict[str, Any] = {}
+    errores: list[str] = []
+
+    async def leer_errores() -> None:
+        # Se lee mientras corre (un tubo lleno trabaría al comando) y se guardan las últimas líneas:
+        # si el comando se cae sin avisar, eso es lo único que dice por qué.
+        assert proceso.stderr is not None
+        async for crudo in proceso.stderr:
+            linea = crudo.decode("utf-8", errors="replace").rstrip()
+            if linea.strip():
+                errores.append(linea)
+                del errores[:-40]
+
+    lector = asyncio.ensure_future(leer_errores())
     try:
         async with asyncio.timeout(segundos):
             assert proceso.stdout is not None
@@ -241,12 +269,26 @@ async def consultar(
                     final = evento
                 if al_evento:
                     al_evento(evento)
-            await proceso.wait()
+            codigo = await proceso.wait()
+            await lector
     except TimeoutError:
         raise ErrorMotor("El comando tardó demasiado.") from None
     finally:
         if proceso.returncode is None:  # el aviso se fue antes de terminar: no dejamos un proceso suelto
-            proceso.kill()
+            detener_proceso(proceso)
+            try:
+                await asyncio.wait_for(proceso.wait(), 5)
+            except (TimeoutError, ProcessLookupError):
+                proceso.kill()
+        lector.cancel()
+    if codigo != 0:
+        # Se cayó sin decir «error» (un fallo de Python, una opción mal escrita, sin memoria): antes se
+        # devolvía {} y la pantalla anunciaba éxito («Paso 2: dibujo nuevo») sin que nada cambiara.
+        utiles = [ln for ln in errores if not ln.lstrip().startswith(("File ", "Traceback"))]
+        raise ErrorMotor(
+            "El motor se detuvo sin terminar.",
+            ayuda="\n".join(utiles[-4:]) or f"Terminó con el código {codigo}. Revisa ./tpi doctor",
+        )
     return final
 
 

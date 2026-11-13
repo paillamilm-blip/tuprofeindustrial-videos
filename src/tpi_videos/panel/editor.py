@@ -15,7 +15,7 @@ from pydantic import ValidationError
 
 from ..config import cargar_marca
 from ..emojis import EMOJIS, stickers_dir
-from ..entorno import raiz_proyecto
+from ..entorno import escribir_atomico, raiz_proyecto
 from ..errores import ErrorMotor
 from ..guion import MATERIAS, Guion, Visual, a_yaml, explicar_errores
 from ..moldes import MOLDES
@@ -59,7 +59,7 @@ def _visual_vacio() -> dict[str, Any]:
     Se arma desde un `Visual` validado porque los defaults viven en `guion.py`; copiarlos acá
     sería exactamente el error que esta pantalla ya cometió una vez."""
     modelo = Visual.model_validate({"tipo": "torta", "categorias": ["A 1", "B 2"]})
-    salida: dict[str, Any] = {"tipo": ""}
+    salida: dict[str, Any] = {"tipo": "", "tamano": "auto"}
     for clave, campo in CAMPOS.items():
         si_no_tocado = getattr(modelo, clave)
         if campo.forma == "lista":
@@ -71,6 +71,10 @@ def _visual_vacio() -> dict[str, Any]:
         else:
             salida[clave] = "" if si_no_tocado is None else str(si_no_tocado)
     return salida
+
+
+# El tamaño del dibujo en su tarjeta (``Visual.tamano``): igual para todos los tipos.
+TAMANOS = {"auto": "Automático", "chico": "Chico", "mediano": "Mediano", "grande": "Grande"}
 
 
 def _texto_numero(valor: float) -> str:
@@ -108,6 +112,8 @@ def _visual_al_guardar(v: dict[str, Any]) -> dict[str, Any] | None:
     if tipo not in VISUALES:
         return None
     salida: dict[str, Any] = {"tipo": tipo}
+    if str(v.get("tamano") or "auto") in TAMANOS and v.get("tamano") not in (None, "", "auto"):
+        salida["tamano"] = v["tamano"]  # vale para todos los tipos: no está en la lista de campos de cada uno
     for clave in _campos_de(tipo):
         forma = _FORMA.get(clave, "texto")
         valor = v.get(clave)
@@ -312,6 +318,13 @@ class EditorGuion:
                     w = self._texto(v, clave, campo.etiqueta, campo.ayuda)
                     instante = False
                 campos.append((w, instante))
+            tamano = (
+                ui.select(TAMANOS, label="Tamaño del dibujo")
+                .props("outlined dense")
+                .classes("w-full")
+                .bind_value(v, "tamano")
+            )
+            campos.append((tamano, True))
             ui.label(
                 f"{definicion.nombre} se dibuja en el pie de la hoja mientras suena la voz de este paso. "
                 "Con un dibujo en todo el video basta."
@@ -571,7 +584,7 @@ class EditorGuion:
             destino = libre
             self.nombre["valor"] = destino.stem
         destino.parent.mkdir(parents=True, exist_ok=True)
-        destino.write_text(a_yaml(desde_formulario(self.datos), self.cabecera), encoding="utf-8")
+        escribir_atomico(destino, a_yaml(desde_formulario(self.datos), self.cabecera))
         self.ruta = destino
         self.revisar(guion)
         return destino

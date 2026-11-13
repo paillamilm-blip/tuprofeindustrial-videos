@@ -11,7 +11,7 @@ import stat
 from pathlib import Path
 from typing import Any
 
-from .entorno import raiz_proyecto
+from .entorno import escribir_atomico, raiz_proyecto
 from .errores import ErrorMotor
 
 MODELO_POR_DEFECTO = "gemini-3.8-flash"  # Flash estable con nivel gratuito
@@ -66,8 +66,8 @@ def guardar_clave(clave: str) -> Path:
     lineas = ruta.read_text(encoding="utf-8").splitlines() if ruta.exists() else []
     lineas = [ln for ln in lineas if not ln.strip().startswith(tuple(f"{n}=" for n in NOMBRES_CLAVE))]
     lineas.append(f"GEMINI_API_KEY={clave}")
-    ruta.write_text("\n".join(lineas) + "\n", encoding="utf-8")
-    ruta.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 600
+    # Atómico y en 600 desde el primer byte: la clave nunca queda un instante legible por otros.
+    escribir_atomico(ruta, "\n".join(lineas) + "\n", permisos=stat.S_IRUSR | stat.S_IWUSR)
     return ruta
 
 

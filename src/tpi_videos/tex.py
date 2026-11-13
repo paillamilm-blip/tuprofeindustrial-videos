@@ -36,8 +36,43 @@ def plantilla_tex(negrita: bool = True) -> TexTemplate:
 _DECIMAL = re.compile(r"(?<=\d),(?=\d)")
 
 
+# Signos que se escriben pegados en el guion (los pone la IA o se copian de un texto) y que la
+# plantilla mínima no sabe dibujar: «°» y «·» piden la fuente TS1 (cm-super/ec), que BasicTeX no trae,
+# y la fórmula entera no compilaba («No pude dibujar la fórmula: \theta = 30°»). Con
+# \ensuremath valen igual dentro de una fórmula y dentro de \text{…}.
+UNICODE_A_LATEX = {
+    "°": r"\ensuremath{^{\circ}}",
+    "·": r"\ensuremath{\cdot}",
+    "×": r"\ensuremath{\times}",
+    "−": "-",
+    "≈": r"\ensuremath{\approx}",
+    "≤": r"\ensuremath{\leq}",
+    "≥": r"\ensuremath{\geq}",
+    "≠": r"\ensuremath{\neq}",
+    "→": r"\ensuremath{\rightarrow}",
+    "²": r"\ensuremath{^{2}}",
+    "³": r"\ensuremath{^{3}}",
+    "µ": r"\ensuremath{\mu}",
+    "μ": r"\ensuremath{\mu}",
+    "Ω": r"\ensuremath{\Omega}",
+    "π": r"\ensuremath{\pi}",
+    "Δ": r"\ensuremath{\Delta}",
+    "θ": r"\ensuremath{\theta}",
+    "α": r"\ensuremath{\alpha}",
+    "β": r"\ensuremath{\beta}",
+    "λ": r"\ensuremath{\lambda}",
+    "ρ": r"\ensuremath{\rho}",
+    "σ": r"\ensuremath{\sigma}",
+    "τ": r"\ensuremath{\tau}",
+    "ω": r"\ensuremath{\omega}",
+}
+_UNICODE = re.compile("|".join(map(re.escape, UNICODE_A_LATEX)))
+
+
 def corregir_decimales(tex: str) -> str:
-    """En Chile la coma es decimal: ``9,8`` → ``9{,}8`` (sin el espacio que LaTeX agrega)."""
+    """Prepara la fórmula para LaTeX: en Chile la coma es decimal (``9,8`` → ``9{,}8``, sin el
+    espacio que LaTeX agrega) y los signos pegados (°, ·, ², Ω…) pasan a su comando."""
+    tex = _UNICODE.sub(lambda m: UNICODE_A_LATEX[m.group()], tex)
     return _DECIMAL.sub("{,}", tex)
 
 
@@ -47,7 +82,7 @@ _CON_ARGUMENTO = {
     "frac", "dfrac", "tfrac", "cfrac", "sqrt", "vec", "hat", "bar", "overline", "underline",
     "widehat", "widetilde", "tilde", "dot", "ddot", "check", "breve", "acute", "grave",
     "mathrm", "mathbf", "mathit", "mathcal", "mathbb", "mathsf", "boldsymbol", "pmb",
-    "text", "textbf", "textit", "operatorname", "overrightarrow", "binom", "dbinom",
+    "text", "textbf", "textit", "operatorname", "ensuremath", "overrightarrow", "binom", "dbinom",
     "stackrel", "overset", "underset", "boxed", "color", "textcolor",
     "big", "Big", "bigg", "Bigg", "bigl", "bigr", "Bigl", "Bigr", "biggl", "biggr",
 }  # fmt: skip
@@ -125,8 +160,30 @@ def partes(tex: str) -> list[str]:
 
 
 def agrupar_argumentos(tex: str) -> str:
-    dobles = {"frac", "dfrac", "tfrac", "cfrac", "binom", "dbinom", "stackrel", "overset", "underset", "textcolor"}
-    comandos = _CON_ARGUMENTO - {"big", "Big", "bigg", "Bigg", "bigl", "bigr", "Bigl", "Bigr", "biggl", "biggr"}
+    dobles = {
+        "frac",
+        "dfrac",
+        "tfrac",
+        "cfrac",
+        "binom",
+        "dbinom",
+        "stackrel",
+        "overset",
+        "underset",
+        "textcolor",
+    }
+    comandos = _CON_ARGUMENTO - {
+        "big",
+        "Big",
+        "bigg",
+        "Bigg",
+        "bigl",
+        "bigr",
+        "Bigl",
+        "Bigr",
+        "biggl",
+        "biggr",
+    }
     inserciones: dict[int, str] = {}
 
     def saltar_espacios(i: int) -> int:
