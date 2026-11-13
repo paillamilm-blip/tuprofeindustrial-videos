@@ -9,8 +9,11 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from pruebas.datos_didacticos import datos_base, datos_concepto
+from tpi_videos.entorno import latex_disponible
 from tpi_videos.guion import Guion, a_yaml
 from tpi_videos.temas import Tema
+
+LATEX = all(latex_disponible())  # macOS/Windows en CI no traen TeX: lo que dibuja fórmulas se salta
 
 try:
     from manim import MathTex, Paragraph, tempconfig
@@ -41,7 +44,7 @@ _CONFIG = {
 }  # fmt: skip
 
 
-@unittest.skipUnless(escena is not None, "manim no está instalado")
+@unittest.skipUnless(escena is not None and LATEX, "manim o LaTeX no están instalados")
 class ResultadoTextualTest(unittest.TestCase):
     def test_conclusion_es_texto_visible_y_cabe(self):
         g = Guion.model_validate(datos_concepto())
@@ -94,7 +97,7 @@ class ResultadoTextualTest(unittest.TestCase):
         self.assertEqual(c.estilo_activo(), antes)
 
 
-@unittest.skipUnless(escena is not None, "manim no está instalado")
+@unittest.skipUnless(escena is not None and LATEX, "manim o LaTeX no están instalados")
 class EscenaConclusionTest(unittest.TestCase):
     """La escena completa (sin video): voz de silencio, animaciones saltadas."""
 
