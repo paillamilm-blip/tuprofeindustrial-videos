@@ -20,8 +20,8 @@ from ...errores import ErrorMotor
 from ...niveles import CARRERA_CORTA, NIVELES, PUBLICOS
 from .. import didactica_ui, qc
 from ..comun import abrir_en_mac, cabecera, confirmar, piel_de_la_pagina, url_medio
+from ..etapas import ACTIVA, ERROR, HECHA, Etapa, avance_total
 from ..supervision import (
-    COLUMNAS,
     COMPLETADOS,
     EN_RENDER,
     LANZAMIENTO,
@@ -37,8 +37,7 @@ PESTANAS = {
     "qc": ("Aprobación de Guiones (QC)", "fact_check"),
     "avanzado": ("Avanzado", "tune"),
 }
-ICONOS_COLUMNA = {PENDIENTES: "schedule", EN_RENDER: "motion_photos_on", COMPLETADOS: "task_alt"}
-CLASE_COLUMNA = {PENDIENTES: "tpi-celeste", EN_RENDER: "tpi-ambar", COMPLETADOS: "tpi-verde"}
+MAXIMO_LISTOS_A_LA_VISTA = 4  # la sala muestra lo reciente; el resto se abre con «Ver los listos»
 
 
 # ------------------------------------------------------------------------------------------
@@ -101,6 +100,41 @@ def _consola(clases: str = "") -> ui.card:
 
 def _rotulo(texto: str) -> None:
     ui.label(texto).classes("tpi-rotulo")
+
+
+def _resumen_sala(haciendo: list, espera: list, problemas: list, listos: list) -> str:
+    """La frase bajo el título: «1 produciendo · 2 en espera · 5 listos» (solo lo que hay)."""
+    partes = []
+    if haciendo:
+        partes.append(f"{len(haciendo)} produciendo")
+    if espera:
+        partes.append(f"{len(espera)} en espera")
+    if problemas:
+        partes.append(f"{len(problemas)} con problema" + ("" if len(problemas) == 1 else "s"))
+    if listos:
+        partes.append(f"{len(listos)} listo" + ("" if len(listos) == 1 else "s"))
+    return " · ".join(partes)
+
+
+def _etapas(etapas: tuple[Etapa, ...]) -> None:
+    """Las etapas de un video en fila: un check verde si está lista, un anillo con su % si trabaja."""
+    with ui.element("div").classes("tpi-etapas"):
+        for e in etapas:
+            with (
+                ui.element("div")
+                .classes(f"tpi-etapa tpi-etapa-{e.estado}")
+                .props(f'role="img" aria-label="{e.texto}"')
+            ):
+                marca = ui.element("div").classes(f"tpi-marca-etapa tpi-marca-{e.estado}")
+                if e.estado == ACTIVA:
+                    marca.style(f"--p: {e.porcentaje}")  # el anillo se llena hasta su %
+                with marca:
+                    if e.estado == HECHA:
+                        ui.icon("check").classes("text-xl")
+                    elif e.estado == ERROR:
+                        ui.icon("priority_high").classes("text-xl")
+                ui.label(e.nombre).classes("tpi-etapa-nombre")
+                ui.label(f"{e.porcentaje} %").classes("tpi-etapa-pct")
 
 
 def _clic(elemento: Any, accion: Callable[[], Any], ayuda: str) -> Any:
@@ -293,7 +327,7 @@ class ParaHoy:
 
 
 class ColaDeProduccion:
-    """El estado de la fábrica de un vistazo, y una sola acción: producir lo pendiente."""
+    """La sala de producción en una sola pantalla: cada video con sus etapas, su % y su check."""
 
     def __init__(self, ir_a: Callable[[str], None]) -> None:
         self.ir_a = ir_a
@@ -301,28 +335,40 @@ class ColaDeProduccion:
 
     def render(self) -> None:
         self.firma = self._firma()  # lo recién pintado no se repinta: un clic no cae sobre algo que se va
-        ParaHoy(self._al_crear).render()
-        self.resumen()
-        self.columnas()
+        with ui.column().classes("tpi-sala w-full mx-auto gap-8"):
+            self.sala()
+            self._idea_del_dia()
+            with ui.row().classes("w-full justify-center gap-2"):
+                for destino, texto, icono in (
+                    ("/qc", "Aprobar guiones", "fact_check"),
+                    ("/avanzado", "Herramientas avanzadas", "tune"),
+                ):
+                    with ui.link(target=destino).classes("tpi-enlace-cabecera"):
+                        ui.icon(icono).classes("text-xl")
+                        ui.label(texto)
         ui.timer(1.5, self._mirar)
 
     def _al_crear(self) -> None:
-        self.firma = ()  # la ficha nueva aparece en Pendientes en el próximo vistazo
+        self.firma = ()  # la ficha nueva aparece en la lista en el próximo vistazo
 
     def _mirar(self) -> None:
-        # Se repinta solo si algo cambió: un tablero que parpadea cansa la vista.
+        # Se repinta solo si algo cambió: una pantalla que parpadea cansa la vista.
         firma = self._firma()
         if firma != self.firma:
             self.firma = firma
-            self.resumen.refresh()
-            self.columnas.refresh()
+            self.sala.refresh()
 
     def _firma(self) -> tuple:
         datos = cola.cargar()
         vivo = _en_vivo()
         return (
             tuple(
-                (v.get("id"), v.get("estado"), round(float(v.get("avance") or 0), 2))
+                (
+                    v.get("id"),
+                    v.get("estado"),
+                    round(float(v.get("avance") or 0), 2),
+                    len(v.get("hitos") or {}),
+                )
                 for lote in datos.get("lotes", [])
                 for v in lote.get("videos", [])
             ),
@@ -334,66 +380,175 @@ class ColaDeProduccion:
             len(qc.guiones()),
         )
 
+    def _idea_del_dia(self) -> None:
+        """«Para hoy» queda a mano pero cerrado: la pantalla muestra primero lo que se está produciendo."""
+        caja = ui.expansion(
+            "Idea para hoy", icon="lightbulb", caption="Tres guiones del mismo nivel, uno por materia"
+        ).classes("tpi-plegable w-full")
+        armado = {"listo": False}
+
+        def armar(abierto: bool) -> None:
+            if not abierto or armado["listo"]:
+                return
+            armado["listo"] = True
+            with caja:
+                ParaHoy(self._al_crear).render()
+
+        caja.on_value_change(lambda e: armar(bool(e.value)))
+
     @ui.refreshable_method
-    def resumen(self) -> None:
+    def sala(self) -> None:
         datos = cola.cargar()
         fichas = columnas(datos, _en_vivo())
+        haciendo = fichas[EN_RENDER]
+        con_problemas = [f for f in fichas[PENDIENTES] if f.fallo]
+        en_espera = [f for f in fichas[PENDIENTES] if not f.fallo]
+        listos = fichas[COMPLETADOS]
+        self._encabezado(datos, haciendo, en_espera, con_problemas, listos)
+        if not (haciendo or en_espera or con_problemas or listos):
+            if TAREAS.ocupado():
+                self._tarea_suelta()
+            else:
+                self._vacia()
+            return
+        if not haciendo and TAREAS.ocupado():
+            self._tarea_suelta()  # un trabajo que no es de la cola (escribir un guion, un video suelto)
+        self._grupo("Produciendo ahora", haciendo, self._video)
+        self._grupo("En espera", en_espera, self._video)
+        self._grupo("Con problemas", con_problemas, self._video)
+        self._grupo("Listos", listos[:MAXIMO_LISTOS_A_LA_VISTA], self._listo)
+        if len(listos) > MAXIMO_LISTOS_A_LA_VISTA:
+            ui.button(
+                color=None,
+                text=f"Ver los {len(listos)} listos",
+                icon="expand_more",
+                on_click=lambda: self._lista_de("Listos", listos),
+            ).props("flat no-caps").classes("tpi-sobrio self-center")
+
+    def _encabezado(
+        self, datos: dict[str, Any], haciendo: list, espera: list, problemas: list, listos: list
+    ) -> None:
         por_producir = len(lotes_por_producir(datos))
         por_revisar = len(qc.guiones())
-        with _consola():
-            with ui.row().classes("w-full items-center justify-between gap-8 flex-wrap"):
-                with ui.row().classes("gap-6 items-end"):
-                    for clave, nombre in COLUMNAS.items():
-                        cifra = _clic(
-                            ui.column().classes("gap-1 px-3 py-2 rounded-xl"),
-                            lambda c=clave, n=nombre, fs=fichas[clave]: self._lista_de(n, fs),
-                            f"Ver los {nombre.lower()}",
-                        )
-                        with cifra:
-                            ui.label(str(len(fichas[clave]))).classes(f"tpi-cifra {CLASE_COLUMNA[clave]}")
-                            _rotulo(nombre)
-                    with _clic(
-                        ui.column().classes("gap-1 px-3 py-2 rounded-xl"),
-                        lambda: self.ir_a("qc"),
-                        "Ir a aprobar guiones",
-                    ):
-                        ui.label(str(por_revisar)).classes("tpi-cifra")
-                        _rotulo("Guiones por aprobar")
-                with ui.row().classes("items-center gap-3"):
-                    if por_revisar:
-                        ui.button(
-                            color=None,
-                            text="Revisar guiones",
-                            icon="fact_check",
-                            on_click=lambda: self.ir_a("qc"),
-                        ).props("flat no-caps").classes("tpi-sobrio")
-                    if TAREAS.ocupado():
-                        ui.button(color=None, text="Detener", icon="stop", on_click=self._detener).props(
-                            "flat no-caps"
-                        ).classes("tpi-rojo")
-                    boton = ui.button(
-                        color=None,
-                        text="Lanzar Renderización en Lote",
-                        icon="play_arrow",
-                        on_click=self._lanzar,
-                    ).classes("tpi-boton-principal")
-                    if LANZAMIENTO.activo or TAREAS.ocupado():
-                        boton.text = "Produciendo…"
-                        boton.disable()
-                    elif not por_producir:
-                        boton.disable()
-                        boton.tooltip("No hay videos esperando. Aprueba un guion en la pestaña QC.")
-            t = TAREAS.actual
-            if t is not None and not t.terminada:
-                with _clic(
-                    ui.column().classes("w-full gap-1 px-3 py-2 rounded-xl"),
-                    _dialogo_tarea,
-                    "Ver qué está haciendo el motor",
-                ):
-                    ui.linear_progress(value=t.avance, show_value=False, color=None).props(
-                        "rounded size=6px"
-                    ).classes("w-full")
-                    ui.label(t.detalle or t.texto_etapa).classes("tpi-sobrio text-sm")
+        with ui.row().classes("w-full items-center justify-between gap-4 flex-wrap"):
+            with ui.column().classes("gap-1"):
+                ui.label("Sala de producción").classes("tpi-sala-titulo")
+                ui.label(
+                    _resumen_sala(haciendo, espera, problemas, listos) or "Sin videos por ahora."
+                ).classes("tpi-sobrio")
+            with ui.row().classes("items-center gap-3"):
+                if TAREAS.ocupado():
+                    _clic(
+                        ui.button(color=None, icon="terminal").props("flat round").classes("tpi-sobrio"),
+                        _dialogo_tarea,
+                        "Ver el registro del motor",
+                    ).props('aria-label="Ver el registro del motor"')
+                    ui.button(color=None, text="Detener", icon="stop", on_click=self._detener).props(
+                        "flat no-caps"
+                    ).classes("tpi-rojo")
+                boton = ui.button(
+                    color=None, text="Producir videos", icon="play_arrow", on_click=self._lanzar
+                ).classes("tpi-boton-principal")
+                if LANZAMIENTO.activo or TAREAS.ocupado():
+                    boton.text = "Produciendo…"
+                    boton.disable()
+                elif not por_producir:
+                    boton.disable()
+                    boton.tooltip("No hay videos esperando. Aprueba un guion para que llegue acá.")
+        if por_revisar:
+            texto = (
+                "1 guion espera tu aprobación"
+                if por_revisar == 1
+                else f"{por_revisar} guiones esperan tu aprobación"
+            )
+            with _clic(
+                ui.row().classes("tpi-video tpi-video-espera items-center justify-between no-wrap"),
+                lambda: self.ir_a("qc"),
+                "Leer y aprobar los guiones",
+            ):
+                with ui.row().classes("items-center gap-3 no-wrap"):
+                    ui.icon("fact_check").classes("tpi-ambar text-2xl")
+                    ui.label(texto)
+                ui.icon("chevron_right").classes("tpi-sobrio")
+
+    def _vacia(self) -> None:
+        with ui.column().classes("tpi-video items-center gap-3 py-12"):
+            ui.icon("movie").classes("tpi-sobrio text-4xl")
+            ui.label("Todavía no hay videos en la sala").classes("text-lg font-semibold")
+            ui.label("Crea uno en el Estudio y aparece acá con su avance.").classes("tpi-sobrio")
+            ui.button(
+                color=None, text="Crear un video", icon="edit_note", on_click=lambda: ui.navigate.to("/")
+            ).classes("tpi-boton-principal")
+
+    def _grupo(self, titulo: str, fichas: list, dibujar: Callable[[Any], None]) -> None:
+        if not fichas:
+            return
+        with ui.column().classes("w-full gap-3"):
+            _rotulo(f"{titulo} · {len(fichas)}")
+            for ficha in fichas:
+                dibujar(ficha)
+
+    def _tarea_suelta(self) -> None:
+        t = TAREAS.actual
+        if t is None or t.terminada:
+            return
+        with _clic(
+            ui.column().classes("tpi-video tpi-video-activo gap-3"),
+            _dialogo_tarea,
+            "Ver qué está haciendo el motor",
+        ):
+            ui.label(t.nombre).classes("text-lg font-semibold")
+            ui.linear_progress(value=t.avance, show_value=False, color=None).props(
+                "rounded size=6px"
+            ).classes("w-full")
+            ui.label(t.detalle or t.texto_etapa).classes("tpi-sobrio text-sm")
+
+    def _video(self, f: Any) -> None:
+        """Un video en la cola: su título, el avance total y sus cuatro etapas con % y check."""
+        activo = f.estado in cola.ESTADOS_ACTIVOS
+        clase = "tpi-video-activo" if activo else ("tpi-video-fallo" if f.fallo else "tpi-video-espera")
+        with _clic(
+            ui.column().classes(f"tpi-video {clase} gap-4"),
+            lambda: self._detalle(f),
+            "Ver el detalle y qué hacer",
+        ):
+            with ui.row().classes("w-full items-start justify-between no-wrap gap-4"):
+                with ui.column().classes("gap-1"):
+                    if f.tema:
+                        _rotulo(f.tema)
+                    ui.label(f.titulo).classes("text-lg font-semibold leading-snug")
+                    texto = f.detalle if activo and f.detalle else f.texto_estado
+                    ui.label(texto).classes("tpi-rojo text-sm" if f.fallo else "tpi-sobrio text-sm")
+                if activo:
+                    ui.label(f"{avance_total(f.etapas)} %").classes("tpi-total")
+            if activo:
+                ui.linear_progress(value=avance_total(f.etapas) / 100, show_value=False, color=None).props(
+                    "rounded size=4px"
+                ).classes("w-full")
+            _etapas(f.etapas)
+            if f.fallo and f.error:
+                ui.label(str(f.error)).classes("tpi-sobrio text-xs")
+
+    def _listo(self, f: Any) -> None:
+        """Un video terminado: una línea con lo que se hace con él."""
+        with _clic(
+            ui.row().classes("tpi-video tpi-video-espera items-center justify-between no-wrap gap-4"),
+            lambda: self._detalle(f),
+            "Ver el detalle y qué hacer",
+        ):
+            with ui.row().classes("items-center gap-3 no-wrap"):
+                ui.icon("check_circle").classes("tpi-verde text-2xl")
+                with ui.column().classes("gap-0"):
+                    ui.label(f.titulo).classes("font-semibold leading-snug")
+                    ui.label(f"Listo · {f.tema}" if f.tema else "Listo").classes("tpi-sobrio text-xs")
+            if f.video is not None:
+                with ui.row().classes("gap-1 no-wrap"):
+                    ui.button(color=None, text="Ver", icon="play_circle").props("flat dense no-caps").classes(
+                        "tpi-verde"
+                    ).on("click.stop", lambda _e, v=f.video: _ver(v))
+                    ui.button(color=None, text="Carpeta", icon="folder_open").props(
+                        "flat dense no-caps"
+                    ).classes("tpi-sobrio").on("click.stop", lambda _e, v=f.video: abrir_en_mac(v, True))
 
     def _lista_de(self, nombre: str, fichas: list[Any]) -> None:
         with (
@@ -432,9 +587,9 @@ class ColaDeProduccion:
                     "tpi-sobrio"
                 )
             color = "tpi-rojo" if f.fallo else ("tpi-ambar" if activo else "tpi-sobrio")
-            ui.label(f.texto_estado + (f" · {round(f.avance * 100)} %" if activo else "")).classes(color)
-            if activo:
-                ui.linear_progress(value=f.avance, show_value=False, color=None).props("rounded size=6px")
+            ui.label(f.texto_estado + (f" · {avance_total(f.etapas)} %" if activo else "")).classes(color)
+            if f.estado != "listo":
+                _etapas(f.etapas)
             if activo and f.detalle and f.detalle != f.texto_estado:
                 ui.label(f.detalle).classes("tpi-sobrio text-sm")
             if f.error:
@@ -533,78 +688,6 @@ class ColaDeProduccion:
         confirmar(
             "¿Detener la producción? El video en curso queda para retomarlo después.", si, "Sí, detener"
         )
-
-    @ui.refreshable_method
-    def columnas(self) -> None:
-        fichas = columnas(cola.cargar(), _en_vivo())
-        with (
-            ui.element("div")
-            .classes("w-full grid gap-6")
-            .style("grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))")
-        ):
-            for clave, nombre in COLUMNAS.items():
-                with _consola("min-h-[320px]"):
-                    with ui.row().classes("w-full items-center justify-between"):
-                        with ui.row().classes("items-center gap-2"):
-                            ui.icon(ICONOS_COLUMNA[clave]).classes(f"{CLASE_COLUMNA[clave]} text-xl")
-                            ui.label(nombre).classes("text-base font-semibold")
-                        ui.label(str(len(fichas[clave]))).classes("tpi-sobrio")
-                    if not fichas[clave]:
-                        texto, accion, ayuda = self._vacio(clave)
-                        _clic(
-                            ui.label(texto).classes("tpi-sobrio text-sm py-6 px-3 rounded-xl"), accion, ayuda
-                        )
-                    for ficha in fichas[clave]:
-                        self._ficha(ficha)
-
-    def _vacio(self, clave: str) -> tuple[str, Callable[[], Any], str]:
-        return {
-            PENDIENTES: (
-                "Nada esperando. Lo que apruebes en QC llega acá.",
-                lambda: self.ir_a("qc"),
-                "Ir a QC",
-            ),
-            EN_RENDER: ("El motor está libre.", self._lanzar, "Producir lo pendiente"),
-            COMPLETADOS: (
-                "Todavía no sale ningún video.",
-                lambda: ui.navigate.to("/videos"),
-                "Abrir la biblioteca de videos",
-            ),
-        }[clave]
-
-    def _ficha(self, f: Any) -> None:
-        clase = (
-            "tpi-ficha-activa" if f.estado in cola.ESTADOS_ACTIVOS else ("tpi-ficha-fallo" if f.fallo else "")
-        )
-        with _clic(
-            ui.column().classes(f"tpi-ficha {clase} w-full p-4 gap-2"),
-            lambda: self._detalle(f),
-            "Ver el detalle y qué hacer",
-        ):
-            ui.label(f.titulo).classes("font-semibold leading-snug")
-            with ui.row().classes("w-full items-center justify-between gap-2"):
-                color = (
-                    "tpi-rojo"
-                    if f.fallo
-                    else ("tpi-ambar" if f.estado in cola.ESTADOS_ACTIVOS else "tpi-sobrio")
-                )
-                ui.label(f.texto_estado).classes(f"{color} text-xs")
-                if f.estado in cola.ESTADOS_ACTIVOS:
-                    ui.label(f"{round(f.avance * 100)} %").classes("tpi-ambar text-xs")
-            if f.estado in cola.ESTADOS_ACTIVOS:
-                ui.linear_progress(value=f.avance, show_value=False, color=None).props(
-                    "rounded size=4px"
-                ).classes("w-full")
-            if f.fallo and f.error:
-                ui.label(str(f.error)).classes("tpi-sobrio text-xs")
-            if f.video is not None:
-                with ui.row().classes("gap-1 -ml-2"):
-                    ui.button(color=None, text="Ver", icon="play_circle").props("flat dense no-caps").classes(
-                        "tpi-verde"
-                    ).on("click.stop", lambda _e, v=f.video: _ver(v))
-                    ui.button(color=None, text="Carpeta", icon="folder_open").props(
-                        "flat dense no-caps"
-                    ).classes("tpi-sobrio").on("click.stop", lambda _e, v=f.video: abrir_en_mac(v, True))
 
 
 def _ver(video: Path) -> None:
@@ -1242,6 +1325,11 @@ def tablero(
 ) -> None:
     piel_de_la_pagina()
     cabecera(con_menu=False, al_estudio=True)
+    if pestana == "cola":
+        # La sala de producción: una sola pantalla. Aprobar guiones y lo avanzado quedan a un clic.
+        with ui.column().classes("tpi-tablero w-full max-w-7xl mx-auto px-8 py-10 gap-8"):
+            ColaDeProduccion(lambda clave: ui.navigate.to(f"/{clave}")).render()
+        return
     with ui.column().classes("tpi-tablero w-full max-w-7xl mx-auto px-8 py-10 gap-8"):
         pestanas = ui.tabs(value=pestana).props("align=left no-caps inline-label").classes("tpi-pestanas")
         with pestanas:
