@@ -98,7 +98,7 @@ class ClienteContador:
         return type("R", (), {"output_audio": type("A", (), {"data": datos})()})()
 
 
-class PrecargaGeminiTest(unittest.TestCase):
+class _ConGemini(unittest.TestCase):
     def setUp(self):
         try:
             from tpi_videos import voces
@@ -114,6 +114,8 @@ class PrecargaGeminiTest(unittest.TestCase):
         base = self.voces.GeminiTTSService(voz="Charon", estilo="Profe", cliente=cliente, cache_dir=self.tmp.name)
         return self.voces.ServicioConPausas(base, "gemini-tts", cache_dir=self.tmp.name)
 
+
+class PrecargaGeminiTest(_ConGemini):
     def test_un_solo_pedido_para_todo_el_guion(self):
         cliente = ClienteContador()
         servicio = self._servicio(cliente)
@@ -130,7 +132,10 @@ class PrecargaGeminiTest(unittest.TestCase):
         cliente = ClienteContador(con_silencios=False)
         servicio = self._servicio(cliente)
         voces = ["¿Cuánto vale?", "Primero llenamos el cubo.", "Sígueme."]
-        self.assertFalse(self.voces.precargar_voz(servicio, voces))
+        from unittest.mock import patch
+
+        with patch("tpi_videos.whisper_sync.disponible", return_value=False):  # sin Whisper en este equipo
+            self.assertFalse(self.voces.precargar_voz(servicio, voces))
         for v in voces:
             servicio._wrap_generate_from_text(v)
         self.assertEqual(len(cliente.pedidos), 1 + len(voces))  # el intento completo + una por frase
@@ -211,3 +216,88 @@ class EscenaPrecargaTest(unittest.TestCase):
     def test_solo_el_gancho(self):
         guion, llamadas = self._correr(True)
         self.assertEqual(llamadas, [[guion.gancho.voz_final]])
+
+
+def _reconocidas(textos, inicio=0.2, por_palabra=0.3):
+    """Lo que devolvería Whisper: cada palabra del guion, una tras otra, sin silencios entre frases."""
+    salida, t = [], inicio
+    for texto in textos:
+        for palabra in texto.split():
+            salida.append((palabra, t, t + por_palabra * 0.9))
+            t += por_palabra
+    return salida, t
+
+
+class CortarPorPalabrasTest(unittest.TestCase):
+    """Sin silencios claros, el corte sale de dónde Whisper oyó cada palabra (como XCris)."""
+
+    def test_corta_entre_la_ultima_palabra_de_una_frase_y_la_primera_de_la_siguiente(self):
+        from tpi_videos.voz_completa import cortar_por_palabras
+
+        reconocidas, fin = _reconocidas(TEXTOS)
+        audio = _wav(_tono(fin + 0.3))  # voz continua: cortar() no puede
+        self.assertIsNone(cortar(audio, TEXTOS))
+        trozos = cortar_por_palabras(audio, TEXTOS, reconocidas)
+        self.assertEqual(len(trozos), 3)
+        for trozo, texto in zip(trozos, TEXTOS, strict=True):
+            self.assertAlmostEqual(_duracion(trozo), 0.3 * len(texto.split()), delta=0.35)
+
+    def test_whisper_que_oye_otra_cosa_no_corta(self):
+        from tpi_videos.voz_completa import cortar_por_palabras
+
+        otras = [("palabra", 0.2 + i * 0.3, 0.45 + i * 0.3) for i in range(12)]
+        self.assertIsNone(cortar_por_palabras(_wav(_tono(4.0)), TEXTOS, otras))
+
+    def test_sin_palabras_no_corta(self):
+        from tpi_videos.voz_completa import cortar_por_palabras
+
+        self.assertIsNone(cortar_por_palabras(_wav(_tono(4.0)), TEXTOS, []))
+
+    def test_numeros_dichos_en_palabras_igual_alinean(self):
+        from tpi_videos.voz_completa import cortar_por_palabras
+
+        textos = ["El cubo mide 4 cm.", "El grande mide 8 cm.", "Ocho veces más."]
+        oidas = ["El cubo mide cuatro centímetros.", "El grande mide ocho centímetros.", "Ocho veces más."]
+        reconocidas, fin = _reconocidas(oidas)
+        trozos = cortar_por_palabras(_wav(_tono(fin + 0.3)), textos, reconocidas)
+        self.assertEqual(len(trozos), 3)
+
+
+class PrecargaConWhisperTest(_ConGemini):
+    def test_sin_silencios_alinea_con_whisper_y_sigue_siendo_un_pedido(self):
+        from unittest.mock import patch
+
+        cliente = ClienteContador(con_silencios=False)
+        servicio = self._servicio(cliente)
+        voces = ["¿Cuánto vale?", "Primero llenamos el cubo.", "Sígueme."]
+        reconocidas, _ = _reconocidas(voces)
+        with (
+            patch("tpi_videos.whisper_sync.disponible", return_value=True),
+            patch("tpi_videos.whisper_sync.transcribir", return_value=reconocidas) as transcribir,
+        ):
+            self.assertTrue(self.voces.precargar_voz(servicio, voces))
+        self.assertEqual(transcribir.call_count, 1)
+        for v in voces:
+            servicio._wrap_generate_from_text(v)
+        self.assertEqual(len(cliente.pedidos), 1)
+
+    def test_sin_whisper_vuelve_a_frase_por_frase(self):
+        from unittest.mock import patch
+
+        cliente = ClienteContador(con_silencios=False)
+        servicio = self._servicio(cliente)
+        with patch("tpi_videos.whisper_sync.disponible", return_value=False):
+            self.assertFalse(self.voces.precargar_voz(servicio, ["Hola.", "Chao."]))
+
+    def test_si_whisper_falla_vuelve_a_frase_por_frase(self):
+        from unittest.mock import patch
+
+        from tpi_videos.errores import ErrorMotor
+
+        cliente = ClienteContador(con_silencios=False)
+        servicio = self._servicio(cliente)
+        with (
+            patch("tpi_videos.whisper_sync.disponible", return_value=True),
+            patch("tpi_videos.whisper_sync.transcribir", side_effect=ErrorMotor("sin modelo")),
+        ):
+            self.assertFalse(self.voces.precargar_voz(servicio, ["Hola.", "Chao."]))

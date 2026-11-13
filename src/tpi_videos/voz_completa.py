@@ -12,6 +12,7 @@ Solo numpy y la librería estándar: no depende de Manim.
 
 from __future__ import annotations
 
+import difflib
 import io
 import wave
 
@@ -114,3 +115,50 @@ def cortar(audio: bytes, textos: list[str]) -> list[bytes] | None:
         ib = min(len(muestras), int((b + MARGEN) * frecuencia))
         trozos.append(wav_de(muestras[ia:ib], frecuencia))
     return trozos
+
+
+COINCIDENCIA_MINIMA = 0.5  # fracción de palabras del guion que Whisper tiene que oír igual para fiarse
+
+
+def cortar_por_palabras(
+    audio: bytes, textos: list[str], reconocidas: list[tuple[str, float, float]]
+) -> list[bytes] | None:
+    """Corta el audio entre frases según dónde oyó Whisper cada palabra (cuando no hay silencios claros).
+
+    Es lo que hace XCris: la voz se genera de una vez y el reconocimiento de voz dice en qué segundo
+    empieza cada palabra. Usa el mismo emparejamiento que los subtítulos (``subtitulos.alinear``:
+    «4» y «cuatro» igual calzan). Si Whisper oyó otra cosa, devuelve None: no se corta a ciegas.
+    """
+    from .subtitulos import _normalizar, alinear
+
+    leido = _leer(audio)
+    if leido is None or not textos or not reconocidas:
+        return None
+    muestras, frecuencia = leido
+    duracion = len(muestras) / frecuencia
+    por_texto = [t.split() for t in textos]
+    palabras = [p for lista in por_texto for p in lista]
+    if not palabras:
+        return None
+    a = [_normalizar(p) for p in palabras]
+    b = [_normalizar(p) for p, _, _ in reconocidas]
+    iguales = sum(m.size for m in difflib.SequenceMatcher(a=a, b=b, autojunk=False).get_matching_blocks())
+    if iguales / len(palabras) < COINCIDENCIA_MINIMA:
+        return None
+    tiempos = alinear(palabras, reconocidas, duracion)
+    cortes = [0.0]
+    indice = 0
+    for lista in por_texto[:-1]:
+        indice += len(lista)
+        if not lista or indice >= len(tiempos):
+            return None
+        fin_frase, inicio_siguiente = tiempos[indice - 1][1], tiempos[indice][0]
+        corte = (fin_frase + max(inicio_siguiente, fin_frase)) / 2
+        if corte <= cortes[-1]:
+            return None
+        cortes.append(corte)
+    cortes.append(duracion)
+    return [
+        wav_de(muestras[int(x * frecuencia) : int(y * frecuencia)], frecuencia)
+        for x, y in zip(cortes, cortes[1:], strict=False)
+    ]
