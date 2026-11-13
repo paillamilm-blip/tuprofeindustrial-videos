@@ -96,9 +96,11 @@ class ComandosTest(unittest.TestCase):
         from tpi_videos.cli import _kit_tras_crear
 
         with patch("tpi_videos.publicar.crear_kit", side_effect=ErrorMotor("sin internet")):
-            self.assertIsNone(_kit_tras_crear(Path("salida/x/x.mp4"), json_activo=False))
+            archivo, aviso = _kit_tras_crear(Path("salida/x/x.mp4"), json_activo=False)
+            self.assertIsNone(archivo)
+            self.assertIn("sin internet", aviso)
         with patch("tpi_videos.publicar.crear_kit", side_effect=RuntimeError("raro")):
-            self.assertIsNone(_kit_tras_crear(Path("salida/x/x.mp4"), json_activo=False))
+            self.assertIsNone(_kit_tras_crear(Path("salida/x/x.mp4"), json_activo=False)[0])
 
     def test_redibujar_lo_entiende_el_cli(self) -> None:
         leidos = construir_parser().parse_args(estudio.args_redibujar(Path("g.yaml"), 2, "escala"))

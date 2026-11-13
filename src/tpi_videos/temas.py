@@ -242,7 +242,45 @@ class Gramatica(_Base):
     _hex = field_validator("paleta_pasos")(classmethod(lambda cls, v: [_validar_hex(c) for c in v]))
 
     def paleta(self, colores: ColoresTema) -> list[str]:
-        return self.paleta_pasos or [colores.acento, colores.cuadricula, colores.exito, colores.error, colores.tenue]
+        return self.paleta_pasos or colores_distintos(
+            [colores.acento, colores.cuadricula, colores.exito, colores.error, colores.tenue], colores.panel
+        )
+
+
+# Los acentos sobrios de la familia Consola: de acá salen los colores que faltan cuando el tema repite
+# uno (en Reto el acento ES el verde del éxito; en Error, el rojo del error).
+ACENTOS_DE_RESPALDO = ("#6FA8DC", "#D4B26A", "#7DB894", "#A399C9", "#D27A72", "#7FC4C0", "#C99A6B")
+DISTANCIA_MINIMA = 45  # en RGB: menos que esto, dos porciones de una torta se leen como una sola
+
+
+def _rgb_de(color: str) -> tuple[int, int, int]:
+    h = color.lstrip("#")[:6]
+    return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+
+def _distancia(a: str, b: str) -> float:
+    return sum((x - y) ** 2 for x, y in zip(_rgb_de(a), _rgb_de(b), strict=True)) ** 0.5
+
+
+def colores_distintos(colores: list[str], papel: str | None = None, cuantos: int | None = None) -> list[str]:
+    """Los colores en el mismo orden, sin los que se confunden con uno anterior (ni con el papel).
+
+    Si quedan menos de ``cuantos`` (por defecto, los que llegaron), se completan con los acentos de
+    la familia que sí se distinguen. Sirve a la torta, las barras y el mapa de colores de los pasos.
+    """
+    cuantos = cuantos or len(colores)
+    salida: list[str] = []
+    for color in [*colores, *ACENTOS_DE_RESPALDO]:
+        try:
+            lejos_del_papel = papel is None or _distancia(color, papel) >= DISTANCIA_MINIMA
+            lejos = all(_distancia(color, otro) >= DISTANCIA_MINIMA for otro in salida)
+        except (ValueError, IndexError):
+            continue  # un color con nombre (no hex) no se puede comparar: se salta
+        if lejos and lejos_del_papel:
+            salida.append(color)
+        if len(salida) >= cuantos:
+            break
+    return salida or list(colores)
 
 
 class Layout(_Base):

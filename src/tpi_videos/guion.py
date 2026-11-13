@@ -240,6 +240,10 @@ class Visual(_Base):
         "perfil_flujo",
     ]
 
+    # Todos los tipos: cuánto de su tarjeta ocupa el dibujo. «auto» = lo que decide el motor (solo achica
+    # lo que no cabe); chico, mediano y grande lo llevan a esa fracción del espacio, aunque haya que agrandarlo.
+    tamano: Literal["auto", "chico", "mediano", "grande"] = "auto"
+
     # grafico_funcion
     funcion: str | None = None
     variable: str | None = None
@@ -1475,11 +1479,13 @@ def fijar_tema(ruta: str | Path, clave: str | None) -> Guion:
         texto = f"{texto[:fin]}{salto}tema: {clave}\n{texto[fin:]}"
     if texto == original:
         return cargar_guion(ruta)
-    ruta.write_text(texto, encoding="utf-8")
+    from .entorno import escribir_atomico
+
+    escribir_atomico(ruta, texto)
     try:
         return cargar_guion(ruta)
     except ErrorMotor:
-        ruta.write_text(original, encoding="utf-8")
+        escribir_atomico(ruta, original)
         raise
 
 
@@ -1723,6 +1729,8 @@ def _visual_yaml(v: dict[str, Any], sangria: str = "      ") -> list[str]:
         campos.append(
             ("resistencias", "[" + ", ".join(_simples(r) for r in v.get("resistencias") or []) + "]")
         )
+    if v.get("tamano") not in (None, "", "auto"):
+        campos.append(("tamano", v["tamano"]))
     return [f"{sangria}{clave}: {valor}" for clave, valor in campos]
 
 

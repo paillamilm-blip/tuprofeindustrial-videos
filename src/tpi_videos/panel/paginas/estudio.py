@@ -93,7 +93,10 @@ class Estudio:
         self.error_guion: str | None = None
         self.ocupado_paso: int | None = None  # el paso cuyo dibujo está armando la IA
         self._firma_tarea: tuple = ()
-        self._fin_visto: float | None = None
+        # Un trabajo que ya había terminado al abrir la pantalla no cuenta como «recién terminado»:
+        # si no, el primer tic redibujaba el muro y la revisión enteros (y relanzaba las miniaturas).
+        anterior = TAREAS.actual
+        self._fin_visto: float | None = anterior.fin if anterior is not None and anterior.terminada else None
         self._miniaturas: dict[str, str | None] = {}  # visual (JSON) → url del PNG; None = no se pudo
         if guion:
             self._cargar(Path(guion), con_url=False)  # la URL ya trae el guion
@@ -368,6 +371,20 @@ class Estudio:
                             op.nombre, on_click=lambda _e=None, k=n, d=op.dibujo: self._redibujar(k, d)
                         )
             if tiene:
+                actual = paso.visual.tamano
+                with (
+                    _boton(f"Tamaño: {estudio.TAMANOS[actual]}", icon="aspect_ratio")
+                    .props("flat dense no-caps")
+                    .classes("tpi-sobrio")
+                ):
+                    with ui.menu().props("dark").classes("tpi-consola"):
+                        for clave, nombre in estudio.TAMANOS.items():
+                            ui.menu_item(
+                                ("✓ " if clave == actual else "") + nombre,
+                                on_click=lambda _e=None, k=n, t=clave, nm=nombre: self._cambiar(
+                                    estudio.cambiar_tamano, k, t, aviso=f"Paso {k}: dibujo {nm.lower()}."
+                                ),
+                            )
                 _boton(
                     "Quitar",
                     icon="close",
@@ -567,7 +584,8 @@ class Estudio:
 
     def _mirar_tarea(self) -> None:
         t = TAREAS.actual
-        firma = () if t is None else (id(t), t.etapa, round(t.avance * 100), t.terminada)
+        # «reciente» entra en la firma: la tarjeta de «Listo» se esconde sola a los 30 s.
+        firma = () if t is None else (id(t), t.etapa, round(t.avance * 100), t.terminada, t.reciente(30))
         if firma == self._firma_tarea:
             return
         self._firma_tarea = firma
@@ -594,7 +612,15 @@ class Estudio:
                     ).classes("tpi-rojo").tooltip("Detener")
             if t.terminada:
                 if t.ok:
-                    ui.label("Listo ✓").classes("tpi-verde font-semibold")
+                    with ui.row().classes("w-full items-center justify-between"):
+                        ui.label("Listo ✓").classes("tpi-verde font-semibold")
+                        video = t.resultado.get("video")
+                        if video and Path(str(video)).exists():
+                            _boton(
+                                "Ver", icon="play_arrow", on_click=lambda v=str(video): self._ver_ruta(v)
+                            ).props("flat dense no-caps").classes("tpi-verde")
+                    if t.resultado.get("kit_aviso"):
+                        ui.label(str(t.resultado["kit_aviso"])).classes("tpi-ambar text-xs")
                 elif t.cancelada:
                     ui.label("Detenido.").classes("tpi-sobrio")
                 else:
@@ -678,6 +704,12 @@ class Estudio:
                         ).props("flat dense no-caps").classes("tpi-sobrio").tooltip("Revisarlo arriba")
 
     @staticmethod
+    def _ver_ruta(ruta: str) -> None:
+        from .videos import ver_video
+
+        ver_video(Path(ruta))
+
+    @staticmethod
     def _ver(video: biblioteca.Video) -> None:
         from .videos import ver_video
 
@@ -717,7 +749,11 @@ class Estudio:
         if TAREAS.ocupado():
             ui.notify("Hay un trabajo en curso: espera a que termine.", type="warning")
             return
-        TAREAS.lanzar(f"Textos · {video.titulo}", ["publicar", str(video.carpeta)])
+        try:
+            TAREAS.lanzar(f"Textos · {video.titulo}", ["publicar", str(video.carpeta)])
+        except ErrorMotor as e:  # otra pestaña lanzó algo en el mismo instante
+            ui.notify(e.mensaje, type="warning")
+            return
         self.en_curso.refresh()
 
 

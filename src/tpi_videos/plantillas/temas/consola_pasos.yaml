@@ -17,7 +17,7 @@ colores:
   tenue: '#8C97A5'
   acento: '#6FA8DC'
   exito: '#7DB894'
-  cuadricula: '#6FA8DC'
+  cuadricula: '#D4B26A'  # el segundo color de los dibujos (otra porción, el coseno, el agua): nunca igual al acento
   error: '#D27A72'
 materias: {matematica: '#6FA8DC', fisica: '#6FA8DC', ingenieria: '#6FA8DC'}
 tipografia:

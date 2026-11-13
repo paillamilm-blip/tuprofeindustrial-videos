@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import threading
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -23,6 +25,9 @@ from ..temas import cargar_tema
 RAZON = 16 / 9  # alto / ancho de un cuadro vertical
 HOLGURA = 1.15  # aire alrededor del dibujo: lo justo para que ninguna letra toque el borde
 LADO = 320  # px del alto del PNG: se muestra a 78-160 px, sobra
+# Manim guarda su configuración en un objeto global: dos miniaturas a la vez (el Estudio pide una por
+# paso) se pisaban el tamaño del cuadro y salían deformes. Se dibujan de a una.
+_UNA_A_LA_VEZ = threading.Lock()
 
 
 def _carpeta() -> Path:
@@ -67,6 +72,13 @@ def dibujar_miniatura(visual: dict, tema: str = "consola_pasos", forzar: bool = 
     destino = ruta_miniatura(visual, tema)
     if destino.exists() and not forzar:
         return destino
+    with _UNA_A_LA_VEZ:
+        if destino.exists() and not forzar:  # otra la dibujó mientras esta esperaba
+            return destino
+        return _dibujar(visual, tema, destino)
+
+
+def _dibujar(visual: dict, tema: str, destino: Path) -> Path:
     tipo = str(visual.get("tipo") or "")
     if not tipo:
         raise ErrorMotor("No hay dibujo que mostrar: elige uno en «Qué dibujar».")
@@ -106,5 +118,9 @@ def dibujar_miniatura(visual: dict, tema: str = "consola_pasos", forzar: bool = 
     ):
         camara = Camera()
         camara.capture_mobject(grupo)
-        camara.get_image().save(destino)
+        # A un temporal y después al nombre final: una miniatura cortada a medio guardar quedaba en la
+        # caché para siempre (se reusa mientras exista el archivo).
+        temporal = destino.with_name(f".{destino.stem}.{os.getpid()}.{threading.get_ident()}.png")
+        camara.get_image().save(temporal)
+        os.replace(temporal, destino)
     return destino

@@ -16,7 +16,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .entorno import PLANTILLAS_DIR, raiz_proyecto
+from .entorno import PLANTILLAS_DIR, escribir_atomico, raiz_proyecto
 from .errores import ErrorMotor
 from .guion import Guion, cargar_guion
 
@@ -36,6 +36,9 @@ HASHTAGS_BASE = [
 
 AVISO_IA = "Creado con IA."
 _CAMPOS_CON_AVISO = ("descripcion_youtube", "texto_tiktok", "texto_instagram")
+LARGO_TIKTOK = 150  # el texto entero, con el aviso de IA incluido
+# Lo que el texto de TikTok puede ocupar antes del aviso («\n\nCreado con IA.»).
+LARGO_TIKTOK_SIN_AVISO = LARGO_TIKTOK - len(AVISO_IA) - 2
 
 
 def _con_aviso(texto: str) -> str:
@@ -172,10 +175,15 @@ def aplicar_llamado(textos: TextosPublicacion, llamado: str | None) -> TextosPub
         return f"{base}{separador}{llamado}" if base else llamado
 
     tiktok = con(textos.texto_tiktok, " ")
-    if len(tiktok) > 150:
-        espacio = 150 - len(llamado) - 2
+    if len(tiktok) > LARGO_TIKTOK_SIN_AVISO:
+        espacio = LARGO_TIKTOK_SIN_AVISO - len(llamado) - 2
+        # Sin el llamado que ya traía (de la IA) ni el de siempre: si no, salía dos veces.
         base = _sin_llamado_de_siempre(textos.texto_tiktok)
-        tiktok = (f"{base[:espacio].rstrip()}… {llamado}" if espacio > 10 else llamado)[:150]
+        donde = base.casefold().find(llamado.casefold())
+        if donde >= 0:
+            base = (base[:donde] + base[donde + len(llamado) :]).strip()
+        tiktok = f"{base[:espacio].rstrip()}… {llamado}" if espacio > 10 and base else llamado
+        tiktok = tiktok[:LARGO_TIKTOK_SIN_AVISO]
     youtube = textos.descripcion_youtube
     if llamado.casefold() not in youtube.casefold():
         if SUSCRIBETE in youtube:
@@ -212,6 +220,12 @@ def _limpiar(textos: TextosPublicacion) -> TextosPublicacion:
         etiquetas.insert(0, "#tuprofeindustrial")
     # TikTok e Instagram piden que el contenido generado por IA se declare en el texto,
     # no solo en la configuración de la cuenta; si ya viene dicho, no se repite.
+    tiktok = textos.texto_tiktok
+    if "creado con ia" not in tiktok.lower() and len(tiktok) > LARGO_TIKTOK_SIN_AVISO:
+        # El aviso no puede empujar el texto sobre el máximo: se acorta lo de antes, no el aviso.
+        textos = textos.model_copy(
+            update={"texto_tiktok": tiktok[: LARGO_TIKTOK_SIN_AVISO - 1].rstrip() + "…"}
+        )
     textos = textos.model_copy(update={c: _con_aviso(getattr(textos, c)) for c in _CAMPOS_CON_AVISO})
     return textos.model_copy(
         update={"hashtags": etiquetas[:12], "titulo_youtube": textos.titulo_youtube[:100]}
@@ -289,11 +303,9 @@ def crear_kit(
     textos = _limpiar(aplicar_llamado(textos or textos_de_plantilla(guion), guion.llamado))
 
     archivo = carpeta / "publicacion.md"
-    archivo.write_text(_markdown(textos, guion), encoding="utf-8")
+    escribir_atomico(archivo, _markdown(textos, guion))
     datos = {"portada": str(portada), "con_ia": con_ia_real, **textos.model_dump()}
-    (carpeta / "publicacion.json").write_text(
-        json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    escribir_atomico(carpeta / "publicacion.json", json.dumps(datos, ensure_ascii=False, indent=2))
     return Kit(
         carpeta=carpeta, portada=portada, textos=textos, con_ia=con_ia_real, archivo=archivo, aviso=aviso
     )

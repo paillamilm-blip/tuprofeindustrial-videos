@@ -70,6 +70,20 @@ def slug(texto: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", sin_tildes(texto.lower())).strip("-") or "video"
 
 
+def verificar_voz(proveedor: str | None, voz: str | None) -> None:
+    """La voz de Gemini necesita la clave: sin ella el video se caía recién en la primera frase, después
+    de varios minutos animando, y el aviso hablaba de «redactar»."""
+    if voz == "silencio" or proveedor != "gemini":
+        return
+    from .ia import obtener_clave
+
+    if obtener_clave() is None:
+        raise ErrorMotor(
+            "La voz de Gemini necesita tu clave de Gemini, y no la encuentro.",
+            ayuda="Guárdala con ./tpi clave, o crea este video con la otra voz: --voz edge",
+        )
+
+
 def verificar_requisitos(subtitulos: bool) -> None:
     """Falla rápido (antes de renderizar minutos) si falta algo esencial."""
     entorno.preparar()
@@ -207,6 +221,7 @@ def crear_video(
     voz = voz or guion.voz or marca.voz.nombre
     velocidad = velocidad or guion.velocidad or marca.voz.velocidad
     tono = tono or marca.voz.tono
+    verificar_voz(proveedor, voz)
     nombre = slug(Path(ruta_guion).stem)
     carpeta = (carpeta_salida or entorno.raiz_proyecto() / "salida") / nombre
     carpeta.mkdir(parents=True, exist_ok=True)
@@ -239,9 +254,7 @@ def crear_video(
         "materia": guion.materia,
         "molde": guion.molde or "",
     }
-    (carpeta / "linea_de_tiempo.json").write_text(
-        json.dumps(linea, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    entorno.escribir_atomico(carpeta / "linea_de_tiempo.json", json.dumps(linea, ensure_ascii=False, indent=2))
     resultado = ResultadoVideo(
         video=final, carpeta=carpeta, duracion=0.0, segundos_proceso=0.0, tema=estilo_video.nombre
     )
@@ -358,6 +371,7 @@ def crear_clip_gancho(
     else:
         proveedor = proveedor or marca.voz.proveedor
         voz = voz or guion.voz or marca.voz.nombre
+    verificar_voz(proveedor, voz)
     velocidad = velocidad or guion.velocidad or marca.voz.velocidad
     destino = salida or entorno.raiz_proyecto() / "salida" / "ganchos" / slug(guion.titulo) / "gancho.mp4"
     destino.parent.mkdir(parents=True, exist_ok=True)
