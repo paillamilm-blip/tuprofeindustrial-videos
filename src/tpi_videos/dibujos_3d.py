@@ -516,6 +516,8 @@ def _cuerpo_vivo(
         """(phi, theta, separación 0..1) del instante t del recorrido."""
         orbita = d._suave(t / PARTE_ORBITA if separa else t)
         separacion = d._suave((t - PARTE_ORBITA) / (1 - PARTE_ORBITA)) if separa else 0.0
+        if desde is not None and desde[2] and separa:
+            separacion = 1.0  # ya venía desarmado: no se vuelve a cerrar para abrirse otra vez
         if desde is not None:
             return phi_f + cabeceo_desde * (1 - orbita), theta_f + giro_desde * (1 - orbita), separacion
         return phi_f + cabeceo * (1 - orbita), theta_f + GIRO_ORBITA * (1 - orbita), separacion
@@ -817,6 +819,7 @@ def _cuerpo_vivo(
         fisico=False,
         desplazamiento=desplazamiento,
         vista_final=(phi_f, theta_f),
+        separado_final=separa,
     )
 
 

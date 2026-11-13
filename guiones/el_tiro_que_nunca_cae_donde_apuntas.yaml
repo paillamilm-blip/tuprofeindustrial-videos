@@ -26,6 +26,11 @@ pasos:
   - nota: "La velocidad se parte en dos"
     tex: 'v_x = v_0\cos\theta \quad v_y = v_0\sin\theta'
     voz: "La velocidad se parte en dos. Una empuja hacia adelante y la otra hacia arriba."
+    visual:
+      tipo: proyectil
+      velocidad: "20 m/s"
+      angulo: 30
+      anotar: ["componentes"]
   - nota: "El vuelo completo"
     tex: 't = \dfrac{2\,v_0\sin\theta}{g}'
     voz: "Hacia arriba la frena la gravedad. Sube, se detiene un instante y baja el mismo tiempo."
@@ -37,6 +42,11 @@ pasos:
   - nota: "Los números del vuelo"
     tex: 't = 2{,}04\ \text{s}'
     voz: "El vuelo dura dos coma cero cuatro segundos."
+    visual:
+      tipo: proyectil
+      velocidad: "20 m/s"
+      angulo: 30
+      anotar: ["tiempo", "alcance"]
 
 resultado:
   tex: 'd \approx 35{,}35\ \text{m} \quad h \approx 5{,}1\ \text{m}'

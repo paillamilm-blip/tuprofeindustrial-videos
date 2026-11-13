@@ -25,6 +25,12 @@ pasos:
     tex: 'Q = 8 - 2 = 6\ \text{L/min}'
     voz: "De los ocho que entran, dos se escapan: quedan seis litros por minuto."
     emoji: "💡"
+    visual:
+      tipo: tanque
+      capacidad: '120 L'
+      entrada: '8 L/min'
+      salida: '2 L/min'
+      anotar: ['llenado']
   - nota: "El tiempo es lo que cabe por lo que entra"
     tex: 't = \frac{V}{Q} = \frac{120}{6} = 20\ \text{min}'
     voz: "Ciento veinte divididos en seis: veinte minutos tarda en llenarse."
@@ -37,6 +43,12 @@ pasos:
   - nota: "El error clásico"
     tex: 't \ne \frac{120}{8} = 15\ \text{min}'
     voz: "Dividir solo entre los ocho da quince minutos, y es la trampa del ejercicio."
+    visual:
+      tipo: tanque
+      capacidad: '120 L'
+      entrada: '8 L/min'
+      salida: '2 L/min'
+      anotar: ['llenado']
 
 resultado:
   tex: 't = 20\ \text{min}'

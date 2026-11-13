@@ -16,7 +16,7 @@ except ImportError:
     MANIM = False
 
 if MANIM:
-    from manim import Group, Text
+    from manim import Text
 
     from tpi_videos.continuidad import emparejar
     from tpi_videos.dibujos import ALTO_DIBUJO, bloques
@@ -33,8 +33,8 @@ class LazoQueSeQuedaTest(unittest.TestCase):
         return dibujo
 
     def _alinear(self, previo, dibujo):
-        """Lo mismo que hace la escena: alinear por la estructura (las cajas), no por el grupo entero."""
-        delta = Group(*previo.trazo).get_center() - Group(*dibujo.trazo).get_center()
+        """Lo mismo que hace la escena: alinear por la base de la estructura (la caja G), no por el grupo."""
+        delta = previo.trazo[0].get_center() - dibujo.trazo[0].get_center()
         destino = dibujo.mobs.get_center() + delta
         dibujo.place(float(destino[0]), float(destino[1]))
 
@@ -113,7 +113,7 @@ class CuerpoQueNoVuelveAGirarTest(unittest.TestCase):
 
         from tpi_videos import dibujos as d
 
-        marca = d.desde_vista.set((60.0, -55.0))
+        marca = d.desde_vista.set((60.0, -55.0, False))
         try:
             lata = self._lata(vista="axonometrica")
         finally:

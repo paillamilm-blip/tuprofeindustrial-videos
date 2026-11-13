@@ -26,6 +26,11 @@ pasos:
   - nota: "El peso apunta al suelo, no a la rampa"
     tex: 'P = m\,g = 19{,}6\ \text{N}'
     voz: "El peso baja derecho y mide diecinueve coma seis newton. Pero el bloque sólo puede moverse por el plano."
+    visual:
+      tipo: diagrama_fuerzas
+      cuerpo: bloque
+      vectores: ['P', 'N']
+      angulo: 30
   - nota: "Se parte en dos"
     tex: 'P_{\parallel} = P\sin\theta \quad P_{\perp} = P\cos\theta'
     voz: "Por eso se parte en dos. Una componente corre por el plano y la otra lo aprieta."
@@ -38,6 +43,12 @@ pasos:
   - nota: "La mitad del peso empuja a deslizar"
     tex: 'P_{\parallel} = 19{,}6 \cdot 0{,}5'
     voz: "Con treinta grados el seno vale medio. La mitad del peso tira a deslizar."
+    visual:
+      tipo: diagrama_fuerzas
+      cuerpo: bloque
+      vectores: ['P', 'N']
+      angulo: 30
+      descomponer: true
 
 resultado:
   tex: 'P_{\parallel} = 9{,}8\ \text{N}'

@@ -1384,6 +1384,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             rate_func=rate_functions.linear,
         )
         dibujo.vivo(avance)
+        dibujo.pose_final = avance  # si el paso siguiente es el mismo dibujo, sigue desde acá
 
     def _trazar_dibujo(
         self,
@@ -1405,7 +1406,11 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         # Con el tablero partido el dibujo vive dentro de un casillero: si ocupara el ancho de la hoja,
         # la toma de la mitad lo cortaría por los lados.
         ancho = ANCHO_CASILLERO - 0.3 if self.receta.partida == "mitades" else c.ANCHO_UTIL
-        desde = previo.vista_final if previo is not None else None
+        desde = (
+            (*previo.vista_final, previo.separado_final)
+            if previo is not None and previo.vista_final is not None
+            else None
+        )
         marca = d.desde_vista.set(desde) if desde is not None else None
         try:
             dibujo = d.dibujar_visual(paso.visual, self.col, ancho, alto, papel)
@@ -1413,10 +1418,11 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             if marca is not None:
                 d.desde_vista.reset(marca)
         dibujo.place(0, centro_y)
-        if previo is not None and dibujo.trazo and len(dibujo.trazo) == len(previo.trazo):
-            # Una marca nueva (un rótulo abajo) corre el centro del grupo: se alinea por la estructura
-            # (cajas, ejes, el cuerpo) para que lo que no cambia quede exactamente donde estaba.
-            delta = Group(*previo.trazo).get_center() - Group(*dibujo.trazo).get_center()
+        if previo is not None and dibujo.trazo and previo.trazo:
+            # Una marca nueva (un rótulo abajo) corre el centro del grupo: se alinea por la base de la
+            # estructura (el suelo, el eje, el contorno, la caja G), que es la primera pieza del trazo y
+            # está siempre; las marcas pueden sumar trazos (la bajada de la altura máxima) detrás.
+            delta = previo.trazo[0].get_center() - dibujo.trazo[0].get_center()
             destino = dibujo.mobs.get_center() + delta
             dibujo.place(float(destino[0]), float(destino[1]))
         if not hoja:  # en la pizarra el dibujo tiene su propia tarjeta, como los pasos
@@ -1438,6 +1444,20 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             camara = self._animaciones_camara(centro_y, self._camara_escala, run_time=0.55)
         else:
             camara = []  # el gancho se mira entero desde el reposo: acá la cámara no se mueve
+        if dibujo.vivo is not None and dibujo.duracion and previo is not None and dibujo.vista_final is None:
+            # Su recorrido ya corrió en el paso anterior (la bola cayó, los cubos entraron, la tangente
+            # llegó): se queda en ese mismo instante y solo cambia lo escrito. Repetirlo haría volver la
+            # bola al suelo o vaciar los cubos en cada paso. (Un cuerpo 3D sí se mueve: va a su vista nueva.)
+            dibujo.pose_final = previo.pose_final
+            dibujo.vivo(dibujo.pose_final)
+            if dibujo.estela is not None and previo.estela is not None:
+                # La estela se dibuja cuadro a cuadro mientras se mueve: la nueva nacería vacía.
+                dibujo.mobs.remove(dibujo.estela)
+                dibujo.mobs.add(previo.estela)
+                dibujo.estela = previo.estela
+            self._reemplazar_dibujo(previo, dibujo, camara, run_time=float(np.clip(restante * 0.3, 0.5, 0.9)))
+            self._dibujo_listo_en = self.renderer.time
+            return dibujo
         if dibujo.vivo is not None and dibujo.duracion:
             self._mover_dibujo(dibujo, dibujo.duracion, restante, camara, previo=previo)
             self._dibujo_listo_en = self.renderer.time  # desde acá se ve completo (el proyectil ya cayó)

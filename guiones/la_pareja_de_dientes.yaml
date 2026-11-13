@@ -27,6 +27,12 @@ pasos:
   - nota: "Los dientes se muerden de a uno"
     tex: 'z_1 n_1 = z_2 n_2'
     voz: "Por cada diente que pasa entra uno que sale. El producto de dientes y vueltas se conserva."
+    visual:
+      tipo: engranaje
+      dientes_a: '20'
+      dientes_b: '60'
+      rpm: '1200 rpm'
+      anotar: ['relacion']
   - nota: "Despejo el eje lento"
     tex: 'n_2 = n_1 \cdot \frac{z_1}{z_2} = 1200 \cdot \frac{20}{60}'
     voz: "Despejo: las vueltas del eje lento son mil doscientos por veinte sobre sesenta."
@@ -40,6 +46,12 @@ pasos:
   - nota: "Cuenta vueltas"
     tex: 'n_2 = 400\ \text{rpm}'
     voz: "Cuatrocientas vueltas por minuto. Un tercio de las de entrada."
+    visual:
+      tipo: engranaje
+      dientes_a: '20'
+      dientes_b: '60'
+      rpm: '1200 rpm'
+      anotar: ['velocidad']
 
 resultado:
   tex: 'n_2 = 400\ \text{rpm} \qquad i = 3'

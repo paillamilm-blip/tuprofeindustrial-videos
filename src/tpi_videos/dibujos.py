@@ -104,9 +104,12 @@ class Dibujo:
     fisico: bool = True
     # Lo que ``place`` corre el dibujo: la pose lo consulta para no volver al origen.
     desplazamiento: list[np.ndarray] = field(default_factory=lambda: [np.zeros(3)], repr=False)
-    # Un cuerpo 3D: la vista (phi, theta) en la que termina. El paso siguiente, si es el mismo dibujo,
-    # parte de ahí (``desde_vista``) en vez de dar la vuelta de nuevo. None en los dibujos 2D.
-    vista_final: tuple[float, float] | None = None
+    # Un cuerpo 3D: la vista (phi, theta) en la que termina y si queda con las piezas separadas. El paso
+    # siguiente, si es el mismo dibujo, parte de ahí (``desde_vista``) en vez de dar la vuelta de nuevo.
+    vista_final: tuple[float, float] | None = None  # None en los dibujos 2D
+    separado_final: bool = False
+    # Hasta dónde llegó su recorrido (0..1): si la voz cortó la física, el paso siguiente sigue desde ahí.
+    pose_final: float = 1.0
 
     def place(self, x: float, y: float) -> Dibujo:
         delta = np.array([x, y, 0.0]) - self.mobs.get_center()
@@ -145,9 +148,9 @@ def afinar_trazo(mobs: VGroup, minimo: float = GROSOR_MINIMO) -> None:
 # None = «auto»: solo se achica lo que no cabe. Se fija en ``dibujar_visual`` mientras se construye.
 RELLENO = {"chico": 0.6, "mediano": 0.8, "grande": 1.0}
 _relleno: ContextVar[float | None] = ContextVar("relleno_del_dibujo", default=None)
-# Si el cuerpo 3D sigue del paso anterior, la vista (phi, theta) donde quedó: la órbita parte de ahí.
+# Si el cuerpo 3D sigue del paso anterior: (phi, theta, ya separado) de donde quedó, y la órbita parte de ahí.
 # None = la órbita de siempre (75° antes de la vista pedida). La fija la escena mientras construye.
-desde_vista: ContextVar[tuple[float, float] | None] = ContextVar("desde_vista", default=None)
+desde_vista: ContextVar[tuple[float, float, bool] | None] = ContextVar("desde_vista", default=None)
 
 
 def factor_de_encaje(ancho_dibujo: float, alto_dibujo: float, ancho: float, alto: float) -> float:
@@ -873,6 +876,14 @@ def poligono_regular(
         26,
     )
 
+    if "perimetro" in marcas:
+        # Arriba, donde no hay nada: n lados iguales dan la vuelta entera.
+        total = figura.lados * figura.lado
+        medida(
+            f"P = {figura.lados} · {_numero_latex(figura.lado)} = {_numero_latex(total)}{_sufijo(figura)}",
+            [0.0, arriba + 0.42, 0.0],
+            24,
+        )
     if "apotema" in marcas:
         pie = (izq_base + der_base) / 2  # la apotema baja recta desde el centro hasta el medio de la base
         raya(col.acento, centro, pie)
@@ -974,6 +985,9 @@ def proyectil(
     medida(f"{_numero_latex(figura.angulo)}°", izquierda + np.array([0.95, 0.16, 0.0]))
     if "alcance" in marcas:
         medida(f"d ≈ {_numero_latex(figura.alcance)}{_sufijo_proyectil(figura)}", derecha + DOWN * 0.36, 24)
+    if "tiempo" in marcas:
+        # Bajo el suelo, al centro: el alcance va en la punta derecha.
+        medida(f"t ≈ {_numero_latex(figura.tiempo)} s", np.array([0.0, izquierda[1] - 0.36, 0.0]), 24)
     if "altura_maxima" in marcas:
         bajada = DashedLine(cima, cima * np.array([1.0, 0.0, 1.0]), buff=0).set_stroke(col.acento, 4)
         rayas.append(bajada)
@@ -1611,12 +1625,17 @@ def onda(
     etiqueta(
         f"λ = {_numero_latex(figura.longitud)}{uni}", np.array([cresta + lam_px / 2, a_px + 0.55, 0.0]), 17
     )
-    if "velocidad" in marcas and figura.velocidad is not None:
-        etiqueta(
-            f"v = λ/T ≈ {_numero_latex(figura.velocidad)}{uni}/s",
-            np.array([0.0, -a_px - 0.55, 0.0]),
-            18,
-        )
+    # Lo que se deduce del período va bajo la onda, de a una línea: con solo la velocidad queda donde estaba.
+    abajo = [
+        f"f = 1/T ≈ {_numero_latex(figura.frecuencia)} Hz"
+        if "frecuencia" in marcas and figura.frecuencia is not None
+        else None,
+        f"v = λ/T ≈ {_numero_latex(figura.velocidad)}{uni}/s"
+        if "velocidad" in marcas and figura.velocidad is not None
+        else None,
+    ]
+    for i, texto in enumerate(t for t in abajo if t):
+        etiqueta(texto, np.array([0.0, -a_px - 0.55 - 0.5 * i, 0.0]), 18)
 
     todo = VGroup(*rayas, flecha_a, flecha_l, parches, rótulos)
     _encajar(todo, ancho, alto)

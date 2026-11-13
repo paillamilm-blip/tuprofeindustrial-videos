@@ -26,6 +26,12 @@ pasos:
   - nota: "Seis juegan las dos cosas"
     tex: 'n(A \cap B) = 6'
     voz: "El problema que nadie te dice: seis juegan los dos deportes a la vez."
+    visual:
+      tipo: venn
+      solo_a: 10
+      solo_b: 8
+      ambos: 6
+      fuera: 6
   - nota: "La intersección se cuenta dos veces"
     tex: 'n(A \cup B) = 16 + 14 - 6 = 24'
     voz: "Si los sumas, cuentas dos veces a esos seis. Si los restas una vez, quedan veinticuatro."
@@ -39,6 +45,13 @@ pasos:
   - nota: "Seis no juegan ninguna"
     tex: '30 - 24 = 6'
     voz: "Y como en el curso son treinta, seis no juegan ningún deporte."
+    visual:
+      tipo: venn
+      solo_a: 10
+      solo_b: 8
+      ambos: 6
+      fuera: 6
+      anotar: ['total']
 
 resultado:
   tex: 'n(A \cup B) = 24 \quad n(A \cap B) = 6'

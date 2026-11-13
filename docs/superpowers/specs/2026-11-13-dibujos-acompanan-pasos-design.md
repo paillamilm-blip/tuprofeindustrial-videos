@@ -55,10 +55,33 @@ al pasar de una a otra hay un ajuste suave de tamaño y brillo (ya no un salto d
 Pruebas: `test_continuidad.py` (sin Manim) y `test_continuidad_dibujos.py` (con Manim: el lazo conserva cajas y
 flechas y cambia solo los rótulos; la lata no vuelve a girar si sigue en la misma vista).
 
+## Fase 3: más marcas, y los guiones rellenados
+
+Cruzando cada paso sin dibujo con lo que el dibujo ya sabe marcar, casi todos se cubrían **con marcas que ya
+existían** (el círculo con `coseno`, el engranaje con `relacion`, el oscilador con `regimen`…). Faltaban tres,
+nuevas y opcionales (sin pedirlas el dibujo sale igual que antes):
+
+- `onda` → `frecuencia` (f = 1/T; pide el periodo). Con solo `velocidad` el rótulo queda donde estaba.
+- `poligono_regular` → `perimetro` (P = n · lado), arriba de la figura.
+- `proyectil` → `tiempo` (tiempo de vuelo), bajo el suelo al centro.
+
+**Ajuste a la fase 2** (salió al repetir dibujos que se mueven): si el dibujo sigue, **se queda en el instante
+donde quedó** (`Dibujo.pose_final`): la bola no vuelve a despegar, los cubos no se vacían, el péndulo no se
+reinicia; la estela del paso anterior pasa al nuevo (nacería vacía). Los cuerpos 3D sí se mueven (la cámara va a
+su vista nueva) y, si ya estaban separados, siguen separados (`desde_vista` lleva «ya separado»). La alineación
+usa ahora la primera pieza de la estructura (`trazo[0]`), porque algunas marcas suman trazos.
+
+**Guiones:** 17 rellenados con el mismo dibujo y la marca de lo que dice cada paso. De 27 guiones con pasos sin
+dibujo quedan 8, a propósito: 3 revelarían la respuesta antes de calcularla (IVA, GPS, vértice), 1 es álgebra
+(derivada), 2 cambian de ángulo en cada paso (Euler, i²), 1 mezcla dos dibujos (ocho veces más pesado) y la tolva
+espera decisión.
+
+Pruebas: `test_marcas_nuevas.py` (catálogo, validación y, con Manim, que cada rótulo se escriba solo si se pide).
+
 ## Pendiente
 
-- Verlo renderizado (lazo, lata, `el_cubo_partido`, vectores) y comparar los ejemplos con `main`.
-- Fase 3: más marcas por dibujo.
+- Verlo renderizado y comparar los ejemplos con `main`.
+- Decidir los 8 guiones de arriba.
 - `balance_de_masa_en_tolva_de_inyeccion`: el guion es de masa y la tolva solo anota volumen y chapa; repetirla
   sería adorno. Decide el profe.
 - Los otros ~25 guiones con avisos: se corrigen de a poco o se regeneran con la IA.

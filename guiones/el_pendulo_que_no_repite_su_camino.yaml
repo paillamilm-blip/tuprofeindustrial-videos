@@ -26,6 +26,15 @@ pasos:
   - nota: "La energía al soltar"
     tex: 'E = 3\,m g L\,(1-\cos 170^\circ) = 58\ \text{J}'
     voz: "La masa de abajo cae el doble: tres desniveles iguales, cincuenta y ocho joules."
+    visual:
+      tipo: pendulo_doble
+      masa_1: '1 kg'
+      masa_2: '1 kg'
+      longitud_1: '1 m'
+      longitud_2: '1 m'
+      angulo_1: 170
+      angulo_2: 170
+      anotar: ['energia']
   - nota: "La energía no se pierde"
     tex: 'E = 58\ \text{J}\ \text{en todo el recorrido}'
     voz: "La energía se conserva en todo el recorrido: mira la traza, solo cambia de forma."
@@ -41,6 +50,15 @@ pasos:
   - nota: "El camino no se repite"
     tex: '\Delta\theta_0 = 1^\circ \;\Rightarrow\; \text{otra traza}'
     voz: "Un grado de diferencia al soltar y a los diez segundos va por otro lado."
+    visual:
+      tipo: pendulo_doble
+      masa_1: '1 kg'
+      masa_2: '1 kg'
+      longitud_1: '1 m'
+      longitud_2: '1 m'
+      angulo_1: 170
+      angulo_2: 170
+      anotar: ['angulos']
 
 resultado:
   tex: 'E = 58\ \text{J}, \quad \theta_2(t)\ \text{no periódico}'

@@ -65,10 +65,10 @@ MARCAS_PLACA = ("centro", "isotermas")
 MARCAS_FLUJO = ("esfuerzo",)
 
 # Lo que se puede anotar en un polígono regular.
-MARCAS_POLIGONO = ("apotema", "radio", "angulo_central", "angulo_interior")
+MARCAS_POLIGONO = ("apotema", "radio", "angulo_central", "angulo_interior", "perimetro")
 
 # Lo que se puede anotar en un tiro parabólico.
-MARCAS_PROYECTIL = ("alcance", "altura_maxima", "componentes")
+MARCAS_PROYECTIL = ("alcance", "altura_maxima", "componentes", "tiempo")
 
 # Lo que se puede anotar en el círculo trigonométrico.
 MARCAS_CIRCULO = ("seno", "coseno", "tangente")
@@ -87,7 +87,7 @@ MARCAS_VENN = ("total",)
 MARCAS_PROBABILIDAD = ("probabilidad",)
 
 # Lo que se puede anotar en una onda (la amplitud y λ van siempre; la velocidad es opcional).
-MARCAS_ONDA = ("velocidad",)
+MARCAS_ONDA = ("velocidad", "frecuencia")
 
 # Lo que se puede anotar en cada máquina: la óptica no lleva marcas (sus dos ángulos van siempre).
 MARCAS_PENDULO = ("periodo", "velocidad")

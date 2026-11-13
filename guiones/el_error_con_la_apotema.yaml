@@ -39,6 +39,11 @@ pasos:
   - nota: "Perímetro"
     tex: 'P = 6 \cdot 6'
     voz: "Primero sacamos el perímetro multiplicando por seis."
+    visual:
+      tipo: poligono_regular
+      lados: 6
+      lado: "6 cm"
+      anotar: ["perimetro"]
   - nota: "Área correcta"
     tex: 'A = \frac{36 \cdot 5,2}{2}'
     voz: "Mira el hexágono: cada lado mide seis centímetros. La apotema baja del centro hasta la base y mide cinco coma dos. Área es perímetro por apotema, dividido en dos."

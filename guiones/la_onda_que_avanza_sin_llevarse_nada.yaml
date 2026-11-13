@@ -26,6 +26,12 @@ pasos:
   - nota: "La frecuencia es lo inverso al período"
     tex: 'f = \frac{1}{T} = 2{,}5\ \text{Hz}'
     voz: "Uno partido por cero coma cuatro: dos punto cinco ciclos por segundo."
+    visual:
+      tipo: onda
+      amplitud: '0,5 m'
+      longitud_onda: '2 m'
+      periodo: 0.4
+      anotar: ['frecuencia']
   - nota: "La velocidad de la onda"
     tex: 'v = \frac{\lambda}{T} = 5\ \text{m/s}'
     voz: "Dos metros divididos por cero coma cuatro segundos: la onda corre a cinco metros por segundo."

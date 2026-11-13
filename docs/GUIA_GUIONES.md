@@ -160,7 +160,7 @@ uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra 
 | `tipo` | Qué dibuja | Materia | Campos |
 |---|---|---|---|
 | `grafico_funcion` | Gráfico de la función | Matemática | funcion, variable, eje_x, eje_y, rango, marcar, movimiento, desde, hasta, anotar |
-| `poligono_regular` | Polígono regular | Matemática | lados, lado, anotar |
+| `poligono_regular` | Polígono regular | Matemática | lados, lado, anotar (apotema, radio, angulo_central, angulo_interior, perimetro) |
 | `circulo_trig` | Círculo trigonométrico | Matemática | angulo, anotar |
 | `solido` | Sólido (lámina) | Matemática | figura, lado, radio, altura, anotar |
 | `vector_3d` | Vector dentro de una caja (3D) | Matemática | componentes, unidad, anotar |
@@ -170,9 +170,9 @@ uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra 
 | `torta` | Torta de porcentajes | Matemática | categorias |
 | `barras` | Barras de datos | Matemática | categorias |
 | `diagrama_fuerzas` | Diagrama de fuerzas | Física | cuerpo, vectores, angulo, descomponer |
-| `proyectil` | Tiro parabólico | Física | velocidad, angulo, anotar |
+| `proyectil` | Tiro parabólico | Física | velocidad, angulo, anotar (alcance, altura_maxima, componentes, tiempo) |
 | `circuito` | Circuito | Física | fuente, arreglo, resistencias |
-| `onda` | Onda anotada | Física | amplitud, longitud_onda, periodo, anotar |
+| `onda` | Onda anotada | Física | amplitud, longitud_onda, periodo, anotar (frecuencia, velocidad: piden periodo) |
 | `energia` | Barras de energía | Física | categorias |
 | `optica` | Refracción de la luz | Física | n1, n2, angulo_incidence |
 | `pendulo` | Péndulo | Física | longitud, angulo, anotar |

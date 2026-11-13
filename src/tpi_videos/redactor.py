@@ -388,11 +388,12 @@ class PasoIA(BaseModel):
     anotar: list[str] = Field(
         default_factory=list,
         description=(
-            'Hasta 2 marcas: con "poligono", de "apotema", "radio", "angulo_central", "angulo_interior"; '
-            'con "proyectil", de "alcance", "altura_maxima", "componentes"; '
+            'Hasta 2 marcas: con "poligono", de "apotema", "radio", "angulo_central", "angulo_interior", '
+            '"perimetro"; '
+            'con "proyectil", de "alcance", "altura_maxima", "componentes", "tiempo"; '
             'con "circulo", de "seno", "coseno", "tangente"; '
             'con "solido" o "solido3d", de "volumen", "area"; '
-            'con "venn", "total"; con "probabilidad", "probabilidad"; con "onda", "velocidad"; '
+            'con "venn", "total"; con "probabilidad", "probabilidad"; con "onda", "frecuencia" o "velocidad"; '
             'con "pendulo", "periodo"; con "resorte", "fuerza"; con "escala", "contador" o "razon"; '
             'con "polea", "aceleracion" o "tension"; '
             'con "tanque", "llenado" o "vaciado"; con "viga", "reacciones" o "momento"; '

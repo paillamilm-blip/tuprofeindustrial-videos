@@ -42,13 +42,31 @@ pasos:
     mapa:
       - termino: 'a^3'
         concepto: "tres direcciones"
+    visual:
+      tipo: escala
+      lado: "4 cm"
+      factor: 2
+      dimension: 3
+      anotar: [contador, razon]
   - nota: "Tercero: duplicamos"
     tex: '(2a)^3 = 2a \cdot 2a \cdot 2a = 8\,a^3'
     voz: "Y tercero: si la arista se duplica, el dos aparece en cada una de las tres direcciones. Por eso se multiplica tres veces: dos por dos por dos, que es ocho."
     destacar: ['8\,a^3']
+    visual:
+      tipo: escala
+      lado: "4 cm"
+      factor: 2
+      dimension: 3
+      anotar: [contador, razon]
   - nota: "Con los números"
     tex: 'V_2 = 8 \cdot 4^3 = 8 \cdot 64 = 512\ \text{cm}^3'
     voz: "Con los números: el chico tiene sesenta y cuatro centímetros cúbicos, así que el grande tiene ocho veces eso."
+    visual:
+      tipo: escala
+      lado: "4 cm"
+      factor: 2
+      dimension: 3
+      anotar: [contador, razon]
 
 resultado:
   tex: 'V_2 = 512\ \text{cm}^3 = 8\,V_1'

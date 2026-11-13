@@ -26,6 +26,14 @@ pasos:
   - nota: "Qué tan frenado va"
     tex: '\zeta = \frac{c}{2\sqrt{k\,m}} = \frac{8}{2\sqrt{400}} = 0{,}2'
     voz: "Ocho dividido por dos raíz de cuatrocientos: zeta igual a cero coma dos."
+    visual:
+      tipo: oscilador
+      masa: '2 kg'
+      constante: '200 N/m'
+      amplitud: '10 cm'
+      amortiguamiento: '8 N·s/m'
+      duracion: 2.5
+      anotar: ['regimen']
   - nota: "El período con el freno"
     tex: 'T = \frac{2\pi}{\omega_0\sqrt{1-\zeta^2}} \approx 0{,}64\ \text{s}'
     voz: "Con el freno el período sube a cero coma sesenta y cuatro: mira cómo se apaga la curva."
@@ -40,6 +48,14 @@ pasos:
   - nota: "Cuánto tarda en apagarse"
     tex: '\tau = \frac{2m}{c} = \frac{4}{8} = 0{,}5\ \text{s}'
     voz: "Cada medio segundo la amplitud se queda en el treinta y siete por ciento."
+    visual:
+      tipo: oscilador
+      masa: '2 kg'
+      constante: '200 N/m'
+      amplitud: '10 cm'
+      amortiguamiento: '8 N·s/m'
+      duracion: 2.5
+      anotar: ['decaimiento']
 
 resultado:
   tex: 'T \approx 0{,}64\ \text{s}, \quad \tau = 0{,}5\ \text{s}'

@@ -26,6 +26,9 @@ pasos:
   - nota: "Las porciones chicas"
     tex: '6 \to 15\% \quad 4 \to 10\%'
     voz: "Seis son quince por ciento, y cuatro, diez por ciento."
+    visual:
+      tipo: torta
+      categorias: ['Fútbol 20', 'Básquetbol 10', 'Vóley 6', 'Otros 4']
   - nota: "La torta completa"
     tex: '50\% + 25\% + 15\% + 10\% = 100\%'
     voz: "Las cuatro porciones juntas siempre dan cien por ciento."

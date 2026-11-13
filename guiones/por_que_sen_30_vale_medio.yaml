@@ -26,6 +26,9 @@ pasos:
   - nota: "El radio gira y toca el círculo"
     tex: 'P = (\cos 30°,\ \sin 30°)'
     voz: "Al girar, el radio toca el círculo en un punto. Ese punto son el coseno y el seno juntos."
+    visual:
+      tipo: circulo_trig
+      angulo: 30
   - nota: "El seno es la altura del punto"
     tex: '\sin 30° = 0{,}5'
     voz: "La altura del punto mide justo medio. Eso es el seno: una raya que se ve, no magia."
@@ -36,6 +39,10 @@ pasos:
   - nota: "El coseno es lo que avanzó"
     tex: '\cos 30° \approx 0{,}87'
     voz: "Y hacia la derecha avanzó cero coma ochenta y siete. Esa raya horizontal es el coseno."
+    visual:
+      tipo: circulo_trig
+      angulo: 30
+      anotar: ['coseno']
 
 resultado:
   tex: '\sin 30° = 0{,}5 \quad \cos 30° \approx 0{,}87'
