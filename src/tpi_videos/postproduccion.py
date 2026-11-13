@@ -43,9 +43,14 @@ def _codificacion(ffmpeg: str, calidad: Calidad, con_cama: bool = False) -> list
 
 def _argumentos_cama(cama: Path, volumen: float) -> list[str]:
     """Entrada en bucle + mezcla: la cama suena bajo la voz durante todo el video, sin aire muerto."""
+    # La voz «empuja» la música hacia abajo mientras habla (sidechain) y la deja volver en las pausas:
+    # se escucha la música sin que tape ni una palabra.
+    formato = "aformat=sample_rates=48000:channel_layouts=stereo"
     cadena = (
-        f"[1:a]volume={volumen}[cama];"
-        "[0:a][cama]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[mezcla];"
+        f"[0:a]{formato},asplit=2[voz][llave];"
+        f"[1:a]{formato},volume={volumen}[cama0];"
+        "[cama0][llave]sidechaincompress=threshold=0.02:ratio=4:attack=30:release=500:makeup=1[cama];"
+        "[voz][cama]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[mezcla];"
         "[mezcla]loudnorm=I=-14:TP=-1.5:LRA=11[aout]"
     )
     return [

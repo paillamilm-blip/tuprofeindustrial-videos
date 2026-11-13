@@ -133,3 +133,71 @@ class SubtitulosConCamaTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MusicaNoZumbidoTest(unittest.TestCase):
+    """La cama es música (acordes que cambian y notas que suenan), no un zumbido fijo."""
+
+    def _muestras(self, segundos=16.0):
+        import tempfile
+        import wave
+
+        import numpy as np
+
+        from tpi_videos import musica
+
+        with tempfile.TemporaryDirectory() as carpeta:
+            ruta = musica.bucle_cama(Path(carpeta) / "cama.wav", segundos)
+            with wave.open(str(ruta)) as w:
+                fr = w.getframerate()
+                x = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(float) / 32768
+        return x, fr
+
+    def _espectro(self, trozo, fr):
+        import numpy as np
+
+        e = np.abs(np.fft.rfft(trozo * np.hanning(len(trozo))))
+        f = np.fft.rfftfreq(len(trozo), 1 / fr)
+        banda = (f > 60) & (f < 1200)
+        e = e[banda]
+        return e / (np.linalg.norm(e) or 1)
+
+    def test_los_acordes_cambian_en_el_bucle(self):
+        import numpy as np
+
+        x, fr = self._muestras()
+        cuartos = np.array_split(x, 4)
+        espectros = [self._espectro(c, fr) for c in cuartos]
+        parecidos = [float(espectros[i] @ espectros[i + 1]) for i in range(3)]
+        self.assertLess(max(parecidos), 0.9, f"los 4 tramos suenan casi igual: {parecidos}")
+
+    def test_hay_notas_que_empiezan(self):
+        """Un arpegio: el volumen sube de golpe varias veces por segundo (ataques de nota)."""
+        import numpy as np
+
+        x, fr = self._muestras()
+        paso = int(0.02 * fr)
+        rms = np.sqrt(np.add.reduceat(x**2, np.arange(0, len(x), paso)) / paso)
+        ataques = int(np.sum(np.diff(rms) > 0.15 * rms.max()))
+        self.assertGreater(ataques, 16)
+
+    def test_la_musica_no_pasa_por_encima_de_la_voz(self):
+        """Lo grave y lo medio-bajo: casi nada de energía donde vive la claridad de la voz (2–4 kHz)."""
+        import numpy as np
+
+        x, fr = self._muestras()
+        e = np.abs(np.fft.rfft(x)) ** 2
+        f = np.fft.rfftfreq(len(x), 1 / fr)
+        self.assertLess(e[(f > 2000) & (f < 4000)].sum() / e.sum(), 0.02)
+
+
+class MezclaQueSeApartaTest(unittest.TestCase):
+    """Mientras habla la voz la música baja; en las pausas vuelve a su volumen."""
+
+    def test_la_cama_baja_bajo_la_voz(self):
+        from tpi_videos import postproduccion
+
+        cadena = postproduccion._argumentos_cama(Path("/tmp/c.wav"), 0.18)
+        filtro = cadena[cadena.index("-filter_complex") + 1]
+        self.assertIn("sidechaincompress", filtro)
+        self.assertIn("asplit", filtro)
