@@ -80,9 +80,6 @@ body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
   color: {PIEL["tinta"]}; border-radius: 16px; padding: 24px;
 }}
 .tpi-cabecera {{ background: {PIEL["sala"]}; border-bottom: 1px solid {PIEL["linea_sala"]}; }}
-.tpi-pestanas .q-tab {{ color: {PIEL["tenue_sala"]}; text-transform: none; font-size: .95rem; padding: 0 20px; }}
-.tpi-pestanas .q-tab--active {{ color: {PIEL["texto_sala"]}; }}
-.tpi-pestanas .q-tab__indicator {{ background: {PIEL["ambar"]}; height: 3px; }}
 .tpi-consola {{ background: {PIEL["consola"]}; border-radius: 16px; box-shadow: none; color: {PIEL["texto_sala"]}; }}
 .tpi-ficha {{ background: {PIEL["consola_alta"]}; border-radius: 12px; color: {PIEL["texto_sala"]}; }}
 .tpi-ficha-activa {{ box-shadow: inset 3px 0 0 {PIEL["ambar"]}; }}
@@ -194,6 +191,49 @@ body {{ background-color: {PIEL["sala"]}; color: {PIEL["texto_sala"]}; }}
 @keyframes tpi-latido {{ 0%, 100% {{ opacity: .55; }} 50% {{ opacity: 1; }} }}
 .tpi-aviso-error {{ border-radius: 12px; padding: 14px 16px; background: {PIEL["consola_alta"]};
   box-shadow: inset 3px 0 0 {PIEL["rojo_sala"]}; }}
+/* La sala en una sola pantalla: una lista; cada video lleva sus etapas con su % y su check. */
+.tpi-sala {{ max-width: 880px; }}
+.tpi-sala-titulo {{ font-size: 1.75rem; font-weight: 700; line-height: 1.2; }}
+.tpi-video {{ background: {PIEL["consola"]}; border-radius: 16px; padding: 20px 24px; width: 100%; }}
+.tpi-video-activo {{ box-shadow: inset 3px 0 0 {PIEL["ambar"]}; }}
+.tpi-video-fallo {{ box-shadow: inset 3px 0 0 {PIEL["rojo_sala"]}; }}
+.tpi-video-espera {{ padding: 16px 24px; }}
+.tpi-video.tpi-clic:hover {{ box-shadow: 0 0 0 1px {PIEL["linea_sala"]}; background-color: {PIEL["consola"]}; }}
+.tpi-video-activo.tpi-clic:hover {{ box-shadow: inset 3px 0 0 {PIEL["ambar"]}, 0 0 0 1px {PIEL["linea_sala"]}; }}
+.tpi-video-fallo.tpi-clic:hover {{ box-shadow: inset 3px 0 0 {PIEL["rojo_sala"]}, 0 0 0 1px {PIEL["linea_sala"]}; }}
+.tpi-etapas {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; width: 100%; }}
+.tpi-etapa {{ display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }}
+.tpi-marca-etapa {{ position: relative; width: 36px; height: 36px; border-radius: 999px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; }}
+.tpi-marca-hecha {{ background: {PIEL["verde_sala"]}; color: {PIEL["sala"]}; }}
+.tpi-marca-espera {{ box-shadow: inset 0 0 0 2px {PIEL["linea_sala"]}; }}
+.tpi-marca-error {{ background: {PIEL["rojo_sala"]}; color: {PIEL["sala"]}; }}
+.tpi-marca-activa {{ background: conic-gradient({PIEL["ambar"]} calc(var(--p) * 1%), {PIEL["linea_sala"]} 0); }}
+.tpi-marca-activa::before {{ content: ""; position: absolute; inset: 4px; border-radius: 999px;
+  background: {PIEL["consola"]}; }}
+.tpi-etapa-nombre {{ white-space: nowrap; font-size: .85rem; line-height: 1.2; color: {PIEL["texto_sala"]}; }}
+.tpi-etapa-pct {{ font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: .9rem; line-height: 1;
+  color: {PIEL["tenue_sala"]}; }}
+.tpi-etapa-hecha .tpi-etapa-pct {{ color: {PIEL["verde_sala"]}; }}
+.tpi-etapa-activa .tpi-etapa-pct {{ color: {PIEL["ambar"]}; }}
+.tpi-etapa-error .tpi-etapa-pct {{ color: {PIEL["rojo_sala"]}; }}
+.tpi-etapa-espera .tpi-etapa-nombre {{ color: {PIEL["tenue_sala"]}; }}
+.tpi-borrar:hover {{ color: {PIEL["rojo_sala"]}; }}
+.tpi-total {{ font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 1.6rem; line-height: 1;
+  color: {PIEL["ambar"]}; white-space: nowrap; }}
+.tpi-sala .q-linear-progress {{ color: {PIEL["ambar"]}; }}
+/* Avanzado: cinco tarjetas, cada una abre su herramienta. */
+.tpi-herramienta {{ background: {PIEL["consola"]}; border-radius: 16px; padding: 24px; min-height: 140px; gap: 8px;
+  cursor: pointer; }}
+.tpi-herramienta.tpi-clic:hover {{ background-color: {PIEL["consola"]}; box-shadow: 0 0 0 1px {PIEL["ambar"]}; }}
+.tpi-herramienta:focus-visible {{ outline: 2px solid {PIEL["ambar"]}; outline-offset: 2px; }}
+/* Aprobar guiones: un guion a la vez, con sus chequeos y la decisión siempre a la vista. */
+.tpi-posicion {{ font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 1rem; min-width: 64px;
+  text-align: center; color: {PIEL["texto_sala"]}; }}
+.tpi-chequeo {{ padding: 6px 12px; border-radius: 999px; background: {PIEL["consola_alta"]}; font-size: .85rem;
+  color: {PIEL["texto_sala"]}; }}
+.tpi-barra-accion {{ position: sticky; bottom: 0; z-index: 2; padding: 14px 0; background: {PIEL["sala"]};
+  border-top: 1px solid {PIEL["linea_sala"]}; }}
 .tpi-entra {{ animation: tpi-entra .22s cubic-bezier(0.23, 1, 0.32, 1); }}
 @keyframes tpi-entra {{ from {{ opacity: 0; transform: translateY(6px); }} to {{ opacity: 1; transform: none; }} }}
 @media (hover: hover) and (pointer: fine) {{

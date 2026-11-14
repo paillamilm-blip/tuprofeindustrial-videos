@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import cola
+from .etapas import Etapa, etapas_de
 
 PENDIENTES, EN_RENDER, COMPLETADOS = "pendientes", "en_render", "completados"
 COLUMNAS = {
@@ -41,6 +42,7 @@ class Ficha:
     video: Path | None  # el .mp4 terminado
     actualizado: str
     guion: Path | None = None  # el .yaml de donde sale, si ya está escrito
+    etapas: tuple[Etapa, ...] = ()  # Guion, Animación, Video y Kit: cada una con su % y su check
 
     @property
     def fallo(self) -> bool:
@@ -79,6 +81,7 @@ def columnas(
             archivo = Path(str(ruta)) if ruta else None
             crudo = ((video.get("hitos") or {}).get("guion") or {}).get("ruta")
             guion = Path(str(crudo)) if crudo else None
+            avance = float(vivo.get("avance", video.get("avance")) or 0.0)
             salida[columna].append(
                 Ficha(
                     video_id=str(video.get("id")),
@@ -89,12 +92,13 @@ def columnas(
                     tema=str(lote.get("tema") or ""),
                     estado=estado,
                     texto_estado=_texto_estado(estado),
-                    avance=float(vivo.get("avance", video.get("avance")) or 0.0),
+                    avance=avance,
                     detalle=str(vivo.get("detalle") or video.get("detalle") or ""),
                     error=video.get("error"),
                     video=archivo if archivo and archivo.exists() else None,
                     actualizado=str(video.get("actualizado") or lote.get("actualizado") or ""),
                     guion=guion if guion and guion.exists() else None,
+                    etapas=etapas_de(estado, avance, tuple(video.get("hitos") or ())),
                 )
             )
     for clave in salida:
