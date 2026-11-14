@@ -24,7 +24,9 @@ dibujo; un error tachado no lo necesita; un dato o mito puede usar ejemplos dist
 
 ## Guiones corregidos
 
-- `el_lazo_que_se_calma`: el lazo en los 3 pasos (malla → malla y T → T).
+- `el_lazo_que_se_calma`: el lazo en los 3 pasos (malla → malla → T). El paso 2 pide solo `malla`:
+  pedir `malla` y `lazo_cerrado` juntos escribía los dos rótulos en la misma línea (se pisaban) y el T
+  adelantaba el resultado antes del paso 3.
 - `cuanta_agua_cabe_en_la_lata`: de lámina plana en 1 paso a **cilindro 3D** en los 3 (base desde arriba →
   volumen → despiece de tapas y manto para el área).
 

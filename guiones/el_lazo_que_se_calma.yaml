@@ -39,7 +39,7 @@ pasos:
       tipo: bloques
       adelante: '8'
       retro: '0.5'
-      anotar: ['malla', 'lazo_cerrado']
+      anotar: ['malla']
   - nota: "Resultado"
     tex: 'T = \frac{8}{5} = 1{,}6'
     voz: "Ocho entre cinco. La ganancia baja de ocho a uno coma seis."
