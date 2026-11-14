@@ -145,8 +145,12 @@ Sin `angulo` el cuerpo está sobre una mesa horizontal.
       resistencias: ['4 Ω', '6 Ω', '12 Ω']   # de 2 a 4, cada una con su unidad
 ```
 
-Las reglas: **mejor uno o dos dibujos por video** (más se confunden en 60 segundos; el motor no lo
-prohíbe), los campos de otro tipo se pueden dejar fuera, y `./tpi revisar` avisa si la función no se
+Las reglas: **el dibujo acompaña cada paso que se puede ver**. Usa el mismo dibujo (mismo `tipo` y mismos números)
+en cada uno y cambia solo lo que muestra (`anotar`, `vista`, `corte`, `despiece`), como en `guiones/el_cubo_partido.yaml`.
+Cuando dos pasos seguidos usan el mismo dibujo, **el dibujo se queda en pantalla**: no se borra ni se vuelve a
+trazar; solo aparece lo nuevo y se va lo que sobra (un sólido 3D parte de la vista donde quedó, sin dar la vuelta
+de nuevo). No mezcles
+tipos distintos en un ejercicio (eso sí confunde en 60 segundos), los campos de otro tipo se pueden dejar fuera, y `./tpi revisar` avisa si la función no se
 entiende o si falta un número. En el panel, el mismo dibujo se arma en cada tarjeta de paso, dentro de
 «Dibujo en el pie de la hoja». Ejemplo con los tres: `guiones/ejemplos/visuales_tres_tipos.yaml`.
 
@@ -156,7 +160,7 @@ uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra 
 | `tipo` | Qué dibuja | Materia | Campos |
 |---|---|---|---|
 | `grafico_funcion` | Gráfico de la función | Matemática | funcion, variable, eje_x, eje_y, rango, marcar, movimiento, desde, hasta, anotar |
-| `poligono_regular` | Polígono regular | Matemática | lados, lado, anotar |
+| `poligono_regular` | Polígono regular | Matemática | lados, lado, anotar (apotema, radio, angulo_central, angulo_interior, perimetro) |
 | `circulo_trig` | Círculo trigonométrico | Matemática | angulo, anotar |
 | `solido` | Sólido (lámina) | Matemática | figura, lado, radio, altura, anotar |
 | `vector_3d` | Vector dentro de una caja (3D) | Matemática | componentes, unidad, anotar |
@@ -166,9 +170,9 @@ uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra 
 | `torta` | Torta de porcentajes | Matemática | categorias |
 | `barras` | Barras de datos | Matemática | categorias |
 | `diagrama_fuerzas` | Diagrama de fuerzas | Física | cuerpo, vectores, angulo, descomponer |
-| `proyectil` | Tiro parabólico | Física | velocidad, angulo, anotar |
+| `proyectil` | Tiro parabólico | Física | velocidad, angulo, anotar (alcance, altura_maxima, componentes, tiempo) |
 | `circuito` | Circuito | Física | fuente, arreglo, resistencias |
-| `onda` | Onda anotada | Física | amplitud, longitud_onda, periodo, anotar |
+| `onda` | Onda anotada | Física | amplitud, longitud_onda, periodo, anotar (frecuencia, velocidad: piden periodo) |
 | `energia` | Barras de energía | Física | categorias |
 | `optica` | Refracción de la luz | Física | n1, n2, angulo_incidence |
 | `pendulo` | Péndulo | Física | longitud, angulo, anotar |
@@ -181,7 +185,7 @@ uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra 
 | `tanque` | Tanque con llave y fisura | Ingeniería | capacidad, entrada, salida, anotar |
 | `viga` | Viga apoyada | Ingeniería | longitud, carga, repartida, anotar |
 | `cercha` | Cercha | Ingeniería | base, altura, carga, anotar |
-| `bloques` | Lazo de control | Ingeniería | adelante, retro, negativa, anotar |
+| `bloques` | Lazo de control | Ingeniería | adelante, retro, negativa, anotar (malla: escribe GH · lazo_cerrado: escribe T) |
 | `engranaje` | Pareja de engranajes | Ingeniería | dientes_a, dientes_b, rpm, anotar |
 | `mohr` | Círculo de Mohr | Ingeniería | sigma_x, sigma_y, cortante, anotar |
 | `tolva_3d` | Tolva en 3D | Ingeniería | radio, altura, radio_salida, altura_cono, vista, despiece, anotar |

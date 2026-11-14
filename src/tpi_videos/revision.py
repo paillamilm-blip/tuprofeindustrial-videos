@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from .acompanar import PasoParaRevisar, faltas_de_acompanamiento
 from .guion import Guion, Visual
 from .pausas import segundos_de_pausa, sin_pausas
 from .visuales import (
@@ -238,6 +239,21 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
         )
     elif segundos < 25:
         avisos.append(Aviso("sugerencia", "duración", f"~{segundos:.0f} s es muy corto; ¿falta algún paso?"))
+
+    # El dibujo acompaña la explicación: en un ejercicio, el mismo dibujo en cada paso que se puede ver.
+    intenciones = guion.contenido.intenciones if guion.contenido else ["ejercicio"]
+    pasos_a_revisar = [
+        PasoParaRevisar(
+            tex=p.tex or "",
+            error=bool(p.error),
+            visual=p.visual.model_dump(exclude_none=True, exclude_defaults=True) | {"tipo": p.visual.tipo}
+            if p.visual
+            else None,
+        )
+        for p in guion.pasos
+    ]
+    for falta in faltas_de_acompanamiento(pasos_a_revisar, ejercicio="ejercicio" in intenciones):
+        avisos.append(Aviso(falta.nivel, falta.donde, falta.mensaje))
 
     # Gancho (primeros 3 segundos)
     gancho = sin_pausas(guion.gancho.voz_final)

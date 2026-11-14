@@ -24,6 +24,10 @@ pasos:
   - nota: "Lo que desequilibra el sistema"
     tex: 'F = (m_1 - m_2)\,g = 9{,}8\ \text{N}'
     voz: "Un kilo de diferencia pesa nueve coma ocho newtons."
+    visual:
+      tipo: polea
+      masa_a: '3 kg'
+      masa_b: '2 kg'
   - nota: "Esa fuerza mueve los cinco kilos"
     tex: 'a = \frac{(m_1 - m_2)\,g}{m_1 + m_2} = 1{,}96\ \text{m/s}^2'
     voz: "Nueve coma ocho repartido en cinco kilos: todos se mueven a uno coma noventa y seis."
@@ -35,6 +39,11 @@ pasos:
   - nota: "La cuerda frena la caída del lado pesado"
     tex: 'T = m_2 (g + a) = 2 \cdot 11{,}76 = 23{,}52\ \text{N}'
     voz: "El lado liviano sube: la cuerda lo tira con veintitrés coma cinco dos newtons."
+    visual:
+      tipo: polea
+      masa_a: '3 kg'
+      masa_b: '2 kg'
+      anotar: ['tension']
 
 resultado:
   tex: 'a = 1{,}96\ \text{m/s}^2 \quad T = 23{,}52\ \text{N}'

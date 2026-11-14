@@ -27,6 +27,11 @@ pasos:
   - nota: "El centro va en el promedio"
     tex: 'C = \frac{\sigma_x + \sigma_y}{2} = \frac{90 + 30}{2} = 60'
     voz: "El centro del círculo es el promedio de las dos normales. Sesenta."
+    visual:
+      tipo: mohr
+      sigma_x: '90 MPa'
+      sigma_y: '30 MPa'
+      cortante: '40 MPa'
   - nota: "El radio"
     tex: 'R = \sqrt{\left(\frac{\sigma_x - \sigma_y}{2}\right)^2 + \tau_{xy}^2} = \sqrt{30^2 + 40^2} = 50'
     voz: "El radio usa trescientos de cateto y cuatrocientos de otro. Un triángulo tres cuatro cinco: cincuenta."
@@ -40,6 +45,12 @@ pasos:
   - nota: "Leo los principales en el eje horizontal"
     tex: '\sigma_1 = C + R = 60 + 50 = 110\ \text{MPa}'
     voz: "Donde el círculo corta el eje horizontal está el máximo: ciento diez."
+    visual:
+      tipo: mohr
+      sigma_x: '90 MPa'
+      sigma_y: '30 MPa'
+      cortante: '40 MPa'
+      anotar: ['principales']
 
 resultado:
   tex: '\sigma_1 = 110\ \text{MPa} \qquad \sigma_2 = 10\ \text{MPa}'

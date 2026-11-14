@@ -685,6 +685,8 @@ class Visual(_Base):
                 )
             if "velocidad" in self.anotar and self.periodo is None:
                 raise ValueError("para anotar la velocidad la onda necesita su periodo, ej. periodo: 0.4")
+            if "frecuencia" in self.anotar and self.periodo is None:
+                raise ValueError("para anotar la frecuencia la onda necesita su periodo, ej. periodo: 0.4")
         elif self.tipo == "energia":
             if not self.categorias:
                 raise ValueError(

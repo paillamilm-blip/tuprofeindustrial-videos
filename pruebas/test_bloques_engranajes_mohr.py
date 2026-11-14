@@ -102,7 +102,7 @@ class MarcasYTiempoTest(unittest.TestCase):
             self.assertGreaterEqual(SEGUNDOS_VISUAL[tipo], 2.5, tipo)
 
     def test_las_marcas_no_se_pisan(self):
-        self.assertEqual(MARCAS_BLOQUES, ("lazo_cerrado",))
+        self.assertEqual(MARCAS_BLOQUES, ("malla", "lazo_cerrado"))
         self.assertEqual(MARCAS_ENGRANAJE, ("velocidad", "relacion"))
         self.assertEqual(MARCAS_MOHR, ("principales", "cortante"))
 
@@ -164,6 +164,13 @@ class DibujoBloquesEngranajeMohrTest(unittest.TestCase):
         textos = self._textos(dib)
         self.assertIn("G = 10", textos)
         self.assertIn("3,33", textos)
+
+    def test_la_malla_se_escribe_solo_si_se_pide(self):
+        figura = analizar_bloques("8", "0.5")
+        con = self._textos(bloques(figura, ["malla"], ColoresTema(), ANCHO_HOJA, ALTO_DIBUJO))
+        sin = self._textos(bloques(figura, [], ColoresTema(), ANCHO_HOJA, ALTO_DIBUJO))
+        self.assertIn("GH = 4", con)
+        self.assertNotIn("GH", sin)  # sin la marca el lazo sale igual que antes
 
     def test_la_pareja_escribe_su_velocidad(self):
         dib = engranaje(

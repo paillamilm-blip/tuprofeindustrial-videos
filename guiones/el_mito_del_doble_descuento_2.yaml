@@ -42,6 +42,9 @@ pasos:
     tex: 'P_{final} = 30000 \cdot 0,5 = 15000\ \text{pesos}'
     voz: "Luego el descuento se aplica sobre los treinta mil."
     emoji: "✅"
+    visual:
+      tipo: barras
+      categorias: ['Inicial 20000', 'Alza 30000', 'Final 15000']
 
 resultado:
   tex: 'P_{final} = 15000\ \text{pesos}'

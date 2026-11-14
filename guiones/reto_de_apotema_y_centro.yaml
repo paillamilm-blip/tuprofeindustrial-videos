@@ -45,12 +45,27 @@ pasos:
   - nota: "Despejamos la apotema"
     tex: 'a = \sqrt{R^2 - \left(\frac{s}{2}\right)^2}'
     voz: "Despejamos la apotema. Restamos al radio al cuadrado la mitad del lado al cuadrado."
+    visual:
+      tipo: poligono_regular
+      lados: 3
+      lado: "10 cm"
+      anotar: ["apotema", "radio"]
   - nota: "Reemplazamos exacto"
     tex: 'a = \sqrt{\frac{100}{3} - 25}'
     voz: "El radio al cuadrado son cien tercios. La mitad del lado, veinticinco."
+    visual:
+      tipo: poligono_regular
+      lados: 3
+      lado: "10 cm"
+      anotar: ["apotema", "radio"]
   - nota: "Queda la raíz"
     tex: 'a = \sqrt{\frac{25}{3}} = \frac{5\sqrt{3}}{3}'
     voz: "Cien tercios menos veinticinco son veinticinco tercios. Esa raíz se simplifica sola."
+    visual:
+      tipo: poligono_regular
+      lados: 3
+      lado: "10 cm"
+      anotar: ["apotema", "radio"]
 
 resultado:
   tex: 'a \approx 2,89\ \text{cm}'

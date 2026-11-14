@@ -50,10 +50,20 @@ pasos:
     tex: 'h_{max} = \frac{v_{0y}^2}{2g}'
     voz: "Ahora aplicamos la fórmula correcta con la velocidad vertical al cuadrado."
     halo: ['v_{0y}^2']
+    visual:
+      tipo: proyectil
+      velocidad: '20 m/s'
+      angulo: 30
+      anotar: ['altura_maxima']
   - nota: "Reemplazamos"
     tex: 'h_{max} = \frac{10^2}{2 \cdot 9,8} = \frac{100}{19,6}'
     voz: "Reemplazamos diez al cuadrado, que es cien, dividido en diecinueve coma seis."
     resaltar_cambio: true
+    visual:
+      tipo: proyectil
+      velocidad: '20 m/s'
+      angulo: 30
+      anotar: ['altura_maxima']
 
 resultado:
   tex: 'h_{max} \approx 5,10\ \text{m}'
