@@ -1,9 +1,9 @@
 """¿El dibujo acompaña la explicación? Revisa la cadena de pasos de un ejercicio (sin Manim ni pydantic).
 
 El motor traza el dibujo de un paso mientras suena su voz: un paso con fórmula y sin dibujo, en un guion que
-sí dibuja, es una fórmula sola en pantalla. Acá se avisa de eso y de dos cosas que confunden: mezclar tipos de
-dibujo en un ejercicio y cambiarle los números al dibujo entre pasos. Que el mismo dibujo se repita NO es un
-problema: es lo que se busca.
+sí dibuja, es una fórmula sola en pantalla. Acá se avisa de eso y de cambiarle los números al dibujo entre
+pasos. Que el mismo dibujo se repita NO es un problema: es lo que se busca. Un ejercicio también puede
+cambiar de tipo de dibujo (una caja 3D y después barras): cada tipo lleva sus propios números.
 """
 
 from __future__ import annotations
@@ -56,25 +56,14 @@ def faltas_de_acompanamiento(pasos: Sequence[PasoParaRevisar], ejercicio: bool) 
     if not ejercicio or not con_dibujo:
         return []  # sin dibujo no hay nada que acompañar; un dato o mito puede mezclar ejemplos
     faltas: list[Falta] = []
-    tipos = []
-    for p in con_dibujo:
-        tipo = str(p.visual.get("tipo") or "")
-        if tipo not in tipos:
-            tipos.append(tipo)
-    if len(tipos) > 1:
-        faltas.append(
-            Falta(
-                "advertencia",
-                "pasos",
-                f"el ejercicio mezcla dibujos ({', '.join(tipos)}): usa uno solo y repítelo en cada paso, "
-                "cambiando solo lo que muestra (anotar, vista, corte).",
-            )
-        )
-    base = _identidad(con_dibujo[0].visual)
+    vistos: dict[str, dict[str, Any]] = {}  # el último paso de cada tipo: sus números son la referencia
     for i, p in enumerate(pasos, 1):
         if p.visual:
             identidad = _identidad(p.visual)
-            if len(tipos) == 1 and identidad != base:
+            tipo = str(p.visual.get("tipo") or "")
+            base = vistos.get(tipo)
+            vistos[tipo] = identidad
+            if base is not None and identidad != base:
                 distintos = sorted(k for k in set(base) | set(identidad) if base.get(k) != identidad.get(k))
                 faltas.append(
                     Falta(

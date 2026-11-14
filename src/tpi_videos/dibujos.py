@@ -108,6 +108,10 @@ class Dibujo:
     # siguiente, si es el mismo dibujo, parte de ahí (``desde_vista``) en vez de dar la vuelta de nuevo.
     vista_final: tuple[float, float] | None = None  # None en los dibujos 2D
     separado_final: bool = False
+    # Con qué porte (unidades de pantalla por unidad 3D, encaje incluido) y con qué luz quedó el cuerpo.
+    # La serie de pasos del mismo cuerpo los comparte: la cámara gira, el cuerpo no se reencuadra.
+    escala_3d: float | None = None
+    luz_3d: tuple[float, float, float] | None = None
     # Hasta dónde llegó su recorrido (0..1): si la voz cortó la física, el paso siguiente sigue desde ahí.
     pose_final: float = 1.0
 
@@ -147,10 +151,19 @@ def afinar_trazo(mobs: VGroup, minimo: float = GROSOR_MINIMO) -> None:
 # El tamaño que pidió el guion (``visual.tamano``): la fracción de la tarjeta que ocupa el dibujo.
 # None = «auto»: solo se achica lo que no cabe. Se fija en ``dibujar_visual`` mientras se construye.
 RELLENO = {"chico": 0.6, "mediano": 0.8, "grande": 1.0}
+# Los dibujos que proyectan un cuerpo 3D y por eso comparten porte entre pasos (``Dibujo.escala_3d``).
+TIPOS_DE_CUERPO_3D = frozenset({"solido_3d", "tolva_3d", "tuberia_3d", "eje_3d"})
 _relleno: ContextVar[float | None] = ContextVar("relleno_del_dibujo", default=None)
 # Si el cuerpo 3D sigue del paso anterior: (phi, theta, ya separado) de donde quedó, y la órbita parte de ahí.
 # None = la órbita de siempre (75° antes de la vista pedida). La fija la escena mientras construye.
 desde_vista: ContextVar[tuple[float, float, bool] | None] = ContextVar("desde_vista", default=None)
+# Con qué porte y con qué luz dibujar el cuerpo: (escala, vector de luz en ejes de cámara). El porte lo
+# fija la serie entera (el paso que deja menos hueco); la luz, la del paso anterior. None en la luz =
+# se calcula con la vista de este paso; None todo = se calcula todo como siempre. La fija la escena.
+desde_encuadre: ContextVar[tuple[float | None, tuple[float, float, float] | None] | None] = ContextVar(
+    "desde_encuadre", default=None
+)
+
 
 
 def factor_de_encaje(ancho_dibujo: float, alto_dibujo: float, ancho: float, alto: float) -> float:

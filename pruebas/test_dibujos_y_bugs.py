@@ -166,6 +166,10 @@ class RedibujarSinPerderCambiosTest(unittest.TestCase):
         (raiz / "guiones").mkdir()
         self.ruta = raiz / "guiones" / "cubos.yaml"
         shutil.copy(GUION, self.ruta)
+        # El guion del repo ya dibuja en todos sus pasos; acá se necesita uno sin dibujo para probar el aviso.
+        guion = cargar_guion(self.ruta)
+        guion.pasos[-1].visual = None
+        escribir_atomico(self.ruta, a_yaml(guion.model_dump()))
         entorno = patch.dict(os.environ, {"TPI_RAIZ": str(raiz)})
         entorno.start()
         self.addCleanup(entorno.stop)

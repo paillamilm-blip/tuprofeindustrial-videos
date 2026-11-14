@@ -149,8 +149,8 @@ Las reglas: **el dibujo acompaña cada paso que se puede ver**. Usa el mismo dib
 en cada uno y cambia solo lo que muestra (`anotar`, `vista`, `corte`, `despiece`), como en `guiones/el_cubo_partido.yaml`.
 Cuando dos pasos seguidos usan el mismo dibujo, **el dibujo se queda en pantalla**: no se borra ni se vuelve a
 trazar; solo aparece lo nuevo y se va lo que sobra (un sólido 3D parte de la vista donde quedó, sin dar la vuelta
-de nuevo). No mezcles
-tipos distintos en un ejercicio (eso sí confunde en 60 segundos), los campos de otro tipo se pueden dejar fuera, y `./tpi revisar` avisa si la función no se
+de nuevo). Un ejercicio **puede cambiar de tipo de dibujo** (una caja 3D y después barras): el viejo se desvanece
+mientras el nuevo se traza y cada tipo lleva sus propios números; los campos de otro tipo se pueden dejar fuera, y `./tpi revisar` avisa si la función no se
 entiende o si falta un número. En el panel, el mismo dibujo se arma en cada tarjeta de paso, dentro de
 «Dibujo en el pie de la hoja». Ejemplo con los tres: `guiones/ejemplos/visuales_tres_tipos.yaml`.
 

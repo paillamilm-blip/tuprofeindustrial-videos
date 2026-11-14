@@ -32,11 +32,19 @@ class AcompanarTest(unittest.TestCase):
         pasos = [_paso(visual=CUBO), _paso(tex=""), _paso(tex="V = 3a", error=True)]
         self.assertEqual(faltas_de_acompanamiento(pasos, ejercicio=True), [])
 
-    def test_mezclar_tipos_en_un_ejercicio_es_una_advertencia(self):
+    def test_mezclar_tipos_de_dibujo_en_un_ejercicio_ya_no_se_avisa(self):
         pasos = [_paso(visual=CUBO), _paso(visual={"tipo": "grafico_funcion", "funcion": "x^2"})]
+        self.assertEqual(faltas_de_acompanamiento(pasos, ejercicio=True), [])
+
+    def test_cada_tipo_lleva_sus_propios_numeros(self):
+        pasos = [
+            _paso(visual=CUBO),
+            _paso(visual={"tipo": "grafico_funcion", "funcion": "x^2"}),
+            _paso(visual={**CUBO, "lado": "5 cm"}),
+        ]
         faltas = faltas_de_acompanamiento(pasos, ejercicio=True)
-        self.assertEqual(faltas[0].nivel, "advertencia")
-        self.assertIn("solido_3d, grafico_funcion", faltas[0].mensaje)
+        self.assertEqual([(f.nivel, f.donde) for f in faltas], [("sugerencia", "paso 3 (visual)")])
+        self.assertIn("lado", faltas[0].mensaje)
 
     def test_cambiarle_los_numeros_al_dibujo_se_avisa(self):
         pasos = [_paso(visual=CUBO), _paso(visual={**CUBO, "lado": "5 cm"})]

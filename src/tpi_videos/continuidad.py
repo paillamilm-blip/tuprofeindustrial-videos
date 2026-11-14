@@ -43,6 +43,28 @@ def sigue(previo: Mapping[str, Any] | None, nuevo: Mapping[str, Any] | None) -> 
     return _identidad(previo) == _identidad(nuevo)
 
 
+def cambia_de_tipo(previo: Mapping[str, Any] | None, nuevo: Mapping[str, Any] | None) -> bool:
+    """True si el paso trae un dibujo de otro tipo que el que está en pantalla.
+
+    Solo ahí conviene el fundido cruzado: el mismo tipo con otros números va en el mismo sitio y se vería
+    doble mientras entra (dos cubos de distinto lado, con dos juegos de rótulos), así que ese sale antes.
+    """
+    if not previo or not nuevo:
+        return False
+    return previo.get("tipo") != nuevo.get("tipo")
+
+
+def repartir_salida(sale: Sequence[V], trae_dibujo: bool) -> tuple[list[V], list[V]]:
+    """Reparte la salida del dibujo anterior: ``(se_va_antes, se_va_con_el_nuevo)``.
+
+    Si el paso trae otro dibujo, el viejo se desvanece junto con la entrada del nuevo (fundido cruzado:
+    la hoja no queda vacía entre los dos). Si no, sale antes, como siempre.
+    """
+    if trae_dibujo:
+        return [], list(sale)
+    return list(sale), []
+
+
 def emparejar(
     viejas: Sequence[V],
     nuevas: Sequence[N],

@@ -51,11 +51,20 @@ No se activa con el tablero partido (`mitades`) ni cuando el dibujo cambia de ti
 **Estilo original:** ningún guion de `guiones/ejemplos/` repite el mismo dibujo en pasos seguidos (revisado),
 así que esos videos siguen el camino de siempre y deben salir idénticos a `main`.
 
-Límite conocido: entre vistas distintas el tamaño y la luz del cuerpo 3D se calculan para cada vista, así que
-al pasar de una a otra hay un ajuste suave de tamaño y brillo (ya no un salto de 75°).
+**Porte y luz entre vistas** (fase 4): el cuerpo 3D guarda con qué porte y con qué luz quedó (`Dibujo.escala_3d`,
+`luz_3d`) y el paso siguiente, si es el mismo cuerpo, los reusa (`dibujos.desde_encuadre`). La cámara gira y el
+cuerpo no se reencuadra ni se reilumina. Solo se achica si la vista nueva no cabe entera con ese porte (de lado un
+cilindro ocupa más alto que su base vista desde arriba); nunca se agranda, porque se saldría de la franja.
+
+Antes de dibujar el primer paso, la escena mide la serie entera (`_portes_de_las_series`): arma cada dibujo del
+mismo cuerpo con su franja y se queda con **el porte más chico**, el del paso que deja menos hueco (un rótulo o un
+despiece ensanchan el grupo y el encaje lo achicaría). Ese porte lo usan todos los pasos desde el primero, así el
+cuerpo no se encoge al llegar las notas del tercero. En el tablero partido, con un solo paso del cuerpo o cuando el
+cuerpo cambia de números, no hay serie y cada dibujo entra con el de siempre.
 
 Pruebas: `test_continuidad.py` (sin Manim) y `test_continuidad_dibujos.py` (con Manim: el lazo conserva cajas y
-flechas y cambia solo los rótulos; la lata no vuelve a girar si sigue en la misma vista).
+flechas y cambia solo los rótulos; la lata no vuelve a girar si sigue en la misma vista; la serie de la lata entra
+con el mismo porte en los tres pasos).
 
 ## Fase 3: más marcas, y los guiones rellenados
 
@@ -75,10 +84,23 @@ usa ahora la primera pieza de la estructura (`trazo[0]`), porque algunas marcas 
 
 **Guiones:** 17 rellenados con el mismo dibujo y la marca de lo que dice cada paso. De 27 guiones con pasos sin
 dibujo quedan 8, a propósito: 3 revelarían la respuesta antes de calcularla (IVA, GPS, vértice), 1 es álgebra
-(derivada), 2 cambian de ángulo en cada paso (Euler, i²), 1 mezcla dos dibujos (ocho veces más pesado) y la tolva
-espera decisión.
+(derivada), 2 cambian de ángulo en cada paso (Euler, i²), 1 mezcla dos dibujos (ocho veces más pesado, ya permitido
+en la fase 5) y la tolva espera decisión.
 
 Pruebas: `test_marcas_nuevas.py` (catálogo, validación y, con Manim, que cada rótulo se escriba solo si se pide).
+
+## Fase 5: un ejercicio puede mezclar dibujos
+
+El aviso «el ejercicio mezcla dibujos» desaparece (`acompanar`): un ejercicio puede cambiar de tipo cuando el paso
+se entiende mejor con otro dibujo. Los números se siguen vigilando, ahora dentro de cada tipo (cada tipo lleva los
+suyos). En la escena, cuando el dibujo no continúa pero el paso trae **otro tipo**, el viejo se desvanece **en la
+misma animación** en que el nuevo entra (`continuidad.repartir_salida`), con su tarjeta, sin dejar la hoja vacía.
+El mismo tipo con otros números no se funde (`continuidad.cambia_de_tipo`): va en el mismo sitio y se vería doble
+(dos cubos de distinto lado, con dos juegos de rótulos), así que sale antes, como siempre. Las tres
+instrucciones de IA (`sistema.md`, `revisor.md`) y `GUIA_GUIONES.md` dicen lo mismo.
+
+Pruebas: `test_acompanar.py` (dos tipos ya no dan falta; los números se comparan dentro del tipo),
+`test_continuidad.py` (`repartir_salida` y `cambia_de_tipo`).
 
 ## Pendiente
 

@@ -3,7 +3,7 @@
 import unittest
 from types import SimpleNamespace
 
-from tpi_videos.continuidad import campos_del_visual, emparejar, sigue
+from tpi_videos.continuidad import cambia_de_tipo, campos_del_visual, emparejar, repartir_salida, sigue
 
 LAZO = {"tipo": "bloques", "adelante": "8", "retro": "0.5"}
 LATA = {"tipo": "solido_3d", "figura": "cilindro", "radio": "3 cm", "altura": "5 cm"}
@@ -60,6 +60,35 @@ class EmparejarTest(unittest.TestCase):
     def test_si_nada_coincide_es_un_fundido_completo(self):
         quedan, salen, entran = self._repartir([{"clave": "a"}], [{"clave": "b"}])
         self.assertEqual((quedan, len(salen), len(entran)), ([], 1, 1))
+
+
+class RepartirSalidaTest(unittest.TestCase):
+    """El dibujo que no sigue: si el paso trae otro dibujo, se va con su entrada (fundido cruzado)."""
+
+    def test_con_dibujo_nuevo_la_salida_viaja_con_el(self):
+        self.assertEqual(repartir_salida(["viejo"], trae_dibujo=True), ([], ["viejo"]))
+
+    def test_sin_dibujo_nuevo_sale_antes_como_siempre(self):
+        self.assertEqual(repartir_salida(["viejo"], trae_dibujo=False), (["viejo"], []))
+
+    def test_sin_nada_que_sacar_no_hay_fundido(self):
+        self.assertEqual(repartir_salida([], trae_dibujo=True), ([], []))
+
+class CambiaDeTipoTest(unittest.TestCase):
+    """Solo el cambio de tipo de dibujo se funde cruzado: el mismo tipo con otros números se borra antes.
+
+    Dos cubos de distinto lado en el mismo sitio se verían dobles mientras entra el nuevo.
+    """
+
+    def test_otro_tipo_se_funde_cruzado(self):
+        self.assertTrue(cambia_de_tipo(LAZO, LATA))
+
+    def test_el_mismo_tipo_con_otros_numeros_no(self):
+        self.assertFalse(cambia_de_tipo({"tipo": "solido_3d", "lado": "4 cm"}, {"tipo": "solido_3d", "lado": "8 cm"}))
+
+    def test_sin_dibujo_antes_o_ahora_no_hay_fundido(self):
+        self.assertFalse(cambia_de_tipo(None, LATA))
+        self.assertFalse(cambia_de_tipo(LAZO, None))
 
 
 if __name__ == "__main__":

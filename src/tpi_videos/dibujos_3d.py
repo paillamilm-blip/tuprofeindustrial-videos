@@ -523,9 +523,14 @@ def _cuerpo_vivo(
         return phi_f + cabeceo * (1 - orbita), theta_f + GIRO_ORBITA * (1 - orbita), separacion
 
     # La luz es del estudio, no de la cámara: al orbitar el brillo resbala por el cuerpo y se lee el
-    # volumen. Se fija con la vista final para que el último cuadro quede bien iluminado.
+    # volumen. El mismo cuerpo del paso anterior conserva la luz con que se lo vio, así al girar la
+    # cámara no se reilumina la escena; sin paso anterior se fija con la vista final.
     der_f, arr_f, hacia_f = _ejes_de_camara(phi_f, theta_f)
-    luz = _unitario(-0.45 * der_f + 0.7 * arr_f + 0.55 * hacia_f)
+    encuadre = d.desde_encuadre.get()
+    if encuadre is not None and encuadre[1] is not None:
+        luz = np.asarray(encuadre[1], dtype=float)
+    else:
+        luz = _unitario(-0.45 * der_f + 0.7 * arr_f + 0.55 * hacia_f)
 
     # Una sola escala para todo el recorrido: el cuerpo no puede crecer ni encogerse al girar.
     vistos = []
@@ -800,10 +805,24 @@ def _cuerpo_vivo(
         mover_rotulos(1.0, lambda q: q)
     corrido = -todo.get_center()
     todo.shift(corrido)
+    factor_encaje = d.factor_de_encaje(todo.width, todo.height, ancho * 0.94, alto * 0.94)
     fijo, desplazamiento = d._encaje(todo, ancho * 0.94, alto * 0.94)
+    # El mismo cuerpo conserva el porte del paso anterior: la cámara gira, el cuerpo no se reencuadra.
+    # Solo baja si la vista nueva no cabe entero con ese porte (de lado un cilindro ocupa más alto que
+    # la base vista desde arriba); nunca sube, porque agrandarlo lo sacaría de la franja.
+    escala = k * factor_encaje
+    achique = 1.0
+    if encuadre is not None and encuadre[0] and escala > 0:
+        achique = min(1.0, encuadre[0] / escala)
+    escala *= achique
+    centro = todo.get_center().copy()
+    if achique != 1.0:
+        # Las notas quietas no pasan por ``llevar``: se achican con el grupo, o quedarían sueltas.
+        todo.scale(achique, about_point=centro)
 
     def llevar(q: np.ndarray) -> np.ndarray:
-        return fijo(q + corrido)
+        # El desplazamiento se suma al final, sin achicarlo: ``place`` corre el dibujo ya armado.
+        return centro + (fijo(q + corrido) - centro - desplazamiento[0]) * achique + desplazamiento[0]
 
     def vivo(t: float) -> None:
         pose(t, llevar)
@@ -820,6 +839,8 @@ def _cuerpo_vivo(
         desplazamiento=desplazamiento,
         vista_final=(phi_f, theta_f),
         separado_final=separa,
+        escala_3d=float(escala),
+        luz_3d=(float(luz[0]), float(luz[1]), float(luz[2])),
     )
 
 

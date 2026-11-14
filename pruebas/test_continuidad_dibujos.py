@@ -126,5 +126,125 @@ class CuerpoQueNoVuelveAGirarTest(unittest.TestCase):
         self.assertIsNone(d.desde_vista.get())
 
 
+@unittest.skipUnless(MANIM, "manim no está instalado")
+class PorteYLuzQueSeQuedanTest(unittest.TestCase):
+    """El cuerpo 3D no cambia de tamaño ni de brillo al pasar a otra vista del mismo cuerpo."""
+
+    def _lata(self, **campos):
+        from tpi_videos.dibujos import dibujar_visual
+        from tpi_videos.guion import Visual
+
+        visual = Visual(tipo="solido_3d", figura="cilindro", radio="3 cm", altura="5 cm", **campos)
+        return dibujar_visual(visual, ColoresTema(), ANCHO_HOJA, ALTO_DIBUJO)
+
+    def _sigue(self, previo, **campos):
+        """Lo mismo que hace la escena: el paso nuevo sabe con qué porte y luz quedó el anterior."""
+        from tpi_videos import dibujos as d
+
+        marca = d.desde_encuadre.set((previo.escala_3d, previo.luz_3d))
+        try:
+            return self._lata(**campos)
+        finally:
+            d.desde_encuadre.reset(marca)
+
+    def test_cada_vista_tiene_su_porte(self):
+        self.assertNotEqual(self._lata(vista="piso").escala_3d, self._lata(vista="ala").escala_3d)
+
+    def test_el_porte_del_paso_anterior_se_conserva(self):
+        piso = self._lata(vista="piso")
+        ala = self._sigue(piso, vista="ala")
+        self.assertAlmostEqual(ala.escala_3d, piso.escala_3d)
+
+    def test_el_brillo_no_cambia_de_una_vista_a_otra(self):
+        piso = self._lata(vista="piso")
+        ala = self._sigue(piso, vista="ala")
+        self.assertEqual(ala.luz_3d, piso.luz_3d)
+
+    def test_si_la_vista_nueva_no_cabe_se_achica_lo_justo(self):
+        ala = self._lata(vista="ala")  # el porte más grande de los dos
+        piso = self._sigue(ala, vista="piso")
+        self.assertLess(piso.escala_3d, ala.escala_3d)
+        self.assertAlmostEqual(piso.escala_3d, self._lata(vista="piso").escala_3d)
+
+    def test_el_encuadre_no_queda_puesto_para_el_dibujo_siguiente(self):
+        from tpi_videos import dibujos as d
+
+        self.assertIsNone(d.desde_encuadre.get())
+
+@unittest.skipUnless(MANIM, "manim no está instalado")
+class PorteDeLaSerieTest(unittest.TestCase):
+    """Una serie 3D fija su porte antes de dibujar: cada paso entra con el mismo, no con el suyo.
+
+    Al agregar notas o despiezar el grupo se ensancha y el encaje lo achicaría: el cuerpo se vería
+    encoger de un paso a otro aunque la cámara no se haya movido.
+    """
+
+    def _portes(self, visuales):
+        from types import SimpleNamespace
+
+        from tpi_videos.escena import VideoEjercicio
+
+        pasos = [SimpleNamespace(visual=v) for v in visuales]
+        franja = {id(p): (0.0, -2.0, ALTO_DIBUJO) for p in pasos}
+        escena = SimpleNamespace(
+            receta=SimpleNamespace(partida="pila"),
+            tema=SimpleNamespace(marco="pizarra"),
+            col=ColoresTema(),
+            guion=SimpleNamespace(pasos=pasos),
+            _franja_del_dibujo=lambda paso, tope, techo=None: franja[id(paso)],
+        )
+        return VideoEjercicio._portes_de_las_series(escena, -1.0)
+
+    def _lata(self, **campos):
+        from tpi_videos.guion import Visual
+
+        return Visual(tipo="solido_3d", figura="cilindro", radio="3 cm", altura="5 cm", **campos)
+
+    def _escalas(self, visuales, portes=None):
+        """El porte con que sale cada dibujo, medido en la misma franja y ancho que usa la escena."""
+        from tpi_videos import componentes as c
+        from tpi_videos import dibujos as d
+        from tpi_videos.dibujos import dibujar_visual
+
+        col = ColoresTema()
+        escalas = []
+        for i, visual in enumerate(visuales, 1):
+            porte = (portes or {}).get(i)
+            marca = d.desde_encuadre.set((porte, None)) if porte is not None else None
+            try:
+                dibujo = dibujar_visual(visual, col, c.ANCHO_UTIL, ALTO_DIBUJO, col.panel)
+                escalas.append(dibujo.escala_3d)
+            finally:
+                if marca is not None:
+                    d.desde_encuadre.reset(marca)
+        return escalas
+
+    def test_toda_la_serie_entra_con_el_mismo_porte(self):
+        visuales = [
+            self._lata(vista="piso"),
+            self._lata(vista="axonometrica", anotar=["volumen"]),
+            self._lata(vista="axonometrica", despiece=True, anotar=["area"]),
+        ]
+        propios = self._escalas(visuales)
+        self.assertGreater(
+            len({round(e, 4) for e in propios}), 1, "las notas deben cambiar el encaje; si no, la prueba no dice nada"
+        )
+        portes = self._portes(visuales)
+        self.assertEqual(set(portes), {1, 2, 3})
+        self.assertAlmostEqual(portes[1], min(propios))
+        self.assertEqual(self._escalas(visuales, portes), [portes[1], portes[2], portes[3]])
+        self.assertEqual(len({round(e, 6) for e in self._escalas(visuales, portes)}), 1)
+
+    def test_un_cuerpo_en_un_solo_paso_no_se_toca(self):
+        self.assertEqual(self._portes([self._lata(vista="piso")]), {})
+
+    def test_otro_dibujo_en_medio_corta_la_serie(self):
+        from tpi_videos.guion import Visual
+
+        barras = Visual(tipo="barras", categorias=["Fútbol 12", "Básquetbol 8"])
+        portes = self._portes([self._lata(vista="piso"), barras, self._lata(vista="piso")])
+        self.assertEqual(portes, {})
+
+
 if __name__ == "__main__":
     unittest.main()
