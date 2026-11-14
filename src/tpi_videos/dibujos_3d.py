@@ -468,11 +468,8 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
         medidas = [(mide("r", cuerpo.radio or 0.0), [r / 2, 0, 0], 0, "arriba")]
     notas = []
     for marca in visual.anotar[:2]:
-        valor = cuerpo.volumen if marca == "volumen" else cuerpo.area
-        sufijo = "³" if marca == "volumen" else "²"
-        notas.append(
-            f"{'V' if marca == 'volumen' else 'A'} = {d._numero_latex(valor)} {unidad}{sufijo}".strip()
-        )
+        rotulo, valor, sufijo = cuerpo.nota(marca, visual.vista)
+        notas.append(f"{rotulo} = {d._numero_latex(valor)} {unidad}{sufijo}".strip())
     cotas = None
     if cuerpo.figura == "cubo":
         s = a / 2
@@ -1104,10 +1101,9 @@ def dibujar_solido_3d_lamina(
     # El volumen y el área al costado, donde siempre hay hueco: el cuerpo mide ~2,6 de 7,6 de ancho.
     pie = 0
     for marca in visual.anotar[:2]:
-        valor = cuerpo.volumen if marca == "volumen" else cuerpo.area
-        sufijo = "³" if marca == "volumen" else "²"
+        rotulo, valor, sufijo = cuerpo.nota(marca, visual.vista)
         etiqueta(
-            f"{'V' if marca == 'volumen' else 'A'} = {d._numero_latex(valor)} {unidad}{sufijo}".strip(),
+            f"{rotulo} = {d._numero_latex(valor)} {unidad}{sufijo}".strip(),
             np.array([ancho * 0.30, 0.42 - pie * 0.62, 0.0]),
             28,
         )

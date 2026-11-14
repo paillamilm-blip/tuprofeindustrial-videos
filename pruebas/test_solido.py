@@ -49,6 +49,37 @@ class MatematicaSolidoTest(unittest.TestCase):
         self.assertAlmostEqual(figura.volumen, 64, places=6)
         self.assertAlmostEqual(figura.area, 96, places=6)
 
+    def test_el_area_basal_de_cada_solido(self):
+        casos = (
+            ("cilindro", {"radio": "1,2 m", "altura": "2,5 m"}, math.pi * 1.2**2),
+            ("cono", {"radio": "3 cm", "altura": "4 cm"}, math.pi * 9),
+            ("cubo", {"lado": "4 cm"}, 16.0),
+            ("esfera", {"radio": "3 cm"}, math.pi * 9),
+        )
+        for figura, medidas, esperada in casos:
+            with self.subTest(figura=figura):
+                self.assertAlmostEqual(analizar_solido(figura, **medidas).area_base, esperada, places=6)
+
+    def test_de_piso_se_anota_el_area_basal_no_la_total(self):
+        estanque = analizar_solido("cilindro", radio="1,2 m", altura="2,5 m")
+        rotulo, valor, sufijo = estanque.nota("area", "piso")
+        self.assertEqual(rotulo, "A base")
+        self.assertAlmostEqual(valor, math.pi * 1.2**2, places=6)
+        self.assertEqual(sufijo, "²")
+        # mirando el cuerpo entero el área sigue siendo la de toda la superficie
+        rotulo, valor, _ = estanque.nota("area", "axonometrica")
+        self.assertEqual(rotulo, "A")
+        self.assertAlmostEqual(valor, 2 * math.pi * 1.2 * (1.2 + 2.5), places=6)
+        rotulo, valor, sufijo = estanque.nota("volumen", "piso")
+        self.assertEqual((rotulo, sufijo), ("V", "³"))
+        self.assertAlmostEqual(valor, math.pi * 1.2**2 * 2.5, places=6)
+
+    def test_la_lata_y_el_cubo_partido_siguen_con_su_area_total(self):
+        lata = analizar_solido("cilindro", radio="3 cm", altura="5 cm")
+        self.assertAlmostEqual(lata.nota("area", "axonometrica")[1], 2 * math.pi * 3 * 8, places=2)
+        cubo = analizar_solido("cubo", lado="4 cm")
+        self.assertAlmostEqual(cubo.nota("area", "frente")[1], 96, places=6)
+
     def test_el_cilindro_convierte_todas_las_medidas_a_la_primera_unidad(self):
         casos = (
             ("1 m", "100 cm", "m", 1.0, 1.0, math.pi, 4 * math.pi),

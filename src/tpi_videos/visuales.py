@@ -1137,9 +1137,22 @@ class Solido:
     unidad: str  # la de las medidas: de «3 cm» sale «cm»
     volumen: float
     area: float  # el área total de su superficie
+    area_base: float = 0.0  # la cara que se ve de piso: la que multiplica la altura en V = A_b·h
     radio: float | None = None
     altura: float | None = None
     lado: float | None = None
+
+    def nota(self, marca: str, vista: str = "") -> tuple[str, float, str]:
+        """(rótulo, valor, sufijo) de una anotación del cuerpo.
+
+        De piso la cámara mira la base, así que el área que se anota es la basal; mirando el cuerpo
+        entero sigue siendo la de toda la superficie (la lata y el cubo partido la piden así).
+        """
+        if marca == "volumen":
+            return "V", self.volumen, "³"
+        if vista == "piso":
+            return "A base", self.area_base, "²"
+        return "A", self.area, "²"
 
 
 def _medida_solido(texto: str | None, nombre: str, hasta_barra: bool = False) -> tuple[float, str]:
@@ -1189,24 +1202,25 @@ def analizar_solido(
     if figura == "cubo":
         exigir("lado")
         a = medidas["lado"]
-        volumen, area = a**3, 6 * a * a
+        volumen, area, base = a**3, 6 * a * a, a * a
     elif figura == "esfera":
         exigir("radio")
         r = medidas["radio"]
-        volumen, area = 4 * math.pi * r**3 / 3, 4 * math.pi * r * r
+        volumen, area, base = 4 * math.pi * r**3 / 3, 4 * math.pi * r * r, math.pi * r * r
     elif figura == "cilindro":
         exigir("radio", "altura")
         r, h = medidas["radio"], medidas["altura"]
-        volumen, area = math.pi * r * r * h, 2 * math.pi * r * (r + h)
+        volumen, area, base = math.pi * r * r * h, 2 * math.pi * r * (r + h), math.pi * r * r
     else:
         exigir("radio", "altura")
         r, h = medidas["radio"], medidas["altura"]
-        volumen, area = math.pi * r * r * h / 3, math.pi * r * (r + math.hypot(r, h))
+        volumen, area, base = math.pi * r * r * h / 3, math.pi * r * (r + math.hypot(r, h)), math.pi * r * r
     return Solido(
         figura=figura,
         unidad=unidad,
         volumen=volumen,
         area=area,
+        area_base=base,
         radio=medidas.get("radio"),
         altura=medidas.get("altura"),
         lado=medidas.get("lado"),
