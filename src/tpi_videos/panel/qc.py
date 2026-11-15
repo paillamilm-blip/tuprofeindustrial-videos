@@ -106,6 +106,28 @@ def rechazar(ruta: Path, nota: str = "") -> None:
     _decidir(ruta, RECHAZADO, nota=nota.strip())
 
 
+def borrar_guion(ruta: Path) -> Path:
+    """Manda un guion propio a la Papelera (se recupera desde Finder). Devuelve dónde quedó.
+
+    Solo guiones de ``guiones/`` (nunca los ejemplos). Uno ya aprobado está en la cola de producción: se
+    saca de ahí primero, para que un lote pendiente no se quede sin su guion.
+    """
+    if not guion_revisable(ruta):
+        raise ErrorMotor("Ese archivo no es un guion de guiones/.", ayuda="Elige uno de la lista.")
+    if estado(ruta) == APROBADO:
+        raise ErrorMotor(
+            "Este guion ya está aprobado y en la cola de producción.",
+            ayuda="Quita su video de la Sala de producción y vuelve a intentarlo.",
+        )
+    from .biblioteca import enviar_a_papelera
+
+    destino = enviar_a_papelera(ruta.resolve(), "el guion")
+    datos = _leer()
+    if datos["guiones"].pop(_clave(ruta), None) is not None:
+        _guardar(datos)
+    return destino
+
+
 def guiones(incluir_decididos: bool = False) -> list[Path]:
     """Los guiones propios, los más nuevos primero; por defecto solo los que esperan revisión."""
     carpeta = _carpeta_guiones()

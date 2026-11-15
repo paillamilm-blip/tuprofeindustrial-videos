@@ -532,3 +532,33 @@ def descartar_lote(lote_id: str) -> None:
             if video.get("estado") != "listo":
                 video["estado"] = "descartado"
         guardar(datos)
+
+
+def descartar_video(video_id: str) -> None:
+    """Saca UN video de la cola (los demás de su lote siguen). Los archivos que ya salieron no se tocan.
+
+    Un video que está trabajando no se puede sacar: primero se detiene. Si era el último vivo de su lote,
+    el lote queda descartado (``estado_derivado``).
+    """
+    with _cerrojo():
+        datos = cargar()
+        video = _video(datos, video_id)
+        if video is None:
+            raise ErrorMotor("No encuentro ese video en la cola.")
+        if candado_tomado():
+            raise ErrorMotor(
+                "Hay un lote trabajando ahora.",
+                ayuda="Espera a que termine o cancela el trabajo antes de sacar este video de la cola.",
+            )
+        if video.get("estado") in ESTADOS_ACTIVOS:
+            raise ErrorMotor(
+                "Este video se está produciendo.", ayuda="Detén el trabajo y vuelve a intentarlo."
+            )
+        video["estado"] = "descartado"
+        video["actualizado"] = _ahora()
+        for lote in datos.get("lotes", []):
+            if video in lote.get("videos", []):
+                lote["estado"] = estado_derivado(lote)
+                lote["fase"] = lote["estado"]
+                lote["actualizado"] = _ahora()
+        guardar(datos)
