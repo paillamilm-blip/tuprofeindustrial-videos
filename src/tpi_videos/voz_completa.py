@@ -76,8 +76,15 @@ def _silencios(muestras: np.ndarray, frecuencia: int) -> tuple[list[tuple[float,
     return tramos, primero * VENTANA, (ultimo + 1) * VENTANA
 
 
-def cortar(audio: bytes, textos: list[str]) -> list[bytes] | None:
-    """Un WAV por texto, en orden; None si no se puede cortar con seguridad."""
+def cortar(
+    audio: bytes, textos: list[str], reconocidas: list[tuple[str, float, float]] | None = None
+) -> list[bytes] | None:
+    """Un WAV por texto, en orden; None si no se puede cortar con seguridad.
+
+    Con ``reconocidas`` (lo que oyó Whisper) cada corte se busca donde termina la frase de verdad, así
+    las pausas de coma no roban el corte. Sin ellas solo se corta si hay exactamente un silencio por
+    frontera: si sobran silencios (comas) no se distingue la frontera y se vuelve a pedir frase por frase.
+    """
     leido = _leer(audio)
     if leido is None or not textos:
         return None
@@ -89,9 +96,16 @@ def cortar(audio: bytes, textos: list[str]) -> list[bytes] | None:
         return [wav_de(muestras, frecuencia)]
     if len(tramos) < len(textos) - 1:
         return None
-    # Dónde debería caer cada corte si la voz habla parejo: proporcional al largo de cada texto.
-    largos = np.array([max(1, len(t)) for t in textos], dtype=float)
-    esperados = inicio + (fin - inicio) * np.cumsum(largos)[:-1] / largos.sum()
+    if reconocidas:
+        esperados = _esperados_por_palabras(textos, reconocidas, len(muestras) / frecuencia)
+        if esperados is None:
+            return None
+    else:
+        if len(tramos) != len(textos) - 1:
+            return None  # comas de más: sin Whisper no se sabe cuál silencio es la frontera
+        # Dónde debería caer cada corte si la voz habla parejo: proporcional al largo de cada texto.
+        largos = np.array([max(1, len(t)) for t in textos], dtype=float)
+        esperados = inicio + (fin - inicio) * np.cumsum(largos)[:-1] / largos.sum()
     tolerancia = TOLERANCIA * (fin - inicio)
     elegidos: list[tuple[float, float]] = []
     desde = 0
@@ -118,6 +132,33 @@ def cortar(audio: bytes, textos: list[str]) -> list[bytes] | None:
 
 
 COINCIDENCIA_MINIMA = 0.5  # fracción de palabras del guion que Whisper tiene que oír igual para fiarse
+
+
+def _esperados_por_palabras(
+    textos: list[str], reconocidas: list[tuple[str, float, float]], duracion: float
+) -> list[float] | None:
+    """Dónde debería caer cada corte: el punto medio entre la última palabra de una frase y la primera
+    de la siguiente, según dónde las oyó Whisper. None si oyó otra cosa (no se corta a ciegas)."""
+    from .subtitulos import _normalizar, alinear
+
+    por_texto = [t.split() for t in textos]
+    palabras = [p for lista in por_texto for p in lista]
+    if not palabras:
+        return None
+    a = [_normalizar(p) for p in palabras]
+    b = [_normalizar(p) for p, _, _ in reconocidas]
+    iguales = sum(m.size for m in difflib.SequenceMatcher(a=a, b=b, autojunk=False).get_matching_blocks())
+    if iguales / len(palabras) < COINCIDENCIA_MINIMA:
+        return None
+    tiempos = alinear(palabras, reconocidas, duracion)
+    esperados, indice = [], 0
+    for lista in por_texto[:-1]:
+        indice += len(lista)
+        if not lista or indice >= len(tiempos):
+            return None
+        fin_frase, inicio_siguiente = tiempos[indice - 1][1], tiempos[indice][0]
+        esperados.append((fin_frase + max(inicio_siguiente, fin_frase)) / 2)
+    return esperados
 
 
 def cortar_por_palabras(

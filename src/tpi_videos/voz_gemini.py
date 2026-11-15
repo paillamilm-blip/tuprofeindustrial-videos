@@ -90,17 +90,19 @@ def cliente_tts() -> Any:
     from google import genai
     from google.genai import types
 
-    from .ia import clave_obligatoria
+    from .ia import args_httpx, clave_obligatoria
 
     # Una frase se sintetiza en segundos: si Gemini no responde en 45 s, algo pasa. Con 2 intentos, el
     # peor caso es ~1,5 min de espera antes del aviso, no los 15 que daban 3 intentos de 5 min.
     reintentos = types.HttpRetryOptions(
         attempts=2, initial_delay=2.0, max_delay=10.0, http_status_codes=[429, 500, 502, 503, 504]
     )
+    args = args_httpx()
     return genai.Client(
         api_key=clave_obligatoria(),
         http_options=types.HttpOptions(
-            api_version="v1beta", timeout=SEGUNDOS_DE_ESPERA * 1000, retry_options=reintentos
+            api_version="v1beta", timeout=SEGUNDOS_DE_ESPERA * 1000, retry_options=reintentos,
+            client_args=args, async_client_args=args,
         ),
     )
 
@@ -145,30 +147,12 @@ def sintetizar(
 
 
 def _con_limite(funcion: Any, segundos: float) -> Any:
-    """Corre ``funcion`` en un hilo aparte y no la espera más de ``segundos``.
+    """Límite de reloj por frase: el patrón compartido con el redactor vive en ``ia.con_limite``."""
+    from . import ia
 
-    Si se pasa, avisa (ErrorMotor transitorio) en vez de colgar el video. El hilo colgado queda como
-    daemon: no impide que el proceso termine.
-    """
-    import threading
-
-    salida: dict[str, Any] = {}
-
-    def correr() -> None:
-        try:
-            salida["valor"] = funcion()
-        except BaseException as e:  # se relanza en el hilo principal
-            salida["error"] = e
-
-    hilo = threading.Thread(target=correr, name="voz-gemini", daemon=True)
-    hilo.start()
-    hilo.join(segundos)
-    if hilo.is_alive():
-        raise ErrorMotor(
-            f"La voz de Gemini no respondió en {segundos:.0f} s para una frase.",
-            ayuda="Repite el comando en un rato. Mientras tanto puedes usar --voz edge.",
-            transitorio=True,
-        )
-    if "error" in salida:
-        raise salida["error"]
-    return salida["valor"]
+    return ia.con_limite(
+        funcion,
+        segundos,
+        f"La voz de Gemini no respondió en {segundos:.0f} s para una frase.",
+        ayuda="Repite el comando en un rato. Mientras tanto puedes usar --voz edge.",
+    )

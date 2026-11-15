@@ -4,6 +4,27 @@
 nombre: "Tu Profe Industrial"
 usuario: "@tuprofeindustrial"
 
+# ── Reglas espaciales y visuales del cuadro vertical (9:16) ──────────────────────────────────
+# Las aplica el motor en cada video, no son opcionales. Viven en el código y en las pruebas;
+# acá quedan escritas para que cualquier guion o agente las respete. (Van como comentario porque
+# el lector de marca.yaml no acepta claves nuevas: una clave suelta rompería la carga.)
+#
+# 1. Base única: todos los videos heredan de VideoEjercicio (escena.py). No hay una base ThreeDScene
+#    aparte: el 3D se proyecta en 2D con luz propia para que la cámara y los subtítulos sigan mandando.
+# 2. Zonas seguras de TikTok/Reels: el contenido vive en la banda central. Quedan prohibidos el 25%
+#    inferior (subtítulo quemado + botones de la app) y el 15% superior (cabecera). Todo dibujo se
+#    agrupa y escala al centro con ajustar_a_zona() y reparto_de_intro(): solo achica, nunca agranda,
+#    y nunca invade la banda del subtítulo (componentes.py; pruebas test_capas_y_zonas, test_aire_del_dibujo).
+# 3. Ancla visual en la intro: junto al texto del enunciado aparece siempre el objeto del ejercicio
+#    (su sólido 3D, circuito o gráfico) ANTES de la matemática (ancla_del_enunciado + _enunciado).
+#    Si el ejercicio no tiene ningún dibujo, no se inventa un ancla: queda solo el texto.
+# 4. Capas por rol: texto y fórmulas (Text/Tex) van en CAPA_TEXTO=10, por encima de cajas y tarjetas
+#    (CAPA_CAJA=0). Manim reordena por z_index en cada cuadro: una etiqueta nunca queda tapada por
+#    su propio contenedor (componentes.py: texto/parrafo/ecuacion/chip/tarjeta).
+# 5. Figuras con volumen: el generador promociona el sólido plano al cuerpo 3D (solido → solido_3d),
+#    con caras, luz Lambert y relieve, en vez de un contorno de alambre (redactor.py; dibujos_3d.py).
+# 6. El video se juzga viéndolo: fluidez, fotogramas completos y números de los rótulos legibles.
+
 # Estilo de respaldo (ver ./tpi temas). Casi nunca se usa: cada video lleva la variante de la familia
 # Consola neón que le toca por su forma de contenido (paso a paso, error, mito, dato o reto), o la que
 # elijas en Aprobación de Guiones (QC). Este solo vale cuando no hay guion (vista previa, ./tpi subtitular).

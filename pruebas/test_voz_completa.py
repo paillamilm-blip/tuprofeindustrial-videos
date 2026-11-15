@@ -228,6 +228,53 @@ def _reconocidas(textos, inicio=0.2, por_palabra=0.3):
     return salida, t
 
 
+class CortarConComasTest(unittest.TestCase):
+    """Gemini deja pausas de coma dentro de la frase: no son fronteras entre frases."""
+
+    TEXTOS = ["Hola a todos.", "Hoy vemos por qué el volumen crece ocho veces.", "Sígueme."]
+
+    def _audio_con_comas(self):
+        partes = [_silencio(0.2), _tono(1.0), _silencio(0.35), _tono(0.8), _silencio(0.8),
+                  _tono(0.6), _silencio(0.35), _tono(0.6), _silencio(0.8), _tono(0.6),
+                  _silencio(0.3)]  # fmt: skip
+        return _wav(np.concatenate(partes))
+
+    def _oidas(self):
+        """Whisper oyó cada palabra real donde suena: la coma parte «Hola a | todos.» y la frase 2."""
+        plan = [[(0.2, 1.2, 2), (1.55, 2.35, 1)], [(3.15, 3.75, 5), (4.10, 4.70, 4)], [(5.50, 6.10, 1)]]
+        salida = []
+        for texto, segmentos in zip(self.TEXTOS, plan, strict=True):
+            palabras = texto.split()
+            i = 0
+            for ini, fin, n in segmentos:
+                for k in range(n):
+                    a = ini + (fin - ini) * k / n
+                    b = ini + (fin - ini) * (k + 1) / n
+                    salida.append((palabras[i], a, b))
+                    i += 1
+        return salida
+
+    def test_con_whisper_las_comas_no_roban_el_corte(self):
+        from tpi_videos.voz_completa import cortar
+
+        trozos = cortar(self._audio_con_comas(), self.TEXTOS, self._oidas())
+        self.assertIsNotNone(trozos)
+        for trozo, esperado in zip(trozos, (2.15, 1.55, 0.6), strict=True):
+            self.assertAlmostEqual(_duracion(trozo), esperado, delta=0.3)
+
+    def test_sin_whisper_una_coma_no_vale_como_frontera(self):
+        from tpi_videos.voz_completa import cortar
+
+        # Sin Whisper no se puede saber dónde termina cada frase: mejor no cortar (frase por frase).
+        self.assertIsNone(cortar(self._audio_con_comas(), self.TEXTOS))
+
+    def test_con_whisper_que_oye_otra_cosa_no_corta_a_ciegas(self):
+        from tpi_videos.voz_completa import cortar
+
+        otras = [("ruido", 0.2 + i * 0.3, 0.45 + i * 0.3) for i in range(13)]
+        self.assertIsNone(cortar(self._audio_con_comas(), self.TEXTOS, otras))
+
+
 class CortarPorPalabrasTest(unittest.TestCase):
     """Sin silencios claros, el corte sale de dónde Whisper oyó cada palabra (como XCris)."""
 
@@ -301,3 +348,26 @@ class PrecargaConWhisperTest(_ConGemini):
             patch("tpi_videos.whisper_sync.transcribir", side_effect=ErrorMotor("sin modelo")),
         ):
             self.assertFalse(self.voces.precargar_voz(servicio, ["Hola.", "Chao."]))
+
+
+class PrecargaConComasTest(_ConGemini):
+    """La voz completa trae pausas de coma: el pedido único igual queda bien cortado, frase por frase."""
+
+    def test_precargar_corta_en_el_silencio_de_parrafo_no_en_la_coma(self):
+        from unittest.mock import patch
+
+        caso = CortarConComasTest()
+        audio, reconocidas, textos = caso._audio_con_comas(), caso._oidas(), caso.TEXTOS
+        servicio = self._servicio(ClienteContador())
+        with (
+            patch("tpi_videos.voz_gemini.sintetizar", return_value=audio) as sintetizar,
+            patch("tpi_videos.whisper_sync.disponible", return_value=True),
+            patch("tpi_videos.whisper_sync.transcribir", return_value=reconocidas),
+        ):
+            self.assertTrue(self.voces.precargar_voz(servicio, textos))
+        self.assertEqual(sintetizar.call_count, 1)  # un solo pedido para todo el guion
+        for texto, esperado in zip(textos, (2.15, 1.55, 0.6), strict=True):
+            datos = servicio.base.get_cached_result(servicio.base._datos(texto), self.tmp.name)
+            self.assertIsNotNone(datos)
+            pieza = (Path(self.tmp.name) / datos["original_audio"]).read_bytes()
+            self.assertAlmostEqual(_duracion(pieza), esperado, delta=0.35)

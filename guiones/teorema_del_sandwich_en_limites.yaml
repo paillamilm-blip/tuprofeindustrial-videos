@@ -1,0 +1,83 @@
+# Guion redactado con IA (gemini-3.6-flash) el 13-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "Teorema del Sándwich en límites"
+materia: matematica
+categoria: matematicas  # sale de la materia; elige el estilo si no hay «tema»
+nivel: "4° medio"
+molde: nadie_te_enseno
+
+contenido:
+  intenciones: [dato]
+  objetivo: "sobre el teorema y como se aplica"
+
+gancho:
+  texto: "El truco del sándwich para calcular límites raros"
+  voz: "Aprende el truco del sándwich para calcular límites que parecen imposibles."
+  emoji: "💡"
+
+gancho_variantes:
+  - texto: "¡Un límite imposible que sí da cero!"
+    voz: "¿Sabías que aunque el seno oscile sin parar, este límite da cero exactamente?"
+    emoji: "🤯"
+    tex: '\lim_{x \to 0} x^2 \sin\left(\frac{1}{x}\right) = 0'
+  - texto: "¿Cómo resolver un límite atrapándolo entre dos funciones?"
+    voz: "¿Cómo se resuelve un límite difícil atrapándolo entre dos funciones?"
+    emoji: "🤔"
+
+enunciado:
+  texto: "Calcula el límite cuando x tiende a 0 de x² · sin(1/x) usando el Teorema del Sándwich."
+  voz: "Queremos calcular el límite cuando x tiende a cero de x al cuadrado por el seno de uno partido por x."
+  destacar: ["x² · sin(1/x)", "Teorema del Sándwich"]
+
+pasos:
+  - nota: "Acotamos el seno"
+    tex: '-1 \le \sin\left(\frac{1}{x}\right) \le 1'
+    voz: "Primero, sabemos que la función seno siempre está atrapada entre menos uno y uno."
+    emoji: "💡"
+    mapa:
+      - termino: "\\sin\\left(\\frac{1}{x}\\right)"
+        concepto: "función acotada"
+    visual:
+      tipo: grafico_funcion
+      funcion: 'sin(1/x)'
+      variable: "x"
+      rango: [-1, 1]
+      eje_x: "x"
+      eje_y: "y"
+      tamano: chico
+  - nota: "Multiplicamos por x²"
+    tex: '-x^2 \le x^2 \sin\left(\frac{1}{x}\right) \le x^2'
+    voz: "Segundo, multiplicamos toda la desigualdad por x al cuadrado para construir la expresión deseada."
+    halo: ['x^2']
+    resaltar_cambio: true
+  - nota: "Límite en los lados"
+    tex: '\lim_{x \to 0} (-x^2) = 0 \quad \text{y} \quad \lim_{x \to 0} x^2 = 0'
+    voz: "Tercero, aplicamos el límite cuando x tiende a cero en ambos extremos: los dos dan cero."
+
+resultado:
+  tex: '\lim_{x \to 0} x^2 \sin\left(\frac{1}{x}\right) = 0'
+  texto: "Como los dos extremos se juntan en cero, la función del medio no tiene escapatoria y su límite también es cero."
+  voz: "Por lo tanto, la función del medio no tiene opción: su límite también es cero."
+  emoji: "🎯"
+  destello: true
+
+verificacion:
+  texto: "Las parábolas x² y −x² atrapan la oscilación y la obligan a pasar por el origen."
+  voz: "Como un sándwich, las dos parábolas aplastan la oscilación y la obligan a pasar por cero."
+
+reto:
+  texto: "Calcula el límite cuando x tiende a 0 de x⁴ · cos(1/x)."
+  voz: "Ahora tú. ¿Cuánto vale el límite cuando x tiende a cero de x a la cuarta por el coseno de uno partido por x?"
+  emoji: "✍️"
+
+cierre:
+  texto: "¿Te cuesta esta materia? Hago clases particulares. Escríbeme"
+  voz: "¿Te cuesta esta materia? Hago clases particulares. Escríbeme"
+
+metadatos:
+  titulo: "El Teorema del Sándwich para calcular límites 🤯"
+  descripcion: "Demostramos cómo atrapando una función entre otras dos podemos resolver un límite aparentemente imposible. ¿Qué te pareció el método?"
+  hashtags: ["#tuprofeindustrial", "#matematica", "#limites", "#teoremadelsandwich", "#calculo", "#cuartomedio", "#paes", "#estudiantes", "#aprendeentiktok", "#sabiasque"]

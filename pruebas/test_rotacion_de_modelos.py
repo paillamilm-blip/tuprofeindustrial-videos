@@ -145,6 +145,75 @@ class RotacionTest(unittest.TestCase):
         self.assertEqual(oidos, [])
 
 
+class EsperaDelPedidoTest(unittest.TestCase):
+    """Un Gemini mudo no puede dejar el guion quieto 15 minutos (igual que la voz, PR #56).
+
+    El timeout del SDK es por lectura: una respuesta que gotea bytes no lo dispara nunca.
+    Por eso cada intento tiene límite de reloj y un reintento antes de cortar con aviso.
+    """
+
+    def test_pedido_mudo_corta_con_aviso_y_no_gasta_la_cadena(self):
+        import threading
+        import time
+        from unittest.mock import patch
+
+        from tpi_videos import redactor
+
+        nunca = threading.Event()
+        llamados: list[str] = []
+
+        class Mudo:
+            class models:  # noqa: N801 — imita al SDK
+                @staticmethod
+                def generate_content(model, contents, config):
+                    llamados.append(model)
+                    nunca.wait(30)
+
+        inicio = time.time()
+        with patch.object(redactor, "LIMITE_POR_PEDIDO", 0.5), self.assertRaises(ErrorMotor) as caja:
+            _pedir(Mudo())
+        nunca.set()
+        self.assertLess(time.time() - inicio, 5)
+        self.assertTrue(caja.exception.transitorio)
+        self.assertIn("no respondió", str(caja.exception))
+        self.assertEqual(llamados, [ia.MODELO_POR_DEFECTO, ia.MODELO_POR_DEFECTO])
+
+    def test_tras_el_cuelgue_reintenta_y_sigue(self):
+        import threading
+        from unittest.mock import patch
+
+        from tpi_videos import redactor
+
+        nunca = threading.Event()
+        llamados: list[str] = []
+
+        class Tartamudo:
+            class models:  # noqa: N801 — imita al SDK
+                @staticmethod
+                def generate_content(model, contents, config):
+                    llamados.append(model)
+                    if len(llamados) == 1:
+                        nunca.wait(30)
+                    return _Respuesta('{"titulo": "ok"}')
+
+        oidos: list[str] = []
+        with patch.object(redactor, "LIMITE_POR_PEDIDO", 0.5):
+            salida = _pedir(Tartamudo(), avisar=lambda mensaje, usado: oidos.append(mensaje))
+        nunca.set()
+        self.assertEqual(salida.titulo, "ok")
+        self.assertEqual(llamados, [ia.MODELO_POR_DEFECTO, ia.MODELO_POR_DEFECTO])
+        self.assertEqual(len(oidos), 1, oidos)
+        self.assertIn("reintento", oidos[0])
+
+    def test_pedido_normal_no_cambia(self):
+        oidos: list[str] = []
+        cliente = _ClienteFalso('{"titulo": "ok"}', vivos=[ia.MODELO_POR_DEFECTO])
+        salida = _pedir(cliente, avisar=lambda mensaje, usado: oidos.append(mensaje))
+        self.assertEqual(salida.titulo, "ok")
+        self.assertEqual(cliente.llamados, [ia.MODELO_POR_DEFECTO])
+        self.assertEqual(oidos, [])
+
+
 class EstadoDeCuotaTest(unittest.TestCase):
     def test_clasifica_modelo_por_modelo(self):
         cliente = _ClienteFalso(

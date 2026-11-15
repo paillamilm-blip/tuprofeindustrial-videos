@@ -1,0 +1,100 @@
+# Guion redactado con IA (gemini-3.6-flash) el 14-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se asume que la función f(x) es biyectiva en los números reales para garantizar la existencia de su función inversa.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "3 errores al calcular función inversa"
+materia: matematica
+categoria: matematicas  # sale de la materia; elige el estilo si no hay «tema»
+nivel: "4° medio"
+molde: tres_errores
+
+contenido:
+  intenciones: [error]
+  objetivo: "como utilizarla"
+
+gancho:
+  texto: "¡No cometas estos 3 errores en función inversa!"
+  voz: "No cometas estos tres errores típicos al calcular una función inversa."
+  tex: 'f^{-1}(x)'
+  emoji: "🚨"
+
+gancho_variantes:
+  - texto: "¿Cómo se calcula realmente la función inversa?"
+    voz: "Cómo se calcula realmente la función inversa sin caer en las trampas típicas."
+    emoji: "🤔"
+  - texto: "El error que todos cometen en función inversa"
+    voz: "El error que casi todos cometen al trabajar con funciones inversas."
+    emoji: "❌"
+
+enunciado:
+  texto: "Dada la función f(x) = 2x + 3, encuentra su función inversa f⁻¹(x)."
+  voz: "Dada la función efe de equis igual a dos equis más tres, encuentra su función inversa."
+  destacar: ["f(x) = 2x + 3", "f⁻¹(x)"]
+
+datos:
+  - tex: 'f(x) = 2x + 3'
+    voz: "Tenemos la función original efe de equis igual a dos equis más tres."
+
+pasos:
+  - nota: "Error 1: Recíproca"
+    tex: 'f^{-1}(x) = \frac{1}{2x + 3}'
+    voz: "Primer error: pensar que el exponente menos uno significa dividir uno por la función."
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Error 2: Cambiar signo"
+    tex: 'f^{-1}(x) = -(2x + 3)'
+    voz: "Segundo error: creer que la inversa consiste en cambiarle los signos a la expresión."
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Error 3: Sin despejar"
+    tex: 'f^{-1}(x) = 2y + 3'
+    voz: "Tercer error: cambiar equis por y pero olvidarse de despejar la ecuación."
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Despejar la x"
+    tex: 'y = 2x + 3 \Rightarrow x = \frac{y - 3}{2}'
+    voz: "La forma correcta: igualamos a y, restamos tres y dividimos en dos para despejar equis."
+    resaltar_cambio: true
+    emoji: "💡"
+    mapa:
+      - termino: "y"
+        concepto: "variable dependiente"
+      - termino: "x"
+        concepto: "variable a despejar"
+  - nota: "Intercambiar variables"
+    tex: 'f^{-1}(x) = \frac{x - 3}{2}'
+    voz: "Finalmente, cambiamos la y por equis y obtenemos la verdadera función inversa."
+    halo: ['f^{-1}(x)']
+    resaltar_cambio: true
+    emoji: "✅"
+
+resultado:
+  tex: 'f^{-1}(x) = \frac{x - 3}{2}'
+  texto: "La función inversa de f(x) = 2x + 3 es f⁻¹(x) = (x - 3) / 2."
+  voz: "La función inversa de dos equis más tres es equis menos tres dividido en dos."
+  emoji: "🎯"
+  destello: true
+
+verificacion:
+  texto: "Si f(2) = 7, entonces f⁻¹(7) debe dar 2. Comprobamos: (7 - 3)/2 = 2."
+  voz: "Comprobamos: si efe de dos da siete, la inversa de siete nos devuelve exactamente dos."
+
+reto:
+  texto: "Encuentra la función inversa de f(x) = 3x - 5."
+  voz: "Ahora te toca a ti: ¿cuál es la función inversa de tres equis menos cinco?"
+  emoji: "✍️"
+
+cierre:
+  texto: "Ahora ya no vas a caer"
+  voz: "Ahora ya no vas a caer"
+
+llamado: "Etiqueta a quien siempre se equivoca aquí 😅"  # el cierre del texto de la publicación
+
+metadatos:
+  titulo: "3 errores al calcular la función inversa 🚨"
+  descripcion: "Descubre los 3 errores más comunes al calcular la función inversa f⁻¹(x) y aprende el método correcto paso a paso."
+  hashtags: ["#tuprofeindustrial", "#matematica", "#funcioninversa", "#algebra", "#paes", "#4medio", "#estudiantes", "#aprendeentiktok", "#errorestipicos"]

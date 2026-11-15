@@ -4,7 +4,6 @@ para TikTok / Reels / Shorts (H.264 + AAC, yuv420p, faststart, −14 LUFS)."""
 from __future__ import annotations
 
 import functools
-import os
 import re
 import shutil
 import subprocess
@@ -68,15 +67,64 @@ def _ejecutar(comando: list[str], cwd: Path, que: str) -> None:
         raise ErrorMotor(f"FFmpeg falló al {que}:\n{detalle}", ayuda="Revisa ./tpi doctor")
 
 
-def _carpeta_fuentes_relativa(desde: Path) -> str:
-    """Ruta relativa y sin caracteres especiales a las fuentes (para el filtro de FFmpeg)."""
-    relativa = Path(os.path.relpath(entorno.FUENTES_DIR, desde)).as_posix()
-    if _RUTA_SEGURA.match(relativa):
-        return relativa
+def _carpeta_fuentes(desde: Path) -> str:
+    """Carpeta de fuentes para el filtro ``ass`` de FFmpeg, usable desde ``desde``.
+
+    Preferimos la ruta absoluta del repo: una relativa con ``../`` que se sale del repo (o que cruza
+    un symlink como /tmp → /private/tmp) no la resuelve libass y sustituye la fuente por la del
+    sistema en silencio. Si la absoluta trae caracteres que rompen el filtro, copiamos las fuentes
+    junto al video y usamos esa copia local.
+    """
+    absoluta = entorno.FUENTES_DIR.as_posix()
+    if _RUTA_SEGURA.match(absoluta):
+        return absoluta
     copia = desde / ".fuentes"
     if not copia.exists():
         shutil.copytree(entorno.FUENTES_DIR, copia)
     return ".fuentes"
+
+
+_ASS_SONDA = """[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: CapCut,Montserrat Black,84,&H00FFFFFF,&H00FFFFFF,&H00000000,&H78000000,0,0,0,0,100,100,1,0,1,6.0,2.0,5,80,80,0,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:01.00,CapCut,,0,0,0,,PRUEBA
+"""
+
+
+def fuente_subtitulos_ok() -> tuple[bool, str]:
+    """Sonda: quema un fotograma desde fuera del repo y confirma que libass usa la fuente incluida
+    (y no la del sistema). Detecta la sustitución silenciosa antes de renderizar minutos."""
+    import tempfile
+
+    ffmpeg = entorno.ffmpeg_con_libass()
+    if ffmpeg is None:
+        return False, "FFmpeg con libass no disponible"
+    with tempfile.TemporaryDirectory() as tmp:
+        carpeta = Path(tmp)
+        (carpeta / "sonda.ass").write_text(_ASS_SONDA, encoding="utf-8")
+        fuentes = _carpeta_fuentes(carpeta)
+        proceso = subprocess.run(
+            [
+                ffmpeg, "-hide_banner", "-loglevel", "debug",
+                "-f", "lavfi", "-i", "color=c=black:s=200x200:d=1",
+                "-vf", f"ass=sonda.ass:fontsdir={fuentes}",
+                "-frames:v", "1", "-y", str(carpeta / "sonda.png"),
+            ],
+            cwd=carpeta, capture_output=True, text=True,
+        )
+        seleccion = [l for l in proceso.stderr.splitlines() if "fontselect" in l]
+        if any("Montserrat" in l for l in seleccion):
+            return True, "Montserrat Black (libass la carga)"
+        sustituta = seleccion[0].split("->")[-1].strip() if seleccion else "sin respuesta"
+        return False, f"libass sustituyó la fuente por: {sustituta}"
 
 
 def _cadena_resplandor(ancho: int, alto: int) -> str:
@@ -107,7 +155,7 @@ def quemar_subtitulos(
             ayuda="En Mac instala la versión completa: brew install ffmpeg-full   (luego: ./tpi doctor)",
         )
     carpeta = ass.parent
-    fuentes = _carpeta_fuentes_relativa(carpeta)
+    fuentes = _carpeta_fuentes(carpeta)
     filtro = f"ass={ass.name}:fontsdir={fuentes}"
     if resplandor:
         ancho, alto = resolucion(video)

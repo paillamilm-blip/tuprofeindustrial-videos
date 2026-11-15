@@ -182,6 +182,11 @@ def restablecer_estilo(token: Token[_Estilo]) -> None:
     _ESTILO.reset(token)
 
 
+# Capas por rol: cajas y tarjetas al fondo, texto y fórmulas siempre encima. Manim reordena por
+# z_index en cada cuadro, así el desempate no depende del orden en que se agregaron a la escena.
+CAPA_CAJA = 0
+CAPA_TEXTO = 10
+
 TAM_GANCHO = 60
 TAM_TITULO = 28
 TAM_CUERPO = 37
@@ -364,7 +369,9 @@ def texto(
     familia, grosor, escala = _letra(peso)
     if mayus:
         contenido = contenido.upper()
-    return Text(contenido, font=familia, weight=grosor, font_size=tam * escala, color=color)
+    return Text(
+        contenido, font=familia, weight=grosor, font_size=tam * escala, color=color
+    ).set_z_index(CAPA_TEXTO)
 
 
 def _resaltados_sin_solapamiento(frases: tuple[str, ...]) -> list[str]:
@@ -432,6 +439,7 @@ def parrafo(
         p.scale_to_fit_width(ancho_max)
     p.lineas_texto = lineas
     p.mayus = mayus
+    p.set_z_index(CAPA_TEXTO)
     return p
 
 
@@ -592,6 +600,7 @@ def ecuacion(
         ) from e
     if eq.width > ancho_max:
         eq.scale_to_fit_width(ancho_max)
+    eq.set_z_index(CAPA_TEXTO)
     return eq
 
 
@@ -645,10 +654,16 @@ def terminos_nuevos(origen: Mobject | None, destino: MathTex) -> list[Mobject]:
     ]
 
 
+# La capa más ancha del resplandor sobresale esto por lado del término; el recuadro (buff 0.09)
+# queda dentro de ese mismo aire. El emoji se pega fuera del resplandor, no montado sobre él.
+HOLGURA_HALO = 0.26
+BUFF_EMOJI = 0.2 + HOLGURA_HALO
+
+
 def halo_de(parte: Mobject, color: str) -> VGroup:
     """Un resplandor suave detrás de un término: tres capas redondeadas que se apagan hacia afuera."""
     capas = VGroup()
-    for holgura, opacidad in ((0.26, 0.07), (0.16, 0.13), (0.08, 0.24)):
+    for holgura, opacidad in ((HOLGURA_HALO, 0.07), (0.16, 0.13), (0.08, 0.24)):
         capa = RoundedRectangle(
             corner_radius=0.12 + holgura / 2,
             width=parte.width + 2 * holgura,
@@ -657,6 +672,17 @@ def halo_de(parte: Mobject, color: str) -> VGroup:
         capa.set_fill(color, opacidad).set_stroke(width=0).move_to(parte.get_center())
         capas.add(capa)
     return capas.set_z_index(0)
+
+
+def ancho_para_fila(ancho_util: float, ancho_emoji: float = 0.0) -> float:
+    """Ancho máximo de la fila (nota + fórmula) para que, con el resplandor y el recuadro
+    (``HOLGURA_HALO`` por lado) y el emoji pegado a la derecha, nada se salga de ``ancho_util``.
+
+    Sin esto la fórmula se ajustaba al ancho útil completo y el halo asomaba por los bordes;
+    con emoji, su separador (0.2) era menor que el halo y el emoji se montaba sobre el resplandor.
+    """
+    hueco = ancho_emoji + BUFF_EMOJI if ancho_emoji else 0.0
+    return ancho_util - hueco - 2 * HOLGURA_HALO
 
 
 def tacha_de(parte: Mobject, color: str) -> Line:
@@ -718,8 +744,9 @@ def engranaje(radio: float, color: str, color_agujero: str, dientes: int = 10) -
 def chip(contenido: str, color: str, tam: float = 19) -> VGroup:
     etiqueta = texto(contenido, tam, ULTRABOLD, color)
     caja = RoundedRectangle(corner_radius=0.18, width=etiqueta.width + 0.42, height=etiqueta.height + 0.26)
-    caja.set_fill(color, 0.14).set_stroke(color, 2, 0.9)
+    caja.set_fill(color, 0.14).set_stroke(color, 2, 0.9).set_z_index(CAPA_CAJA)
     etiqueta.move_to(caja)
+    etiqueta.set_z_index(CAPA_TEXTO)
     return VGroup(caja, etiqueta)
 
 
@@ -736,7 +763,48 @@ def tarjeta(contenido: Mobject, ancho: float, relleno: str, borde: str, margen: 
     sombra.shift(DOWN * 0.1 + RIGHT * 0.05)
     contenido.move_to(caja)
     contenido.align_to(caja.get_left() + RIGHT * margen, LEFT)
+    sombra.set_z_index(CAPA_CAJA)
+    caja.set_z_index(CAPA_CAJA)
+    contenido.set_z_index(CAPA_TEXTO)
     return VGroup(VGroup(sombra, caja), contenido)
+
+
+def ajustar_a_zona(
+    mob: Mobject, *, alto: float, ancho: float, centro_y: float, centro_x: float = 0.0
+) -> Mobject:
+    """Agrupa y escala el contenido en el centro de la banda usable: solo achica, nunca agranda.
+
+    Es la zona segura del cuadro vertical: lo dibujado no puede salir de la banda que dejan libre
+    la cabecera (arriba) y el subtítulo quemado (abajo), aunque el dibujo interno venga de más.
+    """
+    factor = min(
+        1.0,
+        alto / mob.height if mob.height else 1.0,
+        ancho / mob.width if mob.width else 1.0,
+    )
+    if factor < 1.0:
+        mob.scale(factor)
+    mob.move_to([centro_x, centro_y, 0])
+    return mob
+
+
+def reparto_de_intro(
+    *, y_superior: float, y_inferior: float, con_ancla: bool, aire: float = 0.28
+) -> tuple[tuple[float, float], tuple[float, float] | None]:
+    """Parte la zona del enunciado en (centro, alto) del texto y, si hay ancla, del dibujo.
+
+    Sin ancla el texto usa toda la zona (el comportamiento de siempre). Con ancla, el dibujo se
+    apoya en el filo de abajo de la zona segura y el texto queda arriba, separado por ``aire``.
+    """
+    if not con_ancla:
+        alto = y_superior - y_inferior
+        return ((y_superior + y_inferior) / 2, alto), None
+    alto_ancla = min(3.0, (y_superior - y_inferior) * 0.42)
+    centro_ancla = y_inferior + alto_ancla / 2
+    piso_texto = centro_ancla + alto_ancla / 2 + aire
+    alto_texto = y_superior - piso_texto
+    centro_texto = (y_superior + piso_texto) / 2
+    return (centro_texto, alto_texto), (centro_ancla, alto_ancla)
 
 
 def visto(color: str, escala: float = 0.32) -> VMobject:

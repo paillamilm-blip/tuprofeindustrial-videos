@@ -157,7 +157,7 @@ class GuionSolidoTest(unittest.TestCase):
         self.assertIn("figura: cono", texto)
         self.assertIn("radio: '3 cm'", texto)
 
-    def test_la_ia_puede_pedir_el_solido(self):
+    def test_la_ia_puede_pedir_el_solido_y_sale_con_volumen(self):
         paso = PasoIA(
             nota="Calculo el volumen",
             tex=r"V = \pi r^2 h",
@@ -169,7 +169,8 @@ class GuionSolidoTest(unittest.TestCase):
             anotar=["volumen", "area"],
         )
         visual = Visual(**_visual(paso))
-        self.assertEqual(visual.tipo, "solido")
+        # El generador promociona el sólido plano al cuerpo 3D: relieve y caras, no alambre.
+        self.assertEqual(visual.tipo, "solido_3d")
         self.assertEqual(visual.anotar, ["volumen", "area"])
 
 

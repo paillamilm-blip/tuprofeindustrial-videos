@@ -167,6 +167,17 @@ def diagnosticar(probar_red: bool = False) -> list[Chequeo]:
             None if ok_letras else "Vuelve a descargar el repo (git pull).",
         )
     )
+    from . import postproduccion
+
+    ok_fuente, detalle_fuente = postproduccion.fuente_subtitulos_ok()
+    chequeos.append(
+        Chequeo(
+            "Fuente de subtítulos (libass)",
+            "ok" if ok_fuente else "falla",
+            detalle_fuente,
+            None if ok_fuente else "Las letras deben estar en src/tpi_videos/assets/fuentes (git pull).",
+        )
+    )
     chequeos.append(_chequear_estilos())
     version_panel = _version("nicegui")
     chequeos.append(

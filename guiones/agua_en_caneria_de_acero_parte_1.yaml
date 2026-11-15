@@ -1,0 +1,108 @@
+# Guion redactado con IA (gemini-3.6-flash) el 14-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se resuelve la primera pregunta (litros de agua) como Parte 1 para ajustar la duración al rango óptimo de 45 a 100 segundos.
+#   - El cálculo del volumen de acero se deja como reto para la Parte 2.
+#
+# Quedaron observaciones por revisar:
+#   - revisor: Coherencia: el enunciado solicita responder dos preguntas («¿cuántos litros de agua lleva adentro? ¿Y cuánto acero se usó para fabricar el tubo?»), pero el desarrollo omite la segunda pregunta y la deja como reto, dejando incompleto el problema.
+#   - revisor: Matemática / Precisión: el cálculo de V = \pi (0,096 m)^2 \cdot 6 m es \pi \cdot 0,009216 \cdot 6 = 0,055296 \pi \approx 0,173673 m^3, que al convertir a litros da ~173,67 L (~174 L); sin embargo, la verificación menciona que sin espesor daría 188 L (el volumen exterior es \pi \cdot 0,1^2 \cdot 6 = 0,06 \pi \approx 0,188495 m^3 = 188,5 L), por lo que la diferencia es ~14,8 L (redondeado a 15 L, no 14 L).
+
+titulo: "Agua en cañería de acero (Parte 1)"
+materia: ingenieria
+categoria: ingenieria  # sale de la materia; elige el estilo si no hay «tema»
+nivel: "1° año ingeniería"
+
+contenido:
+  intenciones: [ejercicio]
+  objetivo: "desarrollar"
+
+gancho:
+  texto: "¿Cuánta agua cabe en esta cañería de 6 m?"
+  voz: "¿Cuántos litros de agua caben en esta cañería de seis metros?"
+  emoji: "💧"
+
+gancho_variantes:
+  - texto: "El error de no restar 4 mm de espesor"
+    voz: "El error común de no restar los cuatro milímetros de espesor."
+    emoji: "⚠️"
+  - texto: "¿Cuántos litros de agua lleva esta cañería?"
+    voz: "¿Cuántos litros de agua lleva realmente esta cañería de acero?"
+    emoji: "🤔"
+
+enunciado:
+  texto: "Una cañería de acero de 6 m de largo tiene 10 cm de radio exterior y 4 mm de espesor de pared. Corre llena de agua: ¿cuántos litros de agua lleva adentro? ¿Y cuánto acero se usó para fabricar el tubo?"
+  voz: "Una cañería de acero de seis metros tiene diez centímetros de radio exterior y cuatro milímetros de espesor. ¿Cuántos litros de agua lleva adentro?"
+  destacar: ["6 m", "10 cm", "4 mm"]
+
+datos:
+  - tex: 'L = 6\ \text{m}'
+    voz: "El largo es de seis metros."
+  - tex: 'R_{ext} = 10\ \text{cm}'
+    voz: "El radio exterior mide diez centímetros."
+  - tex: 'e = 4\ \text{mm} = 0,4\ \text{cm}'
+    voz: "El espesor es de cuatro milímetros, o cero coma cuatro centímetros."
+
+pasos:
+  - nota: "Radio interior"
+    tex: 'R_{int} = R_{ext} - e = 10\ \text{cm} - 0,4\ \text{cm} = 9,6\ \text{cm}'
+    voz: "Primero hallamos el radio interior restando el espesor de la pared al radio exterior. <break time=\"1.0s\"/>"
+    halo: ['R_{int}']
+    emoji: "💡"
+    mapa:
+      - termino: "R_{int}"
+        concepto: "radio interior"
+      - termino: "e"
+        concepto: "espesor pared"
+    visual:
+      tipo: tuberia_3d
+      radio: '10 cm'
+      espesor: '4 mm'
+      longitud: '6 m'
+      bridas: false
+      anotar: ['seccion']
+  - nota: "Volumen cilíndrico"
+    tex: 'V = \pi R_{int}^2 L = \pi (0,096\ \text{m})^2 \cdot 6\ \text{m} \approx 0,174\ \text{m}^3'
+    voz: "Segundo, calculamos el volumen interior multiplicando el área circular interna por el largo de seis metros."
+    halo: ['0,174\ \text{m}^3']
+    visual:
+      tipo: tuberia_3d
+      radio: '10 cm'
+      espesor: '4 mm'
+      longitud: '6 m'
+      bridas: false
+      anotar: ['seccion']
+  - nota: "Conversión a litros"
+    tex: 'V = 0,174\ \text{m}^3 \cdot 1000\ \frac{\text{L}}{\text{m}^3} = 174\ \text{L}'
+    voz: "Tercero, multiplicamos por mil para pasar de metros cúbicos a litros."
+    halo: ['174\ \text{L}']
+    resaltar_cambio: true
+    visual:
+      tipo: tuberia_3d
+      radio: '10 cm'
+      espesor: '4 mm'
+      longitud: '6 m'
+      bridas: false
+      anotar: ['seccion']
+
+resultado:
+  tex: 'V_{agua} \approx 174\ \text{L}'
+  texto: "La cañería lleva aproximadamente 174 litros de agua en su interior."
+  voz: "La cañería lleva aproximadamente ciento setenta y cuatro litros de agua."
+  emoji: "💧"
+  destello: true
+
+verificacion:
+  texto: "Si ignoraras el espesor te daría 188 L: esos 14 L de diferencia corresponden a la pared de acero."
+  voz: "Si ignoraras el espesor te daría ciento ochenta y ocho litros. Esos catorce litros de diferencia son pura pared de acero."
+
+reto:
+  texto: "Parte 2: ¿cuánto acero se usó para fabricar el tubo?"
+  voz: "Para la segunda parte: ¿cuánto acero se usó para fabricar el tubo? Piénsalo."
+  emoji: "✍️"
+
+metadatos:
+  titulo: "¿Cuánta agua cabe en esta cañería? (Parte 1) 💧"
+  descripcion: "Calculamos la capacidad real de agua en una tubería de acero considerando su espesor. ¿Cometerías el error de usar el radio exterior?"
+  hashtags: ["#tuprofeindustrial", "#ingenieria", "#obrasciviles", "#fluidos", "#geometria", "#ejerciciosresueltos", "#estudiantes", "#calculo"]

@@ -1,0 +1,95 @@
+# Guion redactado con IA (gemini-3.6-flash) el 13-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se asume x diferente de 0 y x diferente de 2 como restricciones del dominio algebraico.
+#
+# Revisión automática: fórmulas compiladas y cálculos revisados por la IA (sin observaciones).
+
+titulo: "El error al pasar a cuadrática"
+materia: matematica
+categoria: matematicas  # sale de la materia; elige el estilo si no hay «tema»
+nivel: "4° medio"
+
+contenido:
+  intenciones: [error]
+  objetivo: "llegar. a la ecuacion cuadratica"
+
+gancho:
+  texto: "¿Por qué esta fracción se vuelve cuadrática?"
+  voz: "¿Por qué una suma de fracciones simples termina convirtiéndose en una ecuación cuadrática?"
+  emoji: "🤔"
+
+gancho_variantes:
+  - texto: "¿Cometes este error en ecuaciones fraccionarias?"
+    voz: "¿Cometes este error clásico al transformar fracciones en una cuadrática? Vamos a revisarlo."
+    emoji: "⚠️"
+    tex: '\frac{2}{x} + \frac{1}{x-2} = 1'
+  - texto: "No olvides multiplicar el lado derecho"
+    voz: "Muchos olvidan multiplicar el lado derecho de la ecuación por el denominador común."
+    emoji: "🚨"
+
+enunciado:
+  texto: "Resuelve la ecuación fraccionaria 2/x + 1/(x-2) = 1 y determina sus soluciones."
+  voz: "Tenemos la ecuación fraccionaria dos dividido en equis más uno dividido en equis menos dos, igual a uno."
+  destacar: ["2/x + 1/(x-2) = 1"]
+
+datos:
+  - tex: 'x \neq 0, \quad x \neq 2'
+    voz: "Primero recordamos que equis no puede ser cero ni dos para no dividir por cero."
+
+pasos:
+  - nota: "Error típico"
+    tex: '2(x-2) + x = 1'
+    voz: "El error más común es multiplicar cruzado a la izquierda, pero olvidar multiplicar el uno de la derecha por el denominador."
+    destacar: ['1']
+    emoji: "❌"
+    error: true   # error típico: se muestra tachado
+  - nota: "Multiplicar por el MCM"
+    tex: 'x(x-2) \left( \frac{2}{x} + \frac{1}{x-2} \right) = 1 \cdot x(x-2)'
+    voz: "Lo correcto es multiplicar ambos lados completos por el mínimo común múltiplo, equis por equis menos dos."
+    destacar: ['x(x-2)']
+    halo: ['x(x-2)']
+    emoji: "💡"
+    mapa:
+      - termino: "x(x-2)"
+        concepto: "mínimo común múltiplo"
+  - nota: "Simplificamos"
+    tex: '2(x-2) + x = x(x-2)'
+    voz: "Al simplificar, cada término queda multiplicado por el denominador común, asegurando la igualdad."
+    destacar: ['x(x-2)']
+    resaltar_cambio: true
+  - nota: "Ecuación cuadrática"
+    tex: 'x^2 - 5x + 4 = 0'
+    voz: "Desarrollamos los paréntesis y reordenamos todos los términos para llegar a la cuadrática correcta."
+    destacar: ['x^2 - 5x + 4 = 0']
+    halo: ['x^2 - 5x + 4 = 0']
+    resaltar_cambio: true
+    emoji: "✅"
+
+resultado:
+  tex: 'x_1 = 4, \quad x_2 = 1'
+  texto: "Multiplicar ambos miembros por el denominador común permite llegar a la cuadrática correcta sin perder términos."
+  voz: "Las soluciones son equis igual a cuatro y equis igual a uno."
+  emoji: "🎯"
+  destello: true
+
+verificacion:
+  texto: "Reemplazando x = 4: 2/4 + 1/2 = 1/2 + 1/2 = 1. Se cumple la igualdad."
+  voz: "Si reemplazas cuatro, obtienes dos cuartos más un medio, que suma exactamente uno."
+
+reto:
+  texto: "¿A qué ecuación cuadrática llegas con 1/x + 2/(x+1) = 1?"
+  voz: "Ahora te toca a ti. ¿A qué ecuación cuadrática llegas con uno partido en equis más dos partido en equis más uno igual a uno?"
+  emoji: "✍️"
+
+cierre:
+  texto: "Ahora te toca a ti"
+  voz: "Ahora te toca a ti"
+
+llamado: "Guárdalo para tu próxima prueba 📌"  # el cierre del texto de la publicación
+
+metadatos:
+  titulo: "El error al pasar a cuadrática"
+  descripcion: "Aprende cómo transformar correctamente una ecuación fraccionaria en una cuadrática sin olvidar multiplicar el miembro derecho. ¿Cuál método usas tú?"
+  hashtags: ["#tuprofeindustrial", "#matematica", "#algebra", "#ecuaciones", "#cuadratica", "#paes", "#cuartomedio", "#estudiantes", "#ejerciciosresueltos"]

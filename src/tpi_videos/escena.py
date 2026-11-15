@@ -562,6 +562,20 @@ def olvida_en_ancla(pila: list[Linea], ultima: Any) -> list[Linea]:
     return [linea for linea in pila if linea.eq is not ultima]
 
 
+def ancla_del_enunciado(pasos: Any, gancho: Any) -> Any:
+    """El objeto visual que ancla la intro: el primer dibujo del desarrollo, o el de la promesa.
+
+    Es el cuerpo que se va a estudiar (un sólido 3D, un circuito, un gráfico), no la matemática:
+    aparece junto al enunciado, antes de los datos y los pasos. Si el ejercicio no tiene ningún
+    dibujo no se inventa un ancla: el enunciado queda solo con su texto, como siempre.
+    """
+    for paso in pasos:
+        visual = getattr(paso, "visual", None)
+        if visual is not None:
+            return visual
+    return getattr(gancho, "visual", None)
+
+
 def gramatica_de(tema, n_pasos: int) -> tuple[VGroup | None, VGroup | None]:
     g = tema.gramatica
     if not c.gramatica_activa(tema) or not n_pasos:
@@ -1215,18 +1229,48 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         )
         contenido = VGroup(etiqueta, cuerpo).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
         tarjeta = c.tarjeta(contenido, c.ANCHO_UTIL, self.col.panel, self.col.borde)
-        if tarjeta.height > c.ALTO_ZONA - 0.4:
-            tarjeta.scale_to_fit_height(c.ALTO_ZONA - 0.4)
-        tarjeta.move_to([0, c.CENTRO_ZONA + 0.5, 0])
+        # Ancla visual de la intro: el objeto del ejercicio (sólido 3D, circuito, gráfico…) aparece
+        # junto al enunciado, antes de la matemática. Si no hay dibujo, el texto usa toda la zona.
+        ancla = ancla_del_enunciado(self.guion.pasos, self.guion.gancho)
+        ancla_mobs = None
+        if ancla is not None:
+            (centro_t, alto_t), (centro_a, alto_a) = c.reparto_de_intro(
+                y_superior=c.Y_ZONA_SUPERIOR, y_inferior=c.Y_ZONA_INFERIOR,
+                con_ancla=True, aire=c.AIRE_DIBUJO,
+            )
+            if tarjeta.height > alto_t:
+                tarjeta.scale_to_fit_height(alto_t)
+            tarjeta.move_to([0, centro_t, 0])
+            hoja = self.tema.marco == "hoja"
+            papel = self.tema.hoja.color if hoja else self.col.panel
+            dibujo = d.dibujar_visual(ancla, self.col, c.ANCHO_UTIL, alto_a, papel)
+            dibujo.place(0, centro_a)
+            c.ajustar_a_zona(dibujo.mobs, alto=alto_a, ancho=c.ANCHO_UTIL, centro_y=centro_a)
+            ancla_mobs = dibujo.mobs
+            if not hoja:
+                caja = (
+                    RoundedRectangle(corner_radius=0.28, width=c.ANCHO_UTIL, height=alto_a)
+                    .set_fill(papel, 0.94)
+                    .set_stroke(self.col.borde, 2.5)
+                    .set_z_index(c.CAPA_CAJA)
+                    .move_to([0, centro_a, 0])
+                )
+                ancla_mobs.add_to_back(caja)
+        else:
+            if tarjeta.height > c.ALTO_ZONA - 0.4:
+                tarjeta.scale_to_fit_height(c.ALTO_ZONA - 0.4)
+            tarjeta.move_to([0, c.CENTRO_ZONA + 0.5, 0])
         subrayados = VGroup()
 
         with self.hablar(e.voz_final, "enunciado") as tr:
-            self._con_pendientes(
+            entrada = [
                 self._aparecer_titulo(self.titulo, shift=DOWN * 0.15),
                 FadeIn(tarjeta[0], scale=0.97),
                 FadeIn(etiqueta),
-                run_time=0.5,
-            )
+            ]
+            if ancla_mobs is not None:
+                entrada.append(FadeIn(ancla_mobs, scale=0.97))
+            self._con_pendientes(*entrada, run_time=0.5)
             self.play(
                 LaggedStart(*[FadeIn(linea, shift=RIGHT * 0.12) for linea in cuerpo], lag_ratio=0.25),
                 run_time=min(1.6, 0.3 * len(cuerpo) + 0.4),
@@ -1242,7 +1286,10 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 self.play(
                     Create(lineas), Indicate(letras, color=self.col.acento, scale_factor=1.06), run_time=0.45
                 )
-        self._pendientes.append(FadeOut(VGroup(tarjeta, subrayados), shift=UP * 0.3))
+        salida = VGroup(tarjeta, subrayados)
+        if ancla_mobs is not None:
+            salida.add(ancla_mobs)
+        self._pendientes.append(FadeOut(salida, shift=UP * 0.3))
 
     def _datos(self) -> None:
         etiqueta = c.texto("DATOS", c.TAM_ETIQUETA, ULTRABOLD, self.color_materia)
@@ -1439,6 +1486,12 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             delta = previo.trazo[0].get_center() - dibujo.trazo[0].get_center()
             destino = dibujo.mobs.get_center() + delta
             dibujo.place(float(destino[0]), float(destino[1]))
+        # Zona segura: el bulto completo (trazo + rótulos + chips) queda dentro de la banda del
+        # dibujo, aunque el visual interno venga más alto o más ancho de la cuenta.
+        c.ajustar_a_zona(
+            dibujo.mobs, alto=alto, ancho=ancho, centro_y=centro_y,
+            centro_x=float(dibujo.mobs.get_center()[0]),
+        )
         if not hoja:  # en la pizarra el dibujo tiene su propia tarjeta, como los pasos
             caja = (
                 RoundedRectangle(corner_radius=0.28, width=ancho, height=alto)
@@ -1689,11 +1742,14 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 # la nota sola, un emoji más alto que ella se montaba sobre la fórmula de abajo y tapaba
                 # sus números («30·000», «= 15000 pesos»). Se le hace espacio a las dos líneas.
                 emoji = self._emoji(paso.emoji or ("alerta" if paso.error else None), 0.78)
-                hueco = emoji.width + 0.2 if emoji is not None else 0.0
-                # (la fórmula sola ya viene ajustada al ancho por c.ecuacion)
-                for linea_de_texto in (nota, eq if emoji is not None else None):
-                    if linea_de_texto is not None and linea_de_texto.width > c.ANCHO_UTIL - hueco + 1e-6:
-                        linea_de_texto.scale_to_fit_width(c.ANCHO_UTIL - hueco)  # nada se sale de la hoja
+                ancho_emoji = emoji.width if emoji is not None else 0.0
+                hueco = ancho_emoji + c.BUFF_EMOJI if emoji is not None else 0.0
+                # El halo (+0.26/lado) y el recuadro van por fuera de la fórmula: se descuentan del
+                # ancho útil para que no asomen por el borde (y el emoji quede fuera del resplandor).
+                ancho_fila = c.ancho_para_fila(c.ANCHO_UTIL, ancho_emoji)
+                for linea_de_texto in (nota, eq):
+                    if linea_de_texto is not None and linea_de_texto.width > ancho_fila + 1e-6:
+                        linea_de_texto.scale_to_fit_width(ancho_fila)  # nada se sale de la hoja
                 nueva = VGroup(*[m for m in (nota, eq) if m is not None]).arrange(DOWN, buff=0.16)
 
                 # —— Dónde cae cada línea ——————————————————————————————————————————
@@ -1706,8 +1762,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     y_rotulo, y_linea, alto_max = casilleros[mitad]
                     # El emoji va al lado: la fila entera (fórmula + emoji) tiene que caber en el casillero,
                     # porque la toma de la mitad se cierra a su ancho y cortaría lo que sobre.
-                    if nueva.width > ANCHO_CASILLERO - hueco:
-                        nueva.scale_to_fit_width(ANCHO_CASILLERO - hueco)
+                    ancho_casillero = c.ancho_para_fila(ANCHO_CASILLERO, ancho_emoji)
+                    if nueva.width > ancho_casillero:
+                        nueva.scale_to_fit_width(ancho_casillero)
                     if nueva.height > alto_max:
                         nueva.scale_to_fit_height(alto_max)
                     nueva.move_to([0, y_linea, 0])
@@ -1739,7 +1796,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     columna.move_to([0, (tope + fondo) / 2, 0])  # pizarra centrada
                 if emoji is not None:  # la fila [nota o fórmula + emoji] queda centrada
                     nueva.shift(LEFT * hueco / 2)
-                    emoji.next_to(nueva, RIGHT, buff=0.2)
+                    emoji.next_to(nueva, RIGHT, buff=c.BUFF_EMOJI)  # fuera del resplandor, no encima
 
                 # El halo se apaga de golpe: la línea a la que pertenece sube y se achica en esta misma
                 # animación, y un halo que se desvanece se quedaría flotando en el sitio viejo.

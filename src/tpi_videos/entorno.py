@@ -141,6 +141,18 @@ def registrar_fuentes() -> bool:
     return ok
 
 
+def exigir_fuentes() -> None:
+    """Falla ruidoso si las letras no se pudieron registrar: sin ellas Manim sustituye la fuente
+    por la del sistema en silencio y el video sale con otra letra sin que nadie avise."""
+    from .errores import ErrorMotor
+
+    if not registrar_fuentes():
+        raise ErrorMotor(
+            "No pude registrar las letras incluidas (Montserrat, Bangers…); Manim usaría otra fuente.",
+            ayuda="Vuelve a descargar el repo (git pull) y reintenta; revisa ./tpi doctor.",
+        )
+
+
 def _tiene_filtro_ass(ffmpeg: str) -> bool:
     try:
         salida = subprocess.run(

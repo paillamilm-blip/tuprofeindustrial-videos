@@ -1,0 +1,119 @@
+# Guion redactado con IA (gemini-3-flash-preview) el 14-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se utiliza una precisión de tres decimales en el área basal para asegurar coherencia en el volumen final.
+#   - Se asume que el estanque es un cilindro perfecto y el radio es interior.
+#
+# Quedaron observaciones por revisar:
+#   - revisor: Matemática: el área basal es pi por uno coma dos al cuadrado, lo cual da aproximadamente 4,52389, que redondeado a tres decimales es 4,524, pero el cálculo posterior del volumen (4,524 por 2,5) es exactamente 11,31, no una aproximación, por lo que el signo aproximado en el resultado final es innecesario si se usa ese valor intermedio.
+#   - revisor: Claridad: en el paso del área basal, la voz dice metros cuadrados pero no explica que el área basal se calcula con pi por el radio al cuadrado, solo lo enuncia en la voz sin nombrar la fórmula pi erre cuadrado.
+#   - revisor: Claridad: el cierre y el resultado mencionan aproximadamente once mil trescientos diez litros, pero según el cálculo exacto de los datos mostrados (11,31 por 1000) da once mil trescientos diez cerrados. Si se pretende rigor de ingeniería, debe aclararse si se están usando todos los decimales de pi o el valor redondeado de los pasos.
+#   - revisor: Formato: en el resultado_tex falta el símbolo de unidad litros en mayúscula o minúscula consistente, aunque usa L, el uso de approx es inconsistente con el paso anterior que dio 11,31 exacto.
+#   - revisor: Claridad: en el paso de conversión a litros, falta un dibujo que represente la escala o el volumen calculado, dejando la pantalla solo con texto mientras que los pasos anteriores tenían un sólido 3D.
+
+titulo: "Cálculo de volumen: Estanque Cilíndrico"
+materia: ingenieria
+categoria: ingenieria  # sale de la materia; elige el estilo si no hay «tema»
+nivel: "1° año ingeniería"
+
+contenido:
+  intenciones: [ejercicio, dato]
+  objetivo: "Calcular el volumen de un estanque cilíndrico industrial y realizar la conversión de unidades a litros con rigor de primer año de ingeniería."
+
+gancho:
+  texto: "¿Cuántos litros caben en este estanque gigante?"
+  voz: "¿Cuántos litros de agua caben en este estanque gigante? Vamos a calcularlo con rigor de ingeniería."
+  emoji: "🏗️"
+
+gancho_variantes:
+  - texto: "Cuidado al cubicar estanques de acero"
+    voz: "Cubicar un estanque de acero requiere precisión. No pierdas decimales en la conversión."
+    emoji: "⚠️"
+  - texto: "¿Sabes pasar de metros cúbicos a litros?"
+    voz: "Pasar de metros cúbicos a litros parece simple, pero un error decimal en ingeniería es un desastre."
+    emoji: "💡"
+
+enunciado:
+  texto: "Un estanque cilíndrico de acero tiene radio interior de 1,2 m y altura de 2,5 m. ¿Cuántos litros de agua almacena cuando está lleno? (1 m³ = 1000 litros)."
+  voz: "Un estanque cilíndrico tiene un radio interior de uno coma dos metros y una altura de dos coma cinco metros. ¿Cuántos litros de agua almacena al estar lleno?"
+  destacar: ["radio interior de 1,2 m", "altura de 2,5 m", "1 m³ = 1000 litros"]
+
+datos:
+  - tex: 'r = 1,2\ \text{m}'
+    voz: "El radio interior es de uno coma dos metros."
+  - tex: 'h = 2,5\ \text{m}'
+    voz: "La altura del estanque es de dos coma cinco metros."
+  - tex: '1\ \text{m}^3 = 1000\ \text{L}'
+    voz: "Cada metro cúbico equivale exactamente a mil litros."
+
+pasos:
+  - nota: "Definimos el volumen"
+    tex: 'V = A_{b} \cdot h'
+    voz: "En ingeniería, primero visualizamos el sólido. <break time=\"1.5s\"/> El volumen es el área de la base por su altura."
+    destacar: ['V']
+    emoji: "📐"
+    mapa:
+      - termino: "A_{b}"
+        concepto: "área basal"
+      - termino: "h"
+        concepto: "altura"
+    visual:
+      tipo: solido_3d
+      figura: cilindro
+      radio: '1,2 m'
+      altura: '2,5 m'
+      vista: axonometrica
+      despiece: true
+      anotar: ['volumen']
+  - nota: "Área de la base"
+    tex: 'A_{b} = \pi \cdot (1,2)^2 \approx 4,524\ \text{m}^2'
+    voz: "Calculamos el área transversal. Multiplicamos pi por el radio al cuadrado, obteniendo cuatro coma quinientos veinticuatro metros cuadrados."
+    halo: ['A_{b}']
+    visual:
+      tipo: solido_3d
+      figura: cilindro
+      radio: '1,2 m'
+      altura: '2,5 m'
+      vista: piso
+      anotar: ['area']
+  - nota: "Volumen total"
+    tex: 'V = 4,524\ \text{m}^2 \cdot 2,5\ \text{m} = 11,31\ \text{m}^3'
+    voz: "Multiplicamos los cuatro coma quinientos veinticuatro metros cuadrados del área por los dos coma cinco metros de altura."
+    destacar: ['11,31']
+    halo: ['V']
+    resaltar_cambio: true
+    visual:
+      tipo: solido_3d
+      figura: cilindro
+      radio: '1,2 m'
+      altura: '2,5 m'
+      vista: axonometrica
+      anotar: ['volumen']
+  - nota: "Conversión a litros"
+    tex: 'V_{L} = 11,31\ \text{m}^3 \cdot 1000\ \text{L/m}^3'
+    voz: "Finalmente, convertimos a litros multiplicando por mil. Esto desplaza la coma tres lugares a la derecha."
+    halo: ['11,31']
+    resaltar_cambio: true
+    emoji: "🔢"
+
+resultado:
+  tex: 'V \approx 11310\ \text{L}'
+  texto: "El estanque almacena 11310 litros de agua."
+  voz: "El estanque almacena aproximadamente once mil trescientos diez litros de agua."
+  emoji: "🎯"
+  destello: true
+
+verificacion:
+  texto: "Un volumen de 11,31 m³ equivale a unas 56 personas adultas estiradas. ¡Es muchísima agua!"
+  voz: "Como verificación rápida, once metros cúbicos equivalen a unas cincuenta y seis personas adultas. ¡Es muchísima agua!"
+
+reto:
+  texto: "Si duplicamos el radio a 2,4 m, ¿se duplica el volumen?"
+  voz: "Un reto para ti. Si duplicamos el radio a dos coma cuatro metros, ¿crees que el volumen también se duplica? Piénsalo bien."
+  emoji: "🤔"
+
+metadatos:
+  titulo: "¿Cuánta agua cabe en este estanque? 🏗️"
+  descripcion: "Calculamos el volumen de un estanque cilíndrico industrial paso a paso para primer año de ingeniería. ¿Te dio lo mismo?"
+  hashtags: ["#tuprofeindustrial", "#ingenieria", "#calculodevolumen", "#cilindro", "#estudiantes", "#ingenieriacivil", "#aprendeentiktok", "#tecnicoprofesional"]

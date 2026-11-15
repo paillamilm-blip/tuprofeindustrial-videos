@@ -1,0 +1,108 @@
+# Guion redactado con IA (gemini-3.6-flash) el 14-11-2026 a partir de: texto
+# REVISA la matemática y los textos antes de publicar: la IA puede equivocarse.
+#
+# Supuestos de la IA:
+#   - Se asume que la superficie a pintar corresponde a la envolvente exterior del silo (manto del cilindro y manto del cono), excluyendo el piso y la base de contacto interior.
+#   - El radio de la base cónica y la cilíndrica coinciden en R = 3 m.
+#
+# Quedaron observaciones por revisar:
+#   - revisor: Nivel y rigor: El problema corresponde a geometría básica de enseñanza media (cálculo directo de volumen y área de cilindro y cono) y no presenta el rigor ni el nivel exigido para 1° año de ingeniería.
+#   - revisor: Matemática y redondeo en paso 4: El área lateral del cono es 9\sqrt{2}\pi \approx 40,0\ \text{m}^2 (no 39,9) y el área total resulta 228,5\ \text{m}^2 (no 228,4\ \text{m}^2).
+#   - revisor: Claridad y precisión conceptual en el paso 4: La voz dice que se suma 'la generatriz del cono', pero la generatriz es una longitud (g), no el área lateral del cono (\pi R g).
+
+titulo: "Volumen y superficie exterior de un silo"
+materia: ingenieria
+categoria: ingenieria  # sale de la materia; elige el estilo si no hay «tema»
+nivel: "1° año ingeniería"
+
+contenido:
+  intenciones: [ejercicio]
+  objetivo: "Aprender a calcular el volumen total y la superficie exterior a pintar de un silo compuesto por un cilindro y un techo cónico."
+
+gancho:
+  texto: "¿Cuánto grano cabe en este silo de 10 m?"
+  voz: "¿Cuánto grano cabe en este silo industrial y cuánta pintura necesitas para cubrirlo?"
+  tex: 'V_{total} = ?'
+  emoji: "🤔"
+
+gancho_variantes:
+  - texto: "¿Cuánta pintura requiere un silo de 10 m?"
+    voz: "¿Cuánta pintura necesitas para cubrir la superficie exterior de un silo industrial?"
+    emoji: "💡"
+  - texto: "El error común al calcular el área de un silo"
+    voz: "No cometas el error de sumar el piso al pintar la superficie de un silo."
+    emoji: "🚨"
+
+enunciado:
+  texto: "Un silo de granos es un cilindro de 6 m de diámetro y 10 m de alto, con un techo cónico de 3 m de alto. ¿Cuántos m³ de grano caben adentro y cuánta superficie hay que pintar por fuera, sin contar el piso?"
+  voz: "Un silo mide seis metros de diámetro y diez de alto. Tiene techo cónico de tres metros. ¿Cuánto grano cabe y cuánta superficie se pinta?"
+  destacar: ["6 m de diámetro", "10 m de alto", "3 m de alto"]
+
+datos:
+  - tex: 'R = 3\ \text{m}'
+    voz: "El radio de la base es de tres metros."
+  - tex: 'H_1 = 10\ \text{m}'
+    voz: "La altura del cuerpo cilíndrico es diez metros."
+  - tex: 'H_2 = 3\ \text{m}'
+    voz: "La altura del techo cónico es tres metros."
+
+pasos:
+  - nota: "Volumen cilindro"
+    tex: 'V_{cil} = \pi R^2 H_1 = \pi (3)^2 (10) = 90\pi \approx 282,7\ \text{m}^3'
+    voz: "Primero calculamos el volumen del cuerpo cilíndrico. Multiplicamos pi por el radio al cuadrado y por su altura."
+    halo: ['90\pi']
+    mapa:
+      - termino: "R"
+        concepto: "radio del silo"
+      - termino: "H_1"
+        concepto: "altura del cilindro"
+    visual:
+      tipo: solido_3d
+      figura: cilindro
+      radio: '3 m'
+      altura: '10 m'
+      vista: axonometrica
+      anotar: ['volumen']
+  - nota: "Volumen cono"
+    tex: 'V_{cono} = \frac{1}{3} \pi R^2 H_2 = \frac{1}{3} \pi (3)^2 (3) = 9\pi \approx 28,3\ \text{m}^3'
+    voz: "Segundo calculamos el volumen del techo cónico, que es un tercio de pi por el radio al cuadrado por su altura."
+    halo: ['9\pi']
+    mapa:
+      - termino: "H_2"
+        concepto: "altura del cono"
+    visual:
+      tipo: solido_3d
+      figura: cono
+      radio: '3 m'
+      altura: '3 m'
+      vista: axonometrica
+      anotar: ['volumen']
+  - nota: "Volumen total"
+    tex: 'V_{total} = V_{cil} + V_{cono} = 90\pi + 9\pi = 99\pi \approx 311\ \text{m}^3'
+    voz: "Tercero sumamos ambos volúmenes. Noventa pi más nueve pi da noventa y nueve pi, unos trescientos once metros cúbicos."
+    halo: ['311']
+    resaltar_cambio: true
+    emoji: "💡"
+  - nota: "Área a pintar"
+    tex: 'A = 2\pi R H_1 + \pi R \sqrt{R^2 + H_2^2} \approx 188,5 + 40,0 = 228,5\ \text{m}^2'
+    voz: "Cuarto calculamos la pintura sumando el manto del cilindro y el manto del cono. <break time=\"1.5s\"/> Da doscientos veintiocho coma cinco metros cuadrados."
+
+resultado:
+  tex: 'V_{total} \approx 311\ \text{m}^3 \quad \text{y} \quad A \approx 228,5\ \text{m}^2'
+  voz: "En total el silo almacena trescientos once metros cúbicos de grano y requiere doscientos veintiocho coma cinco metros cuadrados de pintura exterior."
+  emoji: "🏗️"
+  destello: true
+
+verificacion:
+  texto: "No se suma la base entre el cilindro y el cono ni el suelo, pues solo pintamos la envolvente exterior."
+  voz: "Ojo: no sumamos la base interior del cono ni el piso, porque solo se pinta la superficie lateral exterior."
+
+reto:
+  texto: "Si el silo tiene 4 m de diámetro, 8 m de cilindro y 2 m de cono, ¿cuál es su volumen total?"
+  voz: "Ahora te toca a ti. Si el silo tiene cuatro metros de diámetro, ocho de cilindro y dos de cono, ¿cuál es su volumen total?"
+  emoji: "✍️"
+
+metadatos:
+  titulo: "Cálculo de volumen y superficie de un silo industrial 🌾"
+  descripcion: "Calculamos paso a paso el volumen total y la superficie exterior a pintar de un silo cilíndrico con techo cónico. ¿Te dio el mismo valor?"
+  hashtags: ["#tuprofeindustrial", "#ingenieria", "#geometria", "#obrasciviles", "#civilindustrial", "#ejerciciosresueltos", "#estudiantes", "#aprendeentiktok"]

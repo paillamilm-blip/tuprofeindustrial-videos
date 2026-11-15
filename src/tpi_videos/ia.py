@@ -71,6 +71,24 @@ def guardar_clave(clave: str) -> Path:
     return ruta
 
 
+def args_httpx() -> dict[str, Any]:
+    """Argumentos del transporte httpx del SDK de Gemini.
+
+    httpx parsea cada entrada de NO_PROXY como URL y revienta si trae IPv6 («[::1]» →
+    «Invalid port: ':1]'»), así que el cliente se arma sin leer el entorno. NO_PROXY solo exime
+    direcciones locales y la API de Gemini es remota: si hay un proxy real, se conserva igual.
+    """
+    proxy = next(
+        (os.environ[v] for v in ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy",
+                                 "ALL_PROXY", "all_proxy") if os.environ.get(v)),
+        None,
+    )
+    args: dict[str, Any] = {"trust_env": False}
+    if proxy:
+        args["proxy"] = proxy
+    return args
+
+
 def cliente(clave: str | None = None, *, con_reintentos: bool = True) -> Any:
     """Conexión con Gemini. Sin reintentos para sondear cupos: ahí reintentar es perder un minuto.
 
@@ -87,10 +105,43 @@ def cliente(clave: str | None = None, *, con_reintentos: bool = True) -> Any:
         if con_reintentos
         else None
     )
+    args = args_httpx()
     return genai.Client(
         api_key=clave or clave_obligatoria(),
-        http_options=types.HttpOptions(timeout=15 * 60 * 1000, retry_options=reintentos),  # ms
+        http_options=types.HttpOptions(
+            timeout=15 * 60 * 1000, retry_options=reintentos,  # ms
+            client_args=args, async_client_args=args,
+        ),
     )
+
+
+def con_limite(funcion: Any, segundos: float, mensaje: str, ayuda: str = "") -> Any:
+    """Corre ``funcion`` en un hilo aparte y no la espera más de ``segundos`` de reloj.
+
+    El timeout del SDK es por lectura: una respuesta que gotea un byte cada pocos segundos
+    no lo dispara nunca (comprobado con el SDK real en el PR #56). Si se pasa el reloj,
+    avisa con ErrorMotor transitorio en vez de colgar el proceso; el hilo queda daemon.
+    """
+    import threading
+
+    salida: dict[str, Any] = {}
+
+    def correr() -> None:
+        try:
+            salida["valor"] = funcion()
+        except BaseException as e:  # se relanza en el hilo principal
+            salida["error"] = e
+
+    hilo = threading.Thread(target=correr, name="ia-con-limite", daemon=True)
+    hilo.start()
+    hilo.join(segundos)
+    if hilo.is_alive():
+        error = ErrorMotor(mensaje, ayuda=ayuda, transitorio=True)
+        error.por_reloj = True
+        raise error
+    if "error" in salida:
+        raise salida["error"]
+    return salida["valor"]
 
 
 def cadena_desde(modelo: str) -> list[str]:

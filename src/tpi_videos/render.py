@@ -131,7 +131,7 @@ def renderizar_manim(
     didactica: list[dict] | None = None,
 ) -> tuple[Path, dict]:
     entorno.preparar()
-    entorno.registrar_fuentes()
+    entorno.exigir_fuentes()
     from manim import tempconfig
 
     from .escena import OpcionesEscena, VideoEjercicio

@@ -910,7 +910,9 @@ _DIBUJOS = {
     "poligono": "poligono_regular",
     "proyectil": "proyectil",
     "circulo": "circulo_trig",
-    "solido": "solido",
+    # Toda figura geométrica sale con volumen: el sólido plano se promociona al cuerpo 3D (caras,
+    # luz y relieve) en vez de dibujarse como un contorno de alambre.
+    "solido": "solido_3d",
     "solido3d": "solido_3d",
     "venn": "venn",
     "recta": "recta",
@@ -1450,6 +1452,10 @@ def _sistema() -> str:
     )
 
 
+LIMITE_POR_PEDIDO = 180.0  # de reloj por intento: el timeout del SDK es por lectura y un Gemini mudo no lo dispara
+INTENTOS_POR_PEDIDO = 2
+
+
 def pedir_json(
     cliente: Any,
     modelo: str,
@@ -1479,15 +1485,38 @@ def pedir_json(
     errores: list[Exception] = []
     respuesta = None
     for puesto, intento in enumerate(cadena):
-        try:
-            respuesta = cliente.models.generate_content(model=intento, contents=contenido, config=config)
-        except ErrorMotor:
-            raise
-        except Exception as e:
-            if not ia.vale_probar_otro_modelo(e):
-                # Un 400 o una clave rechazada se repetirían en los cuatro modelos: mejor decirlo ya.
-                raise ia.explicar_error(e, intento) from e
-            errores.append(e)
+        for ronda in range(INTENTOS_POR_PEDIDO):
+            try:
+                respuesta = ia.con_limite(
+                    lambda: cliente.models.generate_content(model=intento, contents=contenido, config=config),
+                    LIMITE_POR_PEDIDO,
+                    f"Gemini ({intento}) no respondió en {LIMITE_POR_PEDIDO:.0f} s.",
+                )
+            except ErrorMotor as e:
+                if not getattr(e, "por_reloj", False):
+                    raise
+                if ronda + 1 < INTENTOS_POR_PEDIDO:
+                    if avisar:
+                        avisar(
+                            f"{intento} no respondió en {LIMITE_POR_PEDIDO:.0f} s: "
+                            f"reintento ({ronda + 2} de {INTENTOS_POR_PEDIDO}).",
+                            intento,
+                        )
+                    continue
+                raise ErrorMotor(
+                    f"Gemini no respondió en {LIMITE_POR_PEDIDO:.0f} s "
+                    f"tras {INTENTOS_POR_PEDIDO} intentos con {intento}.",
+                    ayuda="Repite el comando en un rato: a veces Gemini se queda mudo. Si sigue, mira ./tpi cuota.",
+                    transitorio=True,
+                ) from e
+            except Exception as e:
+                if not ia.vale_probar_otro_modelo(e):
+                    # Un 400 o una clave rechazada se repetirían en los cuatro modelos: mejor decirlo ya.
+                    raise ia.explicar_error(e, intento) from e
+                errores.append(e)
+                break
+            break
+        if respuesta is None:
             continue
         if puesto and avisar:
             motivo = "se quedó sin cupo" if ia.es_cuota_agotada(errores[-1]) else "está saturado"
