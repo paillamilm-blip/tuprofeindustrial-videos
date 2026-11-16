@@ -1,0 +1,53 @@
+# Guion creado para PAES Competencia Matemática M1
+# Tema: Números y Operaciones · Trampa clásica de raíces cuadradas
+
+titulo: "PAES M1: El error típico al sumar raíces"
+materia: matematica
+nivel: "PAES M1"
+molde: mito_realidad
+
+gancho:
+  texto: "¿Por qué raíz de 9 más raíz de 16 NO es raíz de 25?"
+  voz: "¿Por qué raíz de nueve más raíz de dieciséis nunca da raíz de veinticinco?"
+  tex: '\sqrt{9} + \sqrt{16} \stackrel{?}{=} \sqrt{25}'
+  emoji: "⚠️"
+
+enunciado:
+  texto: "En la PAES aparece la expresión: \\sqrt{9} + \\sqrt{16}. ¿Cuál es su valor real?"
+  voz: "Típica pregunta trampa de la PAES: calcula el valor de raíz de nueve más raíz de dieciséis."
+  destacar: ["\\sqrt{9}", "\\sqrt{16}"]
+
+datos:
+  - tex: 'E = \sqrt{9} + \sqrt{16}'
+    voz: "Tenemos una suma directa de dos raíces cuadradas exactas."
+
+pasos:
+  - nota: "La trampa que todos marcan"
+    tex: '\sqrt{9} + \sqrt{16} = \sqrt{9 + 16} = \sqrt{25} = 5'
+    voz: "El error clásico es juntar todo bajo una sola raíz y marcar cinco en la prueba."
+    emoji: "❌"
+    error: true
+  - nota: "La regla de oro de las raíces"
+    tex: '\sqrt{a + b} \neq \sqrt{a} + \sqrt{b}'
+    voz: "¡Cuidado! Las raíces se pueden juntar al multiplicar, pero jamás en una suma."
+    emoji: "💡"
+  - nota: "Calculamos cada término por separado"
+    tex: '\sqrt{9} = 3 \quad \text{y} \quad \sqrt{16} = 4'
+    voz: "Lo correcto es resolver cada una: raíz de nueve es tres, y raíz de dieciséis es cuatro."
+  - nota: "Sumamos los valores reales"
+    tex: '3 + 4 = 7'
+    voz: "Sumamos tres más cuatro y obtenemos el resultado verdadero: siete."
+
+resultado:
+  tex: '\sqrt{9} + \sqrt{16} = 7 \neq 5'
+  voz: "La respuesta correcta es siete. El cinco es solo el distractor de la prueba."
+  emoji: "🎯"
+
+verificacion:
+  texto: "Siete al cuadrado es 49, mientras que 9 + 16 es 25. Son números totalmente distintos."
+  voz: "Comprobación: siete al cuadrado es cuarenta y nueve, no veinticinco. Jamás se suman."
+
+reto:
+  texto: "¿Cuánto es \\sqrt{100} - \\sqrt{64}? ¿Da 2 o da 6?"
+  voz: "Ahora para ti: ¿cuánto da raíz de cien menos raíz de sesenta y cuatro? ¿Da dos o da seis? Déjalo en los comentarios."
+  emoji: "✍️"

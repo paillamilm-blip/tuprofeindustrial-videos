@@ -1,0 +1,68 @@
+# Guion de prueba generado por Antigravity
+# Tema: Tolva cónica vs Silo cilíndrico (Geometría / Ingeniería)
+
+titulo: "¿Por qué el cono guarda exactamente un tercio?"
+materia: matematica
+nivel: "1° medio"
+molde: nadie_te_enseno
+
+gancho:
+  texto: "Misma base y misma altura... pero guarda un tercio"
+  voz: "Misma base y misma altura, pero la tolva cónica guarda exactamente un tercio del silo."
+  emoji: "⚠️"
+
+enunciado:
+  texto: "Calcula el volumen de una tolva cónica de radio 3 m y altura 6 m. ¿Por qué es un tercio del cilindro?"
+  voz: "Imagina una tolva cónica de tres metros de radio y seis metros de altura. ¿Cuánto material cabe adentro?"
+  destacar: ["3 m", "6 m"]
+
+datos:
+  - tex: 'r = 3\ \text{m}'
+    voz: "El radio de la base circular mide tres metros."
+  - tex: 'h = 6\ \text{m}'
+    voz: "Y la altura total es de seis metros."
+
+pasos:
+  - nota: "La base circular que sostiene todo"
+    tex: 'A_{base} = \pi r^2 \approx 28{,}27\ \text{m}^2'
+    voz: "Primero miramos el piso: el círculo basal tiene un área de veintiocho coma veintisiete metros cuadrados."
+    visual:
+      tipo: solido_3d
+      figura: cono
+      radio: '3 m'
+      altura: '6 m'
+      vista: piso
+  - nota: "Si fuera un cilindro recto"
+    tex: 'V_{cilindro} = A_{base} \cdot h \approx 169{,}65\ \text{m}^3'
+    voz: "Si fuera un cilindro recto, multiplicamos la base por los seis metros y daría casi ciento setenta metros cúbicos."
+    visual:
+      tipo: solido_3d
+      figura: cilindro
+      radio: '3 m'
+      altura: '6 m'
+      vista: axonometrica
+      anotar: ['volumen']
+  - nota: "Pero las paredes se cierran hacia la punta"
+    tex: 'V_{cono} = \frac{1}{3} A_{base} \cdot h \approx 56{,}55\ \text{m}^3'
+    voz: "Pero como las paredes se cierran en punta, el cono guarda exactamente un tercio: cincuenta y seis coma cincuenta y cinco metros cúbicos."
+    visual:
+      tipo: solido_3d
+      figura: cono
+      radio: '3 m'
+      altura: '6 m'
+      vista: axonometrica
+      anotar: ['volumen']
+
+resultado:
+  tex: 'V = 56{,}55\ \text{m}^3 \approx 56.550\ \text{litros}'
+  voz: "Cincuenta y seis coma cincuenta y cinco metros cúbicos: más de cincuenta y seis mil litros."
+  emoji: "🏗️"
+
+verificacion:
+  texto: "56,55 × 3 = 169,65 m³. Tres conos llenan exactamente el cilindro que los envuelve."
+  voz: "Exactamente tres conos llenan el cilindro: la proporción matemática se cumple."
+
+reto:
+  texto: "Si duplicas el radio de la base pero mantienes la altura, ¿por cuánto se multiplica el volumen?"
+  voz: "Ahora te toca a ti: si duplicamos el radio de la base pero dejamos la misma altura, cuánto crece el volumen."
+  emoji: "✍️"

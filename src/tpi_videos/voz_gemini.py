@@ -95,7 +95,7 @@ def cliente_tts() -> Any:
     # Una frase se sintetiza en segundos: si Gemini no responde en 45 s, algo pasa. Con 2 intentos, el
     # peor caso es ~1,5 min de espera antes del aviso, no los 15 que daban 3 intentos de 5 min.
     reintentos = types.HttpRetryOptions(
-        attempts=2, initial_delay=2.0, max_delay=10.0, http_status_codes=[429, 500, 502, 503, 504]
+        attempts=2, initial_delay=2.0, max_delay=10.0, http_status_codes=[500, 502, 503, 504]
     )
     args = args_httpx()
     return genai.Client(

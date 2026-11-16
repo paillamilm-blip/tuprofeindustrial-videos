@@ -200,7 +200,9 @@ class GeminiTTSService(SpeechService):
                 "\n\n".join(faltan), self.voz, estilo, self.modelo,
                 cliente=self._cliente_listo(), limite=LIMITE_COMPLETO,
             )  # fmt: skip
-        except ErrorMotor:
+        except ErrorMotor as e:
+            if "límite" in str(e).lower() or "cuota" in str(e).lower() or "rate limit" in str(e).lower():
+                raise
             return False
         piezas = cortar(audio, faltan)
         if piezas is None:  # sin silencios claros: dónde empieza cada palabra, según Whisper
