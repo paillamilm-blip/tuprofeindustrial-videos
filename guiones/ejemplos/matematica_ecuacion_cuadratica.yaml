@@ -19,20 +19,20 @@ enunciado:
 pasos:
   - nota: "La ecuación"
     tex: 'x^2 - 5x + 6 = 0'
-    voz: "Partimos de la ecuación."
+    voz: "Partimos de la ecuación: equis al cuadrado, menos cinco equis, más seis, igual a cero."
   - nota: "Dos números: suman 5 y multiplican 6"
     tex: '(x - 2)(x - 3) = 0'
-    voz: "Buscamos dos números que sumen cinco y multipliquen seis. Son el dos y el tres."
+    voz: "Buscamos dos números que sumen cinco y multipliquen seis: el dos y el tres. Factorizamos como equis menos dos por equis menos tres, igual a cero."
     emoji: "💡"
   - nota: "Si un producto es cero, un factor es cero"
     tex: 'x - 2 = 0 \quad \text{o} \quad x - 3 = 0'
-    voz: "Si un producto da cero, alguno de sus factores es cero."
+    voz: "Si un producto es cero, alguno de sus factores es cero: equis menos dos igual a cero, o bien equis menos tres igual a cero."
   - tex: 'x = 2 \quad \text{o} \quad x = 3'
-    voz: "Despejamos cada uno."
+    voz: "Despejamos cada ecuación: equis es igual a dos, o equis es igual a tres."
 
 resultado:
   tex: 'x_1 = 2 \qquad x_2 = 3'
-  voz: "Las soluciones son dos y tres."
+  voz: "Las soluciones de la ecuación son dos y tres."
   emoji: "✅"
 
 verificacion:

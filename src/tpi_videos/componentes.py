@@ -605,12 +605,32 @@ def ecuacion(
 
 
 _ESPACIOS_TEX = re.compile(r"\\[,;:!]|\\quad|\\qquad|\\ |\s+")
-_TRIVIALES = {"=", "+", "-", "(", ")", r"\cdot", r"\times"}
+_TRIVIALES = {
+    "=",
+    "+",
+    "-",
+    "(",
+    ")",
+    "[",
+    "]",
+    "{",
+    "}",
+    ",",
+    ";",
+    ".",
+    r"\cdot",
+    r"\times",
+    r"\approx",
+    r"\leq",
+    r"\geq",
+    r"\neq",
+    "0",
+}
 
 
 def coincidencias(origen: MathTex, destino: MathTex) -> dict[str, str] | None:
     """``key_map`` para ``TransformMatchingTex`` si las fórmulas comparten algún término real
-    o el signo igual/aproximado. Ignora espacios de LaTeX como ``\\,``. None = no conviene transformar."""
+    (no basta con el "=" o signos de operación). Ignora espacios de LaTeX como ``\\,``. None = no conviene transformar."""
 
     def normal(t: str) -> str:
         return _ESPACIOS_TEX.sub("", t)
@@ -621,7 +641,7 @@ def coincidencias(origen: MathTex, destino: MathTex) -> dict[str, str] | None:
     claves_destino = {
         normal(p.tex_string): p.tex_string for p in destino.submobjects if hasattr(p, "tex_string")
     }
-    comunes = {n for n in claves_origen.values() if n in claves_destino}
+    comunes = {n for n in claves_origen.values() if n in claves_destino and n not in _TRIVIALES}
     if not comunes:
         return None
     return {

@@ -229,13 +229,21 @@ class HaloDelCambioTest(unittest.TestCase):
         partes = [p.tex_string for p in eq.submobjects]
         self.assertEqual(partes, ["5x", "+", "5x", "=", "20"])
 
-    def test_coincidencias_con_signo_igual_permite_morphing(self):
+    def test_coincidencias_con_termino_real_permite_morphing(self):
         from tpi_videos import componentes as c
 
-        antes = c.ecuacion("c^2 = 25")
-        despues = c.ecuacion("c = 5")
+        antes = c.ecuacion("x^2 + 5x = 20")
+        despues = c.ecuacion("x^2 + 5x - 20 = 0")
         mapa = c.coincidencias(antes, despues)
         self.assertIsNotNone(mapa)
+
+    def test_coincidencias_solo_con_igual_no_fuerza_morphing(self):
+        from tpi_videos import componentes as c
+
+        antes = c.ecuacion("x^2 - 5x + 6 = 0")
+        despues = c.ecuacion("(x - 2)(x - 3) = 0")
+        # No deben morphing porque solo comparten '=' y deformaría la factorización
+        self.assertIsNone(c.coincidencias(antes, despues))
 
     def test_ecuacion_con_fraccion_y_factores_separa_factores(self):
         from tpi_videos import componentes as c

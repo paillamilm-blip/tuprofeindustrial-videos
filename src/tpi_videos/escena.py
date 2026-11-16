@@ -698,6 +698,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         espera = espera_de_lectura(
             piso, completa_desde=completa_desde, fin_de_bloque=max(fin, self.renderer.time)
         )
+        # Tope de silencio por bloque: nunca más de 1,2 s de pausa muda para no congelar el ritmo
+        espera = min(1.2, espera)
         if espera > 1 / config.frame_rate:
             self.silencio_de_lectura += espera
             self.wait(espera)
