@@ -27,7 +27,9 @@ from ...guion import Guion, cargar_guion
 from ...niveles import NIVELES
 from .. import biblioteca, didactica_ui, estudio, miniaturas, qc
 from ..comun import cabecera, piel_de_la_pagina, url_medio
+from ..etapas import etapas_de
 from ..tareas import TAREAS, consultar
+from .tablero import _etapas
 
 NIVEL_IA = "Que lo decida la IA"
 _PAUSA = re.compile(r"<break[^>]*/?>")
@@ -661,6 +663,7 @@ class Estudio:
                         ).props("flat no-caps dense").classes("tpi-ambar -ml-2")
                 return
             ui.linear_progress(value=t.avance, show_value=False).props("rounded size=8px").classes("w-full")
+            _etapas(etapas_de(t.etapa, t.avance))
             ui.label(f"{t.texto_etapa} · {round(t.avance * 100)} %").classes("tpi-sobrio text-sm")
 
     def _reintentar(self, nombre: str, args: list[str]) -> None:

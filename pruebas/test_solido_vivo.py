@@ -39,7 +39,7 @@ def _caras_visibles(dib):
     return [
         m
         for m in cuerpo.submobjects
-        if isinstance(m, VMobject) and m.get_fill_opacity() > 0.5 and len(m.points)
+        if isinstance(m, VMobject) and m.get_fill_opacity() > 0.2 and len(m.points)
     ]
 
 

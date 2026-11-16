@@ -20,7 +20,7 @@ from ...errores import ErrorMotor
 from ...niveles import CARRERA_CORTA, NIVELES, PUBLICOS
 from .. import didactica_ui, qc
 from ..comun import abrir_en_mac, cabecera, confirmar, piel_de_la_pagina, url_medio
-from ..etapas import ACTIVA, ERROR, HECHA, Etapa, avance_total
+from ..etapas import ACTIVA, ERROR, HECHA, Etapa, avance_total, etapas_de
 from ..herramientas import HERRAMIENTAS, herramienta_de
 from ..revision import AVISO, Chequeo, chequeos
 from ..supervision import (
@@ -520,6 +520,7 @@ class ColaDeProduccion:
             ui.linear_progress(value=t.avance, show_value=False, color=None).props(
                 "rounded size=6px"
             ).classes("w-full")
+            _etapas(etapas_de(t.etapa, t.avance))
             ui.label(t.detalle or t.texto_etapa).classes("tpi-sobrio text-sm")
 
     def _video(self, f: Any) -> None:
@@ -1169,11 +1170,16 @@ class AprobacionDeGuiones:
         except ErrorMotor as e:
             ui.notify(f"No pude enviarlo a la cola: {e.mensaje}", type="negative")
             return
-        ui.notify(f"«{f.titulo}» quedó en la cola de producción.", type="positive")
+        en_marcha = lanzar_en_lote()
+        ui.notify(
+            f"«{f.titulo}» va a producción." + ("" if en_marcha else " Queda en la cola."),
+            type="positive",
+        )
         self.elegido = None
         self.lista.refresh()
         self.lectura.refresh()
         self.al_aprobar()
+        ui.navigate.to("/cola")
 
     def _borrar(self, f: qc.Ficha) -> None:
         """Manda el guion a la Papelera (recuperable desde Finder) y pasa al siguiente."""
