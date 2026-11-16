@@ -109,11 +109,18 @@ Antes de escribir nada más, llena idea_central (la UNA cosa que el estudiante t
 ## 3. Lo que se ESCUCHA (campos *_voz) — voz sintética chilena
 - Español de Chile neutro, trato de "tú", cercano y claro, sin modismos exagerados.
 - Frases completas y naturales, como se las dirías a un estudiante en la sala: de 8 a 18 palabras, una idea por frase, voz activa. Nada de telegrama («Ocho por ocho: sesenta y cuatro.»): di la frase entera («Si multiplicamos ocho por ocho, nos da sesenta y cuatro.»).
+- **DICTA SIEMPRE LAS FÓRMULAS Y ECUACIONES EN PALABRAS FONÉTICAS:** Cuando un paso, el enunciado o el resultado muestren una fórmula en LaTeX, la voz DEBE dictarla en palabras fonéticas completas para que el estudiante la escuche mientras la lee en pantalla.
+  - Enunciado con ecuación: `x² - 5x + 6 = 0` → «Resolvamos equis al cuadrado, menos cinco equis, más seis, igual a cero.»
+  - Paso con ecuación: `x^2 - 5x + 6 = 0` → «Partimos de la ecuación: equis al cuadrado, menos cinco equis, más seis, igual a cero.»
+  - Paso con factorización o producto: `(x - 2)(x - 3) = 0` → «Factorizamos como equis menos dos, por equis menos tres, igual a cero.»
+  - Paso con despeje: `x = 2 \quad \text{o} \quad x = 3` → «Despejamos cada ecuación y obtenemos equis igual a dos, o equis igual a tres.»
+  - Resultado: `x_1 = 2 \quad x_2 = 3` → «Las soluciones de la ecuación son dos y tres.»
+  - **PROHIBIDO dejar pasos mudos o telegráficos** que omitan la matemática («Partimos de la ecuación», «Despejamos cada uno», «Aplicamos la fórmula»): menciona siempre los términos y números en palabras.
 - Escribe TODO como se dice: números en palabras ("veinte metros", "nueve coma ocho metros por segundo al cuadrado") y operaciones en palabras ("dividido en", "por", "al cuadrado", "raíz de", "igual a").
-- PROHIBIDO en las voces: cifras, los signos = + − × / ^ * \ ² √ y los guiones largos. La única excepción es la etiqueta de pausa de abajo.
+- PROHIBIDO en las voces: cifras numéricas directas (0 al 9) y los signos matemáticos crudos (= + − × / ^ * \ ² √). Escribe sus nombres fonéticos. La única excepción técnica es la etiqueta de pausa <break time="..."/>.
 - gancho_voz: de 8 a 14 palabras. Nunca empieces con "Hola", "En este video" ni "Hoy veremos".
 - La primera vez que uses un símbolo, di qué es ("g, la aceleración de gravedad").
-- La voz de cada paso dice POR QUÉ se hace ese paso, no solo qué se hace.
+- La voz de cada paso une la acción con su razón y su expresión: explica QUÉ se hace, POR QUÉ y CÓMO se expresa.
 - Entre todas las voces, como referencia: de 150 a 260 palabras en un ejercicio; un dato o un mito puede ser más corto. Si viene DURACIÓN PROMETIDA, esa manda.
 - Pausas para que la animación se luzca: las animaciones toman tiempo y la voz no debe taparlas. Escribe <break time="1.5s"/> (entre 0.2s y 3s, punto decimal) en la voz del paso justo después de la frase que presenta el movimiento, cuando el paso tenga despiece = true, un movimiento ("tangente" o "area"), un dibujo de física, de calor o de flujo, o un halo importante. Ejemplo: "Mira cómo la tolva se abre en dos piezas. <break time="1.5s"/> Su volumen es la suma de las dos." Usa de 1 a 2 pausas en todo el guion, como mucho 3 en una sola voz, nunca dentro de una palabra o de un número, nunca en el gancho y nunca otra etiqueta (ni <prosody>, ni <emphasis>, ni <speak>): el motor convierte esa sola etiqueta en silencio de verdad y rechaza cualquier otra.
 - reto_voz deja la pregunta abierta y se va. Nunca pidas comentarios, likes, seguir ni compartir: eso dentro del video es gancho vacío. La invitación a responder va en el texto del pie, no en la voz.

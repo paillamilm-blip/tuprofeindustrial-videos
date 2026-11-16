@@ -53,7 +53,12 @@ TEXTO = {".txt", ".md"}
 
 class DatoIA(BaseModel):
     tex: str = Field(description="Dato en LaTeX, ej. h = 20\\ \\text{m}")
-    voz: str = Field(description="El dato dicho en palabras, sin cifras ni símbolos")
+    voz: str = Field(
+        description=(
+            "El dato leído en palabras fonéticas, ej. 'la altura es de veinte metros' "
+            "(sin cifras numéricas directas ni símbolos matemáticos crudos)"
+        )
+    )
 
 
 class MapaIA(BaseModel):
@@ -67,7 +72,13 @@ class PasoIA(BaseModel):
         default="",
         description="Ecuación completa del paso en LaTeX, sin $; vacía si el paso es una demostración visual sin cálculo",
     )
-    voz: str = Field(description="Por qué se hace este paso, en palabras, sin cifras ni símbolos")
+    voz: str = Field(
+        description=(
+            "Qué se hace, por qué y cómo se lee la fórmula o cálculo en palabras fonéticas completas "
+            "(ej. 'Despejamos el tiempo: queda la raíz de dos h sobre g'; dicta siempre los términos "
+            "y números en palabras, sin omitir la matemática ni usar símbolos crudos)"
+        )
+    )
     destacar: list[str] = Field(default_factory=list, description="0 o 1 fragmento copiado del tex")
     emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida (vacío = ninguno)")
     error: bool = Field(
@@ -428,7 +439,10 @@ class GanchoAltIA(BaseModel):
     texto: str = Field(
         description="Otro gancho para el mismo video, máximo 10 palabras, con el número clave"
     )
-    voz: str = Field(default="", description="Cómo se dice, en palabras, sin cifras ni símbolos")
+    voz: str = Field(
+        default="",
+        description="Cómo se dice el gancho en palabras fonéticas naturales (sin cifras ni signos crudos)",
+    )
     emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida")
 
 
@@ -455,7 +469,10 @@ class GuionIA(BaseModel):
     materia: Literal["matematica", "fisica", "ingenieria"]
     nivel: str
     gancho_texto: str
-    gancho_voz: str
+    gancho_voz: str = Field(
+        default="",
+        description="El gancho dicho en palabras fonéticas naturales (sin cifras ni símbolos matemáticos crudos)",
+    )
     gancho_emoji: str = Field(default="", description="1 emoji de la lista permitida (o vacío)")
     gancho_tex: str = Field(default="", description="Opcional: fórmula corta bajo el gancho, sin $")
     ganchos_alternativos: list[GanchoAltIA] = Field(
@@ -465,7 +482,13 @@ class GuionIA(BaseModel):
         ),
     )
     enunciado_texto: str
-    enunciado_voz: str
+    enunciado_voz: str = Field(
+        default="",
+        description=(
+            "El enunciado leído en voz alta, dictando las ecuaciones completas en palabras fonéticas "
+            "(ej. 'Resolvamos equis al cuadrado menos cinco equis más seis igual a cero')"
+        ),
+    )
     enunciado_destacar: list[str]
     datos: list[DatoIA]
     pasos: list[PasoIA]
@@ -476,15 +499,24 @@ class GuionIA(BaseModel):
         default="",
         description="Conclusión en palabras (dato, mito o error), una o dos frases sin fórmulas; vacía si no hace falta",
     )
-    resultado_voz: str
+    resultado_voz: str = Field(
+        default="",
+        description="La respuesta final explicada y leída con sus valores completos en palabras fonéticas",
+    )
     resultado_emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida")
     resultado_destello: bool = Field(
         default=False, description="true para cerrar la respuesta final con un destello de confirmación"
     )
     verificacion_texto: str
-    verificacion_voz: str
+    verificacion_voz: str = Field(
+        default="",
+        description="Comprobación o interpretación del resultado explicada en palabras fonéticas",
+    )
     reto_texto: str
-    reto_voz: str
+    reto_voz: str = Field(
+        default="",
+        description="El ejercicio de reto leído con sus números y datos en palabras fonéticas",
+    )
     reto_emoji: str = Field(default="", description="0 o 1 emoji de la lista permitida")
     supuestos: list[str] = Field(
         description="Supuestos o aclaraciones para el profesor (no salen en el video)"
