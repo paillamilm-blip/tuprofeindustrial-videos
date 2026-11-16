@@ -610,7 +610,7 @@ _TRIVIALES = {"=", "+", "-", "(", ")", r"\cdot", r"\times"}
 
 def coincidencias(origen: MathTex, destino: MathTex) -> dict[str, str] | None:
     """``key_map`` para ``TransformMatchingTex`` si las fórmulas comparten algún término real
-    (no basta con el "="). Ignora espacios de LaTeX como ``\\,``. None = no conviene transformar."""
+    o el signo igual/aproximado. Ignora espacios de LaTeX como ``\\,``. None = no conviene transformar."""
 
     def normal(t: str) -> str:
         return _ESPACIOS_TEX.sub("", t)
@@ -621,7 +621,7 @@ def coincidencias(origen: MathTex, destino: MathTex) -> dict[str, str] | None:
     claves_destino = {
         normal(p.tex_string): p.tex_string for p in destino.submobjects if hasattr(p, "tex_string")
     }
-    comunes = {n for n in claves_origen.values() if n in claves_destino and n not in _TRIVIALES}
+    comunes = {n for n in claves_origen.values() if n in claves_destino}
     if not comunes:
         return None
     return {

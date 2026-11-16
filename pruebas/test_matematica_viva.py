@@ -222,6 +222,31 @@ class HaloDelCambioTest(unittest.TestCase):
         self.assertEqual(opacidades, sorted(opacidades))
         self.assertGreater(halo[-1].width, parte.width)
 
+    def test_formula_sin_espacios_se_divide_en_partes_para_animar(self):
+        from tpi_videos import componentes as c
+
+        eq = c.ecuacion("5x+5x=20")
+        partes = [p.tex_string for p in eq.submobjects]
+        self.assertEqual(partes, ["5x", "+", "5x", "=", "20"])
+
+    def test_coincidencias_con_signo_igual_permite_morphing(self):
+        from tpi_videos import componentes as c
+
+        antes = c.ecuacion("c^2 = 25")
+        despues = c.ecuacion("c = 5")
+        mapa = c.coincidencias(antes, despues)
+        self.assertIsNotNone(mapa)
+
+    def test_ecuacion_con_fraccion_y_factores_separa_factores(self):
+        from tpi_videos import componentes as c
+
+        eq = c.ecuacion(r"V = \frac{1}{3}\pi r^2 h")
+        partes = [p.tex_string for p in eq.submobjects]
+        self.assertIn(r"\frac{1}{3}", partes)
+        self.assertIn(r"\pi", partes)
+        self.assertIn("r^2", partes)
+        self.assertIn("h", partes)
+
 
 @unittest.skipUnless(MANIM, "manim no está instalado")
 class RecorridoSinFisicaTest(unittest.TestCase):

@@ -89,15 +89,19 @@ _CON_ARGUMENTO = {
 _ESPACIADO = re.compile(r"^(\\[,;:! ]|\\quad|\\qquad|~)+$")
 _COMANDO = re.compile(r"\\([a-zA-Z]+|.)")
 _COMANDO_FINAL = re.compile(r"\\([a-zA-Z]+)$")
+_RELACIONALES = {"approx", "leq", "geq", "neq", "sim", "rightarrow", "to", "equiv", "pm"}
 
 
 def _tokens_nivel_superior(tex: str) -> list[str]:
-    """Corta en los espacios que no están dentro de llaves, \\left…\\right ni entornos."""
+    """Corta en los espacios que no están dentro de llaves, \\left…\\right ni entornos.
+    También separa operadores relacionales a nivel superior (=, \\approx, etc.) y límites
+    de grupos como } o ) seguidos de comandos o paréntesis, para que MathTex pueda animar cada factor."""
     tokens: list[str] = []
     actual = ""
     profundidad = 0
     i = 0
-    while i < len(tex):
+    n = len(tex)
+    while i < n:
         c = tex[i]
         if c == "\\":
             m = _COMANDO.match(tex, i)
@@ -107,22 +111,65 @@ def _tokens_nivel_superior(tex: str) -> list[str]:
                 profundidad += 1
             elif nombre in ("right", "end"):
                 profundidad = max(0, profundidad - 1)
+
+            if profundidad == 0 and nombre in _RELACIONALES:
+                if actual.strip():
+                    tokens.append(actual.strip())
+                tokens.append(comando)
+                actual = ""
+                i += len(comando)
+                continue
             actual += comando
             i += len(comando)
             continue
         if c == "{":
             profundidad += 1
-        elif c == "}":
-            profundidad = max(0, profundidad - 1)
-        if c.isspace() and profundidad == 0:
-            if actual:
-                tokens.append(actual)
-                actual = ""
-        else:
             actual += c
+            i += 1
+            continue
+        if c == "}":
+            profundidad = max(0, profundidad - 1)
+            actual += c
+            i += 1
+            if profundidad == 0 and i < n:
+                sig = tex[i]
+                if not (actual.endswith("{,}") and sig.isdigit()):
+                    if sig.isspace():
+                        pass
+                    elif sig == "\\" or sig == "(" or (sig.isalpha() and not actual.endswith(("^", "_"))):
+                        if actual.strip():
+                            tokens.append(actual.strip())
+                            actual = ""
+            continue
+        if profundidad == 0:
+            if c in ("=", "+", "-") and not actual.endswith(("\\", "^", "_")):
+                es_unario = c in ("+", "-") and (not actual.strip() or actual.strip()[-1] in ("=", "(", "[", "{"))
+                if not es_unario:
+                    if actual.strip():
+                        tokens.append(actual.strip())
+                    tokens.append(c)
+                    actual = ""
+                    i += 1
+                    continue
+            if c == ")" and i + 1 < n:
+                actual += c
+                i += 1
+                sig = tex[i]
+                if sig in ("(", "\\") or sig.isalpha():
+                    if actual.strip():
+                        tokens.append(actual.strip())
+                        actual = ""
+                continue
+            if c.isspace():
+                if actual.strip():
+                    tokens.append(actual.strip())
+                    actual = ""
+                i += 1
+                continue
+        actual += c
         i += 1
-    if actual:
-        tokens.append(actual)
+    if actual.strip():
+        tokens.append(actual.strip())
     return tokens
 
 
