@@ -1846,7 +1846,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 if nota is not None:
                     aparecer.append(Write(nota) if self.plumon else FadeIn(nota, shift=DOWN * 0.1))
                 if mapa is not None:
-                    aparecer.append(TransformMatchingTex(fuente, eq, key_map=mapa, fade_transform_mismatches=True))
+                    aparecer.append(TransformMatchingTex(fuente, eq, key_map=mapa))
                 else:
                     aparecer.append(Write(eq))
                 if mitades:
@@ -2030,7 +2030,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         with self.hablar(r.voz, "resultado") as tr:
             mapa = c.coincidencias(self.ultima, eq) if (self.ultima is not None and eq is not None) else None
             if mapa is not None:
-                aparecer = [TransformMatchingTex(self.ultima, eq, key_map=mapa, fade_transform_mismatches=True)]
+                aparecer = [TransformMatchingTex(self.ultima, eq, key_map=mapa)]
             else:
                 aparecer = ([Write(eq)] if eq is not None else []) + (
                     [FadeOut(self.ultima)] if self.ultima is not None else []
@@ -2139,7 +2139,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         with self.hablar(r.voz, "resultado") as tr:
             mapa = c.coincidencias(self.ultima, eq) if self.ultima is not None else None
             if mapa is not None:
-                aparecer = [TransformMatchingTex(self.ultima, eq, key_map=mapa, fade_transform_mismatches=True)]
+                aparecer = [TransformMatchingTex(self.ultima, eq, key_map=mapa)]
             else:
                 aparecer = [Write(eq)] + ([FadeOut(self.ultima)] if self.ultima is not None else [])
             if barra is not None:
