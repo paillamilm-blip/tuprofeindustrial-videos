@@ -348,7 +348,7 @@ def revisar(guion: Guion, cierre_por_defecto: str) -> Revision:
 
     # Estilo, emojis y error típico
     con_formula = _bloques_con_formula(guion)
-    estirados = _estirados_de_lectura(voces, con_formula, PISO_LECTURA)
+    estirados = _estirados_de_lectura(voces, con_formula, PISO_LECTURA, _mapa_formulas(guion))
     if estirados:
         avisos.append(
             Aviso(
@@ -443,6 +443,58 @@ def espera_de_lectura(piso: float, *, completa_desde: float, fin_de_bloque: floa
     return segundos_a_esperar(piso, fin_de_bloque - completa_desde)
 
 
+def piso_adaptativo(tex: str | None, piso_base: float = PISO_LECTURA) -> float:
+    """Calcula el tiempo de lectura que requiere una fórmula según su complejidad visual.
+
+    - Fórmulas simples/cortas (ej: x = 2, a = 5): piso ágil (~1.8 s) para mantener dinamismo.
+    - Fórmulas intermedias: piso estándar (~2.4 - 2.5 s).
+    - Fórmulas complejas (fracciones \\frac, raíces \\sqrt, trinomios): piso extendido (~2.8 - 3.2 s).
+    """
+    if not tex or piso_base <= 0:
+        return piso_base
+    t = tex.strip()
+    tiene_fraccion = r"\frac" in t or "/" in t
+    tiene_raiz = r"\sqrt" in t
+    tiene_matrices_o_sistemas = r"\begin" in t or r"\cases" in t
+    tiene_potencias_o_subindices = "^" in t or "_" in t
+
+    puntos = 0
+    if tiene_fraccion:
+        puntos += 2
+    if tiene_raiz:
+        puntos += 2
+    if tiene_matrices_o_sistemas:
+        puntos += 3
+    if tiene_potencias_o_subindices:
+        puntos += 1
+    if len(t) > 25:
+        puntos += 2
+    elif len(t) > 15:
+        puntos += 1
+
+    if puntos == 0 and len(t) <= 12:
+        return max(1.6, round(piso_base * 0.72, 2))
+    elif puntos >= 3:
+        return round(piso_base * 1.24, 2)
+    return piso_base
+
+
+def _mapa_formulas(guion: Guion) -> dict[str, str]:
+    """Mapea cada bloque con su expresión LaTeX para calibrar el piso de lectura."""
+    m: dict[str, str] = {}
+    if guion.gancho.tex:
+        m["gancho"] = guion.gancho.tex
+    for i, d in enumerate(guion.datos, 1):
+        if d.tex:
+            m[f"dato {i}"] = d.tex
+    for i, p in enumerate(guion.pasos, 1):
+        if p.tex:
+            m[f"paso {i}"] = p.tex
+    if guion.resultado.tex:
+        m["resultado"] = guion.resultado.tex
+    return m
+
+
 def _bloques_con_formula(guion: Guion) -> set[str]:
     """Las secciones que muestran una fórmula en pantalla; ahí es donde hay que leer, no oír."""
     secciones = {"gancho"} if guion.gancho.tex else set()
@@ -452,14 +504,19 @@ def _bloques_con_formula(guion: Guion) -> set[str]:
 
 
 def _estirados_de_lectura(
-    voces: list[tuple[str, str]], con_formula: set[str], piso: float
+    voces: list[tuple[str, str]],
+    con_formula: set[str],
+    piso: float,
+    formulas: dict[str, str] | None = None,
 ) -> list[tuple[str, float]]:
     """(sección, segundos que faltan) por cada bloque con fórmula que no llega al piso de lectura."""
     estirados = []
     for seccion, voz in voces:
         if seccion not in con_formula:
             continue
-        falta = round(segundos_a_esperar(piso, _quieto_estimado(estimar_segundos(voz))), 2)
+        tex = formulas.get(seccion) if formulas is not None else None
+        piso_efectivo = piso_adaptativo(tex, piso)
+        falta = round(segundos_a_esperar(piso_efectivo, _quieto_estimado(estimar_segundos(voz))), 2)
         if falta > 0:
             estirados.append((seccion, falta))
     return estirados
@@ -473,7 +530,7 @@ def necesita_segundos(guion: Guion, cierre_por_defecto: str, piso: float = PISO_
     """
     base = revisar(guion, cierre_por_defecto).segundos
     estirados = _estirados_de_lectura(
-        guion.textos_de_voz(cierre_por_defecto), _bloques_con_formula(guion), piso
+        guion.textos_de_voz(cierre_por_defecto), _bloques_con_formula(guion), piso, _mapa_formulas(guion)
     )
     return Ritmo(base=base, segundos=base + sum(f for _, f in estirados), piso=piso, estirados=estirados)
 

@@ -8,7 +8,7 @@ garantiza, porque el panel lo muestra como valor elegible con su «cambiar».
 import unittest
 
 from tpi_videos.guion import Guion
-from tpi_videos.revision import espera_de_lectura, necesita_segundos, revisar, segundos_a_esperar
+from tpi_videos.revision import espera_de_lectura, necesita_segundos, piso_adaptativo, revisar, segundos_a_esperar
 
 
 def _guion(pasos, resultado_voz="Las dos soluciones son cero y cinco.", gancho_tex=None):
@@ -129,6 +129,19 @@ class RevisionConLecturaTest(unittest.TestCase):
         guion = _guion([{"voz": "Factorizo la equis.", "tex": "x (x - 5) = 0"}])
         ritmo = necesita_segundos(guion, "Sígueme.")
         self.assertEqual(revisar(guion, "Sígueme.").estirados, ritmo.estirados)
+
+
+class PisoAdaptativoTest(unittest.TestCase):
+    def test_formula_simple_tiene_piso_agil(self):
+        self.assertEqual(piso_adaptativo("x = 2", 2.5), 1.8)
+
+    def test_formula_compleja_con_fraccion_o_raiz_tiene_piso_extendido(self):
+        self.assertEqual(piso_adaptativo(r"V = \frac{1}{3}\pi r^2 h", 2.5), 3.1)
+        self.assertEqual(piso_adaptativo(r"g = \sqrt{r^2 + h^2}", 2.5), 3.1)
+
+    def test_piso_cero_o_vacio_se_respeta(self):
+        self.assertEqual(piso_adaptativo("x = 2", 0.0), 0.0)
+        self.assertEqual(piso_adaptativo("", 2.5), 2.5)
 
 
 if __name__ == "__main__":

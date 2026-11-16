@@ -77,7 +77,7 @@ from .errores import ErrorMotor
 from .guion import Bloque, Guion
 from .pausas import sin_pausas
 from .rodaje import rodaje_de_guion
-from .revision import PISO_LECTURA, espera_de_lectura
+from .revision import PISO_LECTURA, espera_de_lectura, piso_adaptativo
 from .voces import RESOLUCION, crear_servicio, precargar_voz
 
 
@@ -89,8 +89,8 @@ def dibuja_el_sticker(elegido: str | None, de_la_marca: bool, tema_emojis: bool)
 # Cuánto acerca la cámara en cada paso y en el resultado (multiplica lo ya acercado).
 # "base" es el encuadre al que vuelve antes de cada golpe: sin ese aire, el golpe no se nota.
 ESCALAS: dict[str, dict[str, float]] = {
-    "suave": {"paso": 0.97, "resultado": 0.94, "minima": 0.86, "base": 0.97},
-    "fuerte": {"paso": 0.93, "resultado": 0.90, "minima": 0.78, "base": 0.93},
+    "suave": {"paso": 0.93, "resultado": 0.85, "minima": 0.75, "base": 0.95},
+    "fuerte": {"paso": 0.88, "resultado": 0.80, "minima": 0.68, "base": 0.90},
 }
 
 
@@ -98,7 +98,7 @@ HOLGURA_ANCHO = 0.12  # aire entre lo dibujado y el borde del cuadro cuando la c
 
 # El golpe: la cámara entra rápido, se pasa un poco del encuadre quieto y vuelve a él.
 # El margen es lo que entra de más que el borde seguro: dura un instante, no se queda.
-GOLPE = {"suave": 0.02, "fuerte": 0.045}
+GOLPE = {"suave": 0.035, "fuerte": 0.06}
 SOBREPASO_MAX = 6.0  # más que esto y el golpe deja de parecer una cámara y parece un error
 
 # El primer plano de un término. El aire es el fondo que queda alrededor de lo destacado; la mínima
@@ -681,19 +681,22 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             }
         )
 
-    def _da_lectura(self, tracker: Any, completa_desde: float, sale_a: float | None = None) -> None:
+    def _da_lectura(
+        self, tracker: Any, completa_desde: float, sale_a: float | None = None, tex: str | None = None
+    ) -> None:
         """Estira el bloque hasta que la fórmula lleve su piso de segundos completa y a la vista.
 
         El reloj llega hasta el fin del audio, no hasta el último movimiento: los énfasis dibujados
         sobre la fórmula ya escrita y los segundos que la voz todavía tarda en terminarse también
-        son lectura. Esperar de más congelaba el cuadro encima de la narración. Con el piso en 0 el
-        video sale exactamente como salía antes, que es lo que muestra el «cambiar» cuando se baja.
+        son lectura. El piso adaptativo permite que las fórmulas simples no frenen el video y las
+        complejas tengan su tiempo de asimilación.
         """
         fin = tracker.start_t + tracker.duration
         if sale_a is not None:
             fin = min(fin, sale_a)
+        piso = piso_adaptativo(tex, self.op.piso_lectura)
         espera = espera_de_lectura(
-            self.op.piso_lectura, completa_desde=completa_desde, fin_de_bloque=max(fin, self.renderer.time)
+            piso, completa_desde=completa_desde, fin_de_bloque=max(fin, self.renderer.time)
         )
         if espera > 1 / config.frame_rate:
             self.silencio_de_lectura += espera
@@ -925,12 +928,12 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         # Se anota el encuadre de reposo, no la posición del cuadro: con la cámara en mano la posición
         # real está corrida por el vaivén y devolver a ella sumaría deriva sobre deriva.
         antes = (self._camara_escala, self._deriva_base_x, self._deriva_base_y)
-        entra = self._primer_plano(marcos)
+        entra = self._primer_plano(marcos, run_time=0.36)
         if not entra:
             return
-        self.play(*entra, run_time=0.45)
-        self.wait(0.25)
-        self.play(*self._mover_camara(*antes, run_time=0.4), run_time=0.4)
+        self.play(*entra, run_time=0.36)
+        self.wait(0.20)
+        self.play(*self._mover_camara(*antes, run_time=0.35), run_time=0.35)
 
     def _destello(self, caja: Mobject) -> list[Animation]:
         """La confirmación: un aro del recuadro que se expande y se apaga, y rayos cortos alrededor."""
@@ -1032,8 +1035,10 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         self._pasos()
         self._resultado()
         if self.guion.verificacion:
+            self.wait(0.35)
             self._verificacion()
         if self.guion.reto:
+            self.wait(0.35)
             self._reto()
         self._cierre()
         self._guardar_linea_de_tiempo()
@@ -1195,7 +1200,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             if emoji is not None and self._restante(tr) > 1.0:
                 self.play(Wiggle(emoji, scale_value=1.08, rotation_angle=0.05 * TAU), run_time=0.8)
             if formula is not None:
-                self._da_lectura(tr, completa_desde)
+                self._da_lectura(tr, completa_desde, tex=self.guion.gancho.tex)
         salen = [m for m in (p, emoji, formula) if m is not None]
         if dibujo is not None:
             salen.append(dibujo.mobs)
@@ -1516,7 +1521,12 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         if self.receta.partida == "mitades":
             camara = self._toma_de_casillero(dibujo.mobs, aire=0.0)
         elif mover_camara:
-            camara = self._animaciones_camara(centro_y, self._camara_escala, run_time=0.55)
+            escala_vis = (
+                max(escala_base(self.modo_camara), self._camara_escala * 0.96)
+                if self.modo_camara != "quieta"
+                else 1.0
+            )
+            camara = self._animaciones_camara(centro_y, escala_vis, run_time=0.55)
         else:
             camara = []  # el gancho se mira entero desde el reposo: acá la cámara no se mueve
         if dibujo.vivo is not None and dibujo.duracion and previo is not None and dibujo.vista_final is None:
@@ -1929,7 +1939,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     if (
                         receta.primer_plano == "destacar"
                         and paso.visual is None
-                        and self._restante(tr) >= 1.3
+                        and self._restante(tr) >= 0.95
                     ):
                         self._primer_plano_de(marcos)
                         hizo_toma = True
@@ -1960,7 +1970,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 # la lectura. Si además la línea tachada sale antes de que termine la voz, leer termina ahí.
                 sale_antes = tr.start_t + max(0.0, tr.duration - 0.7) if error_sale else None
                 if paso.tex:
-                    self._da_lectura(tr, completa_desde, sale_antes)
+                    self._da_lectura(tr, completa_desde, sale_antes, tex=paso.tex)
                 if error_sale:
                     # Un error ya mostrado y tachado no tiene por qué seguir estorbando el video. En
                     # las dos mitades el mito se queda: sin él a la vista no hay con qué comparar.
@@ -2065,7 +2075,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 self.play(*self._destello(caja), run_time=0.7)
             if emoji is not None:
                 self.play(self._rebote(emoji))
-            self._da_lectura(tr, completa_desde)
+            self._da_lectura(tr, completa_desde, tex=r.tex)
         self.bloque_resultado = (
             VGroup(cabeza, caja, cuerpo) if emoji is None else Group(cabeza, caja, cuerpo, emoji)
         )
@@ -2178,7 +2188,7 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 self.play(*self._destello(caja), run_time=0.7)
             if emoji is not None:
                 self.play(self._rebote(emoji))
-            self._da_lectura(tr, completa_desde)
+            self._da_lectura(tr, completa_desde, tex=r.tex)
         # Sin emoji, el mismo grupo vectorial de siempre (idéntico al estilo original)
         self.bloque_resultado = VGroup(cabeza, caja, eq) if emoji is None else Group(cabeza, caja, eq, emoji)
 
