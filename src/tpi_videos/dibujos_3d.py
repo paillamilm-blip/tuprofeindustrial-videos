@@ -469,6 +469,17 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     )
     destaca_g = any(m in marcas_set for m in ("generatriz", "g")) or ("generatriz" in contexto)
 
+    destaca_base = any(m in marcas_set for m in ("area_base", "base")) or (
+        "base" in contexto and not destaca_h
+    )
+    destaca_volumen = (
+        bool(getattr(visual, "agua", False))
+        or "volumen" in marcas_set
+        or "volumen" in contexto
+        or "agua" in contexto
+        or "cabe" in contexto
+    )
+
     def mide(clave: str, valor: float) -> str:
         return f"{clave} = {d._numero_latex(valor)} {unidad}".strip()
 
@@ -510,6 +521,13 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     return _cuerpo_vivo(
         piezas, visual.vista, corte == "mitad" or despiece, col, ancho, alto, papel,
         medidas, notas, cotas=cotas,
+        figura=cuerpo.figura,
+        r_geom=r,
+        h_geom=h,
+        destaca_base=destaca_base,
+        destaca_volumen=destaca_volumen,
+        destaca_h=destaca_h,
+        destaca_g=destaca_g,
     )
 
 
@@ -525,6 +543,13 @@ def _cuerpo_vivo(
     notas: list[str],
     ancho_cuerpo: float = 0.50,
     cotas: list[tuple[str, list[float], list[float], int, str]] | None = None,
+    figura: str = "",
+    r_geom: float = 0.0,
+    h_geom: float = 0.0,
+    destaca_base: bool = False,
+    destaca_volumen: bool = False,
+    destaca_h: bool = False,
+    destaca_g: bool = False,
 ) -> d.Dibujo:
     """El motor común de los cuerpos 3D: órbita, luz, despiece, silueta y rótulos que viajan.
 
@@ -588,10 +613,33 @@ def _cuerpo_vivo(
          if tecnico and cara.clase == "corte" else None for cara in pieza.caras]
         for pieza in piezas
     ]
+    tiene_base = figura in ("cono", "cilindro") and r_geom > 0 and h_geom > 0
+    borde_base = VMobject() if tiene_base else None
+    angulos_base = np.linspace(0.0, 2 * np.pi, 65) if tiene_base else None
+    pts_base_3d = (
+        np.stack([r_geom * np.cos(angulos_base), r_geom * np.sin(angulos_base), np.full(65, -h_geom / 2)], axis=1)
+        if tiene_base
+        else None
+    )
+
+    tiene_escuadra = figura == "cono" and r_geom > 0 and h_geom > 0
+    escuadra_recta = VMobject() if tiene_escuadra else None
+    s_esc = min(r_geom, h_geom) * 0.16 if tiene_escuadra else 0.0
+    pts_escuadra_3d = (
+        np.array([
+            [0.0, 0.0, -h_geom / 2 + s_esc],
+            [s_esc, 0.0, -h_geom / 2 + s_esc],
+            [s_esc, 0.0, -h_geom / 2],
+        ])
+        if tiene_escuadra
+        else None
+    )
+
     cuerpo_mob = VGroup(
         *[m for fila in poligonos for m in fila],
         *[s for s in siluetas if s is not None],
         *[r for fila in rayados for r in fila if r is not None],
+        *([borde_base] if borde_base is not None else []),
     )
     aristas = [_aristas(pieza) if pieza.lisa else [] for pieza in piezas]
 
@@ -640,7 +688,12 @@ def _cuerpo_vivo(
                 mob.set_points_as_corners([pantalla(q) for q in [*pts, pts[0]]])
                 tinte = color_de(cara, cara.normal, hacia, not de_frente)
                 if pieza.lisa and cara.clase in ("cuerpo", "anillo", "interior"):
-                    mob.set_fill(tinte, 1.0).set_stroke(tinte, 1.2, 1.0)  # borde del mismo tono: sin rendijas
+                    if destaca_volumen:
+                        color_agua = ManimColor("#38BDF8")
+                        tinte_vol = tinte.interpolate(color_agua, 0.55)
+                        mob.set_fill(tinte_vol, 0.38).set_stroke(tinte_vol, 1.2, 0.5)
+                    else:
+                        mob.set_fill(tinte, 0.30).set_stroke(tinte, 1.0, 0.35)
                 else:
                     mob.set_fill(tinte, 1.0).set_stroke(canto, 1.6 if tecnico else 3.0, 1.0)
                 # El hueco de un tubo se ve solo por la boca: se pinta antes que la cáscara de afuera.
@@ -670,6 +723,27 @@ def _cuerpo_vivo(
                         silueta.start_new_path(pantalla(q0 + salida))
                         silueta.add_line_to(pantalla(q1 + salida))
                 nuevos.append(silueta)
+
+        if borde_base is not None and pts_base_3d is not None:
+            salida_base = piezas[0].salida * sep if piezas else np.zeros(3)
+            pts_proy = [pantalla(p + salida_base) for p in pts_base_3d]
+            borde_base.set_points_as_corners(pts_proy)
+            if destaca_base:
+                borde_base.set_stroke(col.acento, width=3.5, opacity=1.0)
+                borde_base.set_fill(col.acento, opacity=0.28)
+            else:
+                borde_base.set_stroke(canto, width=2.2, opacity=0.75)
+                borde_base.set_fill(opacity=0.0)
+            nuevos.append(borde_base)
+
+        if escuadra_recta is not None and pts_escuadra_3d is not None:
+            salida_base = piezas[0].salida * sep if piezas else np.zeros(3)
+            pts_esc_proy = [pantalla(p + salida_base) for p in pts_escuadra_3d]
+            escuadra_recta.set_points_as_corners(pts_esc_proy)
+            color_esc = col.acento if (destaca_h or destaca_g) else canto
+            escuadra_recta.set_stroke(color_esc, width=2.2, opacity=0.85)
+            escuadra_recta.set_fill(opacity=0.0)
+
         # El orden de pintado va en z_index y no en el orden de los hijos: Manim fija la lista de lo
         # que pinta al empezar cada animación, pero la reordena por z_index en cada cuadro. Todo el
         # cuerpo cabe bajo 0,5 para que los rótulos (0,55) y las fórmulas (1) queden siempre encima.
@@ -681,6 +755,8 @@ def _cuerpo_vivo(
     # —— Rótulos: las medidas pegadas al cuerpo; las notas a un costado, quietas ——————————————
     parches, rótulos = VGroup(), VGroup()
     lineas_destacadas = VGroup()
+    if escuadra_recta is not None:
+        lineas_destacadas.add(escuadra_recta)
     elementos_destacados = []
     # (cartón, rótulo, punto 3D, pieza a la que va pegado, lado del cuerpo donde se apoya, destacada)
     viajeros: list[tuple[Mobject, Mobject, np.ndarray, int | None, str, bool]] = []
@@ -708,15 +784,18 @@ def _cuerpo_vivo(
         fondo, rotulo = etiqueta(texto, np.zeros(3), 26, destacada=destacada)
         viajeros.append((fondo, rotulo, np.array(punto, dtype=float), pieza, lado, destacada))
 
-        if seg_3d is not None and destacada:
+        if seg_3d is not None:
             p_ini, p_fn = seg_3d
-            linea_dest = Line(np.zeros(3), np.zeros(3)).set_stroke(col.acento, 3.5, 0.95)
-            dot_a = Dot(np.zeros(3), radius=0.06, color=col.acento)
-            dot_b = Dot(np.zeros(3), radius=0.06, color=col.acento)
+            ancho_trazo = 3.5 if destacada else 1.8
+            color_trazo = col.acento if destacada else canto
+            opacidad_trazo = 0.95 if destacada else 0.60
+            linea_dest = Line(np.zeros(3), np.zeros(3)).set_stroke(color_trazo, ancho_trazo, opacidad_trazo)
+            dot_a = Dot(np.zeros(3), radius=0.06 if destacada else 0.04, color=color_trazo)
+            dot_b = Dot(np.zeros(3), radius=0.06 if destacada else 0.04, color=color_trazo)
             grupo_seg = VGroup(linea_dest, dot_a, dot_b)
             lineas_destacadas.add(grupo_seg)
             elementos_destacados.append(
-                (linea_dest, dot_a, dot_b, np.array(p_ini, dtype=float), np.array(p_fn, dtype=float), pieza)
+                (linea_dest, dot_a, dot_b, np.array(p_ini, dtype=float), np.array(p_fn, dtype=float), pieza, destacada)
             )
 
     lineas_cota = VGroup()
@@ -753,14 +832,14 @@ def _cuerpo_vivo(
             x, y = (p3 @ der - centro_2d[0]) * k, (p3 @ arr - centro_2d[1]) * k
             return llevar(np.array([x, y, 0.0]))
 
-        for linea_dest, dot_a, dot_b, p_ini_3d, p_fn_3d, pz in elementos_destacados:
+        for linea_dest, dot_a, dot_b, p_ini_3d, p_fn_3d, pz, dest in elementos_destacados:
             salida = piezas[pz].salida * sep if pz is not None else 0.0
             pt_a = proy(p_ini_3d + salida)
             pt_b = proy(p_fn_3d + salida)
             if np.linalg.norm(pt_b - pt_a) < 1e-5:
                 linea_dest.set_stroke(opacity=0.0)
             else:
-                linea_dest.set_stroke(opacity=0.95)
+                linea_dest.set_stroke(opacity=0.95 if dest else 0.60)
                 linea_dest.put_start_and_end_on(pt_a, pt_b)
             dot_a.move_to(pt_a)
             dot_b.move_to(pt_b)
@@ -834,6 +913,9 @@ def _cuerpo_vivo(
     # Las notas van a la derecha, donde siempre hubo hueco; si el cuerpo es largo (una tubería, un eje)
     # se corren lo justo para no pisar su punta en ninguna pose de la órbita.
     punta_derecha = (alto_[0] - centro_2d[0]) * k
+    for fondo_v, _, _, _, lado_v, _ in viajeros:
+        if lado_v == "derecha":
+            punta_derecha = max(punta_derecha, fondo_v.get_right()[0])
     quietas = []
     for pie, texto in enumerate(notas[:3]):
         fondo, rotulo = etiqueta(texto, np.array([ancho * 0.30, 0.42 - pie * 0.62, 0.0]), 28)
@@ -904,7 +986,7 @@ def _cuerpo_vivo(
     vivo(1.0)
     return d.Dibujo(
         mobs=todo,
-        trazo=[],
+        trazo=[cuerpo_mob],
         aparece=[cuerpo_mob, *lineas_cota, *lineas_destacadas, *rótulos],
         vivo=vivo,
         duracion=d.SEGUNDOS_RECORRIDO,

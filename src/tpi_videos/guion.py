@@ -284,6 +284,7 @@ class Visual(_Base):
     vista: Literal["frente", "piso", "ala", "axonometrica"] = "axonometrica"
     corte: Literal["sin_corte", "mitad"] = "sin_corte"  # mitad solo en cubo: ver el validador
     despiece: StrictBool = False  # las piezas se separan al final de la órbita (caras, tapas o mitades)
+    agua: bool = False  # tinte cian translúcido de agua en el cuerpo 3D
 
     # vector_3d
     componentes: list[float] | None = None  # las tres: [3, 4, 12]

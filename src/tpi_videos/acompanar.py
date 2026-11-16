@@ -25,6 +25,7 @@ CAMPOS_DE_LO_QUE_SE_MUESTRA = frozenset(
         "marcar",
         "descomponer",
         "tamano",
+        "agua",
     }
 )
 

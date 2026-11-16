@@ -203,7 +203,12 @@ class PasoIA(BaseModel):
         default="", description='Con dibujo="solido" o "solido3d": la altura con su unidad, ej. "5 cm"'
     )
     vista: Literal["", "frente", "piso", "ala", "axonometrica"] = Field(
-        default="", description='Con dibujo="solido3d": "axonometrica" (relieve), "frente", "ala" o "piso"'
+        default="",
+        description=(
+            'Con dibujo="solido" o "solido3d": usa siempre "axonometrica" en todos los pasos para mantener '
+            'la continuidad del cuerpo 3D y que las anotaciones se acumulen sobre el mismo objeto. '
+            'No cambies de vista entre pasos para evitar saltos de cámara.'
+        ),
     )
     corte: Literal["", "sin_corte", "mitad"] = Field(
         default="",
