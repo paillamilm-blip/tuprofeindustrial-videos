@@ -456,28 +456,28 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
 
     # Identificar qué dimensiones están destacadas en este paso (vía anotar o por contexto)
     destaca_h = any(m in marcas_set for m in ("altura", "h")) or (
-        "altura" in contexto and not any(m in marcas_set for m in ("radio", "r", "lado", "a"))
+        any(w in contexto for w in ("altura", "alto", "profundidad"))
+        and not any(m in marcas_set for m in ("radio", "r", "lado", "a"))
     )
-    destaca_r = any(m in marcas_set for m in ("radio", "r")) or (
-        ("radio" in contexto or "base" in contexto)
+    destaca_r = any(m in marcas_set for m in ("radio", "r", "diametro", "diámetro")) or (
+        any(w in contexto for w in ("radio", "diámetro", "diametro", "base", "basal"))
         and "altura" not in contexto
+        and "alto" not in contexto
         and not any(m in marcas_set for m in ("altura", "h", "lado", "a"))
     )
     destaca_a = any(m in marcas_set for m in ("lado", "arista", "a")) or (
-        ("lado" in contexto or "arista" in contexto)
+        any(w in contexto for w in ("lado", "arista"))
         and not any(m in marcas_set for m in ("altura", "h", "radio", "r"))
     )
     destaca_g = any(m in marcas_set for m in ("generatriz", "g")) or ("generatriz" in contexto)
 
     destaca_base = any(m in marcas_set for m in ("area_base", "base")) or (
-        "base" in contexto and not destaca_h
+        any(w in contexto for w in ("base", "basal", "fondo")) and not destaca_h
     )
     destaca_volumen = (
         bool(getattr(visual, "agua", False))
         or "volumen" in marcas_set
-        or "volumen" in contexto
-        or "agua" in contexto
-        or "cabe" in contexto
+        or any(w in contexto for w in ("volumen", "agua", "cabe", "capacidad", "litros", "litro", "líquido", "liquido", "llenar"))
     )
 
     def mide(clave: str, valor: float) -> str:
