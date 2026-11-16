@@ -14,6 +14,7 @@ from typing import Any
 
 import numpy as np
 from manim import (
+    BOLD,
     DOWN,
     LEFT,
     MEDIUM,
@@ -1174,15 +1175,28 @@ def solido(
     rayas: list = []
     parches, rótulos = VGroup(), VGroup()
 
-    def medida(texto: str, donde: np.ndarray, tam: float = 22) -> None:
-        rotulo = c.texto(texto, tam, SEMIBOLD, col.texto).move_to(donde)
+    def medida(texto: str, donde: np.ndarray, tam: float = 22, destacada: bool = False) -> None:
+        color_txt = col.acento if destacada else col.texto
+        peso_txt = BOLD if destacada else SEMIBOLD
+        rotulo = c.texto(texto, tam + (2 if destacada else 0), peso_txt, color_txt).move_to(donde)
         fondo, rotulo = _parche(rotulo, papel, 0.16)
+        if destacada:
+            fondo.set_stroke(col.acento, 2.5)
         parches.add(fondo)
         rótulos.add(rotulo)
 
-    def acotada(p: np.ndarray, q: np.ndarray, texto: str, donde: np.ndarray) -> None:
-        rayas.append(DashedLine(p, q, buff=0).set_stroke(col.tenue, 3))
-        medida(texto, donde, 20)
+    def acotada(p: np.ndarray, q: np.ndarray, texto: str, donde: np.ndarray, clave: str = "") -> None:
+        destacada = (
+            clave in marcas
+            or (clave == "h" and any(m in marcas for m in ("altura", "h")))
+            or (clave == "r" and any(m in marcas for m in ("radio", "r")))
+            or (clave == "a" and any(m in marcas for m in ("lado", "arista", "a")))
+            or (clave == "g" and any(m in marcas for m in ("generatriz", "g")))
+        )
+        color_linea = col.acento if destacada else col.tenue
+        ancho_linea = 4.5 if destacada else 3.0
+        rayas.append(DashedLine(p, q, buff=0).set_stroke(color_linea, ancho_linea))
+        medida(texto, donde, 20, destacada=destacada)
 
     if figura.figura == "cilindro":
         tapa = Ellipse(width=2 * R, height=2 * E).move_to(UP * H / 2).set_stroke(col.formulas, 4)
@@ -1195,12 +1209,14 @@ def solido(
             [R, H / 2, 0],
             f"r = {_numero_latex(r)} {figura.unidad}".strip(),
             np.array([R / 2, H / 2 + 0.3, 0.0]),
+            clave="r",
         )
         acotada(
             [-R - 0.3, -H / 2, 0],
             [-R - 0.3, H / 2, 0],
             f"h = {_numero_latex(h)} {figura.unidad}".strip(),
             np.array([-R - 0.8, 0.0, 0.0]),
+            clave="h",
         )
     elif figura.figura == "cono":
         base = Ellipse(width=2 * R, height=2 * E).move_to(DOWN * H / 2).set_stroke(col.tenue, 4)
@@ -1212,13 +1228,24 @@ def solido(
             [0, -H / 2, 0],
             f"h = {_numero_latex(h)} {figura.unidad}".strip(),
             np.array([0.4, 0.0, 0.0]),
+            clave="h",
         )
         acotada(
             [0, -H / 2, 0],
             [R, -H / 2, 0],
             f"r = {_numero_latex(r)} {figura.unidad}".strip(),
             np.array([R / 2, -H / 2 - 0.32, 0.0]),
+            clave="r",
         )
+        if any(m in marcas for m in ("generatriz", "g")):
+            g_val = math.hypot(r, h)
+            acotada(
+                [0, H / 2, 0],
+                [R, -H / 2, 0],
+                f"g = {_numero_latex(round(g_val, 2))} {figura.unidad}".strip(),
+                np.array([R / 2 + 0.45, 0.0, 0.0]),
+                clave="g",
+            )
     elif figura.figura == "esfera":
         rayas.append(Circle(radius=R).set_stroke(col.formulas, 4))
         rayas.append(Ellipse(width=2 * R, height=2 * E).set_stroke(col.tenue, 3))
@@ -1227,6 +1254,7 @@ def solido(
             [R, 0, 0],
             f"r = {_numero_latex(r)} {figura.unidad}".strip(),
             np.array([R / 2, 0.3, 0.0]),
+            clave="r",
         )
     else:
         d = A * 0.38  # el desplazamiento oblicuo de la cara de atrás
@@ -1243,6 +1271,7 @@ def solido(
             f"a = {_numero_latex(a)} {figura.unidad}".strip(),
             (frente[0] + frente[1]) / 2 + DOWN * 0.3,
             20,
+            destacada=any(m in marcas for m in ("lado", "arista", "a")),
         )
 
     cuerpo = VGroup(*rayas, parches)
@@ -1252,12 +1281,21 @@ def solido(
             f"V ≈ {_numero_latex(figura.volumen)}{_sufijo_solido(figura, 3)}",
             np.array([columna, 0.32, 0.0]),
             24,
+            destacada=True,
         )
     if "area" in marcas:
         medida(
             f"A ≈ {_numero_latex(figura.area)}{_sufijo_solido(figura, 2)}",
             np.array([columna, -0.32, 0.0]),
             24,
+            destacada=True,
+        )
+    if "area_base" in marcas or "base" in marcas:
+        medida(
+            f"A base ≈ {_numero_latex(figura.area_base)}{_sufijo_solido(figura, 2)}",
+            np.array([columna, 0.0, 0.0]),
+            24,
+            destacada=True,
         )
 
     todo = VGroup(*rayas, parches, rótulos)

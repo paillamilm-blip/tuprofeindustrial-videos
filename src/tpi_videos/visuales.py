@@ -74,7 +74,7 @@ MARCAS_PROYECTIL = ("alcance", "altura_maxima", "componentes", "tiempo")
 MARCAS_CIRCULO = ("seno", "coseno", "tangente")
 
 # Lo que se puede anotar en un sólido.
-MARCAS_SOLIDO = ("volumen", "area")
+MARCAS_SOLIDO = ("volumen", "area", "area_base", "altura", "radio", "lado", "generatriz")
 
 # Lo que se puede anotar en un vector del espacio: la sombra apoyada en el piso y el largo real.
 MARCAS_VECTOR_3D = ("ejes", "piso", "norma")
@@ -1150,7 +1150,16 @@ class Solido:
         """
         if marca == "volumen":
             return "V", self.volumen, "³"
-        if vista == "piso":
+        if marca in ("altura", "h"):
+            return "h", self.altura or 0.0, ""
+        if marca in ("radio", "r"):
+            return "r", self.radio or 0.0, ""
+        if marca in ("lado", "a"):
+            return "a", self.lado or 0.0, ""
+        if marca in ("generatriz", "g"):
+            g = math.hypot(self.radio or 0.0, self.altura or 0.0) if self.figura == "cono" else 0.0
+            return "g", round(g, 2), ""
+        if vista == "piso" or marca in ("area_base", "base"):
             return "A base", self.area_base, "²"
         return "A", self.area, "²"
 

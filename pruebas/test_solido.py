@@ -49,6 +49,18 @@ class MatematicaSolidoTest(unittest.TestCase):
         self.assertAlmostEqual(figura.volumen, 64, places=6)
         self.assertAlmostEqual(figura.area, 96, places=6)
 
+    def test_marcas_nuevas_nota(self):
+        cono = analizar_solido("cono", radio="3 cm", altura="4 cm")
+        rot, val, suf = cono.nota("altura")
+        self.assertEqual((rot, val, suf), ("h", 4.0, ""))
+        rot, val, suf = cono.nota("radio")
+        self.assertEqual((rot, val, suf), ("r", 3.0, ""))
+        rot, val, suf = cono.nota("generatriz")
+        self.assertEqual((rot, val, suf), ("g", 5.0, ""))
+        rot, val, suf = cono.nota("area_base")
+        self.assertEqual(rot, "A base")
+        self.assertAlmostEqual(val, math.pi * 9, places=2)
+
     def test_el_area_basal_de_cada_solido(self):
         casos = (
             ("cilindro", {"radio": "1,2 m", "altura": "2,5 m"}, math.pi * 1.2**2),
@@ -173,6 +185,12 @@ class GuionSolidoTest(unittest.TestCase):
         self.assertEqual(visual.tipo, "solido_3d")
         self.assertEqual(visual.anotar, ["volumen", "area"])
 
+    def test_marcas_geometricas_validan(self):
+        visual = Visual(tipo="solido_3d", figura="cono", radio="3 cm", altura="4 cm", anotar=["altura", "radio"])
+        self.assertEqual(visual.anotar, ["altura", "radio"])
+        visual_g = Visual(tipo="solido_3d", figura="cono", radio="3 cm", altura="4 cm", anotar=["generatriz"])
+        self.assertEqual(visual_g.anotar, ["generatriz"])
+
 
 @unittest.skipUnless(MANIM, "manim no está instalado")
 class DibujoSolidoTest(unittest.TestCase):
@@ -206,6 +224,13 @@ class DibujoSolidoTest(unittest.TestCase):
         textos = self._textos(self._dibujar("cubo"))
         self.assertIn("64", textos)
         self.assertIn("96", textos)
+
+    def test_cono_3d_destaca_altura_y_radio(self):
+        from tpi_videos.dibujos_3d import dibujar_solido_3d
+        visual = Visual(tipo="solido_3d", figura="cono", radio="3 cm", altura="4 cm", anotar=["altura"])
+        dib = dibujar_solido_3d(visual, ColoresTema(), ANCHO_HOJA, ALTO_DIBUJO)
+        self.assertIsNotNone(dib)
+        self.assertTrue(len(dib.mobs) > 0)
 
 
 if __name__ == "__main__":

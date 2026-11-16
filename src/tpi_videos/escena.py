@@ -1467,6 +1467,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             if previo is not None and previo.vista_final is not None
             else None
         )
+        if paso.visual is not None:
+            texto_contexto = f"{paso.nota or ''} {paso.voz or ''} {' '.join(paso.destacar or [])} {paso.tex or ''}".lower()
+            setattr(paso.visual, "_contexto_paso", texto_contexto)
         porte = escala if escala is not None else (previo.escala_3d if previo is not None else None)
         encuadre = (porte, previo.luz_3d if previo is not None else None) if porte is not None else None
         marca = d.desde_vista.set(desde) if desde is not None else None

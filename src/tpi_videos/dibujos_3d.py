@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ from manim import (
     Cone,
     Cylinder,
     DashedLine,
+    Dot,
     Group,
     ImageMobject,
     Line,
@@ -449,27 +451,58 @@ def dibujar_solido_3d(visual: Any, col: Any, ancho: float, alto: float, papel: s
     piezas = _piezas_vivas(cuerpo.figura, corte, despiece, r, h, a)
     unidad = cuerpo.unidad or ""
 
+    contexto = str(getattr(visual, "_contexto_paso", "")).lower()
+    marcas_set = set(visual.anotar)
+
+    # Identificar qué dimensiones están destacadas en este paso (vía anotar o por contexto)
+    destaca_h = any(m in marcas_set for m in ("altura", "h")) or (
+        "altura" in contexto and not any(m in marcas_set for m in ("radio", "r", "lado", "a"))
+    )
+    destaca_r = any(m in marcas_set for m in ("radio", "r")) or (
+        ("radio" in contexto or "base" in contexto)
+        and "altura" not in contexto
+        and not any(m in marcas_set for m in ("altura", "h", "lado", "a"))
+    )
+    destaca_a = any(m in marcas_set for m in ("lado", "arista", "a")) or (
+        ("lado" in contexto or "arista" in contexto)
+        and not any(m in marcas_set for m in ("altura", "h", "radio", "r"))
+    )
+    destaca_g = any(m in marcas_set for m in ("generatriz", "g")) or ("generatriz" in contexto)
+
     def mide(clave: str, valor: float) -> str:
         return f"{clave} = {d._numero_latex(valor)} {unidad}".strip()
 
     if cuerpo.figura == "cubo":
-        medidas = [(mide("a", cuerpo.lado or a), [0, -a / 2, -a / 2], 0, "abajo")]
+        s = a / 2
+        seg_a = ([-s, -s, -s], [s, -s, -s])
+        medidas = [(mide("a", cuerpo.lado or a), [0, -a / 2, -a / 2], 0, "abajo", destaca_a, seg_a)]
     elif cuerpo.figura == "cilindro":
+        seg_r = ([0.0, 0.0, h / 2], [r, 0.0, h / 2])
+        seg_h = ([-r, 0.0, -h / 2], [-r, 0.0, h / 2])
         medidas = [
-            (mide("r", cuerpo.radio or 0.0), [r / 2, 0, h / 2], 2 if despiece else 0, "arriba"),
-            (mide("h", cuerpo.altura or 0.0), [-r, 0, 0], 1 if despiece else 0, "izquierda"),
+            (mide("r", cuerpo.radio or 0.0), [r / 2, 0, h / 2], 2 if despiece else 0, "arriba", destaca_r, seg_r),
+            (mide("h", cuerpo.altura or 0.0), [-r, 0, 0], 1 if despiece else 0, "izquierda", destaca_h, seg_h),
         ]
     elif cuerpo.figura == "cono":
+        seg_r = ([0.0, 0.0, -h / 2], [r, 0.0, -h / 2])
+        seg_h = ([0.0, 0.0, -h / 2], [0.0, 0.0, h / 2])
         medidas = [
-            (mide("r", cuerpo.radio or 0.0), [r / 2, 0, -h / 2], 0, "abajo"),
-            (mide("h", cuerpo.altura or 0.0), [0, 0, 0], 1 if despiece else 0, "izquierda"),
+            (mide("r", cuerpo.radio or 0.0), [r / 2, 0, -h / 2], 0, "abajo", destaca_r, seg_r),
+            (mide("h", cuerpo.altura or 0.0), [0, 0, 0], 1 if despiece else 0, "izquierda", destaca_h, seg_h),
         ]
+        if destaca_g or "generatriz" in marcas_set or "g" in marcas_set:
+            g_val = math.hypot(cuerpo.radio or 0.0, cuerpo.altura or 0.0)
+            seg_g = ([0.0, 0.0, h / 2], [r, 0.0, -h / 2])
+            medidas.append((mide("g", g_val), [r / 2, 0, 0], 1 if despiece else 0, "derecha", destaca_g, seg_g))
     else:
-        medidas = [(mide("r", cuerpo.radio or 0.0), [r / 2, 0, 0], 0, "arriba")]
+        seg_r = ([0.0, 0.0, 0.0], [r, 0.0, 0.0])
+        medidas = [(mide("r", cuerpo.radio or 0.0), [r / 2, 0, 0], 0, "arriba", destaca_r, seg_r)]
+
     notas = []
     for marca in visual.anotar[:2]:
-        rotulo, valor, sufijo = cuerpo.nota(marca, visual.vista)
-        notas.append(f"{rotulo} = {d._numero_latex(valor)} {unidad}{sufijo}".strip())
+        if marca in ("volumen", "area", "area_base", "base"):
+            rotulo, valor, sufijo = cuerpo.nota(marca, visual.vista)
+            notas.append(f"{rotulo} = {d._numero_latex(valor)} {unidad}{sufijo}".strip())
     cotas = None
     if cuerpo.figura == "cubo":
         s = a / 2
@@ -647,19 +680,44 @@ def _cuerpo_vivo(
 
     # —— Rótulos: las medidas pegadas al cuerpo; las notas a un costado, quietas ——————————————
     parches, rótulos = VGroup(), VGroup()
-    # (cartón, rótulo, punto 3D, pieza a la que va pegado, lado del cuerpo donde se apoya)
-    viajeros: list[tuple[Mobject, Mobject, np.ndarray, int | None, str]] = []
+    lineas_destacadas = VGroup()
+    elementos_destacados = []
+    # (cartón, rótulo, punto 3D, pieza a la que va pegado, lado del cuerpo donde se apoya, destacada)
+    viajeros: list[tuple[Mobject, Mobject, np.ndarray, int | None, str, bool]] = []
 
-    def etiqueta(texto: str, donde: np.ndarray, tam: int = 26) -> tuple[Mobject, Mobject]:
-        rotulo = c.texto(texto, tam, c.SEMIBOLD, col.texto).move_to(donde)
+    def etiqueta(texto: str, donde: np.ndarray, tam: int = 26, destacada: bool = False) -> tuple[Mobject, Mobject]:
+        color_texto = col.acento if destacada else col.texto
+        peso = c.BOLD if destacada else c.SEMIBOLD
+        rotulo = c.texto(texto, tam + (2 if destacada else 0), peso, color_texto).move_to(donde)
         fondo, rotulo = d._parche(rotulo, papel, 0.16)
+        if destacada:
+            fondo.set_stroke(col.acento, 2.8, 1.0)
+            fondo.set_fill(papel, 1.0)
         parches.add(fondo)
         rótulos.add(rotulo)
         return fondo, rotulo
 
-    for texto, punto, pieza, lado in ([] if tecnico else medidas):
-        fondo, rotulo = etiqueta(texto, np.zeros(3))
-        viajeros.append((fondo, rotulo, np.array(punto, dtype=float), pieza, lado))
+    for item in ([] if tecnico else medidas):
+        texto = item[0]
+        punto = item[1]
+        pieza = item[2]
+        lado = item[3]
+        destacada = bool(item[4]) if len(item) > 4 else False
+        seg_3d = item[5] if len(item) > 5 else None
+
+        fondo, rotulo = etiqueta(texto, np.zeros(3), 26, destacada=destacada)
+        viajeros.append((fondo, rotulo, np.array(punto, dtype=float), pieza, lado, destacada))
+
+        if seg_3d is not None and destacada:
+            p_ini, p_fn = seg_3d
+            linea_dest = Line(np.zeros(3), np.zeros(3)).set_stroke(col.acento, 3.5, 0.95)
+            dot_a = Dot(np.zeros(3), radius=0.06, color=col.acento)
+            dot_b = Dot(np.zeros(3), radius=0.06, color=col.acento)
+            grupo_seg = VGroup(linea_dest, dot_a, dot_b)
+            lineas_destacadas.add(grupo_seg)
+            elementos_destacados.append(
+                (linea_dest, dot_a, dot_b, np.array(p_ini, dtype=float), np.array(p_fn, dtype=float), pieza)
+            )
 
     lineas_cota = VGroup()
     acotadas = []
@@ -690,7 +748,24 @@ def _cuerpo_vivo(
         der, arr, _ = _ejes_de_camara(phi, theta)
         x0, x1, y0, y1 = limites[0]
         factor = float(np.linalg.norm(llevar(np.array([1.0, 0.0, 0.0])) - llevar(np.zeros(3)))) or 1.0
-        for fondo, rotulo, punto, pieza, lado in viajeros:
+
+        def proy(p3: np.ndarray) -> np.ndarray:
+            x, y = (p3 @ der - centro_2d[0]) * k, (p3 @ arr - centro_2d[1]) * k
+            return llevar(np.array([x, y, 0.0]))
+
+        for linea_dest, dot_a, dot_b, p_ini_3d, p_fn_3d, pz in elementos_destacados:
+            salida = piezas[pz].salida * sep if pz is not None else 0.0
+            pt_a = proy(p_ini_3d + salida)
+            pt_b = proy(p_fn_3d + salida)
+            if np.linalg.norm(pt_b - pt_a) < 1e-5:
+                linea_dest.set_stroke(opacity=0.0)
+            else:
+                linea_dest.set_stroke(opacity=0.95)
+                linea_dest.put_start_and_end_on(pt_a, pt_b)
+            dot_a.move_to(pt_a)
+            dot_b.move_to(pt_b)
+
+        for fondo, rotulo, punto, pieza, lado, destacada in viajeros:
             p3 = punto + (piezas[pieza].salida * sep if pieza is not None else 0.0)
             x, y = (p3 @ der - centro_2d[0]) * k, (p3 @ arr - centro_2d[1]) * k
             medio_ancho, medio_alto = fondo.width / factor / 2, fondo.height / factor / 2
@@ -769,10 +844,11 @@ def _cuerpo_vivo(
             fondo.shift(corrimiento)
             rotulo.shift(corrimiento)
 
+    lineas_destacadas.set_z_index(0.53)
     lineas_cota.set_z_index(0.52)
     parches.set_z_index(0.55)
     rótulos.set_z_index(0.56)
-    todo = VGroup(cuerpo_mob, lineas_cota, parches, rótulos)
+    todo = VGroup(cuerpo_mob, lineas_cota, lineas_destacadas, parches, rótulos)
     envolvente = None
     if tecnico:
         extremos = []
@@ -829,7 +905,7 @@ def _cuerpo_vivo(
     return d.Dibujo(
         mobs=todo,
         trazo=[],
-        aparece=[cuerpo_mob, *lineas_cota, *rótulos],
+        aparece=[cuerpo_mob, *lineas_cota, *lineas_destacadas, *rótulos],
         vivo=vivo,
         duracion=d.SEGUNDOS_RECORRIDO,
         fisico=False,
