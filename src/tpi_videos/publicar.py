@@ -36,7 +36,7 @@ HASHTAGS_BASE = [
 
 AVISO_IA = "Creado con IA."
 _CAMPOS_CON_AVISO = ("descripcion_youtube", "texto_tiktok", "texto_instagram")
-LARGO_TIKTOK = 150  # el texto entero, con el aviso de IA incluido
+LARGO_TIKTOK = 2200  # TikTok permite hasta 2.200 caracteres (antes 150)
 # Lo que el texto de TikTok puede ocupar antes del aviso («\n\nCreado con IA.»).
 LARGO_TIKTOK_SIN_AVISO = LARGO_TIKTOK - len(AVISO_IA) - 2
 
