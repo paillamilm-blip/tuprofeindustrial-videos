@@ -52,10 +52,13 @@ llamado: Clases particulares PAES · Online y presencial en toda la Región Metr
   en Instagram @tuprofeindustrial o en nuestra web.
 camara: quieta
 portada:
+  estilo: cian
   badge: "CLAVE PAES M1"
+  emoji_badge: cronometro.png
   titular: "¿CÓMO REVISAR\nTU ECUACIÓN?"
   pregunta: "¿3x + 2 = 14 EN 10 SEGUNDOS?"
   alerta: "¡NO ENTREGUES SIN COMPROBAR!"
+  emoji_alerta: objetivo.png
   detalle: "3(4) + 2 = 12 + 2 = 14 ✓"
   pie: "Asegura tus puntos reemplazando tu resultado"
 historias:

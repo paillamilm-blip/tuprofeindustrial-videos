@@ -1263,6 +1263,10 @@ class PortadaConfig(_Base):
     alerta: str | None = None
     detalle: str | None = None
     pie: str | None = None
+    estilo: str | None = None
+    fondo: str | None = None
+    emoji_badge: str | None = None
+    emoji_alerta: str | None = None
 
 
 class HistoriaEncuestaConfig(_Base):

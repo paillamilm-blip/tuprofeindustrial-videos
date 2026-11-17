@@ -3,6 +3,9 @@
 Diseñado con zona segura central (1080×1080) para que nunca se recorte
 ni en la grilla del perfil de Instagram (1:1), ni en el feed de Instagram (4:5),
 ni en el reproductor vertical (9:16).
+
+Incluye sistema de temas cromáticos, fondos y emojis dinámicos para que
+cada video tenga una identidad visual única y destacada en el feed.
 """
 
 from __future__ import annotations
@@ -17,6 +20,129 @@ from .guion import Guion
 
 ANCHO = 1080
 ALTO = 1920
+
+PALETAS: dict[str, dict[str, Any]] = {
+    "morado": {
+        "fondo": "neon_uva.png",
+        "vineta": "vineta_cine.png",
+        "blend": 0.45,
+        "glow": (168, 85, 247, 65),
+        "badge_fill": (147, 51, 234, 245),
+        "badge_emoji": "rayo.png",
+        "titular_l2_fill": (192, 132, 252),
+        "box_fill": (24, 14, 38, 235),
+        "box_border": (192, 132, 252, 210),
+        "alerta_fill": (255, 255, 255, 255),
+        "alerta_border": (147, 51, 234, 255),
+        "alerta_text": (126, 34, 206),
+        "alerta_emoji": "alerta.png",
+        "detalle_fill": (216, 180, 254),
+        "flecha_color": (192, 132, 252, 255),
+    },
+    "ambar": {
+        "fondo": "plano_azul.png",
+        "vineta": "vineta_dorada.png",
+        "blend": 0.50,
+        "glow": (245, 158, 11, 65),
+        "badge_fill": (217, 119, 6, 245),
+        "badge_emoji": "fuego.png",
+        "titular_l2_fill": (250, 204, 21),
+        "box_fill": (26, 22, 14, 235),
+        "box_border": (251, 191, 36, 210),
+        "alerta_fill": (255, 255, 255, 255),
+        "alerta_border": (217, 119, 6, 255),
+        "alerta_text": (180, 83, 9),
+        "alerta_emoji": "baja.png",
+        "detalle_fill": (250, 204, 21),
+        "flecha_color": (251, 191, 36, 255),
+    },
+    "verde": {
+        "fondo": "tiza_verde.png",
+        "vineta": "vineta_cine.png",
+        "blend": 0.40,
+        "glow": (16, 185, 129, 65),
+        "badge_fill": (5, 150, 105, 245),
+        "badge_emoji": "divide.png",
+        "titular_l2_fill": (110, 231, 183),
+        "box_fill": (10, 28, 20, 235),
+        "box_border": (52, 211, 153, 210),
+        "alerta_fill": (255, 255, 255, 255),
+        "alerta_border": (5, 150, 105, 255),
+        "alerta_text": (4, 120, 87),
+        "alerta_emoji": "incorrecto.png",
+        "detalle_fill": (110, 231, 183),
+        "flecha_color": (52, 211, 153, 255),
+    },
+    "cian": {
+        "fondo": "comic_azul.png",
+        "vineta": "vineta_cine.png",
+        "blend": 0.45,
+        "glow": (6, 182, 212, 70),
+        "badge_fill": (2, 132, 199, 245),
+        "badge_emoji": "cronometro.png",
+        "titular_l2_fill": (56, 189, 248),
+        "box_fill": (12, 24, 42, 235),
+        "box_border": (56, 189, 248, 210),
+        "alerta_fill": (255, 255, 255, 255),
+        "alerta_border": (2, 132, 199, 255),
+        "alerta_text": (2, 132, 199),
+        "alerta_emoji": "objetivo.png",
+        "detalle_fill": (56, 189, 248),
+        "flecha_color": (56, 189, 248, 255),
+    },
+    "naranja": {
+        "fondo": "plano_noche.png",
+        "vineta": "vineta_dorada.png",
+        "blend": 0.45,
+        "glow": (249, 115, 22, 65),
+        "badge_fill": (234, 88, 12, 245),
+        "badge_emoji": "construccion.png",
+        "titular_l2_fill": (251, 146, 60),
+        "box_fill": (28, 18, 14, 235),
+        "box_border": (251, 146, 60, 210),
+        "alerta_fill": (255, 255, 255, 255),
+        "alerta_border": (234, 88, 12, 255),
+        "alerta_text": (194, 65, 12),
+        "alerta_emoji": "incorrecto.png",
+        "detalle_fill": (253, 186, 116),
+        "flecha_color": (251, 146, 60, 255),
+    },
+    "rojo": {
+        "fondo": "plano_noche.png",
+        "vineta": "vineta_cine.png",
+        "blend": 0.45,
+        "glow": (244, 63, 94, 65),
+        "badge_fill": (225, 29, 72, 245),
+        "badge_emoji": "alerta.png",
+        "titular_l2_fill": (250, 204, 21),
+        "box_fill": (24, 14, 18, 235),
+        "box_border": (251, 113, 133, 210),
+        "alerta_fill": (255, 255, 255, 255),
+        "alerta_border": (225, 29, 72, 255),
+        "alerta_text": (225, 29, 72),
+        "alerta_emoji": "cien.png",
+        "detalle_fill": (250, 204, 21),
+        "flecha_color": (244, 63, 94, 255),
+    },
+}
+
+
+def inferir_paleta(guion: Guion) -> str:
+    """Deduce una paleta temática armónica según el contenido matemático/físico."""
+    texto_total = f"{guion.titulo} {guion.gancho.texto} {guion.enunciado.texto}".lower()
+    if any(k in texto_total for k in ["obrero", "trabajador", "días", "inversa", "proporcionalidad"]):
+        return "naranja"
+    if any(k in texto_total for k in ["fracción", "fracciones", "denominador", "tercio", "cuarto", "doceavos"]):
+        return "verde"
+    if any(k in texto_total for k in ["signo", "paréntesis", "distributiva", "potencia", "álgebra"]):
+        return "morado"
+    if any(k in texto_total for k in ["ecuación", "revisar", "comprobar", "despejar"]):
+        return "cian"
+    if any(k in texto_total for k in ["precio original", "descuento inverso", "pagaste", "16.000"]):
+        return "rojo"
+    if any(k in texto_total for k in ["porcentaje", "20%", "50%", "base", "iva"]):
+        return "ambar"
+    return "cian"
 
 
 def _fuentes() -> dict[str, str]:
@@ -34,6 +160,8 @@ def _emojis_dir() -> Path:
 
 
 def _cargar_emoji(nombre: str, tamano: int) -> Image.Image:
+    if not nombre.endswith(".png"):
+        nombre += ".png"
     ruta = _emojis_dir() / nombre
     if ruta.exists():
         im = Image.open(ruta).convert("RGBA")
@@ -41,11 +169,20 @@ def _cargar_emoji(nombre: str, tamano: int) -> Image.Image:
     return Image.new("RGBA", (tamano, tamano), (0, 0, 0, 0))
 
 
-def _fondo_base() -> Image.Image:
+def _fondo_base(paleta: dict[str, Any], fondo_custom: str | None = None) -> Image.Image:
     fondos = raiz_proyecto() / "src" / "tpi_videos" / "assets" / "fondos"
-    bg = Image.open(fondos / "plano_noche.png").convert("RGBA")
-    vineta = Image.open(fondos / "vineta_cine.png").convert("RGBA")
-    return Image.blend(bg, vineta, 0.45)
+    nombre_bg = (fondo_custom + ".png" if fondo_custom and not fondo_custom.endswith(".png") else fondo_custom) or paleta["fondo"]
+    ruta_bg = fondos / nombre_bg
+    if not ruta_bg.exists():
+        ruta_bg = fondos / "plano_noche.png"
+    bg = Image.open(ruta_bg).convert("RGBA")
+
+    nombre_vin = paleta.get("vineta", "vineta_cine.png")
+    ruta_vin = fondos / nombre_vin
+    if ruta_vin.exists():
+        vineta = Image.open(ruta_vin).convert("RGBA")
+        return Image.blend(bg, vineta, paleta.get("blend", 0.45))
+    return bg
 
 
 def _rect_con_sombra(
@@ -88,20 +225,23 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
     f_extra = lambda sz: ImageFont.truetype(f["extra"], sz)
     f_semi = lambda sz: ImageFont.truetype(f["semi"], sz)
 
-    # 1. Fondo base y resplandor radial
-    img = _fondo_base()
+    cfg = guion.portada
+    es_paes = "paes" in guion.titulo.lower() or (guion.nivel and "paes" in guion.nivel.lower())
+
+    # 1. Determinar estilo y paleta temática
+    nombre_paleta = (cfg.estilo if cfg and cfg.estilo else inferir_paleta(guion)).lower()
+    paleta = PALETAS.get(nombre_paleta, PALETAS["cian"])
+
+    # 2. Fondo base dinámico y resplandor radial
+    img = _fondo_base(paleta, cfg.fondo if cfg else None)
     glow = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    ImageDraw.Draw(glow).ellipse([180, 620, 900, 1220], fill=(56, 189, 248, 45))
+    ImageDraw.Draw(glow).ellipse([160, 600, 920, 1240], fill=paleta["glow"])
     img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(80)))
 
     ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(ov)
 
-    # 2. Configuración o inferencia de textos
-    cfg = guion.portada
-    es_paes = "paes" in guion.titulo.lower() or (guion.nivel and "paes" in guion.nivel.lower())
-
-    # Badge superior
+    # 3. Badge superior personalizado
     badge_txt = (
         cfg.badge
         if cfg and cfg.badge
@@ -117,12 +257,12 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
         d,
         [bx0 - 25, 470, bx1 + 25, 540],
         radius=35,
-        fill=(239, 68, 68, 245),
+        fill=paleta["badge_fill"],
         shadow_color=(0, 0, 0, 120),
     )
     d.text((bx0 + 44 + 16, 505), badge_txt, font=f_b, fill=(255, 255, 255), anchor="lm")
 
-    # Titular Gancho
+    # 4. Titular Gancho
     if cfg and cfg.titular:
         lineas = cfg.titular.split("\n")
         l1 = lineas[0]
@@ -147,15 +287,15 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
             d.text((540 + dx, 730 + dy), l2, font=f_hook, fill=(0, 0, 0, 200), anchor="mm")
     d.text((540, 630), l1, font=f_hook, fill=(255, 255, 255), anchor="mm")
     if l2:
-        d.text((540, 730), l2, font=f_hook, fill=(250, 204, 21), anchor="mm")
+        d.text((540, 730), l2, font=f_hook, fill=paleta["titular_l2_fill"], anchor="mm")
 
-    # Tarjeta Central de Curiosidad / Ruptura de Creencia
+    # 5. Tarjeta Central de Curiosidad / Ruptura de Creencia
     _rect_con_sombra(
         d,
         [100, 835, 980, 1180],
         radius=30,
-        fill=(15, 23, 42, 235),
-        outline=(56, 189, 248, 180),
+        fill=paleta["box_fill"],
+        outline=paleta["box_border"],
         width=3,
     )
     pregunta_txt = (
@@ -165,7 +305,7 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
     )
     d.text((540, 905), pregunta_txt, font=f_extra(44), fill=(241, 245, 249), anchor="mm")
 
-    # Sello Alerta: FONDO BLANCO con BORDE ROJO para alto contraste
+    # 6. Sello Alerta: FONDO BLANCO con BORDE DINÁMICO
     alerta_txt = cfg.alerta if cfg and cfg.alerta else "¡NO! EL 85% SE EQUIVOCA"
     f_alerta = f_black(38)
     bbox_al = f_alerta.getbbox(alerta_txt)
@@ -177,29 +317,29 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
         d,
         [130, 965, 950, 1050],
         radius=22,
-        fill=(255, 255, 255, 255),
-        outline=(239, 68, 68, 255),
+        fill=paleta["alerta_fill"],
+        outline=paleta["alerta_border"],
         width=3,
         shadow_color=(0, 0, 0, 120),
     )
-    d.text((al_x0 + 50 + 16, 1007), alerta_txt, font=f_alerta, fill=(225, 29, 72), anchor="lm")
+    d.text((al_x0 + 50 + 16, 1007), alerta_txt, font=f_alerta, fill=paleta["alerta_text"], anchor="lm")
 
-    # Fórmula reveladora o detalle
+    # 7. Fórmula reveladora o detalle con color de acento
     if cfg and cfg.detalle:
-        d.text((540, 1115), cfg.detalle, font=f_black(52), fill=(56, 189, 248), anchor="mm")
+        d.text((540, 1115), cfg.detalle, font=f_black(52), fill=paleta["detalle_fill"], anchor="mm")
     elif "20%" in guion.gancho.texto:
         f_form = f_black(54)
         d.text((280, 1115), "100", font=f_form, fill=(255, 255, 255), anchor="mm")
-        _dibujar_flecha(d, 350, 1115, 60, color=(56, 189, 248, 255), width=5)
+        _dibujar_flecha(d, 350, 1115, 60, color=paleta["flecha_color"], width=5)
         d.text((485, 1115), "80", font=f_form, fill=(255, 255, 255), anchor="mm")
-        _dibujar_flecha(d, 550, 1115, 60, color=(56, 189, 248, 255), width=5)
+        _dibujar_flecha(d, 550, 1115, 60, color=paleta["flecha_color"], width=5)
         d.text((690, 1115), "96", font=f_form, fill=(250, 204, 21), anchor="mm")
     else:
         res_tex = guion.resultado.texto or guion.resultado.tex or ""
         limpio = re.sub(r"\\[a-zA-Z]+", "", res_tex).replace("{", "").replace("}", "").strip()
-        d.text((540, 1115), limpio[:24], font=f_black(50), fill=(56, 189, 248), anchor="mm")
+        d.text((540, 1115), limpio[:24], font=f_black(50), fill=paleta["detalle_fill"], anchor="mm")
 
-    # Subtexto / Invitación al video
+    # 8. Subtexto / Invitación al video
     pie_txt = (
         cfg.pie
         if cfg and cfg.pie
@@ -211,7 +351,7 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
     )
     d.text((540, 1250), pie_txt, font=f_semi(35), fill=(203, 213, 225), anchor="mm")
 
-    # Branding en la base segura
+    # 9. Branding en la base segura
     _rect_con_sombra(
         d,
         [240, 1340, 840, 1405],
@@ -223,10 +363,13 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
     materia_tag = "MATEMÁTICA PAES" if es_paes else guion.materia.upper()
     d.text((540, 1372), f"@tuprofeindustrial · {materia_tag}", font=f_extra(30), fill=(148, 163, 184), anchor="mm")
 
-    # Pegar emojis visuales
+    # 10. Pegar emojis visuales temáticos
+    emoji_badge_nombre = (cfg.emoji_badge if cfg and cfg.emoji_badge else paleta["badge_emoji"])
+    emoji_alerta_nombre = (cfg.emoji_alerta if cfg and cfg.emoji_alerta else paleta["alerta_emoji"])
+
     img_comp = Image.alpha_composite(img, ov)
-    _pegar_emoji(img_comp, _cargar_emoji("alerta.png", 44), bx0, 483)
-    _pegar_emoji(img_comp, _cargar_emoji("incorrecto.png", 50), al_x0, 982)
+    _pegar_emoji(img_comp, _cargar_emoji(emoji_badge_nombre, 44), bx0, 483)
+    _pegar_emoji(img_comp, _cargar_emoji(emoji_alerta_nombre, 50), al_x0, 982)
 
     destino_png = carpeta / "portada.png"
     destino_jpg = carpeta / "portada.jpg"

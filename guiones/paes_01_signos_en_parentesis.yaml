@@ -50,10 +50,13 @@ cierre:
 llamado: Clases particulares PAES · Online y presencial en toda la Región Metropolitana · Consultas
   en Instagram @tuprofeindustrial o en nuestra web.
 portada:
+  estilo: morado
   badge: "ERROR TÍPICO PAES M1"
+  emoji_badge: rayo.png
   titular: "¿CUÁNTO DA\n-(x - 3)?"
   pregunta: "¿EL SIGNO MENOS CAMBIA TODO?"
   alerta: "¡NO ES -x - 3! EL 75% FALLA"
+  emoji_alerta: asombro.png
   detalle: "-(x - 3) = -x + 3"
   pie: "Descubre la regla de los signos en este video"
 historias:

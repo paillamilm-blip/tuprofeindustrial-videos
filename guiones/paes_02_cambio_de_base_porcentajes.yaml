@@ -53,10 +53,13 @@ llamado: Clases particulares PAES · Online y presencial en toda la Región Metr
   en Instagram @tuprofeindustrial o en nuestra web.
 camara: quieta
 portada:
+  estilo: ambar
   badge: "ERROR TÍPICO PAES M1"
+  emoji_badge: fuego.png
   titular: "¿BAJA UN 20% Y\nSUBE UN 20%?"
   pregunta: "¿QUEDA EN EL MISMO PRECIO?"
   alerta: "¡NO! EL 85% SE EQUIVOCA"
+  emoji_alerta: baja.png
   detalle: "100 ➔ 80 ➔ 96"
   pie: "Descubre por qué termina en 96 en este video"
 historias:

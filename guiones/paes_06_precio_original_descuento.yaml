@@ -54,10 +54,13 @@ llamado: Clases particulares PAES · Online y presencial en toda la Región Metr
   en Instagram @tuprofeindustrial o en nuestra web.
 camara: quieta
 portada:
+  estilo: rojo
   badge: "ERROR TÍPICO PAES M1"
+  emoji_badge: alerta.png
   titular: "PAGASTE $16.000 CON\n20% DE DESCUENTO"
   pregunta: "¿EL PRECIO ORIGINAL ERA $19.200?"
   alerta: "¡NO SE LE SUMA EL 20%! FALLA EL 90%"
+  emoji_alerta: cien.png
   detalle: "0,80 · P = 16.000  ➔  P = $20.000"
   pie: "Descubre cómo calcular el valor original sin trampas"
 historias:

@@ -55,10 +55,13 @@ llamado: Clases particulares PAES · Online y presencial en toda la Región Metr
   en Instagram @tuprofeindustrial o en nuestra web.
 camara: quieta
 portada:
+  estilo: verde
   badge: "ERROR TÍPICO PAES M1"
+  emoji_badge: divide.png
   titular: "¿CUÁNTO DA\n2/3 + 1/4?"
   pregunta: "¿SE SUMA DIRECTO HACIA EL LADO?"
   alerta: "¡NO ES 3/7! EL 80% LO HACE MAL"
+  emoji_alerta: cerebro.png
   detalle: "2/3 + 1/4 = 8/12 + 3/12 = 11/12"
   pie: "Descubre cómo sumar pedazos del mismo tamaño"
 historias:
