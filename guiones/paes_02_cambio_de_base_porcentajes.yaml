@@ -1,77 +1,88 @@
 titulo: 'PAES M1: El mito del 20% que baja y sube'
 materia: matematica
 nivel: 1° medio / PAES
-tema: rotulador
+molde: mito_realidad
+tema: consola_error
+camara: suave
 gancho:
-  texto: 'Baja 20% y sube 20%: ¿vuelve al precio original?'
-  voz: 'Un producto baja veinte por ciento y después sube veinte por ciento. ¿Vuelve
-    al precio original? Alternativas: noventa y seis, cien o ciento cuatro.'
-  tex: 100 \xrightarrow{-20\%} 80 \xrightarrow{+20\%} ¿100?
-  emoji: 🏷️
+  texto: Si baja un 20% y sube un 20%, ¿queda igual?
+  voz: Si un precio baja veinte por ciento y después sube veinte por ciento, ¿queda igual?
+  tex: 100 - 20\% + 20\% \neq 100
+  emoji: 🚨
 enunciado:
-  texto: Calcula el precio final de un artículo de $100 que disminuye un 20% y luego
-    aumenta un 20%.
-  voz: Para no enredarte nunca, asume siempre un precio inicial de cien pesos.
+  texto: Un producto de $100 baja un 20% y luego el nuevo precio sube un 20%. ¿Queda igual?
+  voz: Cien pesos bajan veinte por ciento y luego suben veinte por ciento. Muchos creen que queda igual.
   destacar:
-  - 20%
+  - "100"
+  - "20%"
+datos:
+- tex: P_0 = 100
+  voz: Partimos de cien pesos.
 pasos:
-- nota: Primera rebaja del 20%
-  tex: 100 - 0{,}20(100) = 80
-  voz: El veinte por ciento de cien pesos son veinte pesos, así que el precio baja
-    a ochenta pesos.
+- nota: La creencia falsa
+  tex: P_{\text{final}} = 100
+  voz: El error común es creer que los porcentajes se anulan. ¡Eso está mal!
+  error: true
+  emoji: ❌
+- nota: Primer cambio (baja 20%)
+  tex: P_1 = 100 - 20 = 80
+  voz: Al bajar un veinte por ciento de cien, te quedan ochenta pesos.
   emoji: 📉
-  transformar: false
-- nota: El aumento se calcula sobre 80
-  tex: 0{,}20 \cdot 80 = 16
-  voz: 'Ahora viene la trampa: el veinte por ciento de aumento se calcula sobre ochenta
-    pesos, que da dieciséis.'
-  emoji: ⚠️
-  transformar: false
-- nota: Sumamos el aumento
-  tex: 80 + 16 = 96 \neq 100
-  voz: Ochenta más dieciséis nos da noventa y seis pesos. ¡Terminas perdiendo cuatro
-    pesos!
+  visual:
+    tipo: barras
+    categorias: ['Base 100', 'Baja 80', 'Final 96']
+- nota: Segundo cambio (sube 20% sobre 80)
+  tex: P_2 = 80 + 0{,}2 \cdot 80 = 80 + 16 = 96
+  voz: La subida se calcula sobre ochenta, no sobre cien. Veinte por ciento de ochenta es dieciséis.
   destacar:
-  - 80 + 16 = 96
-  transformar: false
+  - '96'
+  emoji: 💡
+  visual:
+    tipo: barras
+    categorias: ['Base 100', 'Baja 80', 'Final 96']
 resultado:
-  tex: \text{Precio final} = \$96
-  voz: La respuesta correcta es noventa y seis pesos. Jamás vuelve a cien pesos porque
-    cambió la base de cálculo.
+  tex: P_{\text{final}} = 96 \neq 100
+  voz: El precio final es noventa y seis. ¡Perdiste un cuatro por ciento en el camino!
   emoji: 🎯
 verificacion:
-  texto: En variaciones porcentuales sucesivas, la base de cálculo cambia en cada
-    paso.
-  voz: 'Grábate esto para la PAES: cuando aplicas porcentajes encadenados, la base
-    cambia siempre.'
+  texto: La base sobre la que calculas el porcentaje cambió de 100 a 80.
+  voz: La base cambió. Por eso nunca da el cien por ciento original.
+reto:
+  texto: Si algo cuesta 200, ¿sube 10% y baja 10% queda en 200?
+  voz: Si cuesta doscientos, ¿sube diez por ciento y baja diez por ciento queda igual? Piénsalo.
+  emoji: 🤔
 cierre:
-  texto: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
-    para consultar horarios.
-  voz: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
-    para consultar horarios.
-llamado: Clases particulares PAES · Online y presencial en toda la Región Metropolitana · Consultas
-  en Instagram @tuprofeindustrial o en nuestra web.
-camara: quieta
+  texto: Clases particulares PAES M1. Escríbeme directo al WhatsApp de mi perfil.
+  voz: Si quieres asegurar tu puntaje en la PAES M1, háblame directo al WhatsApp que está en mi perfil.
+  emoji: 🔥
+llamado: Clases particulares PAES · Online y presencial · WhatsApp en mi perfil (link en bio)
 portada:
   estilo: ambar
-  badge: "ERROR TÍPICO PAES M1"
+  badge: TRAMPA CLÁSICA PAES M1
   emoji_badge: fuego.png
-  titular: "¿BAJA UN 20% Y\nSUBE UN 20%?"
-  pregunta: "¿QUEDA EN EL MISMO PRECIO?"
-  alerta: "¡NO! EL 85% SE EQUIVOCA"
-  emoji_alerta: baja.png
-  detalle: "100 ➔ 80 ➔ 96"
-  pie: "Descubre por qué termina en 96 en este video"
+  titular: |-
+    SI BAJA 20%
+    Y SUBE 20%...
+  pregunta: ¿QUEDA EN EL MISMO PRECIO?
+  alerta: ¡NO! EL 90% CAE EN ESTA TRAMPA
+  emoji_alerta: alerta.png
+  detalle: 100 - 20 = 80 → 80 + 16 = 96 (Pierdes 4%)
+  pie: La base del porcentaje siempre cambia
 historias:
   encuesta:
-    badge: "RETO PAES M1"
-    titulo: "¿CAERÍAS EN LA TRAMPA\nDE LOS PORCENTAJES?"
-    pregunta: "Un producto cuesta $100:\n1. Baja un 20%\n2. Luego sube un 20%\n¿Cuál es su precio final?"
-    opcion_a: "$100  («Vuelve al inicio»)"
-    opcion_b: "$96  («Pierde 4 pesos»)"
+    badge: RETO PAES M1
+    titulo: |-
+      ¿CAERÍAS EN LA TRAMPA
+      DEL PORCENTAJE?
+    pregunta: |-
+      Si un precio de $100 baja 20%
+      y luego sube 20%:
+      ¿Cuánto vale al final?
+    opcion_a: $100  («Se anulan los 20%»)
+    opcion_b: $96  («La base cambió a 80»)
 metadatos:
-  titulo: 'Si baja un 20% y sube un 20%, ¿queda igual? ❌'
-  descripcion: 'El error clásico de cambio de base en porcentajes para la PAES M1. Demostramos por qué 100 baja a 80 y sube a 96, no a 100.'
+  titulo: '¿Si baja un 20% y sube un 20%, queda igual? ❌ Trampa PAES M1'
+  descripcion: 'El error clásico de cambio de base en porcentajes para la PAES M1. Demostramos con barras visuales por qué 100 baja a 80 y sube a 96, perdiendo un 4%.'
   hashtags:
   - '#tuprofeindustrial'
   - '#paes'
@@ -81,3 +92,4 @@ metadatos:
   - '#estudiantes'
   - '#aprendeentiktok'
   - '#chile'
+  - '#clasesparticulares'
