@@ -25,27 +25,27 @@ pasos:
   emoji: ❌
 - nota: Amplificar a doceavos
   tex: \frac{2 \cdot 4}{3 \cdot 4} + \frac{1 \cdot 3}{4 \cdot 3} = \frac{8}{12} + \frac{3}{12}
-  voz: "Convertimos a doceavos: dos tercios son ocho partes, y un cuarto son tres partes."
+  voz: "Convertimos a doceavos: dos tercios son ocho partes de doce, y un cuarto son tres partes."
   emoji: 💡
   visual:
-    tipo: barras
-    categorias: ['Dos tercios 8', 'Un cuarto 3', 'Suma 11', 'Entero 12']
+    tipo: torta
+    categorias: ['2/3 8', '1/4 3', 'Falta 1']
 - nota: Sumar pedazos iguales
   tex: \frac{8 + 3}{12} = \frac{11}{12}
-  voz: Ahora que los trozos son iguales, sumamos ocho más tres y obtenemos once doceavos.
+  voz: Ahora que los trozos son del mismo tamaño, sumamos ocho más tres y obtenemos once doceavos.
   destacar:
   - \frac{11}{12}
   emoji: ✅
   visual:
-    tipo: barras
-    categorias: ['Dos tercios 8', 'Un cuarto 3', 'Suma 11', 'Entero 12']
+    tipo: torta
+    categorias: ['2/3 8', '1/4 3', 'Falta 1']
 resultado:
   tex: \frac{2}{3} + \frac{1}{4} = \frac{11}{12}
-  voz: El resultado correcto es once doceavos. Tres séptimos ni siquiera llegaba a la mitad.
+  voz: El resultado correcto es once doceavos. ¡Tres séptimos no alcanzaba ni a la mitad de la pizza!
   emoji: 🎯
 verificacion:
   texto: 11/12 es casi el entero (0,92), mientras que 3/7 es menos de la mitad (0,43).
-  voz: Once doceavos es casi el entero completo, mientras que tres séptimos no alcanzaba ni a la mitad.
+  voz: Once doceavos es casi la pizza entera, mientras que tres séptimos no era ni la mitad.
 reto:
   texto: ¿Cuánto da 1/2 + 1/3? ¿Da 2/5 o 5/6?
   voz: ¿Cuánto da un medio más un tercio? ¿Dos quintos o cinco sextos? Cuéntame abajo.
