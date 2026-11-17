@@ -51,6 +51,20 @@ cierre:
 llamado: Clases particulares PAES · Online y presencial en toda la Región Metropolitana · Consultas
   en Instagram @tuprofeindustrial o en nuestra web.
 camara: quieta
+portada:
+  badge: "CLAVE PAES M1"
+  titular: "¿CÓMO REVISAR\nTU ECUACIÓN?"
+  pregunta: "¿3x + 2 = 14 EN 10 SEGUNDOS?"
+  alerta: "¡NO ENTREGUES SIN COMPROBAR!"
+  detalle: "3(4) + 2 = 12 + 2 = 14 ✓"
+  pie: "Asegura tus puntos reemplazando tu resultado"
+historias:
+  encuesta:
+    badge: "RETO PAES M1"
+    titulo: "¿ESTÁ BIEN DESPEJADA\nESTA ECUACIÓN?"
+    pregunta: "Si resuelves:\n3x + 2 = 14\n¿Cuánto vale la incógnita x?"
+    opcion_a: "x = 4  («Comprobado: 3·4+2=14»)"
+    opcion_b: "x = 16/3  («Error al pasar restando»)"
 metadatos:
   titulo: 'Comprueba tu ecuación en 10 segundos y asegura el puntaje ⏱️'
   descripcion: 'El truco infalible para asegurar preguntas de álgebra en la PAES M1: cómo comprobar ecuaciones lineales sustituyendo en la igualdad original.'

@@ -53,6 +53,20 @@ cierre:
 llamado: Clases particulares PAES · Online y presencial en toda la Región Metropolitana · Consultas
   en Instagram @tuprofeindustrial o en nuestra web.
 camara: quieta
+portada:
+  badge: "ERROR TÍPICO PAES M1"
+  titular: "PAGASTE $16.000 CON\n20% DE DESCUENTO"
+  pregunta: "¿EL PRECIO ORIGINAL ERA $19.200?"
+  alerta: "¡NO SE LE SUMA EL 20%! FALLA EL 90%"
+  detalle: "0,80 · P = 16.000  ➔  P = $20.000"
+  pie: "Descubre cómo calcular el valor original sin trampas"
+historias:
+  encuesta:
+    badge: "RETO PAES M1"
+    titulo: "¿CAERÍAS EN LA TRAMPA\nDEL DESCUENTO INVERSO?"
+    pregunta: "Un producto con 20% de descuento cuesta $16.000.\n¿Cuál era su precio original?"
+    opcion_a: "$19.200  («Sumar 20% a 16.000»)"
+    opcion_b: "$20.000  («16.000 ÷ 0,80»)"
 metadatos:
   titulo: 'Si con 20% de descuento pagaste $16.000, ¿cuál era el precio original? 🏷️'
   descripcion: 'El error de oro en porcentajes PAES: nunca le sumes el 20% al precio rebajado. Explicación paso a paso dividiendo por 0,8.'

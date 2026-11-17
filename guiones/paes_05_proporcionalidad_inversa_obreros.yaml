@@ -54,6 +54,20 @@ cierre:
 llamado: Clases particulares PAES · Online y presencial en toda la Región Metropolitana · Consultas
   en Instagram @tuprofeindustrial o en nuestra web.
 camara: quieta
+portada:
+  badge: "ERROR TÍPICO PAES M1"
+  titular: "¿4 OBREROS EN 6 DÍAS?\n¿CUÁNTO TARDAN 8?"
+  pregunta: "¿SE DEMORAN 12 O 3 DÍAS?"
+  alerta: "¡NO ES DIRECTA! ¡ES INVERSA!"
+  detalle: "4 × 6 = 24  ➔  24 ÷ 8 = 3 días"
+  pie: "A más trabajadores, menos días de trabajo"
+historias:
+  encuesta:
+    badge: "RETO PAES M1"
+    titulo: "¿CAERÍAS EN LA TRAMPA\nDE LA REGLA DE TRES?"
+    pregunta: "4 personas demoran 6 días en una obra.\nSi trabajan 8 personas:\n¿Cuántos días tardarán?"
+    opcion_a: "12 días  («Regla de 3 directa»)"
+    opcion_b: "3 días  («Proporción inversa»)"
 metadatos:
   titulo: '¿Duplicas trabajadores o duplicas días? Proporcionalidad inversa 👷‍♂️'
   descripcion: 'El típico error en la PAES M1 al resolver problemas de trabajadores y tiempo. Descubre por qué la constante es el producto K = x · y.'

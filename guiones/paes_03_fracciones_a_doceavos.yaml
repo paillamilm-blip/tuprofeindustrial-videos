@@ -54,9 +54,23 @@ cierre:
 llamado: Clases particulares PAES · Online y presencial en toda la Región Metropolitana · Consultas
   en Instagram @tuprofeindustrial o en nuestra web.
 camara: quieta
+portada:
+  badge: "ERROR TÍPICO PAES M1"
+  titular: "¿CUÁNTO DA\n2/3 + 1/4?"
+  pregunta: "¿SE SUMA DIRECTO HACIA EL LADO?"
+  alerta: "¡NO ES 3/7! EL 80% LO HACE MAL"
+  detalle: "2/3 + 1/4 = 8/12 + 3/12 = 11/12"
+  pie: "Descubre cómo sumar pedazos del mismo tamaño"
+historias:
+  encuesta:
+    badge: "RETO PAES M1"
+    titulo: "¿CAERÍAS EN LA TRAMPA\nDE LAS FRACCIONES?"
+    pregunta: "Al resolver:\n2/3 + 1/4\n¿Cuál es el resultado correcto?"
+    opcion_a: "3/7  («Sumar hacia el lado»)"
+    opcion_b: "11/12  («Mínimo común múltiplo»)"
 metadatos:
   titulo: '¿Por qué no se suman los denominadores en fracciones? 🥧'
-  descripcion: 'Explicamos con geometría por qué un tercio más un cuarto no son dos séptimos, sino siete doceavos. Clave para la PAES M1.'
+  descripcion: 'Explicamos paso a paso por qué dos tercios más un cuarto no son tres séptimos, sino once doceavos. Clave para la PAES M1.'
   hashtags:
   - '#tuprofeindustrial'
   - '#paes'
