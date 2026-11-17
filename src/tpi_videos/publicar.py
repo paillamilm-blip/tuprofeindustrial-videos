@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +63,7 @@ class Kit:
     con_ia: bool
     archivo: Path  # publicacion.md
     aviso: str | None = None  # ej. por qué no se usó la IA
+    historias: dict[str, Path] = field(default_factory=dict)
 
 
 def _carpeta_del_video(entrada: Path) -> Path:
@@ -293,6 +294,22 @@ def _markdown(textos: TextosPublicacion, guion: Guion) -> str:
             "",
             etiquetas,
             "",
+            "## Historias (Instagram & TikTok Stories)",
+            "",
+            "### 1. Historia Encuesta / Quiz interactivo",
+            "- Imagen: `historia_01_encuesta.png`",
+            "- Acción: Sube la imagen a Stories y coloca el sticker de Encuesta con las opciones A y B.",
+            "",
+            "### 2. Historia Compartir el Reel",
+            "- Acción: Comparte el Reel recién publicado a tus historias con el texto:",
+            '  "El 60% se equivoca con esto... Mira la explicación paso a paso en el reel de hoy 👇"',
+            "",
+            "### 3. Historia Clases Particulares PAES",
+            "- Imagen: `historia_02_clases.png`",
+            "- Beneficios: Online para todo Chile · Presencial en toda la Región Metropolitana.",
+            "- Acción: Sube la imagen y agrega el sticker de respuesta / DM:",
+            '  "Responde «PAES» a esta historia y te envío horarios y cupos disponibles 📩"',
+            "",
         ]
     )
 
@@ -343,10 +360,32 @@ def crear_kit(
     textos = textos or textos_de_plantilla(guion)
     textos = _limpiar(segun_contenido(aplicar_llamado(textos, guion.llamado), guion))
 
+    avisar("Generando historias para Instagram y TikTok…")
+    rutas_historias: dict[str, str] = {}
+    obj_historias = {}
+    try:
+        from .historias import crear_historias
+
+        obj_historias = crear_historias(carpeta, guion)
+        rutas_historias = {k: str(v) for k, v in obj_historias.items()}
+    except Exception as e:
+        avisos.append(f"No se pudieron generar las historias: {e}")
+
     archivo = carpeta / "publicacion.md"
     escribir_atomico(archivo, _markdown(textos, guion))
-    datos = {"portada": str(portada), "con_ia": con_ia_real, **textos.model_dump()}
+    datos = {
+        "portada": str(portada),
+        "historias": rutas_historias,
+        "con_ia": con_ia_real,
+        **textos.model_dump(),
+    }
     escribir_atomico(carpeta / "publicacion.json", json.dumps(datos, ensure_ascii=False, indent=2))
     return Kit(
-        carpeta=carpeta, portada=portada, textos=textos, con_ia=con_ia_real, archivo=archivo, aviso=aviso
+        carpeta=carpeta,
+        portada=portada,
+        textos=textos,
+        con_ia=con_ia_real,
+        archivo=archivo,
+        aviso=aviso,
+        historias=obj_historias,
     )

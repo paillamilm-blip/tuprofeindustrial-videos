@@ -37,6 +37,10 @@ def _mostrar_kit(cuerpo: ui.column, datos: dict[str, Any]) -> None:
     cuerpo.clear()
     portada = Path(datos.get("portada", ""))
     etiquetas = " ".join(datos.get("hashtags", []))
+    historias = datos.get("historias") or {}
+    h_encuesta = Path(historias.get("encuesta", "")) if historias.get("encuesta") else (portada.parent / "historia_01_encuesta.png")
+    h_clases = Path(historias.get("clases", "")) if historias.get("clases") else (portada.parent / "historia_02_clases.png")
+
     with cuerpo, ui.row().classes("w-full gap-6 no-wrap items-start"):
         with ui.column().classes("items-center gap-2"):
             if portada.exists():
@@ -47,6 +51,16 @@ def _mostrar_kit(cuerpo: ui.column, datos: dict[str, Any]) -> None:
             ui.label("Escrito con IA ✨" if datos.get("con_ia") else "Hecho con plantilla").classes(
                 "tpi-ayuda"
             )
+            with ui.column().classes("w-full gap-1 mt-2"):
+                ui.label("📲 Historias 1080×1920").classes("font-semibold text-xs tpi-sobrio")
+                if h_encuesta.exists():
+                    ui.button(
+                        "Historia 1: Encuesta", icon="quiz", on_click=lambda p=h_encuesta: ui.download.file(p)
+                    ).props("flat dense no-caps").classes("tpi-celeste text-xs")
+                if h_clases.exists():
+                    ui.button(
+                        "Historia 3: Clases", icon="campaign", on_click=lambda p=h_clases: ui.download.file(p)
+                    ).props("flat dense no-caps").classes("tpi-ambar text-xs")
         with ui.column().classes("flex-1 gap-4"):
             _bloque_texto("YouTube Shorts · título", datos.get("titulo_youtube", ""))
             _bloque_texto(
@@ -54,6 +68,12 @@ def _mostrar_kit(cuerpo: ui.column, datos: dict[str, Any]) -> None:
             )
             _bloque_texto("TikTok", f"{datos.get('texto_tiktok', '')} {etiquetas}")
             _bloque_texto("Instagram Reels", f"{datos.get('texto_instagram', '')}\n\n{etiquetas}")
+            _bloque_texto(
+                "Instagram & TikTok Stories · Guía de publicación",
+                "1. Sube historia_01_encuesta.png con sticker de Encuesta A vs B.\n"
+                "2. Comparte tu Reel a historias diciendo: «El 60% se equivoca aquí... mira la solución en el reel de hoy 👇»\n"
+                "3. Sube historia_02_clases.png con sticker de DM diciendo «Responde PAES para cupos y horarios disponibles 📩»."
+            )
 
 
 async def abrir_kit(carpeta: Path, al_crear: Callable[[], Any] | None = None) -> None:
