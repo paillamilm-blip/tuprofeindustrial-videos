@@ -218,6 +218,27 @@ def _pegar_emoji(base_img: Image.Image, emoji_img: Image.Image, x: int | float, 
     base_img.paste(emoji_img, (int(x), int(y)), emoji_img)
 
 
+def _fuente_adaptada(
+    texto: str,
+    creador_fuente: Any,
+    tam_inicial: int,
+    max_ancho: int,
+    min_tam: int = 18,
+) -> ImageFont.FreeTypeFont:
+    """Reduce progresivamente el tamaño de fuente hasta que el texto quepa en max_ancho."""
+    tam = tam_inicial
+    f = creador_fuente(tam)
+    if not texto:
+        return f
+    while tam > min_tam:
+        bbox = f.getbbox(texto)
+        if (bbox[2] - bbox[0]) <= max_ancho:
+            return f
+        tam -= 2
+        f = creador_fuente(tam)
+    return f
+
+
 def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
     """Genera la portada/miniatura en alta resolución (1080×1920) y la guarda como PNG y JPG."""
     f = _fuentes()
@@ -247,7 +268,7 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
         if cfg and cfg.badge
         else ("ERROR TÍPICO PAES M1" if es_paes else f"DESAFÍO {guion.materia.upper()}")
     )
-    f_b = f_extra(34)
+    f_b = _fuente_adaptada(badge_txt, f_extra, tam_inicial=34, max_ancho=700, min_tam=20)
     bbox = f_b.getbbox(badge_txt)
     tw = bbox[2] - bbox[0]
     total_w = tw + 44 + 18
@@ -280,14 +301,15 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
         l1 = guion.gancho.texto[:22].upper()
         l2 = guion.gancho.texto[22:45].upper()
 
-    f_hook = f_black(80)
+    f_hook_l1 = _fuente_adaptada(l1, f_black, tam_inicial=80, max_ancho=940, min_tam=36)
+    f_hook_l2 = _fuente_adaptada(l2, f_black, tam_inicial=80, max_ancho=940, min_tam=36)
     for dx, dy in [(-3, -3), (3, -3), (-3, 3), (3, 3), (0, 6), (0, 8)]:
-        d.text((540 + dx, 630 + dy), l1, font=f_hook, fill=(0, 0, 0, 200), anchor="mm")
+        d.text((540 + dx, 630 + dy), l1, font=f_hook_l1, fill=(0, 0, 0, 200), anchor="mm")
         if l2:
-            d.text((540 + dx, 730 + dy), l2, font=f_hook, fill=(0, 0, 0, 200), anchor="mm")
-    d.text((540, 630), l1, font=f_hook, fill=(255, 255, 255), anchor="mm")
+            d.text((540 + dx, 730 + dy), l2, font=f_hook_l2, fill=(0, 0, 0, 200), anchor="mm")
+    d.text((540, 630), l1, font=f_hook_l1, fill=(255, 255, 255), anchor="mm")
     if l2:
-        d.text((540, 730), l2, font=f_hook, fill=paleta["titular_l2_fill"], anchor="mm")
+        d.text((540, 730), l2, font=f_hook_l2, fill=paleta["titular_l2_fill"], anchor="mm")
 
     # 5. Tarjeta Central de Curiosidad / Ruptura de Creencia
     _rect_con_sombra(
@@ -303,30 +325,40 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
         if cfg and cfg.pregunta
         else ("¿QUEDA EN EL MISMO PRECIO?" if "20%" in guion.gancho.texto else "¿CÓMO SE RESUELVE?")
     )
-    d.text((540, 905), pregunta_txt, font=f_extra(44), fill=(241, 245, 249), anchor="mm")
+    f_preg = _fuente_adaptada(pregunta_txt, f_extra, tam_inicial=44, max_ancho=800, min_tam=24)
+    d.text((540, 905), pregunta_txt, font=f_preg, fill=(241, 245, 249), anchor="mm")
 
-    # 6. Sello Alerta: FONDO BLANCO con BORDE DINÁMICO
+    # 6. Sello Alerta: FONDO BLANCO con BORDE DINÁMICO adaptado al texto
     alerta_txt = cfg.alerta if cfg and cfg.alerta else "¡NO! EL 85% SE EQUIVOCA"
-    f_alerta = f_black(38)
+    f_alerta = _fuente_adaptada(alerta_txt, f_black, tam_inicial=36, max_ancho=700, min_tam=20)
     bbox_al = f_alerta.getbbox(alerta_txt)
     w_al = bbox_al[2] - bbox_al[0]
-    total_al = w_al + 50 + 20
-    al_x0 = 540 - total_al // 2
+    emoji_sz = 46
+    gap = 14
+    content_w = emoji_sz + gap + w_al
+    pill_pad = 24
+    pill_w = max(min(content_w + pill_pad * 2, 840), 400)
+    pill_x0 = 540 - pill_w // 2
+    pill_x1 = 540 + pill_w // 2
 
     _rect_con_sombra(
         d,
-        [130, 965, 950, 1050],
+        [pill_x0, 965, pill_x1, 1050],
         radius=22,
         fill=paleta["alerta_fill"],
         outline=paleta["alerta_border"],
         width=3,
         shadow_color=(0, 0, 0, 120),
     )
-    d.text((al_x0 + 50 + 16, 1007), alerta_txt, font=f_alerta, fill=paleta["alerta_text"], anchor="lm")
+    content_x0 = 540 - content_w // 2
+    al_emoji_x = content_x0
+    al_text_x = content_x0 + emoji_sz + gap
+    d.text((al_text_x, 1007), alerta_txt, font=f_alerta, fill=paleta["alerta_text"], anchor="lm")
 
-    # 7. Fórmula reveladora o detalle con color de acento
+    # 7. Fórmula reveladora o detalle con color de acento (auto-adaptable al ancho de la tarjeta)
     if cfg and cfg.detalle:
-        d.text((540, 1115), cfg.detalle, font=f_black(52), fill=paleta["detalle_fill"], anchor="mm")
+        f_det = _fuente_adaptada(cfg.detalle, f_black, tam_inicial=48, max_ancho=800, min_tam=22)
+        d.text((540, 1115), cfg.detalle, font=f_det, fill=paleta["detalle_fill"], anchor="mm")
     elif "20%" in guion.gancho.texto:
         f_form = f_black(54)
         d.text((280, 1115), "100", font=f_form, fill=(255, 255, 255), anchor="mm")
@@ -337,7 +369,8 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
     else:
         res_tex = guion.resultado.texto or guion.resultado.tex or ""
         limpio = re.sub(r"\\[a-zA-Z]+", "", res_tex).replace("{", "").replace("}", "").strip()
-        d.text((540, 1115), limpio[:24], font=f_black(50), fill=paleta["detalle_fill"], anchor="mm")
+        f_det = _fuente_adaptada(limpio[:30], f_black, tam_inicial=46, max_ancho=800, min_tam=22)
+        d.text((540, 1115), limpio[:30], font=f_det, fill=paleta["detalle_fill"], anchor="mm")
 
     # 8. Subtexto / Invitación al video
     pie_txt = (
@@ -349,7 +382,8 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
             else "Descubre la explicación paso a paso en este video"
         )
     )
-    d.text((540, 1250), pie_txt, font=f_semi(35), fill=(203, 213, 225), anchor="mm")
+    f_pie = _fuente_adaptada(pie_txt, f_semi, tam_inicial=35, max_ancho=940, min_tam=20)
+    d.text((540, 1250), pie_txt, font=f_pie, fill=(203, 213, 225), anchor="mm")
 
     # 9. Branding en la base segura
     _rect_con_sombra(
@@ -369,7 +403,7 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
 
     img_comp = Image.alpha_composite(img, ov)
     _pegar_emoji(img_comp, _cargar_emoji(emoji_badge_nombre, 44), bx0, 483)
-    _pegar_emoji(img_comp, _cargar_emoji(emoji_alerta_nombre, 50), al_x0, 982)
+    _pegar_emoji(img_comp, _cargar_emoji(emoji_alerta_nombre, emoji_sz), al_emoji_x, 984)
 
     destino_png = carpeta / "portada.png"
     destino_jpg = carpeta / "portada.jpg"
