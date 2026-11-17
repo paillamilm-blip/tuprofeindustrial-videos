@@ -16,62 +16,51 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 titulo: "Título corto del ejercicio"
-materia: fisica              # matematica | fisica | ingenieria
-nivel: "2° medio"            # opcional: "1° medio"… "4° medio" o "1° año ingeniería"… "4° año ingeniería"
-# carrera: electrica         # opcional (universidad): industrial | electrica | obras_civiles
-# tema: pizarra_nocturna     # opcional: si falta, el motor sugiere uno (se cambia en QC; ver ./tpi temas)
+materia: matematica          # matematica | fisica | ingenieria
+nivel: "1° medio / PAES"     # nivel académico o PAES
+molde: mito_realidad         # Modo Bestia: mito vs realidad de alta retención
+camara: suave                # Modo Bestia: cámara dinámica con seguimiento y zoom
 
-# Los primeros 3 segundos: una pregunta o un dato que sorprenda. Nada de "Hola" ni "en este video…".
+# Los primeros 3 segundos: gancho de dolor o error típico
 gancho:
-  texto: "¿Pregunta que engancha con un número, como 20 metros?"
-  voz: "Pregunta que engancha, dicha en voz alta."
-  emoji: "🤔"                # opcional: aparece con un salto (ver ./tpi emojis)
-  # tex: 'h = 20\ \text{m}'   # opcional: una fórmula bajo la pregunta
+  texto: "¿Por qué casi todos se equivocan en este cálculo?"
+  voz: "¿Por qué casi todos cometen este grave error en la prueba?"
+  emoji: "🚨"
+  # tex: '...'
 
-# El problema tal como lo verías en una guía. "destacar" subraya frases cuando la voz las dice.
 enunciado:
-  texto: "Escribe aquí el enunciado completo, con sus datos: 20 metros, 9,8 m/s²."
-  voz: "Cuenta el problema con tus palabras, en una o dos frases."
-  destacar: ["20 metros"]
+  texto: "Enunciado claro del problema planteando la situación."
+  voz: "Planteamiento directo y sin rodeos en una o dos frases."
+  destacar: []
 
-# Datos conocidos (opcional). Cada uno aparece cuando se nombra y luego queda fijo arriba.
-datos:
-  - tex: 'h = 20\ \text{m}'
-    voz: "La altura es de veinte metros."
-  - tex: 't = ?'
-    voz: "Y buscamos el tiempo."
+datos: []
 
-# La solución, un paso por idea. Cada fórmula se transforma en la siguiente.
-#   nota:       texto pequeño sobre la fórmula (opcional)
-#   destacar:   parte de la fórmula que se enmarca (opcional, tal como está en tex)
-#   transformar: false  → la fórmula se escribe de cero en vez de transformarse
-#   emoji:      emoji junto a la fórmula (opcional)
-#   error: true → ERROR TÍPICO: muestra la forma equivocada y la tacha con una ✗ roja.
-#                 El paso siguiente debe mostrar la forma correcta. ¡Engancha mucho!
 pasos:
-  - nota: "Ecuación que usamos"
-    tex: 'h = \frac{1}{2} g t^2'
-    voz: "Usamos esta ecuación porque…"
-  - nota: "Despejamos"
-    tex: 't = \sqrt{\frac{2h}{g}}'
-    voz: "Despejamos el tiempo."
-    destacar: ['t']
+  - nota: "La creencia falsa"
+    tex: 'x = \text{error}'
+    voz: "El error común es creer esto. ¡Eso está mal!"
+    error: true
+    emoji: "❌"
+  - nota: "Forma correcta"
+    tex: 'x = \text{correcto}'
+    voz: "La forma correcta de resolverlo es esta."
+    emoji: "💡"
 
 resultado:
-  tex: 't \approx 2,02\ \text{s}'
-  voz: "El resultado es… (di también la unidad)."
-  emoji: "✅"                # opcional
+  tex: 'x = \text{resultado}'
+  voz: "El resultado correcto es este."
+  emoji: "🎯"
 
-# Opcional: ¿el resultado tiene sentido? Ayuda a pensar, no solo a calcular.
 verificacion:
-  texto: "Una frase que compruebe o interprete el resultado."
+  texto: "Comprobación rápida que demuestra por qué tiene sentido."
+  voz: "Comprobamos por qué tiene sentido y no se te olvidará más."
 
-# Opcional (recomendado): un ejercicio parecido para que el público practique y comente.
 reto:
-  texto: "¿Y si la altura fuera 45 metros?"
-  voz: "Ahora tú: ¿y si la altura fuera cuarenta y cinco metros?"
+  texto: "¿Y si cambiamos este dato? Deja tu respuesta abajo."
+  voz: "Ahora tú: ¿cuánto daría si cambiamos este número? Te leo en los comentarios."
+  emoji: "🤔"
 
-# Opcional: si no lo escribes, se usa el cierre de marca.yaml
-# cierre:
-#   texto: "Ejercicio resuelto paso a paso"
-#   voz: "Ejercicio resuelto paso a paso."
+cierre:
+  texto: "Clases particulares PAES M1. Escríbeme al WhatsApp de mi perfil."
+  voz: "Si quieres preparar la PAES M1 y asegurar tu puntaje, háblame directo al WhatsApp que está en mi perfil."
+  emoji: "🔥"

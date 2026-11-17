@@ -55,12 +55,14 @@ voz:
   estilo: ""
   velocidad: "+5%"
 
+cama:
+  activa: true
+  volumen: 0.22
+  estilo: "motivado"             # Modo Bestia: sintetizador enérgico y continuo por defecto
+
 cierre:
-  texto: "Ejercicio resuelto paso a paso"
-  voz: "Ejercicio resuelto paso a paso. Nos vemos en el próximo."
-  # Tu logo: el nombre de un PNG subido en Ajustes → Tus stickers (ej. logo). Va arriba en todo
-  # el video y también en el cierre, salvo que el guion pida otro sticker en su propio «cierre:».
-  # Vacío = el engranaje dibujado.
+  texto: "Clases particulares PAES M1 · Escríbeme al WhatsApp de mi perfil"
+  voz: "Si quieres preparar la PAES M1 y asegurar tu puntaje, háblame directo al WhatsApp que está en mi perfil."
   emoji: ""
 
 subtitulos:         # estilo CapCut

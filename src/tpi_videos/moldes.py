@@ -8,7 +8,7 @@ from __future__ import annotations
 import unicodedata
 from dataclasses import dataclass
 
-MOLDE_POR_DEFECTO = "libre"
+MOLDE_POR_DEFECTO = "mito_realidad"
 
 
 @dataclass(frozen=True)
