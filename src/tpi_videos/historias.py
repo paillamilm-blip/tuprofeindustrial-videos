@@ -127,7 +127,14 @@ def crear_historia_encuesta(guion: Guion, destino: Path) -> Path:
         outline=(56, 189, 248, 180),
         width=3,
     )
-    if "20%" in guion.gancho.texto or "porcentaje" in guion.titulo.lower():
+    if cfg and cfg.pregunta:
+        lineas_p = [lp.strip() for lp in cfg.pregunta.split("\n") if lp.strip()]
+        y_p = 660 if len(lineas_p) >= 3 else 700
+        for lp in lineas_p:
+            d.text((540, y_p), lp, font=f_extra(44 if len(lp) < 26 else 38), fill=(241, 245, 249), anchor="mm")
+            y_p += 70
+        has_steps_icons = False
+    elif "20%" in guion.gancho.texto or "porcentaje" in guion.titulo.lower():
         d.text((540, 665), "Un producto cuesta $100:", font=f_extra(44), fill=(241, 245, 249), anchor="mm")
         d.text((370, 745), "1. Baja un 20%", font=f_semi(40), fill=(203, 213, 225), anchor="lm")
         d.text((370, 815), "2. Luego sube un 20%", font=f_semi(40), fill=(203, 213, 225), anchor="lm")
@@ -145,6 +152,16 @@ def crear_historia_encuesta(guion: Guion, destino: Path) -> Path:
     if cfg and cfg.opcion_a and cfg.opcion_b:
         op_a = cfg.opcion_a
         op_b = cfg.opcion_b
+    elif any(p.error for p in guion.pasos):
+        paso_err = next(p for p in guion.pasos if p.error)
+        err_tex = re.sub(r"\\[a-zA-Z]+", "", paso_err.tex or "").replace("{", "").replace("}", "").strip()
+        if "=" in err_tex:
+            err_tex = err_tex.split("=")[-1].strip()
+        res_tex = re.sub(r"\\[a-zA-Z]+", "", guion.resultado.tex or "").replace("{", "").replace("}", "").strip()
+        if "=" in res_tex:
+            res_tex = res_tex.split("=")[-1].strip()
+        op_a = f"{err_tex}  («La trampa clásica»)"
+        op_b = f"{res_tex}  («Resultado correcto»)"
     elif "20%" in guion.gancho.texto or "porcentaje" in guion.titulo.lower():
         op_a = "$100  («Vuelve al inicio»)"
         op_b = "$96  («Pierde 4 pesos»)"

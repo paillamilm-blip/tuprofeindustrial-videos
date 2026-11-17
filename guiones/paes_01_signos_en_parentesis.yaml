@@ -49,6 +49,20 @@ cierre:
     para consultar horarios.
 llamado: Clases particulares PAES · Online y presencial en toda la Región Metropolitana · Consultas
   en Instagram @tuprofeindustrial o en nuestra web.
+portada:
+  badge: "ERROR TÍPICO PAES M1"
+  titular: "¿CUÁNTO DA\n-(x - 3)?"
+  pregunta: "¿EL SIGNO MENOS CAMBIA TODO?"
+  alerta: "¡NO ES -x - 3! EL 75% FALLA"
+  detalle: "-(x - 3) = -x + 3"
+  pie: "Descubre la regla de los signos en este video"
+historias:
+  encuesta:
+    badge: "RETO PAES M1"
+    titulo: "¿CAERÍAS EN LA TRAMPA\nDEL SIGNO MENOS?"
+    pregunta: "Al desarrollar la expresión:\n-(x - 3)\n¿Cuál es el resultado correcto?"
+    opcion_a: "-x - 3  («La trampa típica»)"
+    opcion_b: "-x + 3  («Resultado real»)"
 metadatos:
   titulo: '¿En qué línea empezó el error con este signo menos? 😱'
   descripcion: 'Desarrollamos -(x - 3) aplicando la propiedad distributiva del signo negativo paso a paso para la PAES M1. ¿Caíste en la trampa?'

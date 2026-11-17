@@ -52,6 +52,20 @@ cierre:
 llamado: Clases particulares PAES · Online y presencial en toda la Región Metropolitana · Consultas
   en Instagram @tuprofeindustrial o en nuestra web.
 camara: quieta
+portada:
+  badge: "ERROR TÍPICO PAES M1"
+  titular: "¿BAJA UN 20% Y\nSUBE UN 20%?"
+  pregunta: "¿QUEDA EN EL MISMO PRECIO?"
+  alerta: "¡NO! EL 85% SE EQUIVOCA"
+  detalle: "100 ➔ 80 ➔ 96"
+  pie: "Descubre por qué termina en 96 en este video"
+historias:
+  encuesta:
+    badge: "RETO PAES M1"
+    titulo: "¿CAERÍAS EN LA TRAMPA\nDE LOS PORCENTAJES?"
+    pregunta: "Un producto cuesta $100:\n1. Baja un 20%\n2. Luego sube un 20%\n¿Cuál es su precio final?"
+    opcion_a: "$100  («Vuelve al inicio»)"
+    opcion_b: "$96  («Pierde 4 pesos»)"
 metadatos:
   titulo: 'Si baja un 20% y sube un 20%, ¿queda igual? ❌'
   descripcion: 'El error clásico de cambio de base en porcentajes para la PAES M1. Demostramos por qué 100 baja a 80 y sube a 96, no a 100.'
