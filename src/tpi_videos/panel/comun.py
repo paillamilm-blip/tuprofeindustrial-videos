@@ -325,6 +325,13 @@ def cabecera(con_menu: bool = True, estudio: bool = False, al_estudio: bool = Fa
             ui.timer(0.7, lambda: _estado_tarea(chip))
             if estudio:
                 with (
+                    ui.link(target="/videos")
+                    .classes("tpi-enlace-cabecera")
+                    .props('aria-label="Mis videos"')
+                ):
+                    ui.icon("movie").classes("text-xl")
+                    ui.label("Mis videos").classes("gt-xs")
+                with (
                     ui.link(target="/cola")
                     .classes("tpi-enlace-cabecera")
                     .props('aria-label="Sala de producción"')
@@ -340,6 +347,20 @@ def cabecera(con_menu: bool = True, estudio: bool = False, al_estudio: bool = Fa
                 ):
                     ui.icon("edit_note").classes("text-xl")
                     ui.label("Estudio")
+                with (
+                    ui.link(target="/videos")
+                    .classes("tpi-enlace-cabecera")
+                    .props('aria-label="Mis videos"')
+                ):
+                    ui.icon("movie").classes("text-xl")
+                    ui.label("Mis videos")
+                with (
+                    ui.link(target="/cola")
+                    .classes("tpi-enlace-cabecera")
+                    .props('aria-label="Sala de producción"')
+                ):
+                    ui.icon("dashboard").classes("text-xl")
+                    ui.label("Sala de producción")
             elif con_menu:
                 ui.link("← Volver a la sala", "/cola").classes("tpi-sobrio no-underline")
 

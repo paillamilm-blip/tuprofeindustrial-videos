@@ -26,7 +26,7 @@ from ...errores import ErrorMotor
 from ...guion import Guion, cargar_guion
 from ...niveles import NIVELES
 from .. import biblioteca, didactica_ui, estudio, miniaturas, qc
-from ..comun import cabecera, piel_de_la_pagina, url_medio
+from ..comun import abrir_en_mac, cabecera, piel_de_la_pagina, url_medio
 from ..etapas import etapas_de
 from ..tareas import TAREAS, consultar
 from .tablero import _etapas
@@ -644,9 +644,15 @@ class Estudio:
                         ui.label("Listo ✓").classes("tpi-verde font-semibold")
                         video = t.resultado.get("video")
                         if video and Path(str(video)).exists():
-                            _boton(
-                                "Ver", icon="play_arrow", on_click=lambda v=str(video): self._ver_ruta(v)
-                            ).props("flat dense no-caps").classes("tpi-verde")
+                            with ui.row().classes("gap-1"):
+                                _boton(
+                                    "Ver", icon="play_arrow", on_click=lambda v=str(video): self._ver_ruta(v)
+                                ).props("flat dense no-caps").classes("tpi-verde")
+                                _boton(
+                                    "Carpeta",
+                                    icon="folder_open",
+                                    on_click=lambda v=str(video): abrir_en_mac(Path(v), True),
+                                ).props("flat dense no-caps").classes("tpi-sobrio").tooltip("Mostrar en Finder")
                     if t.resultado.get("kit_aviso"):
                         ui.label(str(t.resultado["kit_aviso"])).classes("tpi-ambar text-xs")
                 elif t.cancelada:
@@ -737,6 +743,11 @@ class Estudio:
                             else "Volver a producir en calidad final (1080p)"
                         )
                     self._menu_textos(video)
+                    _boton(
+                        "Carpeta",
+                        icon="folder_open",
+                        on_click=lambda _e=None, v=video: abrir_en_mac(v.principal, True),
+                    ).props("flat dense no-caps").classes("tpi-sobrio").tooltip("Mostrar en Finder")
                     if video.guion is not None:
                         _boton(
                             "Guion", icon="edit_note", on_click=lambda _e=None, v=video: self._abrir_guion(v)
