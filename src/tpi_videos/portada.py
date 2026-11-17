@@ -266,7 +266,7 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
     badge_txt = (
         cfg.badge
         if cfg and cfg.badge
-        else ("ERROR TÍPICO PAES M1" if es_paes else f"DESAFÍO {guion.materia.upper()}")
+        else ("PAES M1 · ADMISIÓN 2027" if es_paes else f"DESAFÍO {guion.materia.upper()}")
     )
     f_b = _fuente_adaptada(badge_txt, f_extra, tam_inicial=34, max_ancho=700, min_tam=20)
     bbox = f_b.getbbox(badge_txt)
@@ -386,16 +386,18 @@ def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion) -> Path:
     d.text((540, 1250), pie_txt, font=f_pie, fill=(203, 213, 225), anchor="mm")
 
     # 9. Branding en la base segura
+    materia_tag = "PAES M1 · ADMISIÓN 2027" if es_paes else guion.materia.upper()
+    branding_txt = f"@tuprofeindustrial · {materia_tag}"
+    f_brand = _fuente_adaptada(branding_txt, f_extra, tam_inicial=28, max_ancho=680, min_tam=20)
     _rect_con_sombra(
         d,
-        [240, 1340, 840, 1405],
+        [180, 1340, 900, 1405],
         radius=25,
         fill=(30, 41, 59, 220),
         outline=(71, 85, 105, 180),
         width=2,
     )
-    materia_tag = "MATEMÁTICA PAES" if es_paes else guion.materia.upper()
-    d.text((540, 1372), f"@tuprofeindustrial · {materia_tag}", font=f_extra(30), fill=(148, 163, 184), anchor="mm")
+    d.text((540, 1372), branding_txt, font=f_brand, fill=(148, 163, 184), anchor="mm")
 
     # 10. Pegar emojis visuales temáticos
     emoji_badge_nombre = (cfg.emoji_badge if cfg and cfg.emoji_badge else paleta["badge_emoji"])
