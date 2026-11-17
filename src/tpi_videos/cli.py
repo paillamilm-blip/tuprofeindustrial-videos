@@ -1514,8 +1514,8 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("--abrir", action="store_true", help="abre el video al terminar")
     s.add_argument("--kit", action="store_true", help="arma también el kit de publicación (portada y textos)")
     s.add_argument(
-        "--musica", choices=["suave", "lofi", "sin"],
-        help="música de fondo de este video: suave, lofi (jazz hip hop) o sin; por defecto, la de tu marca",
+        "--musica", choices=["suave", "lofi", "motivado", "sin"],
+        help="música de fondo de este video: suave, lofi, motivado o sin; por defecto, la de tu marca",
     )  # fmt: skip
     s.add_argument("--progreso-json", action="store_true", help=argparse.SUPPRESS)  # para el panel
     s.set_defaults(func=cmd_crear)

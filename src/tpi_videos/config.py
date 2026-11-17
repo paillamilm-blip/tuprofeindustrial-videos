@@ -88,7 +88,7 @@ class Cama(_Base):
     activa: bool = True
     volumen: float = Field(default=0.18, ge=0.0, le=1.0)  # respecto a la voz (1 = igual de fuerte)
     archivo: str = ""  # un bucle propio (mp3/wav); vacío = la música libre de derechos que genera el motor
-    estilo: Literal["suave", "lofi"] = "suave"  # la que genera el motor: suave o lofi jazz hip hop
+    estilo: Literal["suave", "lofi", "motivado"] = "suave"  # la que genera el motor: suave, lofi o motivado
 
 
 class Cierre(_Base):

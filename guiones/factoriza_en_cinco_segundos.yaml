@@ -1,0 +1,41 @@
+titulo: "Factoriza en cinco segundos sin fórmula"
+materia: matematica
+nivel: "2° medio"
+molde: nadie_te_enseno
+tema: pizarra_nocturna
+
+gancho:
+  texto: "¿Usas la fórmula cuadrática para esto?"
+  voz: "¿Usas toda la fórmula cuadrática para resolver esto? Te toma un minuto, pero sale en cinco segundos."
+  tex: 'x^2 - 13x + 36 = 0'
+  emoji: "⚡"
+
+enunciado:
+  texto: "Resuelve x² - 13x + 36 = 0 buscando dos números que multiplicados den 36 y sumados den -13."
+  voz: "Buscamos dos números que multiplicados den treinta y seis positivo, y sumados den menos trece."
+  destacar: ["x² - 13x + 36 = 0"]
+
+pasos:
+  - nota: "Multiplicados dan 36"
+    tex: '(-4) \cdot (-9) = 36'
+    voz: "Menos cuatro por menos nueve da treinta y seis positivo."
+    emoji: "💡"
+  - nota: "Sumados dan menos 13"
+    tex: '(-4) + (-9) = -13'
+    voz: "Y menos cuatro sumado con menos nueve da exactamente menos trece."
+  - nota: "Factorizamos en binomios"
+    tex: '(x - 4)(x - 9) = 0'
+    voz: "Abrimos dos paréntesis: equis menos cuatro por equis menos nueve igual a cero."
+
+resultado:
+  tex: 'x_1 = 4 \quad \text{y} \quad x_2 = 9'
+  voz: "Las soluciones son equis uno igual a cuatro, y equis dos igual a nueve."
+  emoji: "🎯"
+
+verificacion:
+  texto: "Si el producto es cero, basta igualar cada paréntesis a cero."
+  voz: "Cualquiera de los dos factores que se haga cero resuelve la ecuación completa."
+
+reto:
+  texto: "¿Cuáles son las soluciones de x² - 7x + 12 = 0?"
+  voz: "¿Cuáles son las dos raíces de equis al cuadrado menos siete equis más doce? ¡Coméntalas abajo!"

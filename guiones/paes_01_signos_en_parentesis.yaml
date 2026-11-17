@@ -1,0 +1,51 @@
+titulo: 'PAES M1: El signo menos que cambia todo'
+materia: matematica
+nivel: 1° medio / PAES
+tema: rotulador
+camara: quieta
+gancho:
+  texto: La respuesta está mal. ¿En qué línea empezó el error?
+  voz: La respuesta está mal. ¿En qué línea empezó el error con este signo menos?
+  tex: -(x - 3) = -x - 3
+  emoji: 😱
+enunciado:
+  texto: Desarrolla correctamente -(x - 3) aplicando la propiedad distributiva del
+    signo menos.
+  voz: Cuando tienes un signo menos delante de un paréntesis, debes cambiarle el signo
+    a todo lo de adentro.
+  destacar:
+  - -(x - 3)
+pasos:
+- nota: Error típico
+  tex: -(x - 3) = -x - 3
+  voz: Muchos solo le cambian el signo a la equis y dejan el menos tres intacto. ¡Eso
+    está mal!
+  error: true
+  transformar: false
+- nota: Distribuir el negativo
+  tex: -(x - 3) = (-1)(x) + (-1)(-3)
+  voz: El signo menos exterior es un menos uno que multiplica a cada término por separado.
+  emoji: 💡
+  transformar: false
+- nota: Regla de los signos
+  tex: -x + 3
+  voz: Menos por más da menos equis, y menos por menos da más tres. Queda menos equis
+    más tres.
+  destacar:
+  - -x + 3
+  transformar: false
+resultado:
+  tex: -(x - 3) = -x + 3
+  voz: El resultado correcto es menos equis más tres. Cambian de signo todos los términos.
+  emoji: ✅
+verificacion:
+  texto: 'Comprueba con x = 5: -(5 - 3) = -2, y -5 + 3 = -2.'
+  voz: 'Comprobémoslo con equis igual cinco: cinco menos tres es dos con signo menos
+    da menos dos, y menos cinco más tres da exactamente menos dos.'
+cierre:
+  texto: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
+    para consultar horarios.
+  voz: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
+    para consultar horarios.
+llamado: Clases particulares PAES · Online y presencial en zona oriente · Consultas
+  en Instagram @tuprofeindustrial o en nuestra web.

@@ -1,0 +1,56 @@
+titulo: 'PAES M1: ¿Duplicas trabajadores o duplicas días?'
+materia: matematica
+nivel: 1° medio / PAES
+tema: rotulador
+gancho:
+  texto: ¿Duplicas trabajadores o duplicas días?
+  voz: Si cuatro personas tardan seis días en una obra, ¿cuánto tardan ocho personas?
+    ¿Tres, seis o doce días?
+  tex: 4\ \text{pers.} \rightarrow 6\ \text{días} \quad|\quad 8\ \text{pers.} \rightarrow
+    ¿?
+  emoji: 👷
+enunciado:
+  texto: Calcula el tiempo que demoran 8 personas si 4 personas completan la misma
+    tarea en 6 días.
+  voz: Muchos piensan que al duplicar las personas se duplican los días, pero eso
+    es absurdo.
+  destacar:
+  - 4 personas
+  - 6 días
+pasos:
+- nota: Error de proporción directa
+  tex: 8\ \text{personas} \rightarrow 12\ \text{días}
+  voz: 'Responder doce días es el error clásico: con más gente trabajando jamás te
+    puedes demorar más tiempo.'
+  error: true
+  transformar: false
+- nota: Proporcionalidad inversa
+  tex: \text{personas} \cdot \text{días} = \text{constante}
+  voz: 'Es proporcionalidad inversa: a más trabajadores, menos días. El producto de
+    ambos se mantiene constante.'
+  emoji: 💡
+  transformar: false
+- nota: Ecuación de producto constante
+  tex: 4 \cdot 6 = 8 \cdot d \implies 24 = 8d
+  voz: Cuatro personas por seis días son veinticuatro. Ocho personas por de días debe
+    dar veinticuatro.
+  destacar:
+  - 24 = 8d
+  transformar: false
+resultado:
+  tex: d = \frac{24}{8} = 3\ \text{días}
+  voz: Veinticuatro dividido entre ocho nos da tres días. Si duplicas la gente, el
+    tiempo se reduce a la mitad.
+  emoji: 🎯
+verificacion:
+  texto: En proporcionalidad inversa, si una magnitud se duplica, la otra se reduce
+    a la mitad.
+  voz: 'Clave PAES: si una variable se multiplica por dos, la otra se divide por dos.'
+cierre:
+  texto: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
+    para consultar horarios.
+  voz: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
+    para consultar horarios.
+llamado: Clases particulares PAES · Online y presencial en zona oriente · Consultas
+  en Instagram @tuprofeindustrial o en nuestra web.
+camara: quieta

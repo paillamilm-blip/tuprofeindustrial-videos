@@ -1,0 +1,54 @@
+titulo: 'PAES M1: El mito del 20% que baja y sube'
+materia: matematica
+nivel: 1° medio / PAES
+tema: rotulador
+gancho:
+  texto: 'Baja 20% y sube 20%: ¿vuelve al precio original?'
+  voz: 'Un producto baja veinte por ciento y después sube veinte por ciento. ¿Vuelve
+    al precio original? Alternativas: noventa y seis, cien o ciento cuatro.'
+  tex: 100 \xrightarrow{-20\%} 80 \xrightarrow{+20\%} ¿100?
+  emoji: 🏷️
+enunciado:
+  texto: Calcula el precio final de un artículo de $100 que disminuye un 20% y luego
+    aumenta un 20%.
+  voz: Para no enredarte nunca, asume siempre un precio inicial de cien pesos.
+  destacar:
+  - 20%
+pasos:
+- nota: Primera rebaja del 20%
+  tex: 100 - 0{,}20(100) = 80
+  voz: El veinte por ciento de cien pesos son veinte pesos, así que el precio baja
+    a ochenta pesos.
+  emoji: 📉
+  transformar: false
+- nota: El aumento se calcula sobre 80
+  tex: 0{,}20 \cdot 80 = 16
+  voz: 'Ahora viene la trampa: el veinte por ciento de aumento se calcula sobre ochenta
+    pesos, que da dieciséis.'
+  emoji: ⚠️
+  transformar: false
+- nota: Sumamos el aumento
+  tex: 80 + 16 = 96 \neq 100
+  voz: Ochenta más dieciséis nos da noventa y seis pesos. ¡Terminas perdiendo cuatro
+    pesos!
+  destacar:
+  - 80 + 16 = 96
+  transformar: false
+resultado:
+  tex: \text{Precio final} = \$96
+  voz: La respuesta correcta es noventa y seis pesos. Jamás vuelve a cien pesos porque
+    cambió la base de cálculo.
+  emoji: 🎯
+verificacion:
+  texto: En variaciones porcentuales sucesivas, la base de cálculo cambia en cada
+    paso.
+  voz: 'Grábate esto para la PAES: cuando aplicas porcentajes encadenados, la base
+    cambia siempre.'
+cierre:
+  texto: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
+    para consultar horarios.
+  voz: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
+    para consultar horarios.
+llamado: Clases particulares PAES · Online y presencial en zona oriente · Consultas
+  en Instagram @tuprofeindustrial o en nuestra web.
+camara: quieta

@@ -722,15 +722,42 @@ class Estudio:
                 ui.label(video.titulo).classes("font-semibold leading-tight line-clamp-2")
                 calidad = "Final" if video.final else "Borrador"
                 ui.label(f"{calidad} · {video.duracion:.0f} s").classes("tpi-sobrio text-xs")
-                with ui.row().classes("gap-0 -ml-2"):
+                with ui.row().classes("gap-0 -ml-2 items-center wrap"):
                     _boton("Ver", icon="play_arrow", on_click=lambda _e=None, v=video: self._ver(v)).props(
                         "flat dense no-caps"
                     ).classes("tpi-verde")
+                    if video.guion is not None and Path(str(video.guion)).exists():
+                        _boton(
+                            "Producir",
+                            icon="movie",
+                            on_click=lambda _e=None, v=video: self._producir_video(v),
+                        ).props("flat dense no-caps").classes("tpi-celeste").tooltip(
+                            "Producir en calidad final (1080p con kit)"
+                            if not video.final
+                            else "Volver a producir en calidad final (1080p)"
+                        )
                     self._menu_textos(video)
                     if video.guion is not None:
                         _boton(
                             "Guion", icon="edit_note", on_click=lambda _e=None, v=video: self._abrir_guion(v)
                         ).props("flat dense no-caps").classes("tpi-sobrio").tooltip("Revisarlo arriba")
+
+    def _producir_video(self, video: biblioteca.Video) -> None:
+        if video.guion is None or not Path(str(video.guion)).exists():
+            ui.notify("No se encontró el archivo de guion para este video.", type="warning")
+            return
+        if TAREAS.ocupado():
+            ui.notify("Ya hay un video creándose: espera a que termine.", type="warning")
+            return
+        nombre = f"Video · {video.titulo}"
+        try:
+            TAREAS.lanzar(nombre, estudio.args_video(video.guion, borrador=False))
+        except ErrorMotor as e:
+            ui.notify(e.mensaje, type="warning")
+            return
+        ui.notify(f"¡Manos a la obra! Produciendo «{video.titulo}» en calidad final.", type="positive")
+        self.en_curso.refresh()
+        ui.run_javascript("window.scrollTo({top: 0, behavior: 'smooth'})")
 
     @staticmethod
     def _ver_ruta(ruta: str) -> None:

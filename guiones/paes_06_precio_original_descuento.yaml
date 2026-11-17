@@ -1,0 +1,55 @@
+titulo: 'PAES M1: El precio original con 20% de descuento'
+materia: matematica
+nivel: 1° medio / PAES
+tema: rotulador
+gancho:
+  texto: Con 20% de descuento pagaste $16.000. ¿Cuál era el precio original?
+  voz: Con veinte por ciento de descuento pagaste dieciséis mil pesos. ¿Cuál era el
+    precio original?
+  tex: P - 20\% = \$16.000 \implies P = ¿?
+  emoji: 🏷️
+enunciado:
+  texto: Determina el valor inicial P de un producto si tras un 20% de rebaja su precio
+    final es $16.000.
+  voz: El error que comete casi todo el mundo es sumarle el veinte por ciento a los
+    dieciséis mil.
+  destacar:
+  - $16.000
+  - 20%
+pasos:
+- nota: Error típico
+  tex: 16.000 + 0{,}20(16.000) = 19.200
+  voz: Calcular el veinte por ciento de dieciséis mil y sumarlo te da diecinueve mil
+    doscientos. ¡Eso está pésimo!
+  error: true
+  transformar: false
+- nota: Plantear la fracción que pagas
+  tex: 100\% - 20\% = 80\% \implies 0{,}80 \cdot P = 16.000
+  voz: Si te descontaron el veinte por ciento, lo que pagaste en caja equivale al
+    ochenta por ciento del total pe.
+  emoji: 💡
+  transformar: false
+- nota: Despejar el precio original
+  tex: P = \frac{16.000}{0{,}80} = 20.000
+  voz: Despejamos pe dividiendo dieciséis mil entre cero coma ocho, y obtenemos exactamente
+    veinte mil pesos.
+  destacar:
+  - P = 20.000
+  transformar: false
+resultado:
+  tex: \text{Precio original} = \$20.000
+  voz: El precio original era de veinte mil pesos. Ni diecinueve mil ni dieciocho
+    mil.
+  emoji: ✅
+verificacion:
+  texto: 'Comprobación: el 20% de $20.000 son $4.000, y $20.000 - $4.000 = $16.000.'
+  voz: 'Comprobémoslo: el veinte por ciento de veinte mil son cuatro mil, y veinte
+    mil menos cuatro mil da dieciséis mil.'
+cierre:
+  texto: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
+    para consultar horarios.
+  voz: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
+    para consultar horarios.
+llamado: Clases particulares PAES · Online y presencial en zona oriente · Consultas
+  en Instagram @tuprofeindustrial o en nuestra web.
+camara: quieta

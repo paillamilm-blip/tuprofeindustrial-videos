@@ -1,0 +1,48 @@
+titulo: "¿Más torque o más velocidad? Ley del engranaje"
+materia: ingenieria
+nivel: "3° medio"
+molde: nadie_te_enseno
+tema: plano_azul
+
+gancho:
+  texto: "Triplicas los dientes: ¿ganas fuerza o velocidad?"
+  voz: "Triplicas los dientes de salida: ¿ganas fuerza o ganas velocidad? La física de taller no miente."
+  tex: 'z_2 = 3 z_1'
+  emoji: "⚙️"
+
+enunciado:
+  texto: "Un piñón de 15 dientes a 900 rpm mueve una rueda de 45 dientes. Calcula la velocidad final y el torque."
+  voz: "El piñón de quince dientes gira a novecientas revoluciones y mueve una rueda de cuarenta y cinco."
+  destacar: ["15 dientes", "45 dientes", "900 rpm"]
+
+pasos:
+  - nota: "Relación de reducción"
+    tex: 'i = \frac{z_2}{z_1} = \frac{45}{15} = 3'
+    voz: "La relación de transmisión es cuarenta y cinco dividido en quince: factor de tres."
+    visual:
+      tipo: engranaje
+      dientes_a: '15'
+      dientes_b: '45'
+      rpm: '900 rpm'
+      anotar: ['relacion']
+  - nota: "Velocidad de salida"
+    tex: 'n_2 = \frac{n_1}{i} = \frac{900}{3} = 300\ \text{rpm}'
+    voz: "La velocidad cae a un tercio: novecientos dividido en tres son trescientas revoluciones."
+    emoji: "📉"
+  - nota: "El torque se multiplica"
+    tex: 'T_2 = i \cdot T_1 = 3 T_1'
+    voz: "Pero la potencia se conserva: el torque de giro se triplica por completo."
+    emoji: "💪"
+
+resultado:
+  tex: 'n_2 = 300\ \text{rpm} \quad \text{con el triple de torque}'
+  voz: "Ley industrial: sacrificas velocidad, pero ganas exactamente el triple de fuerza."
+  emoji: "🎯"
+
+verificacion:
+  texto: "Potencia mecánica: el producto de torque y velocidad se conserva."
+  voz: "Lo que cedes en velocidad lo recuperas íntegro en fuerza de arrastre."
+
+reto:
+  texto: "Si ahora entras por la rueda de 45 dientes, ¿qué le pasa al torque?"
+  voz: "Si conectas el motor en la rueda grande, ¿el torque sube o baja? ¡Comenta abajo!"

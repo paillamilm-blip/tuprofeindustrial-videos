@@ -1,0 +1,42 @@
+titulo: "¡No derives así! Regla de la cadena"
+materia: matematica
+nivel: "Cálculo I / Universidad"
+molde: mito_realidad
+tema: pizarra_nocturna
+
+gancho:
+  texto: "¡No derives así! Regla de la cadena"
+  voz: "¡No derives así! Este es el error número uno en los certámenes de Cálculo Uno."
+  tex: '[(3x^2 + 1)^4]\prime = 4(3x^2 + 1)^3'
+  emoji: "🚨"
+
+enunciado:
+  texto: "Calcula la derivada de f(x) = (3x² + 1)⁴ aplicando la regla de la cadena con la derivada interna."
+  voz: "Muchos bajan el exponente y olvidan lo más importante: la derivada de lo de adentro."
+  destacar: ["(3x² + 1)⁴"]
+
+pasos:
+  - nota: "Error típico"
+    tex: '\frac{d}{dx}[(3x^2 + 1)^4] = 4(3x^2 + 1)^3'
+    voz: "Bajar el cuatro y restar uno parece listo, pero sin la derivada interna está reprobado."
+    error: true
+  - nota: "Derivada interna"
+    tex: '\frac{d}{dx}[3x^2 + 1] = 6x'
+    voz: "Lo de adentro también se deriva: la derivada de tres equis al cuadrado más uno es seis equis."
+    emoji: "💡"
+  - nota: "Regla de la cadena"
+    tex: '4(3x^2 + 1)^3 \cdot (6x) = 24x(3x^2 + 1)^3'
+    voz: "Multiplicamos externa por interna: cuatro por seis equis da veinticuatro equis."
+
+resultado:
+  tex: 'f\prime(x) = 24x(3x^2 + 1)^3'
+  voz: "La derivada final es veinticuatro equis, por el paréntesis al cubo."
+  emoji: "✅"
+
+verificacion:
+  texto: "Regla de la cadena: d/dx[f(g(x))] = f''(g(x)) * g''(x)."
+  voz: "Regla infalible: derivas la función de afuera y multiplicas por la derivada de adentro."
+
+reto:
+  texto: "¿Cuál es la derivada de (2x³ - 5)²? ¡Coméntala!"
+  voz: "¿Cuál es la derivada de dos equis al cubo menos cinco al cuadrado? ¡Coméntala abajo!"

@@ -1,0 +1,42 @@
+titulo: "Si no entiendes esto, repruebas Física I"
+materia: fisica
+nivel: "1° universitario"
+molde: mito_realidad
+tema: consola_pasos
+
+gancho:
+  texto: "Si no entiendes esto, repruebas Física I"
+  voz: "Si no entiendes esto, repruebas Física Uno: ¿la normal es la reacción del peso?"
+  tex: 'N \neq -P'
+  emoji: "⚠️"
+
+enunciado:
+  texto: "Demuestra por qué la normal N no es el par de acción y reacción del peso P según la Tercera Ley de Newton."
+  voz: "Casi todos en la universidad dicen que la normal es la reacción del peso. Es el error más clásico."
+  destacar: ["Tercera Ley de Newton"]
+
+pasos:
+  - nota: "Error típico"
+    tex: '\vec{N} = -\vec{P} \implies \text{acción y reacción}'
+    voz: "Decir que la normal y el peso son par de acción y reacción está completamente equivocado."
+    error: true
+  - nota: "Equilibrio en un solo cuerpo"
+    tex: '\sum \vec{F} = \vec{N} + \vec{P} = \vec{0}'
+    voz: "La normal y el peso actúan sobre el mismo bloque, por eso se equilibran en reposo."
+    emoji: "💡"
+  - nota: "La verdadera reacción"
+    tex: '\vec{P}_{\text{reacción}} \implies \text{al centro de la Tierra}'
+    voz: "La verdadera reacción del peso es la fuerza que el bloque ejerce sobre el centro de la Tierra."
+
+resultado:
+  tex: '\text{Acción y reacción van en cuerpos distintos}'
+  voz: "Tercera Ley de Newton: el par de acción y reacción jamás actúa sobre el mismo cuerpo."
+  emoji: "🧠"
+
+verificacion:
+  texto: "La reacción de la normal va al piso; la reacción del peso va a la Tierra."
+  voz: "La reacción de la normal va al suelo, y la reacción del peso va al planeta entero."
+
+reto:
+  texto: "Si el ascensor sube acelerando, ¿N es mayor, menor o igual al peso?"
+  voz: "Si el ascensor acelera hacia arriba, ¿la normal es mayor o igual al peso? ¡Comenta!"

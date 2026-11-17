@@ -1,0 +1,44 @@
+titulo: "¡No simplifiques así! El error con fracciones"
+materia: matematica
+nivel: "1° medio"
+molde: mito_realidad
+tema: rotulador
+
+gancho:
+  texto: "¿Tú también tachas el dos?"
+  voz: "¿Tú también tachas el dos y dices que queda equis? ¡Cuidado, este error te cuesta la prueba!"
+  tex: '\frac{x + 2}{2} = x'
+  emoji: "😱"
+
+enunciado:
+  texto: "Simplifica correctamente la fracción algebraica (x + 2) / 2 sin cometer el error de tachar en una suma."
+  voz: "Muchos simplifican tachando el dos con el dos, pero en una suma jamás se hace eso."
+  destacar: ["(x + 2) / 2"]
+
+pasos:
+  - nota: "Error típico"
+    tex: '\frac{x + 2}{2} = x'
+    voz: "Tachar el dos arriba y abajo no se puede: el dos de arriba está sumando, no multiplicando."
+    error: true
+  - nota: "Separar la suma"
+    tex: '\frac{x + 2}{2} = \frac{x}{2} + \frac{2}{2}'
+    voz: "La forma correcta es separar la fracción: equis medios más dos medios."
+    destacar: ['\frac{x}{2} + \frac{2}{2}']
+    emoji: "💡"
+  - nota: "Simplificar la división"
+    tex: '\frac{x}{2} + \frac{2}{2} = \frac{x}{2} + 1'
+    voz: "Ahora sí: dos dividido en dos es uno. Queda equis medios más uno."
+    destacar: ['\frac{x}{2} + 1']
+
+resultado:
+  tex: '\frac{x + 2}{2} = \frac{x}{2} + 1'
+  voz: "La respuesta correcta es equis medios más uno, nunca equis a secas."
+  emoji: "✅"
+
+verificacion:
+  texto: "Solo se simplifican factores que multiplican, nunca términos que suman."
+  voz: "Regla de oro de álgebra: solo simplificas lo que multiplica, nunca lo que suma."
+
+reto:
+  texto: "¿Cuánto da (x + 6) / 6? ¡Comenta tu respuesta!"
+  voz: "¿Cuánto da equis más seis partido en seis? Déjalo en los comentarios."

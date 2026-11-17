@@ -1,0 +1,53 @@
+titulo: 'PAES M1: Cómo comprobar tu ecuación en 10 segundos'
+materia: matematica
+nivel: 1° medio / PAES
+tema: pizarra_nocturna
+gancho:
+  texto: 'Obtener una respuesta no basta: descubre si funciona.'
+  voz: 'Obtener una respuesta en álgebra no basta: comprueba siempre si tu resultado
+    realmente funciona.'
+  tex: 3x + 2 = 14
+  emoji: 🎯
+enunciado:
+  texto: Resuelve la ecuación 3x + 2 = 14 y verifica el resultado sustituyendo en
+    la igualdad original.
+  voz: Vamos a despejar la incógnita equis paso a paso y a verificarla de inmediato.
+  destacar:
+  - 3x + 2 = 14
+pasos:
+- nota: Restar 2 a ambos lados
+  tex: 3x = 14 - 2 \implies 3x = 12
+  voz: 'Restamos dos en ambos miembros: tres equis es igual a catorce menos dos, que
+    da doce.'
+  emoji: ➖
+  transformar: false
+- nota: Dividir por 3
+  tex: x = \frac{12}{3} \implies x = 4
+  voz: 'Dividimos ambos lados entre tres: doce partido en tres nos da equis igual
+    a cuatro.'
+  destacar:
+  - x = 4
+  transformar: false
+- nota: Comprobación por sustitución
+  tex: 3(4) + 2 = 12 + 2 = 14
+  voz: 'Ahora comprobamos reemplazando equis por cuatro: tres por cuatro es doce,
+    más dos es catorce.'
+  emoji: 🔍
+  transformar: false
+resultado:
+  tex: 14 = 14 \quad \checkmark
+  voz: Catorce es igual a catorce. La igualdad se cumple y tu respuesta está cien
+    por ciento asegurada.
+  emoji: ✅
+verificacion:
+  texto: La sustitución en la ecuación original valida cualquier solución sin dudar.
+  voz: 'En la PAES no te arriesgues: sustituye el valor encontrado en la ecuación
+    para irte a la segura.'
+cierre:
+  texto: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
+    para consultar horarios.
+  voz: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
+    para consultar horarios.
+llamado: Clases particulares PAES · Online y presencial en zona oriente · Consultas
+  en Instagram @tuprofeindustrial o en nuestra web.
+camara: quieta

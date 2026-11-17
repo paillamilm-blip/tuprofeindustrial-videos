@@ -305,7 +305,7 @@ class MusicaSeEscuchaTest(unittest.TestCase):
         return bajo_voz, en_pausa
 
     def test_se_escucha_bajo_la_voz_y_en_las_pausas(self):
-        for estilo in ("suave", "lofi"):
+        for estilo in ("suave", "lofi", "motivado"):
             with self.subTest(estilo=estilo):
                 bajo_voz, en_pausa = self._niveles(estilo)
                 self.assertGreater(bajo_voz, -28, f"{estilo}: la música queda {bajo_voz:.1f} dB bajo la voz")

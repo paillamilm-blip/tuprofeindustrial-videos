@@ -1,0 +1,42 @@
+titulo: "PAES M1: El truco del doble descuento"
+materia: matematica
+nivel: "4° medio / PAES"
+molde: mito_realidad
+tema: rotulador
+
+gancho:
+  texto: "20% + 30% de descuento: ¿te descuentan 50%?"
+  voz: "Veinte por ciento más treinta por ciento de descuento: ¿te ahorras la mitad? ¡Pregunta fija de la PAES!"
+  tex: '20\% + 30\% \neq 50\%'
+  emoji: "🏷️"
+
+enunciado:
+  texto: "Calcula el descuento real equivalente a dos rebajas sucesivas del 20% y del 30% en una tienda."
+  voz: "En la tienda te ofrecen veinte de descuento y luego otro treinta. ¿Cuánto pagas en verdad?"
+  destacar: ["20%", "30%"]
+
+pasos:
+  - nota: "Error típico"
+    tex: '20\% + 30\% = 50\%\ \text{de rebaja}'
+    voz: "Sumar los porcentajes de golpe da cincuenta, pero es la trampa típica de la prueba."
+    error: true
+  - nota: "Factores de lo que pagas"
+    tex: '(1 - 0{,}20)(1 - 0{,}30) = (0{,}80)(0{,}70)'
+    voz: "El primer descuento te deja pagando el ochenta por ciento, y el segundo el setenta."
+    emoji: "💡"
+  - nota: "Multiplicamos factores"
+    tex: '0{,}80 \cdot 0{,}70 = 0{,}56 \implies 56\%\ \text{a pagar}'
+    voz: "Cero coma ocho por cero coma siete da cincuenta y seis por ciento que pagas en caja."
+
+resultado:
+  tex: '100\% - 56\% = 44\%\ \text{de descuento real}'
+  voz: "Cien menos cincuenta y seis da cuarenta y cuatro por ciento de descuento real, no cincuenta."
+  emoji: "🎯"
+
+verificacion:
+  texto: "La segunda rebaja se calcula sobre el precio ya rebajado, no sobre el original."
+  voz: "El segundo descuento opera sobre un monto menor, por eso jamás se suman directo."
+
+reto:
+  texto: "Si las rebajas fueran 10% y 20%, ¿cuál es el descuento real?"
+  voz: "Si las rebajas son diez y veinte por ciento, ¿cuánto es el descuento real? ¡Comenta!"

@@ -89,7 +89,122 @@ PULSO_LOFI = 78  # el tempo típico del lofi: relajado, con cabeceo
 # Dm9 → G13 → Cmaj9 → Am7 (ii–V–I–vi): el giro de jazz que suena a «lofi para estudiar»
 ACORDES_LOFI = ((50, 53, 57, 60, 64), (43, 53, 59, 64), (48, 52, 55, 59, 62), (45, 52, 55, 60))
 CORTE_LOFI = 2800.0  # Hz: el lofi es cálido y apagado, como un casete
-ESTILOS = ("suave", "lofi")
+ESTILOS = ("suave", "lofi", "motivado")
+
+
+# ------------------------------------------------------------------------------------------
+# Motivado / Upbeat: beat enérgico de 116 BPM con bajo driving, claps, hi-hats y synth plucks
+# ------------------------------------------------------------------------------------------
+
+PULSO_MOTIVADO = 116  # BPM dinámico y motivador
+# Dm → Bb → F → C: progresión épica, motivadora y decidida
+ACORDES_MOTIVADO = (
+    (50, 53, 57, 62),  # Dm (D, F, A, D)
+    (46, 50, 53, 58),  # Bb (Bb, D, F, Bb)
+    (41, 48, 53, 57),  # F  (F, C, F, A)
+    (48, 52, 55, 60),  # C  (C, E, G, C)
+)
+CORTE_MOTIVADO = 2200.0  # Hz: deja pasar el brillo del ritmo sin ensuciar la voz
+
+
+def _tono_synth(frecuencia: float, t: np.ndarray) -> np.ndarray:
+    return (
+        np.sin(2 * np.pi * frecuencia * t)
+        + 0.5 * np.sin(4 * np.pi * frecuencia * t)
+        + 0.25 * np.sin(6 * np.pi * frecuencia * t)
+        + 0.12 * np.sin(8 * np.pi * frecuencia * t)
+    )
+
+
+def _pluck(frecuencia: float, segundos: float = 0.35) -> np.ndarray:
+    t = np.arange(int(segundos * FRECUENCIA)) / FRECUENCIA
+    env = np.exp(-t / 0.18) * np.minimum(1.0, t / 0.003)
+    return _tono_synth(frecuencia, t) * env
+
+
+def _bajo_punch(frecuencia: float, segundos: float = 0.35) -> np.ndarray:
+    t = np.arange(int(segundos * FRECUENCIA)) / FRECUENCIA
+    env = np.exp(-t / 0.22) * np.minimum(1.0, t / 0.005)
+    return (np.sin(2 * np.pi * frecuencia * t) + 0.4 * np.sin(4 * np.pi * frecuencia * t)) * env
+
+
+def _bombo_punch(segundos: float = 0.35) -> np.ndarray:
+    t = np.arange(int(segundos * FRECUENCIA)) / FRECUENCIA
+    frecuencia = 55 + 90 * np.exp(-t / 0.025)
+    fase = 2 * np.pi * np.cumsum(frecuencia) / FRECUENCIA
+    click = np.random.standard_normal(len(t)) * np.exp(-t / 0.005) * 0.3
+    return (np.sin(fase) * np.exp(-t / 0.10) * np.minimum(1.0, t / 0.002)) + click
+
+
+def _clap(azar: np.random.Generator, segundos: float = 0.22) -> np.ndarray:
+    t = np.arange(int(segundos * FRECUENCIA)) / FRECUENCIA
+    ruido = azar.standard_normal(len(t))
+    env1 = np.exp(-np.maximum(0, t) / 0.015)
+    env2 = np.exp(-np.maximum(0, t - 0.012) / 0.015)
+    env3 = np.exp(-np.maximum(0, t - 0.024) / 0.06)
+    clap_env = env1 * 0.4 + env2 * 0.5 + env3 * 0.8
+    ruido = np.convolve(ruido, [0.2, 0.4, 0.2, -0.2, -0.4, -0.2], mode="same")
+    return ruido * clap_env
+
+
+def _hihat_tick(azar: np.random.Generator, abierto: bool = False) -> np.ndarray:
+    segundos = 0.12 if abierto else 0.04
+    t = np.arange(int(segundos * FRECUENCIA)) / FRECUENCIA
+    ruido = azar.standard_normal(len(t))
+    ruido = ruido - np.convolve(ruido, np.ones(4) / 4, mode="same")
+    decay = 0.04 if abierto else 0.012
+    return ruido * np.exp(-t / decay)
+
+
+def componer_motivado(segundos: float | None = None) -> np.ndarray:
+    tiempo = 60 / PULSO_MOTIVADO
+    segundos = segundos or 16 * tiempo
+    n = int(round(segundos * FRECUENCIA))
+    azar = np.random.default_rng(42)
+    salida = np.zeros(n)
+    t_compas = segundos / len(ACORDES_MOTIVADO)
+
+    def poner(en_segundos: float, sonido: np.ndarray, volumen: float) -> None:
+        _sumar_circular(salida, int(round(en_segundos * FRECUENCIA)) % n, sonido * volumen)
+
+    for k, acorde in enumerate(ACORDES_MOTIVADO):
+        inicio = k * t_compas
+        raiz = acorde[0]
+
+        # Pad sostenido para dar cuerpo constante bajo el beat
+        t_pad = np.arange(int(round(t_compas))) / FRECUENCIA
+        env_pad = np.minimum(1.0, t_pad / 0.1) * np.clip((t_pad[-1] - t_pad) / 0.2, 0.0, 1.0)
+        pad = sum(_tono(_hz(nota), t_pad, 0.15) for nota in acorde) * env_pad * 0.18
+        poner(inicio, pad, 1.0)
+
+        for i_corchea in range(8):
+            t_corchea = inicio + i_corchea * (tiempo / 2)
+            nota_bajo = raiz if i_corchea % 4 != 3 else raiz + 7
+            poner(t_corchea, _bajo_punch(_hz(nota_bajo - 12)), 0.32)
+
+        arpegio_patron = (0, 2, 1, 3, 2, 1, 3, 2)
+        for j, pos in enumerate(arpegio_patron):
+            t_arpegio = inicio + j * (tiempo / 2)
+            nota = acorde[pos % len(acorde)] + 12
+            vol = 0.16 if j % 2 == 0 else 0.12
+            poner(t_arpegio, _pluck(_hz(nota), 0.28), vol)
+
+        for golpe in range(4):
+            t_golpe = inicio + golpe * tiempo
+            if golpe in (0, 2):
+                poner(t_golpe, _bombo_punch(), 0.85)
+            elif golpe == 3:
+                poner(t_golpe + tiempo / 2, _bombo_punch(), 0.6)
+
+            if golpe in (1, 3):
+                poner(t_golpe, _clap(azar), 0.45)
+
+            poner(t_golpe, _hihat_tick(azar, abierto=False), 0.15)
+            poner(t_golpe + tiempo / 2, _hihat_tick(azar, abierto=(golpe == 3)), 0.12)
+
+    salida = _sin_agudos(salida, CORTE_MOTIVADO)
+    salida /= np.max(np.abs(salida)) or 1.0
+    return salida * 0.55
 
 
 def _rhodes(frecuencia: float, segundos: float) -> np.ndarray:
@@ -194,7 +309,12 @@ def bucle_cama(destino: Path, segundos: float | None = None, estilo: str = "suav
     if estilo not in ESTILOS:
         raise ErrorMotor(f"No conozco la música «{estilo}».", ayuda=f"Opciones: {', '.join(ESTILOS)}.")
     destino = Path(destino)
-    musica = componer_lofi(segundos) if estilo == "lofi" else componer(segundos or SEGUNDOS_POR_DEFECTO)
+    if estilo == "lofi":
+        musica = componer_lofi(segundos)
+    elif estilo == "motivado":
+        musica = componer_motivado(segundos)
+    else:
+        musica = componer(segundos or SEGUNDOS_POR_DEFECTO)
     musica = _a_volumen_parejo(musica)
     destino.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(destino), "wb") as wav:
