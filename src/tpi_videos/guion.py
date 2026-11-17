@@ -1254,6 +1254,32 @@ class Metadatos(_Base):
         return valor
 
 
+class PortadaConfig(_Base):
+    """Configuración opcional para personalizar la portada/miniatura del video."""
+
+    badge: str | None = None
+    titular: str | None = None
+    pregunta: str | None = None
+    alerta: str | None = None
+    detalle: str | None = None
+    pie: str | None = None
+
+
+class HistoriaEncuestaConfig(_Base):
+    badge: str | None = None
+    titulo: str | None = None
+    pregunta: str | None = None
+    paso1: str | None = None
+    paso2: str | None = None
+    opcion_a: str | None = None
+    opcion_b: str | None = None
+    nota: str | None = None
+
+
+class HistoriasConfig(_Base):
+    encuesta: HistoriaEncuestaConfig | None = None
+
+
 class Guion(_Base):
     titulo: str = Field(min_length=1)
     materia: Literal["matematica", "fisica", "ingenieria"]
@@ -1278,6 +1304,8 @@ class Guion(_Base):
     # creías? Cuéntame 👇». Vacío = el de siempre del kit.
     llamado: str | None = Field(default=None, max_length=150)
     metadatos: Metadatos | None = None  # título, descripción y hashtags para publicar (opcional)
+    portada: PortadaConfig | None = None
+    historias: HistoriasConfig | None = None
     # Qué enseña (dato, mito, error, ejercicio) y con qué herramientas; los dos opcionales.
     contenido: Contenido | None = None
     recursos: RecursosDidacticos | None = None

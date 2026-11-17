@@ -1,8 +1,8 @@
 """Generador de historias para Instagram y TikTok en formato vertical (1080×1920).
 
-Crea dos imágenes de historias automáticas listas para subir:
-1. ``historia_01_encuesta.png``: Reto interactivo con la fórmula y opciones A y B para el sticker de encuesta.
-2. ``historia_02_clases.png``: Tarjeta de llamado a la acción para clases particulares PAES
+Crea dos imágenes de historias automáticas de alto impacto listas para subir:
+1. ``historia_01_encuesta.png``: Reto interactivo con opciones A y B para el sticker de encuesta.
+2. ``historia_02_clases.png``: Tarjeta moderna de llamado a la acción para clases particulares PAES
    (online para todo Chile y presencial en toda la Región Metropolitana).
 """
 
@@ -10,8 +10,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 from .entorno import raiz_proyecto
 from .guion import Guion
@@ -19,164 +18,275 @@ from .guion import Guion
 ANCHO = 1080
 ALTO = 1920
 
-COLOR_FONDO = (14, 20, 27)        # Slate oscuro #0e141b
-COLOR_LINEA_GRID = (22, 32, 44)   # Cuadrícula sutil
-COLOR_AMBAR = (245, 158, 11)      # Ámbar de marca #f59e0b
-COLOR_CELESTE = (56, 189, 248)    # Celeste acento #38bdf8
-COLOR_TEXTO = (241, 245, 249)     # Blanco suave #f1f5f9
-COLOR_TARJETA = (26, 36, 48)      # Tarjeta sólida
-COLOR_BORDE = (71, 85, 105)       # Borde sobrio
-COLOR_TENUE = (148, 163, 184)     # Gris lectura
 
-
-def _fuentes() -> tuple[str, str, str]:
+def _fuentes() -> dict[str, str]:
     carpeta = raiz_proyecto() / "src" / "tpi_videos" / "assets" / "fuentes"
-    bold = str(carpeta / "Montserrat-Black.ttf")
-    semi = str(carpeta / "Montserrat-SemiBold.ttf")
-    extra = str(carpeta / "Montserrat-ExtraBold.ttf")
-    return bold, semi, extra
+    return {
+        "black": str(carpeta / "Montserrat-Black.ttf"),
+        "extra": str(carpeta / "Montserrat-ExtraBold.ttf"),
+        "semi": str(carpeta / "Montserrat-SemiBold.ttf"),
+        "med": str(carpeta / "Montserrat-Medium.ttf"),
+    }
 
 
-def _fondo_base() -> tuple[Image.Image, ImageDraw.ImageDraw]:
-    img = Image.new("RGB", (ANCHO, ALTO), color=COLOR_FONDO)
-    draw = ImageDraw.Draw(img)
-    # Cuadrícula técnica sutil
-    for x in range(0, ANCHO, 40):
-        draw.line([(x, 0), (x, ALTO)], fill=COLOR_LINEA_GRID, width=1)
-    for y in range(0, ALTO, 40):
-        draw.line([(0, y), (ANCHO, y)], fill=COLOR_LINEA_GRID, width=1)
-    return img, draw
+def _emojis_dir() -> Path:
+    return raiz_proyecto() / "src" / "tpi_videos" / "assets" / "emojis"
 
 
-def _limpiar_tex(tex: str) -> str:
-    """Quita comandos LaTeX para dibujarlo limpio en texto sin distorsión."""
-    tex = re.sub(r"\\(?:neq|ne)", "≠", tex)
-    tex = re.sub(r"\\(?:cdot|times)", "·", tex)
-    tex = re.sub(r"\\(?:frac)\{([^}]+)\}\{([^}]+)\}", r"\1/\2", tex)
-    tex = re.sub(r"\\(?:sqrt)\{([^}]+)\}", r"√(\1)", tex)
-    tex = re.sub(r"\\(?:text|mathrm|mathbf)\{([^}]+)\}", r"\1", tex)
-    tex = re.sub(r"\\[a-zA-Z]+", "", tex)
-    tex = re.sub(r"[{}]", "", tex)
-    return tex.strip()
+def _cargar_emoji(nombre: str, tamano: int) -> Image.Image:
+    ruta = _emojis_dir() / nombre
+    if ruta.exists():
+        im = Image.open(ruta).convert("RGBA")
+        return im.resize((tamano, tamano), Image.Resampling.LANCZOS)
+    return Image.new("RGBA", (tamano, tamano), (0, 0, 0, 0))
+
+
+def _pegar_emoji(base_img: Image.Image, emoji_img: Image.Image, x: int | float, y: int | float) -> None:
+    base_img.paste(emoji_img, (int(x), int(y)), emoji_img)
+
+
+def _fondo_base() -> Image.Image:
+    fondos = raiz_proyecto() / "src" / "tpi_videos" / "assets" / "fondos"
+    bg = Image.open(fondos / "plano_noche.png").convert("RGBA")
+    vineta = Image.open(fondos / "vineta_cine.png").convert("RGBA")
+    return Image.blend(bg, vineta, 0.45)
+
+
+def _rect_con_sombra(
+    draw: ImageDraw.ImageDraw,
+    box: list[int | float],
+    radius: int,
+    fill: tuple[int, ...],
+    outline: tuple[int, ...] | None = None,
+    width: int = 1,
+    shadow_offset: tuple[int, int] = (0, 10),
+    shadow_color: tuple[int, int, int, int] = (0, 0, 0, 140),
+) -> None:
+    x0, y0, x1, y1 = box
+    sx, sy = shadow_offset
+    draw.rounded_rectangle([x0 + sx, y0 + sy, x1 + sx, y1 + sy], radius=radius, fill=shadow_color)
+    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
 
 
 def crear_historia_encuesta(guion: Guion, destino: Path) -> Path:
     """Genera la historia 1: Reto / Encuesta para Instagram y TikTok."""
-    bold, semi, extra = _fuentes()
-    img, draw = _fondo_base()
+    f = _fuentes()
+    f_black = lambda sz: ImageFont.truetype(f["black"], sz)
+    f_extra = lambda sz: ImageFont.truetype(f["extra"], sz)
+    f_semi = lambda sz: ImageFont.truetype(f["semi"], sz)
 
-    f_tag = ImageFont.truetype(extra, 36)
-    f_title = ImageFont.truetype(bold, 58)
-    f_formula = ImageFont.truetype(bold, 78)
-    f_opt = ImageFont.truetype(bold, 50)
-    f_hint = ImageFont.truetype(semi, 38)
-    f_marca = ImageFont.truetype(extra, 34)
+    # 1. Fondo base y resplandor
+    img = _fondo_base()
+    glow = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(glow).ellipse([180, 580, 900, 1200], fill=(56, 189, 248, 35))
+    img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(80)))
 
-    # 1. Badge superior
-    etiqueta = "RETO PAES M1" if "paes" in guion.titulo.lower() else "RETO MATEMÁTICO"
-    draw.rounded_rectangle([300, 260, 780, 335], radius=35, fill=COLOR_AMBAR)
-    draw.text((540, 297), etiqueta, font=f_tag, fill=COLOR_FONDO, anchor="mm")
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
 
-    # 2. Pregunta
-    draw.text((540, 460), "¿Cuánto da al desarrollar", font=f_title, fill=COLOR_TEXTO, anchor="mm")
-    draw.text((540, 540), "esta expresión?", font=f_title, fill=COLOR_TEXTO, anchor="mm")
+    cfg = guion.historias.encuesta if guion.historias and guion.historias.encuesta else None
+    es_paes = "paes" in guion.titulo.lower() or (guion.nivel and "paes" in guion.nivel.lower())
 
-    # 3. Expresión / Fórmula principal
-    expresion = _limpiar_tex(guion.gancho.tex or guion.resultado.tex or guion.titulo)
-    # Si viene con signo igual o resultado, mostramos solo el miembro izquierdo para preguntar
-    if "=" in expresion:
-        partes = expresion.split("=")
-        expresion = partes[0].strip()
-    if len(expresion) > 24:
-        expresion = expresion[:22] + "…"
+    # 2. Badge superior
+    badge_txt = cfg.badge if cfg and cfg.badge else ("RETO PAES M1" if es_paes else f"RETO {guion.materia.upper()}")
+    f_b = f_extra(34)
+    bbox = f_b.getbbox(badge_txt)
+    tw = bbox[2] - bbox[0]
+    total_w = tw + 44 + 18
+    bx0 = 540 - total_w // 2
+    bx1 = 540 + total_w // 2
+    _rect_con_sombra(
+        d,
+        [bx0 - 25, 270, bx1 + 25, 345],
+        radius=35,
+        fill=(245, 158, 11, 245),
+        shadow_color=(0, 0, 0, 100),
+    )
+    d.text((bx0 + 44 + 16, 307), badge_txt, font=f_b, fill=(15, 23, 42), anchor="lm")
 
-    draw.rounded_rectangle([120, 640, 960, 840], radius=24, fill=COLOR_TARJETA, outline=COLOR_CELESTE, width=3)
-    draw.text((540, 740), expresion, font=f_formula, fill=(255, 255, 255), anchor="mm")
+    # 3. Titular
+    if cfg and cfg.titulo:
+        t_l1, t_l2 = (cfg.titulo.split("\n") + [""])[:2]
+    elif "20%" in guion.gancho.texto or "porcentaje" in guion.titulo.lower():
+        t_l1 = "¿CAERÍAS EN LA TRAMPA"
+        t_l2 = "DE LOS PORCENTAJES?"
+    else:
+        t_l1 = "¿SABRÍAS RESOLVER"
+        t_l2 = "ESTE PROBLEMA?"
 
-    # 4. Opciones de respuesta
-    # Buscamos si hay un paso de error para usarlo como la opción trampa
-    opcion_error = None
-    for p in guion.pasos:
-        if p.error and p.tex:
-            limpia = _limpiar_tex(p.tex)
-            if "=" in limpia:
-                limpia = limpia.split("=")[-1].strip()
-            opcion_error = limpia
-            break
+    d.text((540, 420), t_l1, font=f_black(58), fill=(255, 255, 255), anchor="mm")
+    if t_l2:
+        d.text((540, 500), t_l2, font=f_black(58), fill=(250, 204, 21), anchor="mm")
 
-    opcion_correcta = _limpiar_tex(guion.resultado.tex)
-    if "=" in opcion_correcta:
-        opcion_correcta = opcion_correcta.split("=")[-1].strip()
+    # 4. Tarjeta del Problema
+    _rect_con_sombra(
+        d,
+        [90, 590, 990, 930],
+        radius=30,
+        fill=(15, 23, 42, 235),
+        outline=(56, 189, 248, 180),
+        width=3,
+    )
+    if "20%" in guion.gancho.texto or "porcentaje" in guion.titulo.lower():
+        d.text((540, 665), "Un producto cuesta $100:", font=f_extra(44), fill=(241, 245, 249), anchor="mm")
+        d.text((370, 745), "1. Baja un 20%", font=f_semi(40), fill=(203, 213, 225), anchor="lm")
+        d.text((370, 815), "2. Luego sube un 20%", font=f_semi(40), fill=(203, 213, 225), anchor="lm")
+        d.text((540, 885), "¿Cuál es su precio final?", font=f_extra(42), fill=(56, 189, 248), anchor="mm")
+        has_steps_icons = True
+    else:
+        enunc = guion.enunciado.texto
+        if len(enunc) > 80:
+            enunc = enunc[:77] + "…"
+        d.text((540, 720), "Enunciado del ejercicio:", font=f_extra(38), fill=(241, 245, 249), anchor="mm")
+        d.text((540, 800), enunc, font=f_semi(34), fill=(203, 213, 225), anchor="mm")
+        has_steps_icons = False
 
-    op_a = opcion_error or "-x - 3"
-    op_b = opcion_correcta or "-x + 3"
+    # 5. Opciones A y B
+    if cfg and cfg.opcion_a and cfg.opcion_b:
+        op_a = cfg.opcion_a
+        op_b = cfg.opcion_b
+    elif "20%" in guion.gancho.texto or "porcentaje" in guion.titulo.lower():
+        op_a = "$100  («Vuelve al inicio»)"
+        op_b = "$96  («Pierde 4 pesos»)"
+    else:
+        op_a = "Opción A (Resultado 1)"
+        op_b = "Opción B (Resultado 2)"
 
-    # Opción A
-    draw.rounded_rectangle([120, 930, 960, 1070], radius=20, fill=(30, 41, 59), outline=COLOR_BORDE, width=2)
-    draw.text((200, 1000), "A)", font=f_opt, fill=COLOR_AMBAR, anchor="mm")
-    draw.text((540, 1000), op_a, font=f_opt, fill=COLOR_TEXTO, anchor="mm")
+    _rect_con_sombra(
+        d,
+        [90, 980, 990, 1110],
+        radius=24,
+        fill=(30, 41, 59, 230),
+        outline=(245, 158, 11, 200),
+        width=2,
+    )
+    d.text((160, 1045), "A)", font=f_black(48), fill=(245, 158, 11), anchor="mm")
+    d.text((540, 1045), op_a, font=f_extra(42), fill=(255, 255, 255), anchor="mm")
 
-    # Opción B
-    draw.rounded_rectangle([120, 1120, 960, 1260], radius=20, fill=(30, 41, 59), outline=COLOR_BORDE, width=2)
-    draw.text((200, 1190), "B)", font=f_opt, fill=COLOR_CELESTE, anchor="mm")
-    draw.text((540, 1190), op_b, font=f_opt, fill=COLOR_TEXTO, anchor="mm")
+    _rect_con_sombra(
+        d,
+        [90, 1140, 990, 1270],
+        radius=24,
+        fill=(30, 41, 59, 230),
+        outline=(56, 189, 248, 200),
+        width=2,
+    )
+    d.text((160, 1205), "B)", font=f_black(48), fill=(56, 189, 248), anchor="mm")
+    d.text((540, 1205), op_b, font=f_extra(42), fill=(255, 255, 255), anchor="mm")
 
-    # 5. Indicador para poner el sticker de Instagram encima
-    draw.text((540, 1370), "👆 Vota en la encuesta de aquí abajo", font=f_hint, fill=COLOR_TENUE, anchor="mm")
-    draw.text((540, 1430), "¿Caíste en la trampa típica?", font=f_hint, fill=COLOR_AMBAR, anchor="mm")
+    # 6. Guía para el sticker interactivo
+    d.text((540, 1395), "VOTA EN LA ENCUESTA AQUÍ ABAJO", font=f_black(35), fill=(250, 204, 21), anchor="mm")
+    d.text((540, 1450), "Más del 80% responde mal... ¿y tú?", font=f_semi(33), fill=(148, 163, 184), anchor="mm")
 
-    # 6. Marca inferior
-    draw.text((540, 1720), "@tuprofeindustrial", font=f_marca, fill=(100, 116, 139), anchor="mm")
+    # 7. Footer
+    d.text((540, 1680), "@tuprofeindustrial · Solución en el nuevo Reel", font=f_extra(30), fill=(100, 116, 139), anchor="mm")
+
+    img_comp = Image.alpha_composite(img, ov)
+    _pegar_emoji(img_comp, _cargar_emoji("cerebro.png", 44), bx0, 285)
+    if has_steps_icons:
+        _pegar_emoji(img_comp, _cargar_emoji("baja.png", 42), 300, 725)
+        _pegar_emoji(img_comp, _cargar_emoji("sube.png", 42), 300, 795)
+
+    _pegar_emoji(img_comp, _cargar_emoji("abajo.png", 46), 540 - 23, 1320)
 
     destino.parent.mkdir(parents=True, exist_ok=True)
-    img.save(destino, quality=95)
+    img_comp.convert("RGB").save(destino, quality=95)
     return destino
 
 
 def crear_historia_clases(guion: Guion, destino: Path) -> Path:
     """Genera la historia 2: Llamado a la acción para clases particulares PAES."""
-    bold, semi, extra = _fuentes()
-    img, draw = _fondo_base()
+    f = _fuentes()
+    f_black = lambda sz: ImageFont.truetype(f["black"], sz)
+    f_extra = lambda sz: ImageFont.truetype(f["extra"], sz)
+    f_semi = lambda sz: ImageFont.truetype(f["semi"], sz)
 
-    f_tag = ImageFont.truetype(extra, 36)
-    f_big = ImageFont.truetype(bold, 66)
-    f_sub = ImageFont.truetype(semi, 42)
-    f_item = ImageFont.truetype(semi, 36)
-    f_dm = ImageFont.truetype(bold, 46)
-    f_marca = ImageFont.truetype(extra, 34)
+    # 1. Fondo base y resplandor
+    img = _fondo_base()
+    glow = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(glow).ellipse([180, 580, 900, 1200], fill=(245, 158, 11, 30))
+    img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(80)))
 
-    # 1. Badge superior
-    draw.rounded_rectangle([250, 260, 830, 335], radius=35, fill=COLOR_CELESTE)
-    draw.text((540, 297), "CLASES PARTICULARES", font=f_tag, fill=COLOR_FONDO, anchor="mm")
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
 
-    # 2. Título
-    draw.text((540, 460), "PREPARACIÓN PAES", font=f_big, fill=COLOR_AMBAR, anchor="mm")
-    draw.text((540, 540), "Matemática M1 & M2", font=f_sub, fill=COLOR_TEXTO, anchor="mm")
+    # 2. Badge
+    badge_txt = "ADMISIÓN PAES 2025"
+    f_b = f_extra(34)
+    bbox = f_b.getbbox(badge_txt)
+    tw = bbox[2] - bbox[0]
+    total_w = tw + 44 + 18
+    bx0 = 540 - total_w // 2
+    bx1 = 540 + total_w // 2
+    _rect_con_sombra(
+        d,
+        [bx0 - 25, 270, bx1 + 25, 345],
+        radius=35,
+        fill=(56, 189, 248, 245),
+        shadow_color=(0, 0, 0, 100),
+    )
+    d.text((bx0 + 44 + 16, 307), badge_txt, font=f_b, fill=(15, 23, 42), anchor="lm")
 
-    # 3. Tarjeta de beneficios (incluyendo toda la Región Metropolitana)
-    draw.rounded_rectangle([110, 640, 970, 1180], radius=24, fill=COLOR_TARJETA, outline=COLOR_BORDE, width=2)
+    # 3. Titular
+    d.text((540, 420), "¿BUSCAS 800+ EN", font=f_black(62), fill=(255, 255, 255), anchor="mm")
+    d.text((540, 500), "MATEMÁTICA PAES?", font=f_black(62), fill=(250, 204, 21), anchor="mm")
+
+    # 4. Tarjeta de Beneficios
+    _rect_con_sombra(
+        d,
+        [80, 585, 1000, 1265],
+        radius=30,
+        fill=(15, 23, 42, 235),
+        outline=(245, 158, 11, 180),
+        width=3,
+    )
+
     items = [
-        "🎯  Clases 100% personalizadas a tu ritmo",
-        "💻  Modalidad Online para todo Chile",
-        "📍  Presencial en toda la Región Metropolitana",
-        "🧠  Aprende los atajos y trampas típicas",
-        "📈  Asegura sobre 800+ puntos en la prueba",
+        ("objetivo.png", "Método enfocado en trampas PAES", "Aprende los patrones y atajos que el DEMRE repite."),
+        ("idea.png", "Modalidad Online en vivo (Todo Chile)", "Clases con pizarra digital interactiva y grabadas."),
+        ("alerta.png", "Presencial en toda la Región Metropolitana", "A domicilio o lugar a convenir con horarios a tu ritmo."),
+        ("cien.png", "Ensayos reales y resolución continua", "Guías paso a paso y apoyo por WhatsApp para dudas."),
     ]
-    y_pos = 730
-    for it in items:
-        draw.text((160, y_pos), it, font=f_item, fill=COLOR_TEXTO, anchor="lm")
-        y_pos += 88
 
-    # 4. Caja de llamada a responder
-    draw.rounded_rectangle([110, 1260, 970, 1490], radius=24, fill=COLOR_AMBAR)
-    draw.text((540, 1335), "Responde «PAES» a esta historia", font=f_dm, fill=COLOR_FONDO, anchor="mm")
-    draw.text((540, 1410), "y te envío horarios y cupos disponibles 📩", font=f_item, fill=COLOR_FONDO, anchor="mm")
+    y_pos = 665
+    for _, tit, sub in items:
+        d.text((220, y_pos - 15), tit, font=f_extra(34), fill=(241, 245, 249), anchor="lm")
+        d.text((220, y_pos + 26), sub, font=f_semi(27), fill=(148, 163, 184), anchor="lm")
+        y_pos += 140
 
-    # 5. Marca inferior
-    draw.text((540, 1720), "@tuprofeindustrial", font=f_marca, fill=(100, 116, 139), anchor="mm")
+    # 5. Botón de Acción tipo Sticker DM
+    btn_txt = "RESPONDE «PAES» A ESTA HISTORIA"
+    f_btn = f_black(37)
+    bbox_btn = f_btn.getbbox(btn_txt)
+    w_btn = bbox_btn[2] - bbox_btn[0]
+    total_btn = w_btn + 44 + 18
+    btn_x0 = 540 - total_btn // 2
+
+    _rect_con_sombra(
+        d,
+        [90, 1330, 990, 1530],
+        radius=28,
+        fill=(245, 158, 11, 255),
+        shadow_color=(0, 0, 0, 140),
+    )
+    d.text((btn_x0 + 44 + 16, 1395), btn_txt, font=f_btn, fill=(15, 23, 42), anchor="lm")
+    d.text((540, 1465), "y coordinamos tu primera clase y diagnóstico", font=f_extra(32), fill=(15, 23, 42), anchor="mm")
+
+    # 6. Footer
+    d.text((540, 1680), "@tuprofeindustrial · Cupos limitados para este mes", font=f_extra(30), fill=(100, 116, 139), anchor="mm")
+
+    img_comp = Image.alpha_composite(img, ov)
+    _pegar_emoji(img_comp, _cargar_emoji("cohete.png", 44), bx0, 285)
+
+    y_ico = 640
+    for ico_name, _, _ in items:
+        _pegar_emoji(img_comp, _cargar_emoji(ico_name, 48), 140, y_ico)
+        y_ico += 140
+
+    _pegar_emoji(img_comp, _cargar_emoji("rayo.png", 44), btn_x0, 1373)
 
     destino.parent.mkdir(parents=True, exist_ok=True)
-    img.save(destino, quality=95)
+    img_comp.convert("RGB").save(destino, quality=95)
     return destino
 
 

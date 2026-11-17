@@ -113,7 +113,15 @@ def _video_sin_subtitulos(carpeta: Path, linea: dict[str, Any]) -> Path:
     raise ErrorMotor(f"No encuentro el video en {carpeta}.", ayuda="Vuelve a crearlo con ./tpi crear …")
 
 
-def crear_portada(carpeta: Path, linea: dict[str, Any]) -> Path:
+def crear_portada(carpeta: Path, linea: dict[str, Any], guion: Guion | None = None) -> Path:
+    if guion is not None:
+        try:
+            from .portada import crear_portada as crear_portada_grafica
+
+            return crear_portada_grafica(carpeta, linea, guion)
+        except Exception:
+            pass
+
     from .postproduccion import extraer_cuadro
 
     gancho = next((b for b in linea["bloques"] if b["seccion"] == "gancho"), linea["bloques"][0])
@@ -332,7 +340,7 @@ def crear_kit(
         )
     guion = cargar_guion(ruta_guion)
     avisar("Creando la portada…")
-    portada = crear_portada(carpeta, linea)
+    portada = crear_portada(carpeta, linea, guion)
 
     avisos: list[str] = []
     if linea.get("calidad") == "borrador":
