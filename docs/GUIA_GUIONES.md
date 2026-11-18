@@ -17,13 +17,14 @@ Plantilla comentada: `./tpi nuevo mi_ejercicio` · Ejemplos completos: `guiones/
 | 1 | `gancho` | 0–3 s | Que no pasen de largo: una pregunta o un dato sorprendente |
 | 2 | `enunciado` | 5–8 s | El problema concreto, antes de cualquier fórmula |
 | 3 | `datos` (opcional) | 2–3 s c/u | Lo que sabemos; luego queda fijo arriba como referencia |
-| 4 | `pasos` | 3–6 s c/u | Una idea por paso; la fórmula se transforma en la siguiente. Un paso puede llevar `visual:` y dibujarse abajo |
-| 5 | `resultado` | 3–5 s | La respuesta destacada, **con unidades** |
-| 6 | `verificacion` (opcional) | 4–6 s | "¿Tiene sentido?": interpretar, no solo calcular |
-| 7 | `reto` (opcional, recomendado) | 5–8 s | Un ejercicio parecido para que practiquen y comenten |
-| 8 | `cierre` (opcional) | 3–4 s | Un solo llamado a la acción (por defecto, el de `marca.yaml`) |
+| 1 | `gancho` | 3–5 s | La pregunta o curiosidad que frena el scroll |
+| 2 | `enunciado` | 5–8 s | Los datos del problema (lo que nos dan y lo que nos piden) |
+| 3 | `error` (en molde mito) | 5–7 s | El error clásico o trampa común (tarjeta roja ❌) |
+| 4 | `pasos` (con `visual:`) | 30–45 s total | El corazón del video: desarrollo algebraico con animación Manim (gráficas, sólidos 3D, figuras) con respiro pedagógico |
+| 5 | `resultado` / comprobación | 4–6 s | La respuesta destacada, con unidades y validación |
+| 6 | `reto` (Ahora tú) | 7–9 s | Punch zoom cinematográfico, tiempo para que el estudiante pause el video, comente y vaya al WhatsApp del perfil |
 
-**Total ideal: 30–75 segundos** (~120–160 palabras de voz). `./tpi revisar` estima la duración.
+**Pacing Asimétrico Calibrado: 60–75 segundos** (~130–165 palabras de voz). Mantiene la viralidad y retención con ganchos y errores fulminantes, pero le da a las figuras y al cálculo el tiempo justo para lucirse y entenderse sin atropellar al estudiante. `./tpi revisar` estima la duración.
 
 ## 2. Los campos
 
