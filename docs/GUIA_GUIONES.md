@@ -230,9 +230,9 @@ uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra 
 La materia de la tabla es solo de dónde viene el dibujo: cualquier guion puede usar cualquiera. Los dibujos de
 circuito y de piezas industriales también influyen en el estilo que se sugiere (ver arriba, `tema`).
 
-### Dibujos que se mueven y álgebra viva (todo opcional)
+### Dibujos Dinámicos y Álgebra Viva (Estándar Obligatorio del Canal)
 
-Si no escribes ninguno de estos campos, el video sale igual que siempre.
+En el canal Tu Profe Industrial, **el dinamismo visual NO es opcional**: es el estándar obligado para capturar y retener la atención en TikTok, Reels y Shorts. Todo guion de Matemática, Física e Ingeniería debe incluir movimiento visual continuo, encuadres dinámicos y transformaciones de álgebra viva:
 
 ```yaml
     visual:
