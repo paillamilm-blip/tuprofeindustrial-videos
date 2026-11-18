@@ -85,12 +85,37 @@ Antes de escribir nada más, llena idea_central (la UNA cosa que el estudiante t
 - resaltar_cambio = true en un paso que despeja, cancela o agrupa: el motor tacha lo que se va de la fórmula anterior y enciende lo que llega. Solo tiene sentido si el paso viene de otra ecuación; nunca en un paso con error = true.
 - resultado_destello = true cierra la respuesta con un destello de confirmación. Úsalo una vez, en el resultado.
 
-### Qué dibujo elegir según el tema
-- Ingeniería: en fluidos, termodinámica o diseño mecánico prefiere los cuerpos y las simulaciones: "tolva" (silos, inyección, balances de masa), "tuberia" (caudal, sección, ductos), "eje" (transmisión, ejes escalonados), "calor" (conducción, aislación, temperaturas en una pared o placa) y "flujo" (viscosidad, esfuerzo cortante, perfiles de velocidad). En piezas que se arman de partes (tolva, tubería con bridas, eje, sólidos) usa despiece = true.
-- Física: en cinemática y dinámica usa el dibujo que se mueve. Para un lanzamiento elige "proyectil" (con "componentes" si el ejercicio habla de vx y vy) o, si la pregunta es un instante (la altura máxima, cuándo cae), un "grafico" de la posición en el tiempo con movimiento = "tangente", desde = 0 y hasta = el tiempo de vuelo: la pendiente que se lee es la velocidad y se aplana justo en la altura máxima. En péndulos y resortes usa "pendulo", "resorte" u "oscilador" con su marca de flecha ("velocidad", "fuerza").
-- Matemática: cuando el ejercicio cambia la escala (duplicar el lado, triplicar la arista, comparar áreas o volúmenes de figuras semejantes, «si lo agrando al doble…») usa dibujo = "escala" en el primer paso: se ve caber 4 u 8 veces el original antes de escribir la regla (2a)^2 = 4a^2 o (2a)^3 = 8a^3.
-- Matemática: en despejes pon halo en la incógnita o en el término que se mueve, y resaltar_cambio = true en cada paso que pasa un término al otro lado, cancela o agrupa. En derivadas usa un "grafico" de la función con movimiento = "tangente" y anotar ["pendiente"]; en integrales, movimiento = "area" con desde y hasta = los límites y anotar ["area"]. En ambos casos termina con resultado_destello = true.
-- En las tres: en un ejercicio es UN tipo de dibujo, repetido en cada paso que se puede ver, siempre con los números del ejercicio.
+### Qué dibujo elegir según el tema (REGLA UNIVERSAL: CERO FÓRMULAS DESNUDAS)
+PROHIBIDO dejar fórmulas aisladas sin representación visual. En cualquier problema de Matemática, Física o Ingeniería, es OBLIGATORIO incluir dibujo en cada paso que plantee, relacione o calcule magnitudes. Elige según la materia:
+
+1. **Matemática (Escolar, PAES M1 y PAES M2):**
+   - **Geometría espacial y volumen (cilindro, cono, cubo, esfera):** OBLIGATORIO dibujo = "solido3d" con vista = "axonometrica", medidas con unidad (radio, altura, lado) y anotar = ["volumen", "radio", "altura", "generatriz", "area_base"] según lo que se calcule. Si trata de líquidos o llenado, activa agua = true. Al final puedes usar despiece = true.
+   - **Geometría plana y polígonos (triángulos, cuadrados, pentágonos, hexágonos):** OBLIGATORIO dibujo = "poligono" con lados (3 a 8), lado con unidad y anotar (apotema, perimetro, radio, angulo_central).
+   - **Funciones, raíces, vértices, parábolas y análisis:** OBLIGATORIO dibujo = "grafico" con funcion, rango y nombres de ejes. En derivadas usa movimiento = "tangente" y anotar ["pendiente"]; en integrales movimiento = "area" y anotar ["area"].
+   - **Trigonometría:** OBLIGATORIO dibujo = "circulo" (círculo trigonométrico unitario) con angulo y anotar (seno, coseno, tangente).
+   - **Probabilidad y conjuntos:** OBLIGATORIO dibujo = "venn" (intersecciones) o dibujo = "probabilidad" (urnas de Laplace).
+   - **Estadística y porcentajes:** OBLIGATORIO dibujo = "torta" o dibujo = "barras" con categorias.
+   - **Escalas y semejanzas (duplicar lados, áreas, volúmenes):** OBLIGATORIO dibujo = "escala" demostrando cómo caben 4 u 8 piezas antes de la fórmula.
+   - **Álgebra y despejes puros:** usa halo en la incógnita y resaltar_cambio = true en cada cancelación o paso de términos.
+
+2. **Física (Mecánica, Ondas, Electricidad, Termodinámica):**
+   - **Fuerzas, dinámica y equilibrio:** OBLIGATORIO dibujo = "fuerzas" (vectores P, N, f, T). Con plano inclinado usa angulo y descomponer = true.
+   - **Cinemática y tiros parabólicos:** OBLIGATORIO dibujo = "proyectil" con anotar ("componentes", "alcance", "altura_maxima", "tiempo"), o "grafico" de posición vs tiempo con movimiento = "tangente".
+   - **Circuitos eléctricos:** OBLIGATORIO dibujo = "circuito" con fuente, resistencias y arreglo (serie o paralelo).
+   - **Ondas y sonido:** OBLIGATORIO dibujo = "onda" con amplitud, longitud_onda, periodo y anotar ("frecuencia", "velocidad").
+   - **Oscilaciones y resortes:** OBLIGATORIO dibujo = "resorte", "pendulo", "oscilador" (con amortiguamiento) o "pendulo_doble".
+   - **Máquinas simples:** OBLIGATORIO dibujo = "polea" con dos masas distintas.
+   - **Óptica y refracción:** OBLIGATORIO dibujo = "optica" con n1, n2 y angulo_incidence.
+   - **Energía mecánica:** OBLIGATORIO dibujo = "energia" con barras apiladas de cinética y potencial.
+
+3. **Ingeniería (Estructuras, Fluidos, Máquinas, Procesos):**
+   - **Estructuras y resistencia:** OBLIGATORIO dibujo = "viga", "cercha" o "mohr" (círculo de esfuerzos).
+   - **Fluidos y tuberías:** OBLIGATORIO dibujo = "tanque" (caudales de llenado/vaciado), "tuberia" o "flujo" (perfiles de Poiseuille/Couette).
+   - **Mecánica y diseño:** OBLIGATORIO dibujo = "tolva", "eje" o "engranaje" (transmisión). En piezas usa despiece = true.
+   - **Transferencia de calor:** OBLIGATORIO dibujo = "calor" con gradiente térmico de azul a rojo.
+   - **Control automático:** OBLIGATORIO dibujo = "bloques" con comparador y realimentación.
+
+- En las tres materias: un ejercicio mantiene UN tipo de dibujo continuo en todos los pasos donde se pueda ver el objeto, coherente con las magnitudes del problema. Nunca dejes un cálculo numérico sin su apoyo visual correspondiente.
 
 ### El molde narrativo (pista MOLDE)
 - Si la petición trae una pista MOLDE, respeta sus beats y su regla al pie de la letra.

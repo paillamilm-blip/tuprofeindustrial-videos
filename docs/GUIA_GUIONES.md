@@ -101,11 +101,51 @@ reemplaza al engranaje de la marca.
 ### El dibujo de un paso (`visual:`)
 
 Un paso puede llevar un dibujo, que se traza en el pie de la hoja mientras suena la voz de ese paso.
-Sirve para lo que la fórmula sola no muestra: la parábola de la caída, las fuerzas sobre el cuerpo,
-las ramas del circuito. El motor conoce **33 dibujos** (tabla al final de esta sección). Estos son los tres
-de base:
+Sirve para lo que la fórmula sola no muestra: la parábola de la caída, el cuerpo geométrico en 3D, las fuerzas sobre el bloque o el circuito eléctrico. El motor cuenta con un catálogo nativo de **33 dibujos especializados** (tabla al final de esta sección).
 
-**1. `grafico_funcion`** — la curva de una función.
+> [!IMPORTANT]
+> **REGLA DE ORO UNIVERSAL: CERO FÓRMULAS DESNUDAS (OBLIGATORIO PARA TODAS LAS MATERIAS)**
+> Queda terminantemente prohibido generar videos con fórmulas aisladas en la pizarra sin su correspondiente soporte gráfico en el pie. En cualquier problema de Matemática, Física o Ingeniería, es **OBLIGATORIO** incluir la etiqueta `visual:` en cada paso que plantee, relacione o calcule magnitudes:
+> 
+> * **En Matemática (PAES M1 / M2 / Universidad):**
+>   * *Geometría espacial y volumen (cilindro, cono, cubo, esfera):* **OBLIGATORIO `tipo: solido_3d`** con `vista: axonometrica`, medidas con unidad (`radio`, `altura`, `lado`), y `anotar: [volumen, radio, altura, generatriz, area_base]`. Si hay fluidos o llenado, activa `agua: true`.
+>   * *Geometría plana y polígonos (triángulos, cuadrados, pentágonos, hexágonos):* **OBLIGATORIO `tipo: poligono_regular`** con `lados` y `anotar: [apotema, perimetro, radio]`.
+>   * *Álgebra, raíces, vértices y trayectorias:* **OBLIGATORIO `tipo: grafico_funcion`** con curvas trazadas en vivo. En derivadas/integrales: `movimiento: tangente` o `area`.
+>   * *Trigonometría:* **OBLIGATORIO `tipo: circulo_trig`** con `angulo` y proyecciones de seno, coseno o tangente.
+>   * *Probabilidad y Conjuntos:* **OBLIGATORIO `tipo: venn`** o `tipo: probabilidad`.
+>   * *Estadística y proporciones:* **OBLIGATORIO `tipo: torta`**, `tipo: barras` o `tipo: escala`.
+> 
+> * **En Física (Mecánica, Ondas, Electricidad):**
+>   * *Leyes de Newton y dinámica:* **OBLIGATORIO `tipo: diagrama_fuerzas`** (con `descomponer: true` en planos inclinados).
+>   * *Cinemática y tiros:* **OBLIGATORIO `tipo: proyectil`** con `anotar: [componentes, alcance, altura_maxima]`.
+>   * *Circuitos eléctricos:* **OBLIGATORIO `tipo: circuito`** con fuente y resistencias en serie/paralelo.
+>   * *Ondas y luz:* **OBLIGATORIO `tipo: onda`** u `tipo: optica` (Snell).
+>   * *Oscilaciones y máquinas:* **OBLIGATORIO `tipo: pendulo`**, `tipo: resorte`, `tipo: oscilador` o `tipo: polea`.
+> 
+> * **En Ingeniería (Estructuras, Fluidos, Máquinas, Procesos):**
+>   * *Estructuras:* **OBLIGATORIO `tipo: viga`**, `tipo: cercha` o `tipo: mohr`.
+>   * *Fluidos y tuberías:* **OBLIGATORIO `tipo: tanque`**, `tipo: tuberia_3d` o `tipo: perfil_flujo`.
+>   * *Mecánica y diseño:* **OBLIGATORIO `tipo: tolva_3d`**, `tipo: eje_3d` o `tipo: engranaje` (con `despiece: true` al desensamblar).
+>   * *Termodinámica y control:* **OBLIGATORIO `tipo: gradiente_termico`** o `tipo: bloques`.
+
+#### Los cuatro modelos de referencia inmediata:
+
+**1. `solido_3d`** — cuerpos geométricos en 3D con rotación axonométrica viva (cilindro, cono, cubo, esfera).
+
+```yaml
+    visual:
+      tipo: solido_3d
+      figura: cilindro              # cilindro | cono | cubo | esfera
+      radio: "3 cm"                 # según la figura
+      altura: "5 cm"                # según la figura
+      lado: "4 cm"                  # solo para cubo
+      vista: axonometrica           # SIEMPRE axonometrica para continuidad espacial
+      agua: true                    # opcional: nivel de líquido animado en el cuerpo
+      despiece: false               # opcional: separa tapas y manto en el paso final
+      anotar: [radio, volumen]      # radio · altura · volumen · generatriz · area_base
+```
+
+**2. `grafico_funcion`** — la curva de una función trazada en vivo en el plano cartesiano.
 
 ```yaml
     visual:
@@ -118,12 +158,7 @@ de base:
       eje_y: "altura (m)"
 ```
 
-Las raíces (donde corta el eje) y el vértice se marcan y se rotulan solos; `marcar` agrega los puntos
-que tú quieras. Si un punto o un extremo del rango se sale de lo que la función puede calcular,
-`./tpi revisar` lo avisa. Funciona con `2x^3 - 3x`, `12/U`, `sin(x)`, `sqrt(x)`, `1/x`, `exp(x)`
-(la «e» de Euler se escribe `E` o `exp`, porque una letra suelta se toma por otra variable).
-
-**2. `diagrama_fuerzas`** — el cuerpo con sus flechas.
+**3. `diagrama_fuerzas`** — el cuerpo con sus flechas de física mecánica.
 
 ```yaml
     visual:
@@ -133,9 +168,7 @@ que tú quieras. Si un punto o un extremo del rango se sale de lo que la funció
       angulo: 30                    # opcional: plano inclinado en grados (solo con bloque)
 ```
 
-Sin `angulo` el cuerpo está sobre una mesa horizontal.
-
-**3. `circuito`** — la pila y sus resistencias.
+**4. `circuito`** — la fuente eléctrica y sus resistencias.
 
 ```yaml
     visual:
@@ -181,7 +214,7 @@ uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra 
 | `oscilador` | Oscilador que se apaga | Física | masa, constante, amplitud, amortiguamiento, duracion, anotar |
 | `pendulo_doble` | Péndulo doble | Física | masa_1, masa_2, longitud_1, longitud_2, angulo_1, angulo_2, duracion, anotar |
 | `polea` | Polea con dos masas | Física | masa_a, masa_b, anotar |
-| `solido_3d` | Sólido en 3D | Ingeniería | figura, lado, radio, altura, vista, corte, despiece, anotar |
+| `solido_3d` | Sólido en 3D (cono, cilindro, cubo, esfera) | Matemática / PAES / Ingeniería | figura, lado, radio, altura, vista, corte, despiece, agua, anotar |
 | `tanque` | Tanque con llave y fisura | Ingeniería | capacidad, entrada, salida, anotar |
 | `viga` | Viga apoyada | Ingeniería | longitud, carga, repartida, anotar |
 | `cercha` | Cercha | Ingeniería | base, altura, carga, anotar |
