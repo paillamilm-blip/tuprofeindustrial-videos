@@ -1,61 +1,71 @@
 titulo: 'PAES M1: ¿Duplicas trabajadores o duplicas días?'
 materia: matematica
-nivel: 1° medio / PAES
+nivel: "PAES M1"
 molde: mito_realidad
 tema: consola_error
-camara: suave
+camara: fuerte
+
 gancho:
-  texto: "¿4 obreros en 6 días? ¿Cuánto tardan 8 obreros?"
-  voz: "Si cuatro obreros tardan seis días en una obra, ¿cuánto tardan ocho obreros? ¡El error más común de la prueba!"
-  tex: 4\ \text{pers.} \rightarrow 6\ \text{días} \quad|\quad 8\ \text{pers.} \rightarrow ¿?
-  emoji: 🏗️
+  texto: "¿4 obreros en 6 días? ¿Cuánto tardan 8?"
+  voz: "Si cuatro obreros tardan seis días, ¿cuánto tardan ocho? ¡El error más común de la PAES!"
+  tex: '4\ \text{obreros} \rightarrow 6\ \text{días} \quad | \quad 8\ \text{obreros} \rightarrow \text{¿?}'
+  emoji: "🏗️"
+
 enunciado:
-  texto: Calcula el tiempo que demoran 8 personas si 4 personas completan la misma tarea en 6 días.
-  voz: Al tener más personas trabajando, el trabajo se reparte y el tiempo disminuye, no aumenta.
+  texto: "Calcula el tiempo que demoran 8 personas si 4 personas completan la misma tarea en 6 días."
+  voz: "Al tener más personas trabajando, la carga se reparte y el tiempo disminuye, no aumenta."
   destacar:
-  - "4 personas"
-  - "6 días"
+    - "4 personas"
+    - "6 días"
+
 datos:
-- tex: k = 4 \cdot 6 = 24
-  voz: La constante de trabajo es cuatro por seis, veinticuatro.
+  - tex: 'k = 4 \cdot 6 = 24'
+    voz: "La constante de trabajo es cuatro por seis, igual a veinticuatro."
+
 pasos:
-- nota: La creencia falsa
-  tex: 8\ \text{personas} \rightarrow 12\ \text{días}
-  voz: Responder doce días aplicando regla de tres directa es un grave error. ¡Jamás tardarás más tiempo con más gente!
-  error: true
-  emoji: ❌
-- nota: Proporcionalidad inversa
-  tex: \text{obreros} \cdot \text{días} = 24
-  voz: "Es proporcionalidad inversa: personas por días siempre da veinticuatro."
-  emoji: 💡
-  visual:
-    tipo: barras
-    categorias: ['4 obreros 6', 'Error directo 12', 'Real 8 obreros 3']
-- nota: Calculamos los días reales
-  tex: d = \frac{24}{8} = 3\ \text{días}
-  voz: Veinticuatro dividido entre ocho nos da tres días exactos. ¡El tiempo se redujo a la mitad!
-  destacar:
-  - "3"
-  emoji: ✅
-  visual:
-    tipo: barras
-    categorias: ['4 obreros 6', 'Error directo 12', 'Real 8 obreros 3']
+  - nota: "La creencia falsa"
+    tex: '8\ \text{personas} \rightarrow 12\ \text{días}'
+    voz: "El error común: responder doce días usando regla de tres directa. ¡Con más gente jamás tardarás más tiempo!"
+    error: true
+    emoji: "❌"
+
+  - nota: "Proporcionalidad inversa"
+    tex: '\text{obreros} \cdot \text{días} = 24'
+    voz: "Es proporción inversa: la multiplicación de obreros por días siempre da veinticuatro."
+    emoji: "💡"
+    visual:
+      tipo: barras
+      categorias: ['4 obreros 6', 'Error directo 12', 'Real 8 obreros 3']
+
+  - nota: "Calculamos los días reales"
+    tex: 'd = \frac{24}{8} \implies d = 3\ \text{días}'
+    voz: "Despejamos los días: veinticuatro dividido en ocho nos da tres días exactos. ¡El tiempo se redujo a la mitad!"
+    destacar:
+      - 'd = 3\ \text{días}'
+    emoji: "✅"
+    visual:
+      tipo: barras
+      categorias: ['4 obreros 6', 'Error directo 12', 'Real 8 obreros 3']
+
 resultado:
-  tex: d = 3\ \text{días} \neq 12\ \text{días}
-  voz: La respuesta correcta son tres días, no doce.
-  emoji: 🎯
+  tex: 'd = 3\ \text{días} \quad (\neq 12\ \text{días})'
+  voz: "La respuesta correcta son tres días: a más obreros, menos tiempo de trabajo."
+  emoji: "🏆"
+
 verificacion:
-  texto: En proporción inversa, si multiplicas los obreros por 2, los días se dividen por 2.
-  voz: Si duplicas los trabajadores, los días de trabajo se cortan exactamente a la mitad.
+  texto: "En proporción inversa: al duplicar los obreros (×2), los días se dividen por la mitad (÷2)."
+  voz: "Si duplicas los trabajadores, los días de trabajo se cortan exactamente a la mitad."
+
 reto:
   texto: "¿Y si fueran 12 obreros? ¿Cuántos días tardan? Te leo abajo."
-  voz: "Ahora tú: ¿cuántos días tardarían doce obreros en la misma obra? Deja tu respuesta abajo."
-  emoji: 🤔
+  voz: "Ahora tú: ¿cuántos días tardarían doce obreros en la misma obra? Deja tu respuesta en los comentarios."
+  emoji: "✍️"
+
 cierre:
-  texto: Clases particulares PAES M1. Háblame directo al WhatsApp de mi perfil.
-  voz: Si quieres asegurar tu puntaje en la M1 para la Admisión 2027, háblame directo al WhatsApp que está en mi perfil.
-  emoji: 🔥
-llamado: Clases particulares PAES · Online y presencial · WhatsApp en mi perfil (link en bio)
+  texto: "Clases particulares PAES M1 · Escríbeme al WhatsApp de mi perfil"
+  voz: "Si quieres asegurar tu puntaje para la Admisión 2027, háblame directo al WhatsApp que está en mi perfil."
+  emoji: "🔥"
+
 portada:
   estilo: naranja
   badge: "PAES M1 · ADMISIÓN 2027"
@@ -68,6 +78,7 @@ portada:
   emoji_alerta: incorrecto.png
   detalle: "4 × 6 = 24  →  24 ÷ 8 = 3 días"
   pie: "A más trabajadores, menos días de trabajo"
+
 historias:
   encuesta:
     badge: "RETO ADMISIÓN 2027"
@@ -80,18 +91,19 @@ historias:
       ¿Cuántos días tardarán?
     opcion_a: "12 días  («Regla de 3 directa»)"
     opcion_b: "3 días  («Proporción inversa»)"
+
 metadatos:
   titulo: '¿4 obreros en 6 días? ¿Cuánto tardan 8 obreros? 👷‍♂️ Proporcionalidad inversa PAES M1'
   descripcion: 'El típico error en la PAES M1 al resolver problemas de trabajadores y tiempo. Demostramos por qué es proporcionalidad inversa y tardan 3 días, no 12.'
   hashtags:
-  - '#tuprofeindustrial'
-  - '#paes'
-  - '#paesm1'
-  - '#admision2027'
-  - '#demre'
-  - '#proporciones'
-  - '#matematica'
-  - '#estudiantes'
-  - '#aprendeentiktok'
-  - '#chile'
-  - '#clasesparticulares'
+    - '#tuprofeindustrial'
+    - '#paes'
+    - '#paesm1'
+    - '#admision2027'
+    - '#demre'
+    - '#proporciones'
+    - '#matematica'
+    - '#estudiantes'
+    - '#aprendeentiktok'
+    - '#chile'
+    - '#clasesparticulares'
