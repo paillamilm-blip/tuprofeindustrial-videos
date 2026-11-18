@@ -1,0 +1,72 @@
+# Guion Modo Bestia PAES M1 / M2 · Álgebra y Funciones
+# Gráfica de parábola cuadrática en vivo, error tachado con zoom y CTA a WhatsApp
+
+titulo: "PAES M1: El signo que arruina el vértice de la parábola"
+materia: matematica
+nivel: "PAES M1"
+molde: mito_realidad
+camara: fuerte
+
+gancho:
+  texto: "¿A qué precio obtienes la ganancia máxima?"
+  voz: "¿A qué precio ganas más dinero? Un signo negativo arruina a casi todos."
+  emoji: "📈"
+  tex: 'U(x) = -2x^2 + 24x - 40'
+
+enunciado:
+  texto: "La ganancia en miles es U(x) = -2x² + 24x - 40. ¿Qué precio maximiza la ganancia?"
+  voz: "La ganancia depende del precio y la parábola abre hacia abajo. ¿Cuál es el precio óptimo?"
+  destacar: ["ganancia"]
+
+pasos:
+  - nota: "El error común: olvidar el signo de a"
+    tex: 'x = \dfrac{-24}{2} = -12'
+    voz: "Muchos hacen menos 24 sobre dos y les da menos doce. ¡Un precio negativo no existe!"
+    error: true
+    emoji: "🚨"
+
+  - nota: "La fórmula con su signo real"
+    tex: 'x = \dfrac{-b}{2a} = \dfrac{-24}{2(-2)} = 6'
+    voz: "La fórmula es menos b sobre dos a. Menos 24 sobre menos cuatro da positivo seis."
+    destacar: ['6', '2(-2)']
+    emoji: "💡"
+
+  - nota: "La ganancia máxima en el vértice"
+    tex: 'U(6) = -2(6)^2 + 24(6) - 40 = 32'
+    voz: "Reemplazamos seis: la ganancia máxima alcanza 32 mil pesos en el vértice."
+    destacar: ['32']
+    visual:
+      tipo: grafico_funcion
+      funcion: '-2x^2 + 24x - 40'
+      variable: x
+      rango: [0, 12]
+      eje_x: "precio"
+      eje_y: "ganancia"
+
+resultado:
+  tex: 'x = 6 \ \Rightarrow \ U = 32'
+  voz: "A seis mil pesos el precio, la ganancia máxima es de 32 mil pesos."
+  emoji: "🎯"
+
+verificacion:
+  texto: "Las raíces son 2 y 10: el vértice cae justo en el centro."
+  voz: "Comprobación: a dos mil y a diez mil la ganancia es cero. El máximo cae justo al centro en seis."
+
+reto:
+  texto: "¿Y si la función fuera U(x) = -x² + 10x - 21?"
+  voz: "Ahora tú: si la función fuera menos equis cuadrado más 10 equis menos 21, ¿a qué precio ganas más? Comenta."
+  emoji: "✍️"
+
+cierre:
+  texto: "Clases particulares PAES M1 y M2 · WhatsApp en mi perfil"
+  voz: "Si quieres dominar Funciones para la PAES, háblame directo al WhatsApp que está en mi perfil."
+  emoji: "🔥"
+
+portada:
+  badge: "PAES M1 · ADMISIÓN 2027"
+  titular: "¿EL SIGNO QUE ARRUINA EL VÉRTICE?"
+  pregunta: "U(x) = -2x² + 24x - 40"
+  alerta: "¡CUIDADO CON EL SIGNO DE a!"
+  detalle: "x = -b / (2a) = 6"
+  pie: "ÁLGEBRA Y FUNCIONES · ADMISIÓN 2027"
+  estilo: morado

@@ -1,0 +1,85 @@
+# Guion Modo Bestia PAES M1 / M2 · Geometría Espacial 3D
+# Cono 3D con agua viva, zooms dinámicos y llamada a WhatsApp de perfil
+
+titulo: "PAES M1: ¿Cuánta agua cabe en el cono de papel?"
+materia: matematica
+nivel: "PAES M1"
+molde: mito_realidad
+camara: fuerte
+
+gancho:
+  texto: "¿Cuánta agua cabe en este cono de papel?"
+  voz: "Este vaso cónico engaña a la vista: guarda mucha menos agua de la que imaginas."
+  emoji: "💧"
+
+enunciado:
+  texto: "Un vaso de papel tiene radio 3 cm y altura 4 cm. ¿Cuánta agua cabe adentro?"
+  voz: "Un vaso cónico tiene radio tres centímetros y altura cuatro. ¿Cuánta agua cabe?"
+  destacar: ["3 cm", "4 cm"]
+
+datos:
+  - tex: 'r = 3\ \text{cm}'
+    voz: "Radio: tres centímetros."
+  - tex: 'h = 4\ \text{cm}'
+    voz: "Altura: cuatro centímetros."
+
+pasos:
+  - nota: "El error común: creer que es un cilindro"
+    tex: 'V = \pi r^2 h \approx 113{,}1\ \text{cm}^3'
+    voz: "Muchos multiplican directo como si fuera un cilindro y dicen 113 centímetros cúbicos. ¡Eso está mal!"
+    error: true
+    emoji: "🚨"
+
+  - nota: "La realidad: el cono es un tercio"
+    tex: 'V = \frac{1}{3}\pi r^2 h = \frac{1}{3}(113{,}1) \approx 37{,}7\ \text{cm}^3'
+    voz: "La realidad: el cono guarda exactamente un tercio. Son casi 38 centímetros cúbicos de agua."
+    destacar: ['\frac{1}{3}', '37{,}7']
+    visual:
+      tipo: solido_3d
+      figura: cono
+      radio: '3 cm'
+      altura: '4 cm'
+      vista: axonometrica
+      agua: true
+      anotar: ['altura', 'volumen']
+
+  - nota: "La pared inclinada: trío 3, 4 y 5"
+    tex: 'g = \sqrt{3^2 + 4^2} = 5\ \text{cm}'
+    voz: "Y para la pared inclinada aplicas Pitágoras: la generatriz mide cinco centímetros."
+    destacar: ['5\ \text{cm}']
+    visual:
+      tipo: solido_3d
+      figura: cono
+      radio: '3 cm'
+      altura: '4 cm'
+      vista: axonometrica
+      agua: true
+      anotar: ['generatriz']
+
+resultado:
+  tex: 'V \approx 38\ \text{ml}'
+  voz: "Treinta y ocho mililitros: apenas dos sorbos de agua."
+  emoji: "🎯"
+
+verificacion:
+  texto: "El cilindro guardaría 113 ml. El cono guarda su tercera parte: calza perfecto."
+  voz: "El cilindro guardaría ciento trece. El cono guarda un tercio: calza perfecto."
+
+reto:
+  texto: "Si duplicas la altura a 8 cm, ¿cuánta agua cabe ahora?"
+  voz: "Ahora tú: si duplicamos la altura a ocho centímetros manteniendo el radio, ¿cuánta agua cabe? Comenta tu respuesta."
+  emoji: "✍️"
+
+cierre:
+  texto: "Clases particulares PAES M1 y M2 · WhatsApp en mi perfil"
+  voz: "Si quieres asegurar tu puntaje en la PAES M1 y M2, háblame directo al WhatsApp de mi perfil."
+  emoji: "🔥"
+
+portada:
+  badge: "PAES M1 · ADMISIÓN 2027"
+  titular: "¿CUÁNTA AGUA CABE EN EL CONO?"
+  pregunta: "RADIO 3 CM · ALTURA 4 CM"
+  alerta: "¡NO ES UN CILINDRO!"
+  detalle: "V = 1/3 · π r² h"
+  pie: "GEOMETRÍA 3D · ADMISIÓN 2027"
+  estilo: cian

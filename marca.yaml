@@ -57,7 +57,7 @@ voz:
 
 cama:
   activa: true
-  volumen: 0.22
+  volumen: 0.12
   estilo: "motivado"             # Modo Bestia: sintetizador enérgico y continuo por defecto
 
 cierre:

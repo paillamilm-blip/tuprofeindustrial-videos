@@ -89,8 +89,8 @@ def dibuja_el_sticker(elegido: str | None, de_la_marca: bool, tema_emojis: bool)
 # Cuánto acerca la cámara en cada paso y en el resultado (multiplica lo ya acercado).
 # "base" es el encuadre al que vuelve antes de cada golpe: sin ese aire, el golpe no se nota.
 ESCALAS: dict[str, dict[str, float]] = {
-    "suave": {"paso": 0.93, "resultado": 0.85, "minima": 0.75, "base": 0.95},
-    "fuerte": {"paso": 0.88, "resultado": 0.80, "minima": 0.68, "base": 0.90},
+    "suave": {"paso": 0.88, "resultado": 0.78, "minima": 0.62, "base": 0.92},
+    "fuerte": {"paso": 0.80, "resultado": 0.68, "minima": 0.50, "base": 0.86},
 }
 
 
@@ -98,13 +98,13 @@ HOLGURA_ANCHO = 0.12  # aire entre lo dibujado y el borde del cuadro cuando la c
 
 # El golpe: la cámara entra rápido, se pasa un poco del encuadre quieto y vuelve a él.
 # El margen es lo que entra de más que el borde seguro: dura un instante, no se queda.
-GOLPE = {"suave": 0.035, "fuerte": 0.06}
+GOLPE = {"suave": 0.05, "fuerte": 0.08}
 SOBREPASO_MAX = 6.0  # más que esto y el golpe deja de parecer una cámara y parece un error
 
 # El primer plano de un término. El aire es el fondo que queda alrededor de lo destacado; la mínima
 # es el freno: más adentro que eso una letra de 84 puntos ocupa todo el cuadro y deja de leerse.
-AIRE_PRIMER_PLANO = 3.3
-MINIMA_PRIMER_PLANO = 0.46
+AIRE_PRIMER_PLANO = 2.4
+MINIMA_PRIMER_PLANO = 0.40
 
 # El gancho que llena el cuadro («nadie te enseñó», POV): la pregunta sola, sin la marca arriba, y
 # con letra un tercio más grande. El centro elegido deja arriba el aire donde todavía no hay cabecera
@@ -342,8 +342,7 @@ def encuadre(
     Nunca se aleja más allá del cuadro completo (escala máxima 1), no recorta lo dibujado por los
     lados y se detiene en el borde del fondo en los dos ejes.
     """
-    por_ancho = (paisaje.ancho_util + HOLGURA_ANCHO) / ancho_cuadro
-    acercada = min(1.0, max(minima, por_ancho, escala))
+    acercada = min(1.0, max(minima, escala))
     return (
         acercada,
         _centro_x(objetivo_x, acercada, ancho_cuadro, paisaje),
@@ -925,17 +924,17 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         )
         return self._mover_camara(s, centro_x, centro_y, 0.5)
 
-    def _primer_plano_de(self, marcos: Mobject) -> None:
+    def _primer_plano_de(self, marcos: Mobject, tiempo_sostener: float = 0.55) -> None:
         """Entra al término recuadrado, lo sostiene y devuelve al paso: el respiro de la receta."""
         # Se anota el encuadre de reposo, no la posición del cuadro: con la cámara en mano la posición
         # real está corrida por el vaivén y devolver a ella sumaría deriva sobre deriva.
         antes = (self._camara_escala, self._deriva_base_x, self._deriva_base_y)
-        entra = self._primer_plano(marcos, run_time=0.36)
+        entra = self._primer_plano(marcos, run_time=0.38)
         if not entra:
             return
-        self.play(*entra, run_time=0.36)
-        self.wait(0.20)
-        self.play(*self._mover_camara(*antes, run_time=0.35), run_time=0.35)
+        self.play(*entra, run_time=0.38)
+        self.wait(tiempo_sostener)
+        self.play(*self._mover_camara(*antes, run_time=0.38), run_time=0.38)
 
     def _destello(self, caja: Mobject) -> list[Animation]:
         """La confirmación: un aro del recuadro que se expande y se apaga, y rayos cortos alrededor."""
@@ -1748,8 +1747,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     continue
 
                 terminos_mapa = [m.termino for m in paso.mapa] if self.tema.gramatica.mapa_color else []
+                terminos_aislar = list(dict.fromkeys(terminos_mapa + [d for d in paso.destacar if d]))
                 eq = c.ecuacion(paso.tex, c.TAM_ECUACION, self.col.formulas,
-                                aislar=terminos_mapa).set_z_index(1)
+                                aislar=terminos_aislar).set_z_index(1)
                 if eq.height > c.ALTO_MAX_ECUACION:
                     eq.scale_to_fit_height(c.ALTO_MAX_ECUACION)
                 nota = self._nota(paso)
@@ -1941,7 +1941,6 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     if (
                         receta.primer_plano == "destacar"
                         and paso.visual is None
-                        and self._restante(tr) >= 0.95
                     ):
                         self._primer_plano_de(marcos)
                         hizo_toma = True
@@ -1950,6 +1949,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     self.hasta(tr, tr.duration * 0.45)
                     cruz = c.tachado(eq, self.col.error)
                     self.play(Create(cruz), run_time=0.45)
+                    if not hizo_toma and receta.primer_plano == "destacar" and paso.visual is None:
+                        self._primer_plano_de(cruz, tiempo_sostener=0.45)
+                        hizo_toma = True
                     if not hizo_toma:
                         # La fórmula y su ✗ tiemblan juntas (mismo centro, mismo movimiento).
                         # Si la cámara ya entró al término, ese empujón fue el énfasis y sobra el temblor.
