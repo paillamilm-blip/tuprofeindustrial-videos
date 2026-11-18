@@ -1,60 +1,67 @@
 titulo: 'PAES M1: ¿Por qué 2/3 + 1/4 NO es 3/7?'
 materia: matematica
-nivel: 1° medio / PAES
+nivel: "PAES M1"
 molde: mito_realidad
-tema: consola_reto
-camara: suave
+camara: fuerte
+
 gancho:
-  texto: ¡Nunca sumes las fracciones hacia el lado!
-  voz: ¡Por favor nunca sumes las fracciones hacia el lado! ¿Por qué dos tercios más un cuarto jamás puede ser tres séptimos?
-  tex: \frac{2}{3} + \frac{1}{4} \neq \frac{3}{7}
-  emoji: 😱
+  texto: "¡Nunca sumes fracciones hacia el lado!"
+  voz: "¡Por favor nunca sumes fracciones hacia el lado! Dos tercios más un cuarto jamás da tres séptimos."
+  tex: '\frac{2}{3} + \frac{1}{4} \neq \frac{3}{7}'
+  emoji: "😱"
+
 enunciado:
-  texto: Calcula 2/3 + 1/4 encontrando el mínimo común múltiplo entre los denominadores.
-  voz: Para sumar fracciones necesitas pedazos del mismo tamaño, no sumar numeradores y denominadores hacia el lado.
+  texto: "Calcula 2/3 + 1/4 encontrando el mínimo común múltiplo entre los denominadores."
+  voz: "Para sumar fracciones necesitas trozos del mismo tamaño, no sumar hacia el lado."
   destacar:
-  - "2/3 + 1/4"
+    - "2/3 + 1/4"
+
 datos:
-- tex: \text{mcm}(3, 4) = 12
-  voz: El mínimo común múltiplo entre tres y cuatro es doce.
+  - tex: '\text{mcm}(3, 4) = 12'
+    voz: "El mínimo común múltiplo entre tres y cuatro es doce."
+
 pasos:
-- nota: La creencia falsa
-  tex: \frac{2 + 1}{3 + 4} = \frac{3}{7}
-  voz: Sumar dos más uno y tres más cuatro da tres séptimos. ¡Eso está completamente prohibido!
-  error: true
-  emoji: ❌
-- nota: Amplificar a doceavos
-  tex: \frac{2 \cdot 4}{3 \cdot 4} + \frac{1 \cdot 3}{4 \cdot 3} = \frac{8}{12} + \frac{3}{12}
-  voz: "Convertimos a doceavos: dos tercios son ocho partes de doce, y un cuarto son tres partes."
-  emoji: 💡
-  visual:
-    tipo: torta
-    categorias: ['2/3 8', '1/4 3', 'Falta 1']
-- nota: Sumar pedazos iguales
-  tex: \frac{8 + 3}{12} = \frac{11}{12}
-  voz: Ahora que los trozos son del mismo tamaño, sumamos ocho más tres y obtenemos once doceavos.
-  destacar:
-  - \frac{11}{12}
-  emoji: ✅
-  visual:
-    tipo: torta
-    categorias: ['2/3 8', '1/4 3', 'Falta 1']
+  - nota: "La creencia falsa"
+    tex: '\frac{2 + 1}{3 + 4} = \frac{3}{7}'
+    voz: "Muchos suman dos más uno y tres más cuatro: ¡tres séptimos está completamente mal!"
+    error: true
+    emoji: "❌"
+
+  - nota: "Paso 1: Amplificar a doceavos"
+    tex: '\frac{2 \cdot 4}{3 \cdot 4} + \frac{1 \cdot 3}{4 \cdot 3} = \frac{8}{12} + \frac{3}{12}'
+    voz: "Convertimos a doceavos: dos tercios son ocho partes de doce, y un cuarto son tres partes."
+    destacar:
+      - '\frac{8}{12}'
+      - '\frac{3}{12}'
+    emoji: "💡"
+    visual:
+      tipo: torta
+      categorias: ['2/3 (8) 8', '1/4 (3) 3', 'Falta 1']
+
+  - nota: "Paso 2: Sumar pedazos iguales"
+    tex: '\frac{8 + 3}{12} = \frac{11}{12}'
+    voz: "Ahora que los trozos son iguales, sumamos ocho más tres y obtenemos once doceavos."
+    destacar:
+      - '\frac{11}{12}'
+    emoji: "✅"
+    visual:
+      tipo: torta
+      categorias: ['2/3 (8) 8', '1/4 (3) 3', 'Falta 1']
+
 resultado:
-  tex: \frac{2}{3} + \frac{1}{4} = \frac{11}{12}
-  voz: El resultado correcto es once doceavos. ¡Tres séptimos no alcanzaba ni a la mitad de la pizza!
-  emoji: 🎯
+  tex: '\frac{2}{3} + \frac{1}{4} = \frac{11}{12}'
+  voz: "El resultado real es once doceavos. Tres séptimos no alcanzaba ni a la mitad."
+  emoji: "🎯"
+
 verificacion:
-  texto: 11/12 es casi el entero (0,92), mientras que 3/7 es menos de la mitad (0,43).
-  voz: Once doceavos es casi la pizza entera, mientras que tres séptimos no era ni la mitad.
+  texto: "11/12 es casi el entero (0,92), mientras que 3/7 es menos de la mitad (0,43)."
+  voz: "Once doceavos es casi la pizza entera, tres séptimos no era ni la mitad."
+
 reto:
-  texto: ¿Cuánto da 1/2 + 1/3? ¿Da 2/5 o 5/6?
-  voz: ¿Cuánto da un medio más un tercio? ¿Dos quintos o cinco sextos? Cuéntame abajo.
-  emoji: 🤔
-cierre:
-  texto: Clases particulares PAES M1. Háblame directo al WhatsApp de mi perfil.
-  voz: Si te complican las fracciones para la PAES, háblame directo al WhatsApp que está en mi perfil.
-  emoji: 🔥
-llamado: Clases particulares PAES · Online y presencial · WhatsApp en mi perfil (link en bio)
+  texto: "¿Cuánto da 1/2 + 1/3? ¿Da 2/5 o 5/6?"
+  voz: "Ahora tú: ¿cuánto da un medio más un tercio? Coméntalo y háblame al WhatsApp de mi perfil para preparar tu PAES."
+  emoji: "✍️"
+
 portada:
   estilo: verde
   badge: "PAES M1 · ADMISIÓN 2027"
@@ -67,6 +74,7 @@ portada:
   emoji_alerta: cerebro.png
   detalle: 2/3 + 1/4 = 8/12 + 3/12 = 11/12
   pie: Solo puedes sumar pedazos del mismo porte
+
 historias:
   encuesta:
     badge: RETO PAES M1
@@ -79,16 +87,17 @@ historias:
       ¿Cuál es el resultado correcto?
     opcion_a: 3/7  («Sumar hacia el lado»)
     opcion_b: 11/12  («Mínimo común múltiplo»)
+
 metadatos:
   titulo: '¿Por qué 2/3 + 1/4 NO es 3/7? 🥧 Error típico PAES M1'
-  descripcion: 'Explicamos con barras visuales paso a paso por qué dos tercios más un cuarto no son tres séptimos, sino once doceavos. Clave para la PAES M1.'
+  descripcion: 'Explicamos visualmente paso a paso por qué dos tercios más un cuarto no son tres séptimos, sino once doceavos. Clave para asegurar tu puntaje en la PAES M1.'
   hashtags:
-  - '#tuprofeindustrial'
-  - '#paes'
-  - '#paesm1'
-  - '#fracciones'
-  - '#matematica'
-  - '#estudiantes'
-  - '#aprendeentiktok'
-  - '#chile'
-  - '#clasesparticulares'
+    - '#tuprofeindustrial'
+    - '#paes'
+    - '#paesm1'
+    - '#fracciones'
+    - '#matematica'
+    - '#estudiantes'
+    - '#aprendeentiktok'
+    - '#chile'
+    - '#clasesparticulares'
