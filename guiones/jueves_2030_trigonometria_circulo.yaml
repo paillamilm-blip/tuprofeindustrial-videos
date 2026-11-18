@@ -1,0 +1,74 @@
+# Guion Modo Bestia PAES M2 · Trigonometría y Círculo Unitario
+# Círculo trigonométrico interactivo en Manim, proyecciones sen/cos y CTA a WhatsApp
+
+titulo: "PAES M2: Por qué sen 30° vale exactamente 0,5"
+materia: matematica
+nivel: "PAES M2"
+molde: mito_realidad
+camara: fuerte
+
+gancho:
+  texto: "El seno no es un número inventado"
+  voz: "El seno no es magia ni un número de memoria: se puede ver dibujado."
+  emoji: "📐"
+
+enunciado:
+  texto: "Demuestra con el círculo trigonométrico por qué sen 30° = 0,5."
+  voz: "Mira este círculo trigonométrico de radio uno y un ángulo de treinta grados."
+  destacar: ["30°", "0,5"]
+
+datos:
+  - tex: 'r = 1 \quad \theta = 30°'
+    voz: "Radio uno y giro de treinta grados."
+
+pasos:
+  - nota: "El error común: memorizar sin entender"
+    tex: '\sin(30°) = \text{¿por qué?}'
+    voz: "Muchos memorizan de memoria sin saber de dónde sale ese medio."
+    error: true
+    emoji: "🚨"
+
+  - nota: "El punto toca el círculo"
+    tex: 'P = (\cos 30°,\ \sin 30°)'
+    voz: "Al girar, el radio toca el círculo: la horizontal es el coseno y la vertical es el seno."
+    destacar: ['\sin 30°', '\cos 30°']
+    visual:
+      tipo: circulo_trig
+      angulo: 30
+
+  - nota: "La altura mide exactamente la mitad"
+    tex: '\sin 30° = 0{,}5 \quad \cos 30° \approx 0{,}87'
+    voz: "La altura del punto mide exactamente medio. Eso es el seno: una altura real."
+    destacar: ['0{,}5']
+    visual:
+      tipo: circulo_trig
+      angulo: 30
+      anotar: ['seno', 'coseno']
+
+resultado:
+  tex: '\sin 30° = \frac{1}{2} = 0{,}5'
+  voz: "Exactamente medio: la mitad del radio unitario."
+  emoji: "🎯"
+
+verificacion:
+  texto: "0,5² + 0,866² = 0,25 + 0,75 = 1: teorema de Pitágoras exacto."
+  voz: "Cero cinco al cuadrado más cero ochenta y siete al cuadrado suma uno. Pitágoras perfecto."
+
+reto:
+  texto: "¿Cuánto valen el seno y el coseno si el radio gira a 90°?"
+  voz: "Ahora tú: si el radio gira a noventa grados, ¿cuánto valen el seno y el coseno? Comenta tu respuesta."
+  emoji: "✍️"
+
+cierre:
+  texto: "Clases particulares PAES M1 y M2 · WhatsApp en mi perfil"
+  voz: "Si quieres dominar Trigonometría y Geometría para la PAES, háblame directo al WhatsApp de mi perfil."
+  emoji: "🔥"
+
+portada:
+  badge: "PAES M2 · ADMISIÓN 2027"
+  titular: "¿POR QUÉ SEN 30° VALE 0,5?"
+  pregunta: "CÍRCULO TRIGONOMÉTRICO R = 1"
+  alerta: "¡EL SENO ES UNA ALTURA REAL!"
+  detalle: "sin²(θ) + cos²(θ) = 1"
+  pie: "TRIGONOMETRÍA PAES M2 · ADMISIÓN 2027"
+  estilo: morado

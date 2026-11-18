@@ -66,6 +66,16 @@ from manim import (
     config,
     rate_functions,
 )
+from manim.animation.transform import FadeTransformPieces
+
+# Parche de seguridad para Manim en Python 3.10+: zip(..., strict=True) en FadeTransformPieces
+# falla si la fórmula fuente y destino tienen cantidad distinta de glifos o partes hijas.
+def _safe_ghost_to(self, source, target):
+    for sm0, sm1 in zip(source.get_family(), target.get_family()):
+        super(FadeTransformPieces, self).ghost_to(sm0, sm1)
+
+FadeTransformPieces.ghost_to = _safe_ghost_to
+
 from manim_voiceover import VoiceoverScene
 from manim_voiceover.helper import remove_bookmarks
 

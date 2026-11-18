@@ -49,11 +49,11 @@ materias:           # color de la etiqueta de cada materia
 
 voz:
   # gemini (natural, misma clave de Gemini) | edge (neural, gratis, más robótica) | gtts | silencio
-  proveedor: gemini
-  nombre: "Charon"                # voz de Gemini (ver ./tpi voces --gemini); con edge: es-CL-LorenzoNeural
+  proveedor: edge
+  nombre: "es-CL-LorenzoNeural"   # voz neural chilena masculina oficial (sin límite diario de cuota)
   # Solo con gemini: cómo tiene que sonar, en palabras. Vacío = profe chileno cercano, con calma.
   estilo: ""
-  velocidad: "+5%"
+  velocidad: "+4%"
 
 cama:
   activa: true

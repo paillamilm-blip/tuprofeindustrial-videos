@@ -1,0 +1,80 @@
+# Guion Modo Bestia PAES M1 · Probabilidad y Conjuntos
+# Diagrama de Venn interactivo, zoom en intersección y CTA a WhatsApp
+
+titulo: "PAES M1: ¿Por qué 16 + 14 no da 30? Diagramas de Venn"
+materia: matematica
+nivel: "PAES M1"
+molde: mito_realidad
+camara: fuerte
+
+gancho:
+  texto: "¿Por qué 16 + 14 no da 30 en este curso?"
+  voz: "Sumar los dos grupos directo y siempre te va a salir mal."
+  emoji: "🤯"
+
+enunciado:
+  texto: "En un curso de 30 alumnos, 16 juegan fútbol y 14 básquetbol. ¿Cuántos juegan ambos?"
+  voz: "En un curso de treinta estudiantes, dieciséis juegan fútbol y catorce básquetbol."
+  destacar: ["16", "14"]
+
+datos:
+  - tex: 'n(A) = 16 \quad n(B) = 14'
+    voz: "Dieciséis en fútbol y catorce en básquetbol."
+
+pasos:
+  - nota: "El error común: sumar sin intersección"
+    tex: '16 + 14 = 30'
+    voz: "El error clásico: sumar directo y creer que todos juegan algo. ¡Falso!"
+    error: true
+    emoji: "🚨"
+
+  - nota: "Seis juegan los dos deportes a la vez"
+    tex: 'n(A \cap B) = 6'
+    voz: "El dato clave: seis juegan ambos deportes a la vez en la intersección."
+    destacar: ['6']
+    visual:
+      tipo: venn
+      solo_a: 10
+      solo_b: 8
+      ambos: 6
+      fuera: 6
+
+  - nota: "La unión no cuenta a nadie dos veces"
+    tex: 'n(A \cup B) = 16 + 14 - 6 = 24'
+    voz: "Si los sumas, cuentas dos veces a esos seis. Al restarlos una vez, son veinticuatro."
+    destacar: ['24', '- 6']
+    visual:
+      tipo: venn
+      solo_a: 10
+      solo_b: 8
+      ambos: 6
+      fuera: 6
+      anotar: ['total']
+
+resultado:
+  tex: 'n(A \cup B) = 24 \quad n(\text{ninguno}) = 6'
+  voz: "Veinticuatro juegan algún deporte, y seis no juegan ninguno."
+  emoji: "🎯"
+
+verificacion:
+  texto: "10 + 8 + 6 + 6 = 30: las cuatro regiones suman el curso completo."
+  voz: "Diez más ocho más seis más seis dan exactamente treinta: el curso completo."
+
+reto:
+  texto: "En un curso de 25, 20 juegan fútbol y 12 básquetbol. ¿Cuántos juegan ambos como mínimo?"
+  voz: "Ahora tú: en un curso de veinticinco, veinte juegan fútbol y doce básquetbol. ¿Cuántos juegan ambos mínimo? Comenta."
+  emoji: "✍️"
+
+cierre:
+  texto: "Clases particulares PAES M1 y M2 · WhatsApp en mi perfil"
+  voz: "Si quieres dominar Probabilidad para la PAES, háblame directo al WhatsApp de mi perfil."
+  emoji: "🔥"
+
+portada:
+  badge: "PAES M1 · ADMISIÓN 2027"
+  titular: "¿POR QUÉ 16 + 14 NO DA 30?"
+  pregunta: "FÚTBOL 16 · BÁSQUETBOL 14"
+  alerta: "¡LA INTERSECCIÓN SE CUENTA DOBLE!"
+  detalle: "n(A ∪ B) = n(A) + n(B) - n(A ∩ B)"
+  pie: "PROBABILIDAD Y CONJUNTOS · ADMISIÓN 2027"
+  estilo: verde
