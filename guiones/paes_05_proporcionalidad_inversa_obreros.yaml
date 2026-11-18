@@ -1,85 +1,97 @@
 titulo: 'PAES M1: ¿Duplicas trabajadores o duplicas días?'
 materia: matematica
 nivel: 1° medio / PAES
-tema: rotulador
+molde: mito_realidad
+tema: consola_error
+camara: suave
 gancho:
-  texto: ¿Duplicas trabajadores o duplicas días?
-  voz: Si cuatro personas tardan seis días en una obra, ¿cuánto tardan ocho personas?
-    ¿Tres, seis o doce días?
-  tex: 4\ \text{pers.} \rightarrow 6\ \text{días} \quad|\quad 8\ \text{pers.} \rightarrow
-    ¿?
-  emoji: 👷
+  texto: "¿4 obreros en 6 días? ¿Cuánto tardan 8 obreros?"
+  voz: "Si cuatro obreros tardan seis días en una obra, ¿cuánto tardan ocho obreros? ¡El error más común de la prueba!"
+  tex: 4\ \text{pers.} \rightarrow 6\ \text{días} \quad|\quad 8\ \text{pers.} \rightarrow ¿?
+  emoji: 🏗️
 enunciado:
-  texto: Calcula el tiempo que demoran 8 personas si 4 personas completan la misma
-    tarea en 6 días.
-  voz: Muchos piensan que al duplicar las personas se duplican los días, pero eso
-    es absurdo.
+  texto: Calcula el tiempo que demoran 8 personas si 4 personas completan la misma tarea en 6 días.
+  voz: Al tener más personas trabajando, el trabajo se reparte y el tiempo disminuye, no aumenta.
   destacar:
-  - 4 personas
-  - 6 días
+  - "4 personas"
+  - "6 días"
+datos:
+- tex: k = 4 \cdot 6 = 24
+  voz: La constante de trabajo es cuatro por seis, veinticuatro.
 pasos:
-- nota: Error de proporción directa
+- nota: La creencia falsa
   tex: 8\ \text{personas} \rightarrow 12\ \text{días}
-  voz: 'Responder doce días es el error clásico: con más gente trabajando jamás te
-    puedes demorar más tiempo.'
+  voz: Responder doce días aplicando regla de tres directa es un grave error. ¡Jamás tardarás más tiempo con más gente!
   error: true
-  transformar: false
+  emoji: ❌
 - nota: Proporcionalidad inversa
-  tex: \text{personas} \cdot \text{días} = \text{constante}
-  voz: 'Es proporcionalidad inversa: a más trabajadores, menos días. El producto de
-    ambos se mantiene constante.'
+  tex: \text{obreros} \cdot \text{días} = 24
+  voz: "Es proporcionalidad inversa: personas por días siempre da veinticuatro."
   emoji: 💡
-  transformar: false
-- nota: Ecuación de producto constante
-  tex: 4 \cdot 6 = 8 \cdot d \implies 24 = 8d
-  voz: Cuatro personas por seis días son veinticuatro. Ocho personas por de días debe
-    dar veinticuatro.
-  destacar:
-  - 24 = 8d
-  transformar: false
-resultado:
+  visual:
+    tipo: barras
+    categorias: ['4 obreros 6', 'Error directo 12', 'Real 8 obreros 3']
+- nota: Calculamos los días reales
   tex: d = \frac{24}{8} = 3\ \text{días}
-  voz: Veinticuatro dividido entre ocho nos da tres días. Si duplicas la gente, el
-    tiempo se reduce a la mitad.
+  voz: Veinticuatro dividido entre ocho nos da tres días exactos. ¡El tiempo se redujo a la mitad!
+  destacar:
+  - "3"
+  emoji: ✅
+  visual:
+    tipo: barras
+    categorias: ['4 obreros 6', 'Error directo 12', 'Real 8 obreros 3']
+resultado:
+  tex: d = 3\ \text{días} \neq 12\ \text{días}
+  voz: La respuesta correcta son tres días, no doce.
   emoji: 🎯
 verificacion:
-  texto: En proporcionalidad inversa, si una magnitud se duplica, la otra se reduce
-    a la mitad.
-  voz: 'Clave PAES: si una variable se multiplica por dos, la otra se divide por dos.'
+  texto: En proporción inversa, si multiplicas los obreros por 2, los días se dividen por 2.
+  voz: Si duplicas los trabajadores, los días de trabajo se cortan exactamente a la mitad.
+reto:
+  texto: "¿Y si fueran 12 obreros? ¿Cuántos días tardan? Te leo abajo."
+  voz: "Ahora tú: ¿cuántos días tardarían doce obreros en la misma obra? Deja tu respuesta abajo."
+  emoji: 🤔
 cierre:
-  texto: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
-    para consultar horarios.
-  voz: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
-    para consultar horarios.
-llamado: Clases particulares PAES · Online y presencial en toda la Región Metropolitana · Consultas
-  en Instagram @tuprofeindustrial o en nuestra web.
-camara: quieta
+  texto: Clases particulares PAES M1. Háblame directo al WhatsApp de mi perfil.
+  voz: Si quieres asegurar tu puntaje en la M1 para la Admisión 2027, háblame directo al WhatsApp que está en mi perfil.
+  emoji: 🔥
+llamado: Clases particulares PAES · Online y presencial · WhatsApp en mi perfil (link en bio)
 portada:
   estilo: naranja
-  badge: "ERROR TÍPICO PAES M1"
+  badge: "PAES M1 · ADMISIÓN 2027"
   emoji_badge: construccion.png
-  titular: "¿4 OBREROS EN 6 DÍAS?\n¿CUÁNTO TARDAN 8?"
+  titular: |-
+    ¿4 OBREROS EN 6 DÍAS?
+    ¿CUÁNTO TARDAN 8?
   pregunta: "¿SE DEMORAN 12 O 3 DÍAS?"
   alerta: "¡NO ES DIRECTA! ¡ES INVERSA!"
   emoji_alerta: incorrecto.png
-  detalle: "4 × 6 = 24  ➔  24 ÷ 8 = 3 días"
+  detalle: "4 × 6 = 24  →  24 ÷ 8 = 3 días"
   pie: "A más trabajadores, menos días de trabajo"
 historias:
   encuesta:
-    badge: "RETO PAES M1"
-    titulo: "¿CAERÍAS EN LA TRAMPA\nDE LA REGLA DE TRES?"
-    pregunta: "4 personas demoran 6 días en una obra.\nSi trabajan 8 personas:\n¿Cuántos días tardarán?"
+    badge: "RETO ADMISIÓN 2027"
+    titulo: |-
+      ¿CAERÍAS EN LA TRAMPA
+      DE LA REGLA DE TRES?
+    pregunta: |-
+      4 personas demoran 6 días.
+      Si trabajan 8 personas:
+      ¿Cuántos días tardarán?
     opcion_a: "12 días  («Regla de 3 directa»)"
     opcion_b: "3 días  («Proporción inversa»)"
 metadatos:
-  titulo: '¿Duplicas trabajadores o duplicas días? Proporcionalidad inversa 👷‍♂️'
-  descripcion: 'El típico error en la PAES M1 al resolver problemas de trabajadores y tiempo. Descubre por qué la constante es el producto K = x · y.'
+  titulo: '¿4 obreros en 6 días? ¿Cuánto tardan 8 obreros? 👷‍♂️ Proporcionalidad inversa PAES M1'
+  descripcion: 'El típico error en la PAES M1 al resolver problemas de trabajadores y tiempo. Demostramos por qué es proporcionalidad inversa y tardan 3 días, no 12.'
   hashtags:
   - '#tuprofeindustrial'
   - '#paes'
   - '#paesm1'
+  - '#admision2027'
+  - '#demre'
   - '#proporciones'
   - '#matematica'
   - '#estudiantes'
   - '#aprendeentiktok'
   - '#chile'
+  - '#clasesparticulares'
