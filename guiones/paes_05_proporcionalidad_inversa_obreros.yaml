@@ -1,4 +1,4 @@
-titulo: 'PAES M1: ¿Duplicas trabajadores o duplicas días?'
+titulo: 'PAES M1: ¿Duplicas obreros o días?'
 materia: matematica
 nivel: "PAES M1"
 molde: mito_realidad
@@ -35,7 +35,7 @@ pasos:
     emoji: "💡"
     visual:
       tipo: barras
-      categorias: ['4 obreros 6', 'Error directo 12', 'Real 8 obreros 3']
+      categorias: ['4 obreros 6', 'Error 12', '8 obreros 3']
 
   - nota: "Calculamos los días reales"
     tex: 'd = \frac{24}{8} \implies d = 3\ \text{días}'
@@ -45,7 +45,7 @@ pasos:
     emoji: "✅"
     visual:
       tipo: barras
-      categorias: ['4 obreros 6', 'Error directo 12', 'Real 8 obreros 3']
+      categorias: ['4 obreros 6', 'Error 12', '8 obreros 3']
 
 resultado:
   tex: 'd = 3\ \text{días} \quad (\neq 12\ \text{días})'
