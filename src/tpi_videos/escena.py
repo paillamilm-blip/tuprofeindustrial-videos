@@ -2049,6 +2049,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         if emoji is not None:
             self._pegar_en_esquina(emoji, caja, giro=-0.2)
         salen: list[Mobject] = [*self.resaltes]
+        if hasattr(self, "datos_fijos") and self.datos_fijos is not None:
+            salen.append(self.datos_fijos)
         for linea in self.pila:
             salen += [m for m in linea.mobs if m is not self.ultima]
         with self.hablar(r.voz, "resultado") as tr:
@@ -2158,6 +2160,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         )
 
         salen: list[Mobject] = [*self.resaltes]
+        if hasattr(self, "datos_fijos") and self.datos_fijos is not None:
+            salen.append(self.datos_fijos)
         for linea in self.pila:
             salen += [m for m in linea.mobs if m is not self.ultima]
         with self.hablar(r.voz, "resultado") as tr:
@@ -2281,6 +2285,10 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             self.play(FadeIn(tarjeta, shift=UP * 0.2), run_time=0.45)
             if emoji is not None:
                 self.play(self._rebote(emoji))
+            if getattr(self, "modo_camara", "suave") != "quieta":
+                acercamiento = self._animaciones_camara(tarjeta.get_center()[1], 0.82, run_time=0.55)
+                if acercamiento:
+                    self.play(*acercamiento)
 
     def _cierre(self) -> None:
         cierre = self.guion.cierre or Bloque(texto=self.marca.cierre.texto, voz=self.marca.cierre.voz)
