@@ -1,39 +1,37 @@
 # Familia Consola · RETO (molde Reto).
-# Versión sobria (12-11-2026): fondo grafito liso con un degradado suave, sin rejas ni viñetas, sin
-# brillo neón y con un solo acento apagado por variante. Se conservan la estructura (pasos
-# numerados, panel, mapa de color), el plumón y los subtítulos de 3 palabras.
+# Versión Neón Moderna: fondo oscuro grafito de alto contraste con verde esmeralda eléctrico (#22C55E).
 nombre: Consola · Reto
-descripcion: 'Grafito verdoso con un verde salvia: pasos numerados y la respuesta tapada para que lo intentes.'
+descripcion: 'Grafito oscuro con verde esmeralda eléctrico: pasos numerados y el reto final en primer plano.'
 rotulo: RETO
 marco: pizarra
 resplandor: false
 colores:
-  fondo: '#0F1411'
-  panel: '#18221D'
-  borde: '#2D4036'
-  titulos: '#ECEFF3'
-  texto: '#E4E7EB'
-  formulas: '#F2F4F7'
-  tenue: '#8FA096'
-  acento: '#7DB894'
-  exito: '#7DB894'
-  cuadricula: '#6FA8DC'  # el segundo color de los dibujos (otra porción, el coseno, el agua): nunca igual al acento
-  error: '#D27A72'
-materias: {matematica: '#7DB894', fisica: '#7DB894', ingenieria: '#7DB894'}
+  fondo: '#0B0E14'
+  panel: '#161922'
+  borde: '#2C3446'
+  titulos: '#F8FAFC'
+  texto: '#F1F5F9'
+  formulas: '#FFFFFF'
+  tenue: '#94A3B8'
+  acento: '#22C55E'
+  exito: '#22C55E'
+  cuadricula: '#38BDF8'
+  error: '#EF4444'
+materias: {matematica: '#22C55E', fisica: '#22C55E', ingenieria: '#22C55E'}
 tipografia:
   titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
   texto: {familia: Montserrat, grosor: SEMIBOLD}
 nota: {rol: texto, escala: 1.0, color: acento}
 formulas_negrita: true
-fondo: {tipo: degradado, degradado: ['#151C18', '#0B0F0D']}
+fondo: {tipo: degradado, degradado: ['#121620', '#0A0C10']}
 subtitulos:
   fuente: Montserrat Black
   tamano: 84
   color: '#FFFFFF'
-  color_activo: '#7DB894'
+  color_activo: '#22C55E'
   borde: 6
   sombra: 2
-  posicion_y: 0.82  # con el panel abajo, el motor la sube sola por encima de él
+  posicion_y: 0.82
   mayusculas: true
   max_palabras: 3
   max_caracteres: 18
@@ -49,4 +47,4 @@ gramatica:
   panel: true
   mapa_color: true
   micro: true
-  paleta_pasos: ['#7DB894', '#6FA8DC', '#D4B26A', '#A399C9', '#C98FA7', '#D29A6E']
+  paleta_pasos: ['#22C55E', '#38BDF8', '#FFC72C', '#A78BFA', '#F472B6', '#EF4444']

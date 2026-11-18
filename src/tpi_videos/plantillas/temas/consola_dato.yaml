@@ -1,36 +1,34 @@
 # Familia Consola · DATO (molde Nadie te enseñó esto).
-# Versión sobria (12-11-2026): fondo grafito liso con un degradado suave, sin rejas ni viñetas, sin
-# brillo neón y con un solo acento apagado por variante. Se conservan la estructura (pasos
-# numerados, panel, mapa de color), el plumón y los subtítulos de 3 palabras.
+# Versión Neón Moderna: fondo oscuro grafito de alto contraste con oro láser (#FFC72C).
 nombre: Consola · Dato
-descripcion: 'Grafito cálido con un dorado mate: el dato sorpresa, limpio y revelado en el momento justo.'
+descripcion: 'Grafito oscuro con oro brillante de alta visibilidad: el dato sorpresa revelado con impacto.'
 rotulo: DATO
 marco: pizarra
 resplandor: false
 colores:
-  fondo: '#13110D'
-  panel: '#211D16'
-  borde: '#41392A'
-  titulos: '#ECEFF3'
-  texto: '#E4E7EB'
-  formulas: '#F2F4F7'
-  tenue: '#A39A88'
-  acento: '#D4B26A'
-  exito: '#7DB894'
-  cuadricula: '#6FA8DC'  # el segundo color de los dibujos (otra porción, el coseno, el agua): nunca igual al acento
-  error: '#D27A72'
-materias: {matematica: '#D4B26A', fisica: '#D4B26A', ingenieria: '#D4B26A'}
+  fondo: '#0B0E14'
+  panel: '#161922'
+  borde: '#2C3446'
+  titulos: '#F8FAFC'
+  texto: '#F1F5F9'
+  formulas: '#FFFFFF'
+  tenue: '#94A3B8'
+  acento: '#FFC72C'
+  exito: '#22C55E'
+  cuadricula: '#38BDF8'
+  error: '#EF4444'
+materias: {matematica: '#FFC72C', fisica: '#FFC72C', ingenieria: '#FFC72C'}
 tipografia:
   titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
   texto: {familia: Montserrat, grosor: SEMIBOLD}
 nota: {rol: texto, escala: 1.0, color: acento}
 formulas_negrita: true
-fondo: {tipo: degradado, degradado: ['#1A1712', '#0E0C09']}
+fondo: {tipo: degradado, degradado: ['#121620', '#0A0C10']}
 subtitulos:
   fuente: Montserrat Black
   tamano: 84
   color: '#FFFFFF'
-  color_activo: '#D4B26A'
+  color_activo: '#FFC72C'
   borde: 6
   sombra: 2
   posicion_y: 0.74

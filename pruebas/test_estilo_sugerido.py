@@ -160,12 +160,11 @@ class GuionTest(unittest.TestCase):
 
 class GuionesDelRepoTest(unittest.TestCase):
     def test_todos_cargan_y_su_estilo_existe(self):
-        from tpi_videos.temas import listar_temas
+        from tpi_videos.temas import existe_tema
 
-        existentes = {clave for clave, _t, _p in listar_temas()}
         for ruta in sorted((RAIZ / "guiones").glob("*.yaml")):
             estilo = estilo_del_guion(cargar_guion(ruta), MARCA)
-            self.assertIn(estilo.clave, existentes, ruta.name)
+            self.assertTrue(existe_tema(estilo.clave), f"{ruta.name}: {estilo.clave}")
 
 
 class FijarTemaTest(unittest.TestCase):
