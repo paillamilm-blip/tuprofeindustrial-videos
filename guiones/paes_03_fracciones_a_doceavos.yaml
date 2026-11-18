@@ -36,7 +36,7 @@ pasos:
     emoji: "💡"
     visual:
       tipo: torta
-      categorias: ['2/3 (8) 8', '1/4 (3) 3', 'Falta 1']
+      categorias: ['2/3 8', '1/4 3', 'Falta 1/12 1']
 
   - nota: "Paso 2: Sumar pedazos iguales"
     tex: '\frac{8 + 3}{12} = \frac{11}{12}'
@@ -46,7 +46,7 @@ pasos:
     emoji: "✅"
     visual:
       tipo: torta
-      categorias: ['2/3 (8) 8', '1/4 (3) 3', 'Falta 1']
+      categorias: ['2/3 8', '1/4 3', 'Falta 1/12 1']
 
 resultado:
   tex: '\frac{2}{3} + \frac{1}{4} = \frac{11}{12}'
