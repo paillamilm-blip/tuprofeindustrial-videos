@@ -1,0 +1,67 @@
+# Guion Modo Bestia PAES M1 / M2 · Geometría 3D: Cilindro y Cuerpos Redondos
+# Sólido 3D en proyección axonométrica, zooms dinámicos y llamada a WhatsApp de perfil
+
+titulo: "PAES M1: ¿Cuánta agua cabe en la lata cilíndrica?"
+materia: matematica
+nivel: "PAES M1"
+molde: mito_realidad
+camara: fuerte
+
+gancho:
+  texto: "¿Cuánta agua cabe en esta lata?"
+  voz: "El error típico en cuerpos redondos PAES: olvidar que el volumen parte por la base."
+  emoji: "💧"
+
+enunciado:
+  texto: "Calcula el volumen de una lata cilíndrica de radio 3 cm y altura 5 cm."
+  voz: "Lata cilíndrica con radio de tres centímetros y altura de cinco."
+  destacar: ["3 cm", "5 cm"]
+
+datos:
+  - tex: 'r = 3\ \text{cm},\quad h = 5\ \text{cm}'
+    voz: "Radio tres, altura cinco."
+
+pasos:
+  - nota: "Error típico: multiplicar radio por altura"
+    tex: 'V = r \cdot h = 3 \cdot 5 = 15\ \text{cm}^3'
+    voz: "Muchos multiplican radio por altura y dicen quince centímetros cúbicos. ¡Gravísimo error!"
+    error: true
+    emoji: "❌"
+
+  - nota: "Paso 1: Área del círculo basal"
+    tex: 'A_{base} = \pi r^2 = \pi \cdot 3^2 = 9\pi \approx 28{,}3\ \text{cm}^2'
+    voz: "Primero calculas el círculo basal: pi por tres al cuadrado, veintiocho coma tres."
+    destacar: ['9\pi', '28{,}3']
+    visual:
+      tipo: solido_3d
+      figura: cilindro
+      radio: '3 cm'
+      altura: '5 cm'
+      vista: axonometrica
+      anotar: ['radio']
+
+  - nota: "Paso 2: Apilar la base por la altura"
+    tex: 'V = A_{base} \cdot h = 9\pi \cdot 5 = 45\pi \approx 141{,}4\ \text{cm}^3'
+    voz: "Luego multiplicas por la altura cinco: cuarenta y cinco pi, ciento cuarenta y un centímetros cúbicos."
+    destacar: ['45\pi', '141{,}4']
+    visual:
+      tipo: solido_3d
+      figura: cilindro
+      radio: '3 cm'
+      altura: '5 cm'
+      vista: axonometrica
+      anotar: ['altura', 'volumen']
+
+resultado:
+  tex: 'V \approx 141{,}4\ \text{cm}^3 \approx 141\ \text{ml}'
+  voz: "La lata almacena exactamente ciento cuarenta y un mililitros."
+  emoji: "📐"
+
+verificacion:
+  texto: "Es el triple que un cono de iguales medidas (47 ml)."
+  voz: "Guarda justo el triple que un cono de iguales medidas."
+
+reto:
+  texto: "¿Qué pasa con el volumen si duplicamos la altura a 10 cm?"
+  voz: "Ahora tú: si duplicamos la altura a diez, ¿el volumen se duplica o se cuadruplica? Coméntalo y háblame al WhatsApp de mi perfil."
+  emoji: "✍️"
