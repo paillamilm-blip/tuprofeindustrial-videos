@@ -194,6 +194,7 @@ uno están en `src/tpi_videos/visuales.py` (`VISUALES`), y el panel los muestra 
 | `tipo` | Qué dibuja | Materia | Campos |
 |---|---|---|---|
 | `grafico_funcion` | Gráfico de la función | Matemática | funcion, variable, eje_x, eje_y, rango, marcar, movimiento, desde, hasta, anotar |
+| `triangulo_rectangulo` | Triángulo rectángulo (Pitágoras / Trigonometría) | Matemática | cateto_a, cateto_b, hipotenusa, anotar (angulo_recto) |
 | `poligono_regular` | Polígono regular | Matemática | lados, lado, anotar (apotema, radio, angulo_central, angulo_interior, perimetro) |
 | `circulo_trig` | Círculo trigonométrico | Matemática | angulo, anotar |
 | `solido` | Sólido (lámina) | Matemática | figura, lado, radio, altura, anotar |

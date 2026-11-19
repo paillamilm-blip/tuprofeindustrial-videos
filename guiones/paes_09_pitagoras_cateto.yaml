@@ -30,18 +30,23 @@ pasos:
     voz: "El error común: sumar los dos datos y decir raíz de ciento treinta y seis. ¡La hipotenusa no puede ser menor que un cateto!"
     error: true
     emoji: "❌"
+    visual:
+      tipo: triangulo_rectangulo
+      cateto_a: "6"
+      cateto_b: "b = ¿?"
+      hipotenusa: "10"
+      anotar: ["angulo_recto"]
 
   - nota: "Teorema de Pitágoras"
     tex: 'a^2 + b^2 = c^2'
     voz: "La fórmula sagrada dice: cateto al cuadrado más cateto al cuadrado es igual a hipotenusa al cuadrado."
     emoji: "💡"
     visual:
-      tipo: barras
-      categorias:
-        - 'Cateto 6^2 36'
-        - 'Cateto 8^2 64'
-        - 'Hipo 10^2 100'
-        - 'Error suma 136'
+      tipo: triangulo_rectangulo
+      cateto_a: "6"
+      cateto_b: "b = ¿?"
+      hipotenusa: "10"
+      anotar: ["angulo_recto"]
 
   - nota: "Despejamos el cateto que falta"
     tex: 'b^2 = c^2 - a^2 \implies b = \sqrt{10^2 - 6^2}'
@@ -50,24 +55,22 @@ pasos:
       - 'b = \sqrt{10^2 - 6^2}'
     emoji: "💡"
     visual:
-      tipo: barras
-      categorias:
-        - 'Cateto 6^2 36'
-        - 'Cateto 8^2 64'
-        - 'Hipo 10^2 100'
-        - 'Error suma 136'
+      tipo: triangulo_rectangulo
+      cateto_a: "6"
+      cateto_b: "b = ¿?"
+      hipotenusa: "10"
+      anotar: ["angulo_recto"]
 
   - nota: "Calculamos los cuadrados"
     tex: 'b = \sqrt{100 - 36} = \sqrt{64}'
     voz: "Cien menos treinta y seis nos da sesenta y cuatro."
     emoji: "🎯"
     visual:
-      tipo: barras
-      categorias:
-        - 'Cateto 6^2 36'
-        - 'Cateto 8^2 64'
-        - 'Hipo 10^2 100'
-        - 'Error suma 136'
+      tipo: triangulo_rectangulo
+      cateto_a: "6"
+      cateto_b: "b = 8"
+      hipotenusa: "10"
+      anotar: ["angulo_recto"]
 
 resultado:
   tex: 'b = 8\ \text{m} \quad (6 - 8 - 10)'

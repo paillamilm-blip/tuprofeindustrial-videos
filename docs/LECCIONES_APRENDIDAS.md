@@ -59,11 +59,12 @@ Este documento recopila las lecciones técnicas, visuales y de contenido derivad
 
 ---
 
-## 6. 🎬 Animaciones Obligatorias ("Cero Fórmulas Desnudas")
-* **Regla:** Ningún video puede mostrar únicamente fórmulas algebraicas o texto plano aislado. Todo video debe incluir animaciones gráficas dinámicas (`visual:`) en la parte inferior de la pantalla para respaldar visualmente el aprendizaje:
-  * **Ecuaciones cuadráticas y funciones:** `tipo: grafico_funcion` trazando la parábola con sus raíces destacadas en el eje (`marcar: [0.0, 5.0]`), demostrando gráficamente por qué una raíz no puede ser cancelada.
-  * **Geometría y Teorema de Pitágoras:** `tipo: barras` o figuras comparativas demostrando las áreas/cuadrados ($a^2=36$, $b^2=64$, $c^2=100$) vs la suma errónea ($136$).
-  * **Aritmética y raíces:** `tipo: barras` contrastando visualmente la suma real de raíces vs la trampa del DEMRE.
+## 6. 🎬 Animaciones Contextuales Obligatorias ("Cero Fórmulas Desnudas")
+* **Regla de Contexto:** La animación dinámica (`visual:`) **depende 100% de la materia y el contexto del problema**. Jamás usar gráficos estadísticos de barras para problemas de geometría donde se describe una figura real:
+  * **Geometría plana y Pitágoras:** **OBLIGATORIO `tipo: triangulo_rectangulo`**. Dibuja la figura geométrica real con su ángulo recto ($\llcorner$), catetos ($a$ y $b$) e hipotenusa ($c$). La incógnita entra destacada (ej. `b = ¿?` en rojo) y al resolverse transiciona al valor exacto (`b = 8`).
+  * **Álgebra y funciones cuadráticas:** **OBLIGATORIO `tipo: grafico_funcion`**. Traza la parábola viva con sus raíces marcadas en el eje ($x_1=0$, $x_2=5$), demostrando visualmente que cancelar una variable elimina un punto de corte real en el plano cartesiano.
+  * **Aritmética y raíces numéricas:** `tipo: barras` para comparar magnitudes abstractas (ej. $\sqrt{9} + \sqrt{16} = 7$ vs la trampa errónea $5$).
+  * **Cero fórmulas desnudas:** Queda terminantemente prohibido dejar un paso algebraico sin su correspondiente representación gráfica en la parte inferior.
 
 ---
 

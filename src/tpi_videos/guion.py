@@ -44,6 +44,7 @@ from .visuales import (
     MARCAS_PLACA,
     MARCAS_POLEA,
     MARCAS_POLIGONO,
+    MARCAS_TRIANGULO,
     MARCAS_PROBABILIDAD,
     MARCAS_PROYECTIL,
     MARCAS_RESORTE,
@@ -75,6 +76,7 @@ from .visuales import (
     analizar_placa,
     analizar_polea,
     analizar_poligono,
+    analizar_triangulo_rectangulo,
     analizar_probabilidad,
     analizar_proyectil,
     analizar_recta,
@@ -208,6 +210,7 @@ class Visual(_Base):
         "diagrama_fuerzas",
         "circuito",
         "poligono_regular",
+        "triangulo_rectangulo",
         "proyectil",
         "circulo_trig",
         "solido",
@@ -274,6 +277,11 @@ class Visual(_Base):
     lados: int | None = None  # de 3 a 8
     lado: str | None = None  # la medida de un lado, con su unidad: '12 cm' (también la arista del cubo)
     anotar: list[str] = []  # ej. ['apotema', 'angulo_interior']
+
+    # triangulo_rectangulo
+    cateto_a: str | None = None
+    cateto_b: str | None = None
+    hipotenusa: str | None = None
 
     # solido
     figura: Literal["", "cubo", "cilindro", "cono", "esfera"] = ""
@@ -843,6 +851,14 @@ class Visual(_Base):
                     f"«{desconocidas[0]}» no es una marca de un polígono; "
                     f"el motor sabe anotar {', '.join(MARCAS_POLIGONO)}"
                 )
+        elif self.tipo == "triangulo_rectangulo":
+            analizar_triangulo_rectangulo(self.cateto_a, self.cateto_b, self.hipotenusa, self.anotar)
+            desconocidas = [m for m in self.anotar if m not in MARCAS_TRIANGULO]
+            if desconocidas:
+                raise ValueError(
+                    f"«{desconocidas[0]}» no es una marca de un triángulo rectángulo; "
+                    f"el motor sabe anotar {', '.join(MARCAS_TRIANGULO)}"
+                )
         elif self.tipo == "oscilador":
             for etiqueta, valor, ejemplo in (
                 ("masa", self.masa, "masa: '2 kg'"),
@@ -1090,6 +1106,12 @@ class Visual(_Base):
         if self.tipo != "poligono_regular":
             raise ValueError(f"«{self.tipo}» no es un polígono")
         return analizar_poligono(self.lados or 0, self.lado)
+
+    def triangulo_rectangulo(self):
+        """El triángulo rectángulo con sus lados, hipotenusa y proporciones de Pitágoras."""
+        if self.tipo != "triangulo_rectangulo":
+            raise ValueError(f"«{self.tipo}» no es un triángulo rectángulo")
+        return analizar_triangulo_rectangulo(self.cateto_a, self.cateto_b, self.hipotenusa, self.anotar)
 
 
 class MapaColor(_Base):
@@ -1687,6 +1709,15 @@ def _visual_yaml(v: dict[str, Any], sangria: str = "      ") -> list[str]:
     elif tipo == "poligono_regular":
         campos.append(("lados", _numero(v.get("lados") or 0)))
         campos.append(("lado", _simples(v.get("lado") or "")))
+        if v.get("anotar"):
+            campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
+    elif tipo == "triangulo_rectangulo":
+        if v.get("cateto_a"):
+            campos.append(("cateto_a", _simples(str(v["cateto_a"]))))
+        if v.get("cateto_b"):
+            campos.append(("cateto_b", _simples(str(v["cateto_b"]))))
+        if v.get("hipotenusa"):
+            campos.append(("hipotenusa", _simples(str(v["hipotenusa"]))))
         if v.get("anotar"):
             campos.append(("anotar", "[" + ", ".join(_simples(m) for m in v["anotar"]) + "]"))
     elif tipo in ("torta", "barras", "energia"):

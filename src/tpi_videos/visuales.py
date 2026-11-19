@@ -19,6 +19,7 @@ SEGUNDOS_VISUAL = {
     "diagrama_fuerzas": 2.5,
     "circuito": 3.0,
     "poligono_regular": 3.0,
+    "triangulo_rectangulo": 3.0,
     "proyectil": 3.0,
     "circulo_trig": 3.0,
     "solido": 3.0,
@@ -66,6 +67,9 @@ MARCAS_FLUJO = ("esfuerzo",)
 
 # Lo que se puede anotar en un polígono regular.
 MARCAS_POLIGONO = ("apotema", "radio", "angulo_central", "angulo_interior", "perimetro")
+
+# Lo que se puede anotar en un triángulo rectángulo.
+MARCAS_TRIANGULO = ("angulo_recto", "catetos", "hipotenusa", "pitagoras")
 
 # Lo que se puede anotar en un tiro parabólico.
 MARCAS_PROYECTIL = ("alcance", "altura_maxima", "componentes", "tiempo")
@@ -328,6 +332,15 @@ VISUALES: dict[str, TipoVisual] = {
             ("lados", "lado", "anotar"),
             MARCAS_POLIGONO,
             ejemplo={"lados": 6, "lado": "12 cm", "anotar": ["apotema", "angulo_interior"]},
+        ),
+        TipoVisual(
+            "triangulo_rectangulo",
+            "Triángulo rectángulo",
+            "matematica",
+            "📐",
+            ("cateto_a", "cateto_b", "hipotenusa", "anotar"),
+            MARCAS_TRIANGULO,
+            ejemplo={"cateto_a": "6", "cateto_b": "b = ¿?", "hipotenusa": "10", "anotar": ["angulo_recto"]},
         ),
         TipoVisual(
             "circulo_trig",
@@ -780,6 +793,20 @@ class Poligono:
     vertices: list[tuple[float, float]] = field(default_factory=list)
 
 
+@dataclass
+class TrianguloRectangulo:
+    """Un triángulo rectángulo con sus catetos, hipotenusa y rótulos de lados."""
+
+    cateto_a: float
+    cateto_b: float
+    hipotenusa: float
+    rotulo_a: str
+    rotulo_b: str
+    rotulo_c: str
+    unidad: str = ""
+    marcas: list[str] = field(default_factory=list)
+
+
 def _bonito(valor: float) -> float:
     """Redondea a un decimal «de pizarra» para que los ejes no salgan con 3,999999 (ni con -0)."""
     return 0.0 if round(valor, 2) == 0 else round(valor, 2)
@@ -1059,6 +1086,75 @@ def analizar_poligono(lados: int, lado: str | None) -> Poligono:
         angulo_interior=(lados - 2) * 180.0 / lados,
         angulo_central=360.0 / lados,
         vertices=vertices,
+    )
+
+
+def analizar_triangulo_rectangulo(
+    cateto_a: Any = None,
+    cateto_b: Any = None,
+    hipotenusa: Any = None,
+    anotar: list[str] | None = None,
+) -> TrianguloRectangulo:
+    """Calcula las medidas y rótulos de un triángulo rectángulo según el Teorema de Pitágoras.
+
+    Permite que dos lados sean conocidos y el tercero incógnita (ej. '¿?', 'b = ¿?'),
+    calculando geométricamente la proporción correcta para el dibujo en pantalla.
+    """
+    def parse_lado(val: Any) -> tuple[float | None, str, str]:
+        if val is None:
+            return None, "", ""
+        s = str(val).strip()
+        if not s:
+            return None, "", ""
+        if "?" in s or "¿" in s:
+            return None, "", s
+        m = re.search(r"\d+(?:[.,]\d+)?", s)
+        if not m:
+            return None, "", s
+        num = float(m.group().replace(",", "."))
+        uni = s[m.end() :].strip().split("/")[0]
+        return num, uni, s
+
+    va, ua, ra = parse_lado(cateto_a)
+    vb, ub, rb = parse_lado(cateto_b)
+    vc, uc, rc = parse_lado(hipotenusa)
+    unidad = ua or ub or uc or ""
+
+    if va is not None and vb is not None:
+        geom_a = va
+        geom_b = vb
+        geom_c = vc if vc is not None else math.hypot(va, vb)
+    elif va is not None and vc is not None:
+        geom_a = va
+        geom_c = vc
+        if vc <= va:
+            raise ValueError(f"la hipotenusa ({vc}) debe ser mayor que el cateto ({va})")
+        geom_b = vb if vb is not None else math.sqrt(vc**2 - va**2)
+    elif vb is not None and vc is not None:
+        geom_b = vb
+        geom_c = vc
+        if vc <= vb:
+            raise ValueError(f"la hipotenusa ({vc}) debe ser mayor que el cateto ({vb})")
+        geom_a = va if va is not None else math.sqrt(vc**2 - vb**2)
+    else:
+        geom_a, geom_b, geom_c = 3.0, 4.0, 5.0
+
+    def _num_str(v: float) -> str:
+        return str(int(v)) if v == int(v) else str(round(v, 2))
+
+    rot_a = ra or f"{_num_str(geom_a)}{unidad}".strip()
+    rot_b = rb or f"{_num_str(geom_b)}{unidad}".strip()
+    rot_c = rc or f"{_num_str(geom_c)}{unidad}".strip()
+
+    return TrianguloRectangulo(
+        cateto_a=geom_a,
+        cateto_b=geom_b,
+        hipotenusa=geom_c,
+        rotulo_a=rot_a,
+        rotulo_b=rot_b,
+        rotulo_c=rot_c,
+        unidad=unidad,
+        marcas=list(anotar or []),
     )
 
 

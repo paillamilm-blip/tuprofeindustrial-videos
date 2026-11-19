@@ -62,6 +62,7 @@ from .visuales import (
     Pendulo,
     Polea,
     Poligono,
+    TrianguloRectangulo,
     Probabilidad,
     Proyectil,
     Recta,
@@ -935,6 +936,72 @@ def poligono_regular(
         )
         rincon = izq_base + np.array([np.cos(giro / 2), np.sin(giro / 2), 0.0]) * (radio_arco + 0.3)
         medida(f"{_numero_latex(figura.angulo_interior)}°", rincon)
+
+    todo = VGroup(contorno, *rayas[1:], parches, *puntos, rótulos)
+    _encajar(todo, ancho, alto)
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[*puntos, *rótulos])
+
+
+def triangulo_rectangulo(
+    figura: TrianguloRectangulo,
+    marcas: list[str],
+    col: Any,
+    ancho: float,
+    alto: float,
+    papel: str = "#FFFFFF",
+) -> Dibujo:
+    """Un triángulo rectángulo con su ángulo recto destacado y las medidas de catetos e hipotenusa.
+
+    Ideal para explicar el Teorema de Pitágoras, relaciones métricas y trigonometría básica.
+    """
+    a = max(float(figura.cateto_a), 0.1)
+    b = max(float(figura.cateto_b), 0.1)
+
+    escala = min((ancho * 0.50) / a, (alto * 0.60) / b)
+    w = a * escala
+    h = b * escala
+
+    # Vértices centrados en la franja
+    P0 = np.array([-w / 2, -h / 2, 0.0])  # Esquina recta (inferior izquierda)
+    P1 = np.array([w / 2, -h / 2, 0.0])   # Extremo base (inferior derecha)
+    P2 = np.array([-w / 2, h / 2, 0.0])   # Vértice superior (superior izquierda)
+
+    contorno = Polygon(P0, P1, P2, color=col.formulas, stroke_width=6).set_fill(col.formulas, 0.08)
+    rayas: list[Mobject] = [contorno]
+    parches, rótulos = VGroup(), VGroup()
+    puntos = [Dot(p, radius=0.045, color=col.formulas) for p in (P0, P1, P2)]
+
+    def medida(texto: str, donde: np.ndarray, tam: float = 24, color_texto: Any = None) -> None:
+        if not texto:
+            return
+        rotulo = c.texto(texto, tam, SEMIBOLD, color_texto or col.texto).move_to(donde)
+        fondo, rotulo = _parche(rotulo, papel, 0.16)
+        parches.add(fondo)
+        rótulos.add(rotulo)
+
+    # 1. Ángulo recto en P0
+    canto = min(0.32, w * 0.22, h * 0.22)
+    escuadra = VMobject(color=col.acento, stroke_width=4)
+    escuadra.set_points_as_corners([
+        P0 + RIGHT * canto,
+        P0 + RIGHT * canto + UP * canto,
+        P0 + UP * canto,
+    ])
+    rayas.append(escuadra)
+    punto_recto = Dot(P0 + (RIGHT + UP) * (canto / 2), radius=0.04, color=col.acento)
+    puntos.append(punto_recto)
+
+    # 2. Cateto a (horizontal, abajo)
+    medida(figura.rotulo_a, (P0 + P1) / 2 + DOWN * 0.36, 24)
+
+    # 3. Cateto b (vertical, izquierda)
+    color_b = col.error if "?" in figura.rotulo_b else col.texto
+    medida(figura.rotulo_b, (P0 + P2) / 2 + LEFT * 0.44, 24, color_texto=color_b)
+
+    # 4. Hipotenusa c (diagonal, normal hacia afuera)
+    norma = float(np.hypot(w, h))
+    normal_afuera = np.array([h / norma, w / norma, 0.0])
+    medida(figura.rotulo_c, (P1 + P2) / 2 + normal_afuera * 0.42, 24)
 
     todo = VGroup(contorno, *rayas[1:], parches, *puntos, rótulos)
     _encajar(todo, ancho, alto)
@@ -3343,6 +3410,8 @@ def _dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str
         )
     if visual.tipo == "poligono_regular":
         return poligono_regular(visual.poligono(), visual.anotar, col, ancho, alto, papel)
+    if visual.tipo == "triangulo_rectangulo":
+        return triangulo_rectangulo(visual.triangulo_rectangulo(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "proyectil":
         return proyectil(visual.proyectil(), visual.anotar, col, ancho, alto, papel)
     if visual.tipo == "circulo_trig":
