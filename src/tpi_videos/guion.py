@@ -1292,6 +1292,7 @@ class Guion(_Base):
     carrera: Literal["industrial", "electrica", "obras_civiles"] | None = None
     molde: str | None = None  # estructura narrativa (ver moldes.py); opcional
     tema: str | None = None  # estilo visual de este video (ver ./tpi temas)
+    rotulo: str | None = None  # etiqueta superior derecha en cabecera (ej. GEOMETRÍA, RETO, PAES M1)
     camara: Literal["quieta", "suave", "fuerte"] = "suave"  # cuánto se acerca la cámara en los pasos
     voz: str | None = None
     velocidad: str | None = None
