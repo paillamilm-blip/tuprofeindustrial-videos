@@ -1,0 +1,110 @@
+titulo: 'PAES M1: ¿Sumas o restas en Pitágoras?'
+materia: matematica
+nivel: "PAES M1"
+tema: pizarra_acrilica
+camara: quieta
+
+gancho:
+  texto: "¿Siempre se suman los catetos al cuadrado?"
+  voz: "¿Siempre se suman los catetos al cuadrado? ¡Cuidado, este error te cuesta la pregunta en la PAES!"
+  tex: 'b = \sqrt{10^2 + 6^2}'
+  emoji: "⚠️"
+
+enunciado:
+  texto: "En un triángulo rectángulo, la hipotenusa mide 10 y un cateto mide 6. Calcula el otro cateto."
+  voz: "Tenemos una hipotenusa de diez metros y un cateto de seis. Debemos hallar el cateto que falta."
+  destacar:
+    - "10"
+    - "6"
+
+datos:
+  - tex: 'c = 10, \quad a = 6, \quad b = \text{¿?}'
+    voz: "La hipotenusa mide diez y uno de los catetos mide seis."
+
+pasos:
+  - nota: "Error típico al aplicar la fórmula"
+    tex: 'b = \sqrt{10^2 + 6^2} = \sqrt{136}'
+    voz: "El error común: sumar los dos datos y decir raíz de ciento treinta y seis. ¡La hipotenusa no puede ser menor que un cateto!"
+    error: true
+    emoji: "❌"
+
+  - nota: "Teorema de Pitágoras"
+    tex: 'a^2 + b^2 = c^2'
+    voz: "La fórmula sagrada dice: cateto al cuadrado más cateto al cuadrado es igual a hipotenusa al cuadrado."
+    emoji: "💡"
+
+  - nota: "Despejamos el cateto que falta"
+    tex: 'b^2 = c^2 - a^2 \implies b = \sqrt{10^2 - 6^2}'
+    voz: "Para despejar un cateto, a la hipotenusa al cuadrado le restamos el otro cateto. ¡Se resta, nunca se suma!"
+    destacar:
+      - 'b = \sqrt{10^2 - 6^2}'
+    emoji: "💡"
+
+  - nota: "Calculamos los cuadrados"
+    tex: 'b = \sqrt{100 - 36} = \sqrt{64}'
+    voz: "Cien menos treinta y seis nos da sesenta y cuatro."
+    emoji: "🎯"
+
+resultado:
+  tex: 'b = 8\ \text{m} \quad (6 - 8 - 10)'
+  voz: "La raíz de sesenta y cuatro es ocho. El cateto mide ocho metros exactos."
+  emoji: "✅"
+
+verificacion:
+  texto: "El trío 6-8-10 es el doble del clásico trío pitagórico 3-4-5."
+  voz: "Tiene sentido: es el doble del clásico trío pitagórico tres cuatro cinco."
+
+reto:
+  texto: "Si la hipotenusa mide 5 y un cateto mide 3, ¿cuánto mide el otro cateto?"
+  voz: "Ahora para ti: si la hipotenusa mide cinco y un cateto mide tres, ¿cuánto vale el otro cateto? Compruébalo y háblame al WhatsApp de mi perfil."
+  emoji: "✍️"
+
+cierre:
+  texto: "Clases particulares PAES M1. Háblame directo al WhatsApp de mi perfil."
+  voz: "Si quieres dominar geometría en la PAES M1 y asegurar tu puntaje, háblame directo al WhatsApp de mi perfil."
+  emoji: "🔥"
+
+llamado: "Clases particulares PAES · Online y presencial · WhatsApp en mi perfil (link en bio)"
+
+portada:
+  estilo: cian
+  badge: "GEOMETRÍA · PAES M1"
+  emoji_badge: cronometro.png
+  titular: |-
+    ¿SUMAS O RESTAS
+    EN PITÁGORAS?
+  pregunta: "¿HIPOTENUSA 10 Y CATETO 6?"
+  alerta: "¡NO LOS SUMES! DA 8, NO √136"
+  emoji_alerta: alerta.png
+  detalle: "b = √(10² - 6²) = √64 = 8"
+  pie: "Para hallar un cateto siempre se resta"
+
+historias:
+  encuesta:
+    badge: "GEOMETRÍA PAES M1"
+    titulo: |-
+      ¿CUÁNTO MIDE EL
+      CATETO RESTANTE?
+    pregunta: |-
+      Hipotenusa = 10
+      Cateto = 6
+      ¿Longitud del otro cateto?
+    opcion_a: "8  («Trío 6-8-10»)"
+    opcion_b: "√136  («Error al sumar»)"
+
+metadatos:
+  titulo: '¿Sumas o restas en Pitágoras? 📐 Error típico PAES M1'
+  descripcion: 'El error más común en geometría PAES M1: sumar los valores cuando buscas un cateto. Te mostramos cómo despejar correctamente para obtener 8 y no √136.'
+  hashtags:
+    - '#tuprofeindustrial'
+    - '#paes'
+    - '#paesm1'
+    - '#geometria'
+    - '#pitagoras'
+    - '#admision2027'
+    - '#demre'
+    - '#matematica'
+    - '#estudiantes'
+    - '#aprendeentiktok'
+    - '#chile'
+    - '#clasesparticulares'

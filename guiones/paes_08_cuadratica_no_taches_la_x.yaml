@@ -1,0 +1,110 @@
+titulo: 'PAES M1: ¡Nunca taches la equis en una ecuación!'
+materia: matematica
+nivel: "PAES M1"
+tema: consola_pasos
+camara: quieta
+
+gancho:
+  texto: "¡Nunca taches la equis en esta ecuación!"
+  voz: "¡Nunca taches la equis en esta ecuación! Si lo haces, acabas de perder la mitad de tu puntaje."
+  tex: 'x^2 = 5x'
+  emoji: "🚨"
+
+enunciado:
+  texto: "Resuelve la ecuación x² = 5x encontrando todas sus soluciones en los números reales."
+  voz: "Tenemos equis al cuadrado igual a cinco equis. Casi todos caen en esta trampa del DEMRE."
+  destacar:
+    - "x^2 = 5x"
+
+pasos:
+  - nota: "Error típico al simplificar"
+    tex: 'x = 5 \quad \text{(¡Falta el cero!)}'
+    voz: "El error clásico: dividir por equis y decir que equis solo vale cinco. ¡Eso borra una solución!"
+    error: true
+    emoji: "❌"
+
+  - nota: "Paso 1: Igualar a cero"
+    tex: 'x^2 - 5x = 0'
+    voz: "Lo correcto en una cuadrática es pasar todo a un lado e igualar a cero."
+    destacar:
+      - 'x^2 - 5x = 0'
+    emoji: "💡"
+
+  - nota: "Paso 2: Factorizar por factor común"
+    tex: 'x(x - 5) = 0'
+    voz: "Factorizamos por equis: equis por equis menos cinco es igual a cero."
+    destacar:
+      - 'x(x - 5)'
+    emoji: "💡"
+
+  - nota: "Paso 3: Propiedad del producto cero"
+    tex: 'x = 0 \quad \text{o} \quad x - 5 = 0 \rightarrow x = 5'
+    voz: "Para que una multiplicación dé cero, el primer factor es cero o el segundo es cinco."
+    destacar:
+      - 'x = 0'
+      - 'x = 5'
+    emoji: "✅"
+
+resultado:
+  tex: 'x_1 = 0 \quad \text{y} \quad x_2 = 5'
+  voz: "La ecuación tiene dos soluciones reales: cero y cinco. ¡Aseguraste tus puntos!"
+  emoji: "🏆"
+
+verificacion:
+  texto: "Comprueba con x = 0: 0² = 5(0) da 0 = 0. El cero es solución válida."
+  voz: "Si reemplazas con cero: cero al cuadrado es igual a cinco por cero. El cero sí es solución."
+
+reto:
+  texto: "¿Cuáles son las soluciones de x² = 7x? ¿Es solo 7 o son dos?"
+  voz: "Ahora para ti: en equis al cuadrado igual a siete equis, ¿cuáles son las soluciones? Compruébalo y háblame al WhatsApp de mi perfil."
+  emoji: "✍️"
+
+cierre:
+  texto: "Clases particulares PAES M1. Háblame directo al WhatsApp de mi perfil."
+  voz: "Si quieres dominar el álgebra de la PAES M1 y asegurar tu cupo universitario, háblame al WhatsApp de mi perfil."
+  emoji: "🔥"
+
+llamado: "Clases particulares PAES · Online y presencial · WhatsApp en mi perfil (link en bio)"
+
+portada:
+  estilo: cian
+  badge: "PAES M1 · ÁLGEBRA"
+  emoji_badge: cronometro.png
+  titular: |-
+    ¡NUNCA TACHES
+    LA EQUIS!
+  pregunta: "¿x² = 5x TIENE UNA O DOS SOLUCIONES?"
+  alerta: "¡NO OLVIDES EL CERO!"
+  emoji_alerta: alerta.png
+  detalle: "x₁ = 0   y   x₂ = 5"
+  pie: "Al dividir por x eliminas la solución cero"
+
+historias:
+  encuesta:
+    badge: "ÁLGEBRA PAES M1"
+    titulo: |-
+      ¿CUÁNTAS SOLUCIONES
+      TIENE ESTA ECUACIÓN?
+    pregunta: |-
+      Al resolver:
+      x² = 5x
+      ¿Cuáles son los valores de x?
+    opcion_a: "Solo x = 5  («Dividí por x»)"
+    opcion_b: "x = 0 y x = 5  («Factoricé»)"
+
+metadatos:
+  titulo: '¡Nunca taches la equis en una ecuación! ⚠️ Trampa PAES M1'
+  descripcion: 'El error que resta 50 puntos en álgebra PAES: resolver x² = 5x dividiendo por x. Te mostramos cómo factorizar para no perder la solución x = 0.'
+  hashtags:
+    - '#tuprofeindustrial'
+    - '#paes'
+    - '#paesm1'
+    - '#algebra'
+    - '#ecuaciones'
+    - '#admision2027'
+    - '#demre'
+    - '#matematica'
+    - '#estudiantes'
+    - '#aprendeentiktok'
+    - '#chile'
+    - '#clasesparticulares'

@@ -48,10 +48,9 @@ materias:           # color de la etiqueta de cada materia
   ingenieria: "#FACC15"
 
 voz:
-  # gemini (natural, misma clave de Gemini) | edge (neural, gratis, más robótica) | gtts | silencio
-  proveedor: gemini
-  nombre: "Charon"                # voz de Gemini (ver ./tpi voces --gemini); con edge: es-CL-LorenzoNeural
-  # Solo con gemini: cómo tiene que sonar, en palabras. Vacío = profe chileno cercano, con calma.
+  # edge (neural, chilena, ilimitada) | gemini (natural, sujeta a cuota diaria)
+  proveedor: edge
+  nombre: "es-CL-LorenzoNeural"
   estilo: ""
   velocidad: "+5%"
 
