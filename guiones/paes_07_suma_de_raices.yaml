@@ -11,11 +11,11 @@ gancho:
   emoji: "⚠️"
 
 enunciado:
-  texto: "En la PAES aparece la expresión: \\sqrt{9} + \\sqrt{16}. ¿Cuál es su valor numérico real?"
+  texto: "En la PAES aparece la expresión: √9 + √16. ¿Cuál es su valor numérico real?"
   voz: "Típica pregunta trampa de la prueba: calcula el valor de raíz de nueve más raíz de dieciséis."
   destacar:
-    - "\\sqrt{9}"
-    - "\\sqrt{16}"
+    - "√9"
+    - "√16"
 
 datos:
   - tex: 'E = \sqrt{9} + \sqrt{16}'
@@ -56,7 +56,7 @@ verificacion:
   voz: "Siete al cuadrado es cuarenta y nueve, no veinticinco. Las raíces cuadradas no se suman hacia adentro."
 
 reto:
-  texto: "¿Cuánto es \\sqrt{100} - \\sqrt{64}? ¿Da 2 o da 6?"
+  texto: "¿Cuánto es √100 - √64? ¿Da 2 o da 6?"
   voz: "Ahora para ti: ¿cuánto da raíz de cien menos raíz de sesenta y cuatro? ¿Da dos o da seis? Compruébalo y háblame al WhatsApp de mi perfil."
   emoji: "🤔"
 
