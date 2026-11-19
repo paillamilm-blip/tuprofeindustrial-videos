@@ -15,6 +15,12 @@ from typing import Any
 from .errores import ErrorMotor
 
 MODELO_TTS = "gemini-3.8-flash-tts"
+MODELOS_TTS = (
+    "gemini-3.8-flash-tts",
+    "gemini-3.8-flash-lite-tts",
+    "gemini-3.1-flash-tts-preview",
+    "gemini-2.5-flash-preview-tts",
+)
 SEGUNDOS_DE_ESPERA = 45  # por frase: más que esto es que Gemini no está respondiendo
 # Límite de RELOJ por frase. El timeout del SDK es por lectura: una respuesta que gotea un byte cada
 # pocos segundos (o una conexión medio cerrada) no lo dispara nunca y el video queda colgado. Con 2
@@ -115,35 +121,46 @@ def sintetizar(
     from . import ia
 
     cliente = cliente or cliente_tts()
+    modelos = [modelo, *[m for m in MODELOS_TTS if m != modelo]] if modelo in MODELOS_TTS else [modelo]
+    ultimo_error = None
 
-    def pedir() -> Any:
-        return cliente.interactions.create(
-            model=modelo,
-            input=[
-                {
-                    "type": "user_input",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": texto,
-                            "annotations": [{"type": "speech_metadata", "style": estilo}],
-                        }
-                    ],
-                }
-            ],
-            response_format={"type": "audio"},
-            generation_config={"speech_config": [{"voice": voz}]},
-        )
+    for m in modelos:
+        def pedir() -> Any:
+            return cliente.interactions.create(
+                model=m,
+                input=[
+                    {
+                        "type": "user_input",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": texto,
+                                "annotations": [{"type": "speech_metadata", "style": estilo}],
+                            }
+                        ],
+                    }
+                ],
+                response_format={"type": "audio"},
+                generation_config={"speech_config": [{"voice": voz}]},
+            )
 
-    try:
-        respuesta = _con_limite(pedir, LIMITE_POR_FRASE if limite is None else limite)
-    except ErrorMotor:
-        raise
-    except Exception as e:
-        error = ia.explicar_error(e, modelo)
+        try:
+            respuesta = _con_limite(pedir, LIMITE_POR_FRASE if limite is None else limite)
+            return _audio_de(respuesta)
+        except ErrorMotor:
+            raise
+        except Exception as e:
+            if ia.vale_probar_otro_modelo(e):
+                ultimo_error = e
+                continue
+            error = ia.explicar_error(e, m)
+            error.ayuda = (error.ayuda + " " if error.ayuda else "") + "Mientras tanto puedes usar --voz edge."
+            raise error from e
+
+    if ultimo_error:
+        error = ia.explicar_error(ultimo_error, modelo)
         error.ayuda = (error.ayuda + " " if error.ayuda else "") + "Mientras tanto puedes usar --voz edge."
-        raise error from e
-    return _audio_de(respuesta)
+        raise error
 
 
 def _con_limite(funcion: Any, segundos: float) -> Any:
