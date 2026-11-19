@@ -992,16 +992,17 @@ def triangulo_rectangulo(
     puntos.append(punto_recto)
 
     # 2. Cateto a (horizontal, abajo)
-    medida(figura.rotulo_a, (P0 + P1) / 2 + DOWN * 0.36, 24)
+    medida(figura.rotulo_a, (P0 + P1) / 2 + DOWN * 0.40, 22)
 
     # 3. Cateto b (vertical, izquierda)
-    color_b = col.error if "?" in figura.rotulo_b else col.texto
-    medida(figura.rotulo_b, (P0 + P2) / 2 + LEFT * 0.44, 24, color_texto=color_b)
+    es_incognita_b = "?" in figura.rotulo_b or "¿" in figura.rotulo_b
+    color_b = col.error if es_incognita_b else col.exito
+    medida(figura.rotulo_b, (P0 + P2) / 2 + LEFT * 0.52, 22, color_texto=color_b)
 
     # 4. Hipotenusa c (diagonal, normal hacia afuera)
     norma = float(np.hypot(w, h))
     normal_afuera = np.array([h / norma, w / norma, 0.0])
-    medida(figura.rotulo_c, (P1 + P2) / 2 + normal_afuera * 0.42, 24)
+    medida(figura.rotulo_c, (P1 + P2) / 2 + normal_afuera * 0.46, 22)
 
     todo = VGroup(contorno, *rayas[1:], parches, *puntos, rótulos)
     _encajar(todo, ancho, alto)

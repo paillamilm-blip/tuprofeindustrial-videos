@@ -8,72 +8,68 @@ tema: pizarra_acrilica
 camara: quieta
 
 gancho:
-  texto: "¿Siempre se suman los catetos al cuadrado?"
-  voz: "¿Siempre se suman los catetos al cuadrado? ¡Cuidado, este error te cuesta la pregunta en la PAES!"
-  tex: 'b = \sqrt{10^2 + 6^2}'
+  texto: "¿Siempre se suma en Pitágoras?"
+  voz: "¿Siempre se suma en el Teorema de Pitágoras? ¡Cuidado! Si buscas un cateto, sumar te cuesta la pregunta en la PAES."
+  tex: 'b = \sqrt{10^2 - 6^2} \neq \sqrt{10^2 + 6^2}'
   emoji: "⚠️"
 
 enunciado:
-  texto: "En un triángulo rectángulo, la hipotenusa mide 10 y un cateto mide 6. Calcula el otro cateto."
-  voz: "Tenemos una hipotenusa de diez metros y un cateto de seis. Debemos hallar el cateto que falta."
+  texto: "En un triángulo rectángulo, la hipotenusa mide 10 m y un cateto mide 6 m. Calcula el otro cateto."
+  voz: "Tenemos un triángulo rectángulo con hipotenusa de diez metros y un cateto de seis metros. Debemos hallar el cateto b."
   destacar:
-    - "10"
-    - "6"
-
-datos:
-  - tex: 'c = 10, \quad a = 6, \quad b = \text{¿?}'
-    voz: "La hipotenusa mide diez y uno de los catetos mide seis."
+    - "10 m"
+    - "6 m"
 
 pasos:
-  - nota: "Error típico al aplicar la fórmula"
-    tex: 'b = \sqrt{10^2 + 6^2} = \sqrt{136}'
-    voz: "El error común: sumar los dos datos y decir raíz de ciento treinta y seis. ¡La hipotenusa no puede ser menor que un cateto!"
+  - nota: "Error típico al calcular un cateto"
+    tex: 'b = \sqrt{10^2 + 6^2} = \sqrt{136} \approx 11.66\text{ m}'
+    voz: "El error común: sumar los datos y decir raíz de ciento treinta y seis. ¡Imposible! La hipotenusa de diez metros siempre debe ser el lado más largo."
     error: true
     emoji: "❌"
     visual:
       tipo: triangulo_rectangulo
-      cateto_a: "6"
+      cateto_a: "a = 6 m"
       cateto_b: "b = ¿?"
-      hipotenusa: "10"
+      hipotenusa: "c = 10 m"
       anotar: ["angulo_recto"]
 
   - nota: "Teorema de Pitágoras"
     tex: 'a^2 + b^2 = c^2'
-    voz: "La fórmula sagrada dice: cateto al cuadrado más cateto al cuadrado es igual a hipotenusa al cuadrado."
+    voz: "La fórmula general dice: cateto a al cuadrado más cateto b al cuadrado es igual a la hipotenusa c al cuadrado."
     emoji: "💡"
     visual:
       tipo: triangulo_rectangulo
-      cateto_a: "6"
+      cateto_a: "a = 6 m"
       cateto_b: "b = ¿?"
-      hipotenusa: "10"
+      hipotenusa: "c = 10 m"
       anotar: ["angulo_recto"]
 
-  - nota: "Despejamos el cateto que falta"
+  - nota: "Despejamos el cateto b"
     tex: 'b^2 = c^2 - a^2 \implies b = \sqrt{10^2 - 6^2}'
-    voz: "Para despejar un cateto, a la hipotenusa al cuadrado le restamos el otro cateto. ¡Se resta, nunca se suma!"
+    voz: "Para despejar el cateto b, a la hipotenusa al cuadrado le restamos el otro cateto. ¡Para un cateto siempre se resta!"
     destacar:
       - 'b = \sqrt{10^2 - 6^2}'
     emoji: "💡"
     visual:
       tipo: triangulo_rectangulo
-      cateto_a: "6"
+      cateto_a: "a = 6 m"
       cateto_b: "b = ¿?"
-      hipotenusa: "10"
+      hipotenusa: "c = 10 m"
       anotar: ["angulo_recto"]
 
   - nota: "Calculamos los cuadrados"
-    tex: 'b = \sqrt{100 - 36} = \sqrt{64}'
-    voz: "Cien menos treinta y seis nos da sesenta y cuatro."
+    tex: 'b = \sqrt{100 - 36} = \sqrt{64} = 8\text{ m}'
+    voz: "Cien menos treinta y seis es sesenta y cuatro. ¡Y la raíz de sesenta y cuatro nos da exactamente ocho metros!"
     emoji: "🎯"
     visual:
       tipo: triangulo_rectangulo
-      cateto_a: "6"
-      cateto_b: "b = 8"
-      hipotenusa: "10"
+      cateto_a: "a = 6 m"
+      cateto_b: "b = 8 m"
+      hipotenusa: "c = 10 m"
       anotar: ["angulo_recto"]
 
 resultado:
-  tex: 'b = 8\ \text{m} \quad (6 - 8 - 10)'
+  tex: 'b = 8\text{ m} \quad (6 - 8 - 10)'
   voz: "La raíz de sesenta y cuatro es ocho. El cateto mide ocho metros exactos."
   emoji: "✅"
 
@@ -82,7 +78,7 @@ verificacion:
   voz: "Tiene sentido: es el doble del clásico trío pitagórico tres cuatro cinco."
 
 reto:
-  texto: "Si la hipotenusa mide 5 y un cateto mide 3, ¿cuánto mide el otro cateto?"
+  texto: "Si la hipotenusa mide 5 m y un cateto mide 3 m, ¿cuánto mide el otro cateto?"
   voz: "Ahora para ti: si la hipotenusa mide cinco y un cateto mide tres, ¿cuánto vale el otro cateto? Compruébalo y háblame al WhatsApp de mi perfil."
   emoji: "✍️"
 
@@ -113,10 +109,10 @@ historias:
       ¿CUÁNTO MIDE EL
       CATETO RESTANTE?
     pregunta: |-
-      Hipotenusa = 10
-      Cateto = 6
+      Hipotenusa = 10 m
+      Cateto = 6 m
       ¿Longitud del otro cateto?
-    opcion_a: "8  («Trío 6-8-10»)"
+    opcion_a: "8 m  («Trío 6-8-10»)"
     opcion_b: "√136  («Error al sumar»)"
 
 metadatos:

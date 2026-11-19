@@ -1305,8 +1305,20 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     Create(lineas), Indicate(letras, color=self.col.acento, scale_factor=1.06), run_time=0.45
                 )
         salida = VGroup(tarjeta, subrayados)
+        primer_paso_visual = getattr(self.guion.pasos[0], "visual", None) if self.guion.pasos else None
+        pasa_a_pasos = (
+            ancla is not None
+            and not self.guion.datos
+            and primer_paso_visual is not None
+            and sigue(campos_del_visual(ancla), campos_del_visual(primer_paso_visual))
+        )
         if ancla_mobs is not None:
-            salida.add(ancla_mobs)
+            if pasa_a_pasos:
+                self.ancla_dibujo = dibujo
+                self.ancla_visual = ancla
+                self.ancla_franja = (round(centro_a, 3), round(alto_a, 3))
+            else:
+                salida.add(ancla_mobs)
         self._pendientes.append(FadeOut(salida, shift=UP * 0.3))
 
     def _datos(self) -> None:
@@ -1703,9 +1715,11 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
         resaltes: list[VGroup] = []
         halos_vivos: list[VGroup] = []  # el resplandor del paso anterior: se va de golpe, no se desvanece
         extras_vivos: list[Mobject] = []  # emojis del paso anterior (salen en el siguiente)
-        dibujo_vivo: d.Dibujo | None = None  # el dibujo del paso anterior (sale en el siguiente)
-        campos_vivos: dict[str, Any] | None = None  # sus campos: si el paso siguiente es igual, se queda
-        franja_viva: tuple[float, float] | None = None
+        dibujo_vivo: d.Dibujo | None = getattr(self, "ancla_dibujo", None)  # el dibujo del paso anterior (o del ancla)
+        campos_vivos: dict[str, Any] | None = (
+            campos_del_visual(getattr(self, "ancla_visual", None)) if dibujo_vivo is not None else None
+        )
+        franja_viva: tuple[float, float] | None = getattr(self, "ancla_franja", None)
         ultima: Any = None  # última ecuación CORRECTA (origen de la transformación)
 
         for i, paso in enumerate(self.guion.pasos, 1):
@@ -1721,11 +1735,16 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 # El mismo dibujo que el paso anterior, en la misma franja: se queda y cambia lo que muestra.
                 campos = campos_del_visual(paso.visual)
                 franja = (round(centro_dibujo, 3), round(alto_dibujo, 3))
+                misma_franja = franja == franja_viva or (
+                    franja_viva is not None
+                    and abs(centro_dibujo - franja_viva[0]) < 0.6
+                    and abs(alto_dibujo - franja_viva[1]) < 0.6
+                )
                 continua = (
                     dibujo_vivo is not None
                     and not mitades
                     and alto_dibujo > 0
-                    and franja == franja_viva
+                    and misma_franja
                     and sigue(campos_vivos, campos)
                 )
                 previo = dibujo_vivo if continua else None

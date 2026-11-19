@@ -46,6 +46,21 @@ class Falta:
 
 def _identidad(visual: Mapping[str, Any]) -> dict[str, Any]:
     """El dibujo sin lo que cambia de un paso a otro: su tipo y sus números."""
+    tipo = visual.get("tipo")
+    if tipo == "triangulo_rectangulo":
+        from .visuales import analizar_triangulo_rectangulo
+        try:
+            tri = analizar_triangulo_rectangulo(
+                visual.get("cateto_a"), visual.get("cateto_b"), visual.get("hipotenusa")
+            )
+            return {
+                "tipo": tipo,
+                "cateto_a": round(tri.cateto_a, 2),
+                "cateto_b": round(tri.cateto_b, 2),
+                "hipotenusa": round(tri.hipotenusa, 2),
+            }
+        except Exception:
+            pass
     return {
         k: v for k, v in visual.items() if k not in CAMPOS_DE_LO_QUE_SE_MUESTRA and v not in (None, "", [])
     }

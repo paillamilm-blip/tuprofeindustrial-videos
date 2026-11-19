@@ -74,3 +74,18 @@ Este documento recopila las lecciones técnicas, visuales y de contenido derivad
   * Audio: *"Háblame directo al WhatsApp que está en mi perfil"* / *"Enlace en bio"*.
   * Copy escrito (`publicacion.md`): Información detallada de clases particulares PAES M1, cupos y link de bio.
   * Historias de soporte (20:35 y 21:15): Story Quiz interactivo con encuesta A vs B y story directa de WhatsApp.
+
+---
+
+## 8. 📐 Sincronía Estricta entre Dibujo y Locución (Continuidad y Rótulos Explícitos)
+* **Regla de Coherencia 1:1:** Cada término o lado mencionado en la locución y en la fórmula debe estar **explícitamente rotulado en el dibujo**.
+  * Si la fórmula dice $a^2 + b^2 = c^2$ y la voz menciona "cateto a", "cateto b" e "hipotenusa c", el triángulo **no puede mostrar números huérfanos** (como `6` o `10`). Debe rotular con precisión:
+    * Base: `a = 6 m`
+    * Altura: `b = ¿?` (incógnita en rojo `col.error`)
+    * Hipotenusa: `c = 10 m`
+* **Continuidad del dibujo (Cero Parpadeos ni Vacíos):**
+  * El dibujo que entra en el enunciado como ancla **se hereda de forma continua al paso 1** (`escena.py`), evitando que se desvanezca y vuelva a trazarse desde cero mientras la voz ya habla.
+  * **Prohibido bloques intermedios redundantes de `datos:`** que repitan el enunciado y borren el dibujo dejando la mitad de la pantalla vacía.
+* **Identidad matemática en transiciones (`acompanar.py`):**
+  * La función `_identidad` para figuras geométricas debe calcular la identidad por dimensiones matemáticas resueltas y no por textos temporales de incógnitas.
+  * Cuando el paso 4 calcula $b = 8\text{ m}$, el triángulo no se destruye ni parpadea: el rótulo de la incógnita `b = ¿?` muta suavemente a **`b = 8 m` en verde esmeralda (`col.exito`)**, confirmando visualmente la resolución del ejercicio.
