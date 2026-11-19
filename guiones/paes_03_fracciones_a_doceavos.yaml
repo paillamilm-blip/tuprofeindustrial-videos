@@ -2,7 +2,7 @@ titulo: 'PAES M1: ¿Por qué 2/3 + 1/4 NO es 3/7?'
 materia: matematica
 nivel: "PAES M1"
 molde: mito_realidad
-camara: fuerte
+camara: quieta
 
 gancho:
   texto: "¡Nunca sumes fracciones hacia el lado!"
