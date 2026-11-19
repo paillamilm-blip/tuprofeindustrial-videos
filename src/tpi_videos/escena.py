@@ -1228,6 +1228,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
             max_lineas=2,
             mayus=self.mayus,
         )
+        if self.titulo.width > c.ANCHO_UTIL - 0.4:
+            self.titulo.scale_to_fit_width(c.ANCHO_UTIL - 0.4)
         if self.titulo.height > 0.95:
             self.titulo.scale_to_fit_height(0.95)
         self.titulo.move_to([0, c.Y_TITULO, 0])

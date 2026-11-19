@@ -1,8 +1,8 @@
-titulo: 'PAES M1: Cómo comprobar tu ecuación en 10 segundos'
+titulo: 'PAES M1: ¿Cómo comprobar tu ecuación?'
 materia: matematica
 nivel: "PAES M1"
 molde: mito_realidad
-camara: fuerte
+camara: quieta
 
 gancho:
   texto: "¡Nunca entregues una ecuación sin comprobar!"
@@ -18,13 +18,13 @@ enunciado:
 
 pasos:
   - nota: "Error típico al despejar"
-    tex: '3x = 14 + 2 \implies 3x = 16'
+    tex: '3x = 14 + 2 \rightarrow 3x = 16'
     voz: "El error común: pasar el dos sumando y decir tres equis igual a dieciséis."
     error: true
     emoji: "❌"
 
   - nota: "Paso 1: Despejar x correctamente"
-    tex: '3x = 14 - 2 \implies 3x = 12 \implies x = 4'
+    tex: '3x = 14 - 2 \rightarrow 3x = 12 \rightarrow x = 4'
     voz: "El dos pasa restando: tres equis es doce, por lo tanto equis vale cuatro."
     destacar:
       - 'x = 4'
