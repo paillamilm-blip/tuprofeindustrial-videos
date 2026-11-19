@@ -23,5 +23,24 @@ class TrianguloRectanguloTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             analizar_triangulo_rectangulo(cateto_a="10", hipotenusa="6")
 
+    def test_partes_del_dibujo(self):
+        from tpi_videos.config import cargar_marca
+        from tpi_videos.temas import cargar_tema
+        from tpi_videos.dibujos import triangulo_rectangulo
+
+        marca = cargar_marca()
+        tema = cargar_tema("pizarra_acrilica", marca)
+        fig = analizar_triangulo_rectangulo(cateto_a="a = 6 m", hipotenusa="c = 10 m", cateto_b="b = ¿?")
+        dibujo = triangulo_rectangulo(fig, ["angulo_recto"], tema.colores, 5.0, 5.0)
+
+        self.assertIn("hipotenusa", dibujo.partes)
+        self.assertIn("c", dibujo.partes)
+        self.assertIn("cateto a", dibujo.partes)
+        self.assertIn("cateto b", dibujo.partes)
+        self.assertIn("angulo_recto", dibujo.partes)
+        self.assertIn("diez", dibujo.partes)
+        self.assertIn("seis", dibujo.partes)
+        self.assertIn("incognita", dibujo.partes)
+
 if __name__ == "__main__":
     unittest.main()

@@ -54,6 +54,7 @@ from manim import (
     MovingCameraScene,
     Polygon,
     Rotate,
+    Rectangle,
     RoundedRectangle,
     SurroundingRectangle,
     Transform,
@@ -982,6 +983,82 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
     def _volver_al_plano(self) -> list[Animation]:
         return self._animaciones_camara(0.0, 1.0, run_time=0.45)
 
+    def _indicar_partes_del_dibujo(
+        self,
+        dibujo: d.Dibujo | None,
+        tr: Any,
+        texto_voz: str,
+        ya_indicadas: set[str] | None = None,
+    ) -> set[str]:
+        """Resalta sincronizadamente las partes del dibujo cuando la voz las menciona.
+
+        Universal para cualquier dibujo con ``dibujo.partes`` (triángulos, polígonos,
+        circuitos, gráficos, sólidos 3D...). Si la cámara no está quieta, acompaña con
+        un encuadre sutil hacia la pieza activa.
+        """
+        if dibujo is None or not getattr(dibujo, "partes", None):
+            return ya_indicadas or set()
+
+        indicadas = set(ya_indicadas or ())
+        candidatos: list[tuple[float, str, Mobject]] = []
+        mobs_usados: set[int] = set()
+
+        claves = sorted(dibujo.partes.keys(), key=lambda k: (-len(k), k))
+
+        for clave in claves:
+            mob = dibujo.partes[clave]
+            if id(mob) in mobs_usados:
+                continue
+            t = self.momento(tr, clave)
+            if t is not None and 0.0 <= t <= tr.duration:
+                candidatos.append((t, clave, mob))
+                mobs_usados.add(id(mob))
+
+        if not candidatos:
+            return indicadas
+
+        candidatos.sort(key=lambda item: item[0])
+
+        eventos_filtrados: list[tuple[float, str, Mobject]] = []
+        ultimo_t = -1.0
+        for t, clave, mob in candidatos:
+            if t >= ultimo_t + 0.45:
+                eventos_filtrados.append((t, clave, mob))
+                ultimo_t = t
+
+        for t, clave, mob in eventos_filtrados:
+            momento_actual = self.renderer.time - tr.start_t
+            if t < momento_actual - 0.1:
+                continue
+
+            self.hasta(tr, t)
+            indicadas.add(clave)
+
+            # Si mob tiene un parche/caja de fondo como primer elemento, resaltamos el rótulo/contenido
+            # para no teñir de azul el parche de fondo.
+            target = mob
+            if isinstance(mob, (VGroup, Group)) and len(mob) >= 2:
+                if isinstance(mob[0], (Rectangle, RoundedRectangle)):
+                    target = mob[1]
+
+            duracion_resalte = min(0.45, max(0.25, tr.duration - t))
+            animaciones: list[Animation] = [
+                Indicate(target, color=self.col.acento, scale_factor=1.22, run_time=duracion_resalte)
+            ]
+
+            if self.modo_camara != "quieta":
+                cam = self._animaciones_camara(
+                    float(target.get_center()[1]),
+                    max(escala_base(self.modo_camara), self._camara_escala * 0.94),
+                    run_time=duracion_resalte,
+                    objetivo_x=float(target.get_center()[0]) * 0.35,
+                )
+                animaciones.extend(cam)
+
+            self.play(*animaciones, run_time=duracion_resalte)
+
+        return indicadas
+
     # --------------------------------------------------------------------------------------
     # Ayudas de estilo
     # --------------------------------------------------------------------------------------
@@ -1205,6 +1282,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     self.play(Indicate(letras, color=self.col.acento, scale_factor=1.18), run_time=0.5)
             if g.visual is not None and alto_dibujo > 0:
                 dibujo = self._trazar_dibujo(g, centro_dibujo, alto_dibujo, tr, mover_camara=False)
+                if dibujo is not None:
+                    self._indicar_partes_del_dibujo(dibujo, tr, g.voz_final)
                 # El gancho no sostiene su dibujo (se va con la pregunta): que su «listo» no lo herede
                 # el primer paso, que esperaría en silencio por un dibujo que ya no está.
                 self._dibujo_listo_en = None
@@ -1293,17 +1372,66 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                 LaggedStart(*[FadeIn(linea, shift=RIGHT * 0.12) for linea in cuerpo], lag_ratio=0.25),
                 run_time=min(1.6, 0.3 * len(cuerpo) + 0.4),
             )
-            eventos = sorted((t, frase) for frase in e.destacar if (t := self.momento(tr, frase)) is not None)
-            for t, frase in eventos:
-                letras = c.frase_en_parrafo(cuerpo, frase)
-                if not len(letras):
+            eventos_texto = [
+                (t, "texto", frase, c.frase_en_parrafo(cuerpo, frase), None)
+                for frase in e.destacar
+                if (t := self.momento(tr, frase)) is not None
+            ]
+            eventos_dibujo = []
+            if ancla is not None and dibujo is not None and getattr(dibujo, "partes", None):
+                mobs_usados = set()
+                claves = sorted(dibujo.partes.keys(), key=lambda k: (-len(k), k))
+                for clave in claves:
+                    mob = dibujo.partes[clave]
+                    if id(mob) in mobs_usados:
+                        continue
+                    t = self.momento(tr, clave)
+                    if t is not None and 0.0 <= t <= tr.duration:
+                        eventos_dibujo.append((t, "dibujo", clave, None, mob))
+                        mobs_usados.add(id(mob))
+
+            todos = sorted(
+                [ev for ev in eventos_texto if len(ev[3])] + eventos_dibujo,
+                key=lambda x: x[0],
+            )
+            agrupados: list[list] = []
+            for ev in todos:
+                if agrupados and abs(ev[0] - agrupados[-1][0][0]) < 0.35:
+                    agrupados[-1].append(ev)
+                else:
+                    agrupados.append([ev])
+
+            for grupo in agrupados:
+                t_grupo = min(ev[0] for ev in grupo)
+                momento_actual = self.renderer.time - tr.start_t
+                if t_grupo < momento_actual - 0.1:
                     continue
-                self.hasta(tr, t)
-                lineas = VGroup(*[c.subrayado(m, self.col.acento, 5, 0.08) for m in letras])
-                subrayados.add(lineas)
-                self.play(
-                    Create(lineas), Indicate(letras, color=self.col.acento, scale_factor=1.06), run_time=0.45
-                )
+                self.hasta(tr, t_grupo)
+
+                anim_grupo: list[Animation] = []
+                for _, tipo, frase, letras, mob in grupo:
+                    if tipo == "texto" and letras is not None:
+                        lineas = VGroup(*[c.subrayado(m, self.col.acento, 5, 0.08) for m in letras])
+                        subrayados.add(lineas)
+                        anim_grupo.extend([Create(lineas), Indicate(letras, color=self.col.acento, scale_factor=1.06)])
+                    elif tipo == "dibujo" and mob is not None:
+                        target = mob
+                        if isinstance(mob, (VGroup, Group)) and len(mob) >= 2:
+                            if isinstance(mob[0], (Rectangle, RoundedRectangle)):
+                                target = mob[1]
+                        anim_grupo.append(Indicate(target, color=self.col.acento, scale_factor=1.22))
+                        if self.modo_camara != "quieta":
+                            anim_grupo.extend(
+                                self._animaciones_camara(
+                                    float(target.get_center()[1]),
+                                    max(escala_base(self.modo_camara), self._camara_escala * 0.94),
+                                    run_time=0.45,
+                                    objetivo_x=float(target.get_center()[0]) * 0.35,
+                                )
+                            )
+
+                if anim_grupo:
+                    self.play(*anim_grupo, run_time=0.45)
         salida = VGroup(tarjeta, subrayados)
         primer_paso_visual = getattr(self.guion.pasos[0], "visual", None) if self.guion.pasos else None
         pasa_a_pasos = (
@@ -1771,6 +1899,8 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                         )
                     elif ultima is not None:
                         self.play(Indicate(ultima, color=self.col.acento, scale_factor=1.04), run_time=0.6)
+                    if dibujo_vivo is not None:
+                        self._indicar_partes_del_dibujo(dibujo_vivo, tr, paso.voz)
                     if c.gramatica_activa(self.tema):
                         self.hasta(tr, max(0.0, tr.duration - 0.6))
                         self._cerrar_paso_gramatica(i, paso)
@@ -1999,6 +2129,9 @@ class VideoEjercicio(VoiceoverScene, MovingCameraScene):
                     self._chip_de_errores(None, 0)  # se cortó la racha: el rincón vuelve a la materia
                     if emoji is not None:
                         self.play(self._rebote(emoji))
+
+                if dibujo_vivo is not None:
+                    self._indicar_partes_del_dibujo(dibujo_vivo, tr, paso.voz)
 
                 error_sale = bool(paso.error and receta.error == "sale" and not mitades)
                 # El recuadro, la ✗ y el temblor se dibujan sobre la fórmula ya escrita: no reinician

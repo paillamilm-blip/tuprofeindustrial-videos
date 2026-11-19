@@ -89,3 +89,18 @@ Este documento recopila las lecciones técnicas, visuales y de contenido derivad
 * **Identidad matemática en transiciones (`acompanar.py`):**
   * La función `_identidad` para figuras geométricas debe calcular la identidad por dimensiones matemáticas resueltas y no por textos temporales de incógnitas.
   * Cuando el paso 4 calcula $b = 8\text{ m}$, el triángulo no se destruye ni parpadea: el rótulo de la incógnita `b = ¿?` muta suavemente a **`b = 8 m` en verde esmeralda (`col.exito`)**, confirmando visualmente la resolución del ejercicio.
+
+---
+
+## 9. 🎥 Indicación Sincronizada de Partes y Cámara Dinámica en Dibujos (Universal)
+* **El dibujo debe "escuchar" lo que se habla:**
+  * No basta con que el dibujo esté quieto mientras la voz explica. Cada dibujo debe registrar sus piezas y rótulos semánticos (`dibujo.partes`).
+  * En `triangulo_rectangulo`: se registran "hipotenusa", "cateto a", "cateto b", "ángulo recto", así como números escritos y hablados ("diez", "seis", "ocho").
+  * Universalmente en `dibujar_visual`: se auto-registran todas las palabras y etiquetas de cualquier figura (`dibujo.mobs.get_family()`).
+* **Sincronización milimétrica con la voz (`_indicar_partes_del_dibujo`):**
+  * El motor detecta en tiempo real con `self.momento(tr, clave)` el segundo exacto en que la voz pronuncia cada término.
+  * En ese instante preciso se ejecuta `Indicate` destacando la pieza activa con `col.acento` (escala 1.22x).
+* **Protección de parches de texto (Cero cuadros ciegos):**
+  * Al indicar rótulos que tienen un parche blanco detrás (`medida`), se debe indicar el texto interno (`target = mob[1]`), evitando que el fondo blanco se rellene de color sólido y tape las letras.
+* **Cámara dinámica:**
+  * Si el guion no está en `camara: quieta`, la cámara realiza micro-encuadres suaves hacia la pieza que se está explicando (`_animaciones_camara`), creando una sensación pedagógica y cinematográfica inmersiva para TikTok / Reels / Shorts.

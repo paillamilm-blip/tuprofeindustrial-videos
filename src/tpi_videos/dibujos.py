@@ -116,6 +116,13 @@ class Dibujo:
     luz_3d: tuple[float, float, float] | None = None
     # Hasta dónde llegó su recorrido (0..1): si la voz cortó la física, el paso siguiente sigue desde ahí.
     pose_final: float = 1.0
+    partes: dict[str, Mobject] = field(default_factory=dict)  # clave/palabra en minúsculas -> Mobject para indicar
+
+    def registrar_parte(self, clave: str, mob: Mobject) -> None:
+        """Asocia una palabra o frase en minúsculas a una pieza del dibujo para indicarla mientras se habla."""
+        k = clave.strip().lower()
+        if k and mob is not None:
+            self.partes[k] = mob
 
     def place(self, x: float, y: float) -> Dibujo:
         delta = np.array([x, y, 0.0]) - self.mobs.get_center()
@@ -971,13 +978,16 @@ def triangulo_rectangulo(
     parches, rótulos = VGroup(), VGroup()
     puntos = [Dot(p, radius=0.045, color=col.formulas) for p in (P0, P1, P2)]
 
-    def medida(texto: str, donde: np.ndarray, tam: float = 24, color_texto: Any = None) -> None:
+    partes_tri: dict[str, Mobject] = {}
+
+    def medida(texto: str, donde: np.ndarray, tam: float = 24, color_texto: Any = None) -> VGroup:
         if not texto:
-            return
+            return VGroup()
         rotulo = c.texto(texto, tam, SEMIBOLD, color_texto or col.texto).move_to(donde)
         fondo, rotulo = _parche(rotulo, papel, 0.16)
         parches.add(fondo)
         rótulos.add(rotulo)
+        return VGroup(fondo, rotulo)
 
     # 1. Ángulo recto en P0
     canto = min(0.32, w * 0.22, h * 0.22)
@@ -990,23 +1000,64 @@ def triangulo_rectangulo(
     rayas.append(escuadra)
     punto_recto = Dot(P0 + (RIGHT + UP) * (canto / 2), radius=0.04, color=col.acento)
     puntos.append(punto_recto)
+    partes_tri["angulo_recto"] = VGroup(escuadra, punto_recto)
+    partes_tri["recto"] = partes_tri["angulo_recto"]
+    partes_tri["angulo"] = partes_tri["angulo_recto"]
+    partes_tri["rectangulo"] = partes_tri["angulo_recto"]
 
     # 2. Cateto a (horizontal, abajo)
-    medida(figura.rotulo_a, (P0 + P1) / 2 + DOWN * 0.40, 22)
+    rot_a = medida(figura.rotulo_a, (P0 + P1) / 2 + DOWN * 0.40, 22)
+    if len(rot_a):
+        partes_tri["cateto a"] = rot_a
+        partes_tri["cateto_a"] = rot_a
+        partes_tri["base"] = rot_a
+        partes_tri["a"] = rot_a
+        if "6" in figura.rotulo_a:
+            partes_tri["seis"] = rot_a
+            partes_tri["6"] = rot_a
+        for w_a in figura.rotulo_a.lower().replace("=", " ").split():
+            if len(w_a) >= 2 or w_a in ("a", "6"):
+                partes_tri[w_a] = rot_a
 
     # 3. Cateto b (vertical, izquierda)
     es_incognita_b = "?" in figura.rotulo_b or "¿" in figura.rotulo_b
     color_b = col.error if es_incognita_b else col.exito
-    medida(figura.rotulo_b, (P0 + P2) / 2 + LEFT * 0.52, 22, color_texto=color_b)
+    rot_b = medida(figura.rotulo_b, (P0 + P2) / 2 + LEFT * 0.52, 22, color_texto=color_b)
+    if len(rot_b):
+        partes_tri["cateto b"] = rot_b
+        partes_tri["cateto_b"] = rot_b
+        partes_tri["altura"] = rot_b
+        partes_tri["b"] = rot_b
+        if es_incognita_b:
+            partes_tri["incognita"] = rot_b
+            partes_tri["falta"] = rot_b
+            partes_tri["hallar"] = rot_b
+            partes_tri["otro cateto"] = rot_b
+        if "8" in figura.rotulo_b:
+            partes_tri["ocho"] = rot_b
+            partes_tri["8"] = rot_b
+        for w_b in figura.rotulo_b.lower().replace("=", " ").replace("¿", "").replace("?", "").split():
+            if len(w_b) >= 2 or w_b in ("b", "8"):
+                partes_tri[w_b] = rot_b
 
     # 4. Hipotenusa c (diagonal, normal hacia afuera)
     norma = float(np.hypot(w, h))
     normal_afuera = np.array([h / norma, w / norma, 0.0])
-    medida(figura.rotulo_c, (P1 + P2) / 2 + normal_afuera * 0.46, 22)
+    rot_c = medida(figura.rotulo_c, (P1 + P2) / 2 + normal_afuera * 0.46, 22)
+    if len(rot_c):
+        partes_tri["hipotenusa"] = rot_c
+        partes_tri["c"] = rot_c
+        if "10" in figura.rotulo_c:
+            partes_tri["diez"] = rot_c
+            partes_tri["10"] = rot_c
+        for w_c in figura.rotulo_c.lower().replace("=", " ").split():
+            if len(w_c) >= 2 or w_c in ("c", "10"):
+                partes_tri[w_c] = rot_c
 
     todo = VGroup(contorno, *rayas[1:], parches, *puntos, rótulos)
+    partes_tri["triangulo"] = todo
     _encajar(todo, ancho, alto)
-    return Dibujo(mobs=todo, trazo=rayas, aparece=[*puntos, *rótulos])
+    return Dibujo(mobs=todo, trazo=rayas, aparece=[*puntos, *rótulos], partes=partes_tri)
 
 
 # ------------------------------------------------------------------------------------------
@@ -3386,6 +3437,15 @@ def dibujar_visual(visual: Any, col: Any, ancho: float, alto: float, papel: str 
         _relleno.reset(marca)
     tecnico = visual.tipo == "tolva_3d" or (visual.tipo == "solido_3d" and visual.figura == "cubo")
     afinar_trazo(dibujo.mobs, minimo=1.5 if tecnico else GROSOR_MINIMO)
+    if not dibujo.partes:
+        from manim import MathTex, Text
+        for m in dibujo.mobs.get_family():
+            txt = getattr(m, "text", None) or getattr(m, "tex_string", None)
+            if txt and isinstance(txt, str):
+                limpio = txt.lower().replace("=", " ").replace("¿", "").replace("?", "").replace("\\", " ")
+                for palabra in limpio.split():
+                    if len(palabra) >= 2 or palabra in ("a", "b", "c", "x", "y", "r", "h"):
+                        dibujo.registrar_parte(palabra, m)
     return dibujo
 
 
