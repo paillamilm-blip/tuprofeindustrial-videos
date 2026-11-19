@@ -1,83 +1,101 @@
-titulo: 'PAES M1: El precio original con 20% de descuento'
+titulo: 'PAES M1: ¿Cuál era el precio original?'
 materia: matematica
-nivel: 1° medio / PAES
-gancho:
-  texto: Con 20% de descuento pagaste $16.000. ¿Cuál era el precio original?
-  voz: Con veinte por ciento de descuento pagaste dieciséis mil pesos. ¿Cuál era el
-    precio original?
-  tex: P - 20\% = \$16.000 \implies P = ¿?
-  emoji: 🏷️
-enunciado:
-  texto: Determina el valor inicial P de un producto si tras un 20% de rebaja su precio
-    final es $16.000.
-  voz: El error que comete casi todo el mundo es sumarle el veinte por ciento a los
-    dieciséis mil.
-  destacar:
-  - $16.000
-  - 20%
-pasos:
-- nota: Error típico
-  tex: 16.000 + 0{,}20(16.000) = 19.200
-  voz: Calcular el veinte por ciento de dieciséis mil y sumarlo te da diecinueve mil
-    doscientos. ¡Eso está pésimo!
-  error: true
-  transformar: false
-- nota: Plantear la fracción que pagas
-  tex: 100\% - 20\% = 80\% \implies 0{,}80 \cdot P = 16.000
-  voz: Si te descontaron el veinte por ciento, lo que pagaste en caja equivale al
-    ochenta por ciento del total pe.
-  emoji: 💡
-  transformar: false
-- nota: Despejar el precio original
-  tex: P = \frac{16.000}{0{,}80} = 20.000
-  voz: Despejamos pe dividiendo dieciséis mil entre cero coma ocho, y obtenemos exactamente
-    veinte mil pesos.
-  destacar:
-  - P = 20.000
-  transformar: false
-resultado:
-  tex: \text{Precio original} = \$20.000
-  voz: El precio original era de veinte mil pesos. Ni diecinueve mil ni dieciocho
-    mil.
-  emoji: ✅
-verificacion:
-  texto: 'Comprobación: el 20% de $20.000 son $4.000, y $20.000 - $4.000 = $16.000.'
-  voz: 'Comprobémoslo: el veinte por ciento de veinte mil son cuatro mil, y veinte
-    mil menos cuatro mil da dieciséis mil.'
-cierre:
-  texto: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
-    para consultar horarios.
-  voz: ¿Repites este error? Trabajémoslo en una clase PAES. Escríbeme PAES por Instagram
-    para consultar horarios.
-llamado: Clases particulares PAES · Online y presencial en toda la Región Metropolitana · Consultas
-  en Instagram @tuprofeindustrial o en nuestra web.
+nivel: "PAES M1"
+molde: mito_realidad
 camara: quieta
+
+gancho:
+  texto: "Con 20% de descuento pagaste $16.000. ¿Cuál era el precio original?"
+  voz: "Con veinte por ciento de descuento pagaste dieciséis mil pesos. ¿Cuál era el precio original?"
+  tex: 'P - 20\% = \$16.000 \rightarrow P = \text{¿?}'
+  emoji: "📉"
+
+enunciado:
+  texto: "Determina el valor inicial P de un producto si tras un 20% de rebaja su precio final es $16.000."
+  voz: "El error que comete casi todo el mundo es sumarle el veinte por ciento a los dieciséis mil."
+  destacar:
+    - "$16.000"
+    - "20%"
+
+pasos:
+  - nota: "La creencia falsa"
+    tex: '16.000 + 0{,}20(16.000) = 19.200'
+    voz: "Calcular el veinte por ciento de dieciséis mil y sumarlo te da diecinueve mil doscientos. ¡Eso está pésimo!"
+    error: true
+    emoji: "❌"
+
+  - nota: "Paso 1: Plantear la fracción que pagas"
+    tex: '100\% - 20\% = 80\% \rightarrow 0{,}80 \cdot P = 16.000'
+    voz: "Si te descontaron el veinte por ciento, lo que pagaste en caja equivale al ochenta por ciento del total pe."
+    destacar:
+      - '0{,}80 \cdot P = 16.000'
+    emoji: "💡"
+
+  - nota: "Paso 2: Despejar el precio original"
+    tex: 'P = \frac{16.000}{0{,}80} \rightarrow P = 20.000'
+    voz: "Despejamos pe dividiendo dieciséis mil entre cero coma ocho, y obtenemos exactamente veinte mil pesos."
+    destacar:
+      - 'P = 20.000'
+    emoji: "✅"
+
+resultado:
+  tex: '\text{Precio original} = \$20.000'
+  voz: "El precio original era de veinte mil pesos. Ni diecinueve mil ni dieciocho mil."
+  emoji: "🏆"
+
+verificacion:
+  texto: "Comprobación: el 20% de $20.000 son $4.000, y $20.000 - $4.000 = $16.000."
+  voz: "Comprobémoslo: el veinte por ciento de veinte mil son cuatro mil, y veinte mil menos cuatro mil da dieciséis mil."
+
+reto:
+  texto: "¿Y si pagas $24.000 con 20% de descuento? ¿Cuánto costaba?"
+  voz: "Ahora tú: si pagaste veinticuatro mil con veinte por ciento de descuento, ¿cuál era el precio original? Deja tu cálculo en los comentarios."
+  emoji: "✍️"
+
+cierre:
+  texto: "Clases particulares PAES M1 · Escríbeme al WhatsApp de mi perfil"
+  voz: "Si quieres asegurar tu puntaje para la Admisión 2027, háblame directo al WhatsApp que está en mi perfil."
+  emoji: "🔥"
+
 portada:
-  estilo: rojo
-  badge: "ERROR TÍPICO PAES M1"
+  estilo: cian
+  badge: "PAES M1 · ADMISIÓN 2027"
   emoji_badge: alerta.png
-  titular: "PAGASTE $16.000 CON\n20% DE DESCUENTO"
+  titular: |-
+    PAGASTE $16.000
+    CON 20% DCTO
   pregunta: "¿EL PRECIO ORIGINAL ERA $19.200?"
   alerta: "¡NO SE LE SUMA EL 20%! FALLA EL 90%"
-  emoji_alerta: cien.png
+  emoji_alerta: cerebro.png
   detalle: "0,80 · P = 16.000  ➔  P = $20.000"
   pie: "Descubre cómo calcular el valor original sin trampas"
+
 historias:
   encuesta:
-    badge: "RETO PAES M1"
-    titulo: "¿CAERÍAS EN LA TRAMPA\nDEL DESCUENTO INVERSO?"
-    pregunta: "Un producto con 20% de descuento cuesta $16.000.\n¿Cuál era su precio original?"
+    badge: "RETO ADMISIÓN 2027"
+    titulo: |-
+      ¿CAERÍAS EN LA TRAMPA
+      DEL DESCUENTO INVERSO?
+    pregunta: |-
+      Un producto con 20% de descuento
+      cuesta $16.000.
+      ¿Cuál era su precio original?
     opcion_a: "$19.200  («Sumar 20% a 16.000»)"
     opcion_b: "$20.000  («16.000 ÷ 0,80»)"
+
 metadatos:
-  titulo: 'Si con 20% de descuento pagaste $16.000, ¿cuál era el precio original? 🏷️'
-  descripcion: 'El error de oro en porcentajes PAES: nunca le sumes el 20% al precio rebajado. Explicación paso a paso dividiendo por 0,8.'
+  titulo: 'Si con 20% de descuento pagaste $16.000, ¿cuál era el precio original? 🏷️ PAES M1'
+  descripcion: 'El típico error de porcentajes en la PAES M1: nunca le sumes el 20% al precio rebajado. Demostramos paso a paso por qué el valor original es $20.000.'
   hashtags:
-  - '#tuprofeindustrial'
-  - '#paes'
-  - '#paesm1'
-  - '#porcentajes'
-  - '#matematica'
-  - '#estudiantes'
-  - '#aprendeentiktok'
-  - '#chile'
+    - '#tuprofeindustrial'
+    - '#paes'
+    - '#paesm1'
+    - '#admision2027'
+    - '#demre'
+    - '#porcentajes'
+    - '#algebra'
+    - '#matematica'
+    - '#estudiantes'
+    - '#aprendeentiktok'
+    - '#chile'
+    - '#clasesparticulares'
