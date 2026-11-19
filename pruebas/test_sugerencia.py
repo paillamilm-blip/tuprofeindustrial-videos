@@ -306,7 +306,7 @@ class EstiloPorMoldeTest(unittest.TestCase):
         }
         self.assertEqual(len(codigos), len(TEMA_POR_MOLDE))
         dato = armar("porcentajes", {"materia": "fisica"}, PREF, {"molde": "nadie_te_enseno", "titulo": "D"})
-        self.assertEqual(dato.pieza("tema").codigo, "consola_dato")  # la materia ya no cambia el estilo
+        self.assertEqual(dato.pieza("tema").codigo, "pizarra_acrilica")  # la materia ya no cambia el estilo
         from tpi_videos.temas import listar_temas
 
         validos = {ident for ident, _tema, _propio in listar_temas()}

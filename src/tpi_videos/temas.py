@@ -46,27 +46,27 @@ TEMA_POR_MOLDE: dict[str, str] = {
     "pov": "consola_pasos",
     "tres_errores": "consola_error",
     "mito_realidad": "consola_mito",
-    "nadie_te_enseno": "consola_dato",
+    "nadie_te_enseno": "pizarra_acrilica",
     "reto": "consola_reto",
 }
 MOTIVO_POR_MOLDE = {
-    "pov": "Un paso a paso: pasos numerados y panel que acumula, en cian.",
+    "pov": "Un paso a paso: desarrollo con tabs numeradas en cian.",
     "tres_errores": "Tres errores: se tachan en rojo y el contador lleva la cuenta.",
-    "mito_realidad": "Mito vs realidad: tablero partido en violeta, sin pasos numerados.",
-    "nadie_te_enseno": "Un dato sorpresa: limpio, en ámbar, con la respuesta tapada.",
+    "mito_realidad": "Mito vs realidad: contraste conceptual en púrpura ciber.",
+    "nadie_te_enseno": "Dato o geometría 3D: la pizarra acrílica blanca aporta luz y volumen.",
     "reto": "Un reto: pasos numerados en verde y la respuesta tapada para que lo intentes.",
 }
 
 # 2° Sin molde, si corrige un error típico.
 TEMA_DE_ERROR = "consola_error"
-MOTIVO_DE_ERROR = "Corrige un error típico: el rojo de la familia lo marca."
+MOTIVO_DE_ERROR = "Corrige un error típico: el rojo eléctrico de alerta lo marca."
 
 # 3° Sin molde ni error: es un ejercicio paso a paso.
 TEMA_DE_PASOS = "consola_pasos"
 MOTIVO_DE_PASOS = "Un ejercicio paso a paso: pasos numerados y panel que acumula."
 
 # Las cinco variantes, en el orden en que se muestran (catálogo, QC y ./tpi temas).
-FAMILIA: tuple[str, ...] = ("consola_pasos", "consola_error", "consola_mito", "consola_dato", "consola_reto")
+FAMILIA: tuple[str, ...] = ("consola_pasos", "consola_error", "pizarra_acrilica", "consola_mito", "consola_reto")
 
 
 class EstiloSugerido(BaseModel):
@@ -87,15 +87,22 @@ def sugerir_tema(
     con_error: bool = False,
     de_siempre: str | None = None,
 ) -> EstiloSugerido:
-    """El estilo que le toca a un video según su forma de contenido (sin mirar el ``tema:``).
+    """El estilo que le toca a un video según la Cascada Inteligente:
 
-    1° su molde · 2° si corrige un error · 3° paso a paso. ``categoria``, ``dibujos`` y ``de_siempre``
-    se aceptan para no romper a quien los pasa, pero ya no cambian el estilo: en la familia Consola
-    neón la materia y los dibujos no deciden la apariencia.
+    1° Por molde (cada forma tiene su estilo específico).
+    2° Si contiene sólidos 3D y no tiene molde -> pizarra_acrilica (Blanco Acrílico).
+    3° Si corrige un error típico sin molde -> consola_error (Rojo Alerta).
+    4° Todo lo demás (paso a paso, álgebra, sin molde) -> consola_pasos (Cian Eléctrico).
     """
-    del categoria, dibujos, de_siempre
+    del categoria, de_siempre
     if molde in TEMA_POR_MOLDE:
         return EstiloSugerido(clave=TEMA_POR_MOLDE[molde], razon=MOTIVO_POR_MOLDE[molde], origen="molde")
+    if "solido_3d" in dibujos:
+        return EstiloSugerido(
+            clave="pizarra_acrilica",
+            razon="Geometría 3D: la pizarra acrílica blanca aporta luz y volumen.",
+            origen="forma",
+        )
     if con_error:
         return EstiloSugerido(clave=TEMA_DE_ERROR, razon=MOTIVO_DE_ERROR, origen="error")
     return EstiloSugerido(clave=TEMA_DE_PASOS, razon=MOTIVO_DE_PASOS, origen="forma")
@@ -341,11 +348,15 @@ def id_tema(nombre: str) -> str:
 def _rutas(identificador: str) -> list[Path]:
     if not _ID_VALIDO.fullmatch(identificador):  # nunca una ruta como «../otra_carpeta»
         return []
-    return [
-        temas_usuario_dir() / f"{identificador}.yaml",
-        TEMAS_DIR / f"{identificador}.yaml",
-        ARCHIVO_DIR / f"{identificador}.yaml",  # retirado: no se ofrece, pero lo viejo sigue funcionando
+    alias = {"consola_dato": "pizarra_acrilica"}
+    clave = alias.get(identificador, identificador)
+    rutas = [
+        temas_usuario_dir() / f"{clave}.yaml",
+        TEMAS_DIR / f"{clave}.yaml",
     ]
+    if ARCHIVO_DIR.exists():
+        rutas.append(ARCHIVO_DIR / f"{clave}.yaml")
+    return rutas
 
 
 def existe_tema(identificador: str) -> bool:

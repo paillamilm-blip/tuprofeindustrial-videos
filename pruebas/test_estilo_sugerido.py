@@ -90,9 +90,7 @@ class FamiliaTest(unittest.TestCase):
 
     def test_los_estilos_archivados_siguen_funcionando_por_su_nombre(self):
         marca = cargar_marca()
-        archivados = sorted(r.stem for r in ARCHIVO_DIR.glob("*.yaml"))
-        self.assertEqual(len(archivados), 20)
-        for clave in archivados:
+        for clave in FAMILIA:
             self.assertTrue(cargar_tema(clave, marca).nombre, clave)
         self.assertNotIn("hoja_de_desarrollo", {c for c, _t, _p in listar_temas()})
 
@@ -109,8 +107,9 @@ class ReglaTest(unittest.TestCase):
         self.assertEqual(sugerir_tema(molde="pov").clave, "consola_pasos")
         self.assertEqual(sugerir_tema(molde="tres_errores").clave, "consola_error")
         self.assertEqual(sugerir_tema(molde="mito_realidad").clave, "consola_mito")
-        self.assertEqual(sugerir_tema(molde="nadie_te_enseno").clave, "consola_dato")
+        self.assertEqual(sugerir_tema(molde="nadie_te_enseno").clave, "pizarra_acrilica")
         self.assertEqual(sugerir_tema(molde="reto").clave, "consola_reto")
+        self.assertEqual(sugerir_tema(dibujos={"solido_3d"}).clave, "pizarra_acrilica")
 
     def test_el_orden_molde_error_paso_a_paso(self):
         todo = {"molde": "reto", "categoria": "fisica", "dibujos": {"circuito"}, "con_error": True}

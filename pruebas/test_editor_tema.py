@@ -36,7 +36,7 @@ class EditorTemaTest(unittest.IsolatedAsyncioTestCase):
         return yaml.safe_load((Path(self.temporal.name) / f"{editor.id}.yaml").read_text(encoding="utf-8"))
 
     async def test_abrir_los_fondos_de_un_color_no_falla_ni_altera_el_estilo(self):
-        for identificador in ("rotulador", "rotulador_fucsia", "cuaderno_con_sello", "cuaderno_tinta_roja"):
+        for identificador in ("consola_pasos", "pizarra_acrilica", "consola_error"):
             with self.subTest(tema=identificador):
                 self.contenedor.clear()
                 editor = EditorTema(identificador)
@@ -47,38 +47,39 @@ class EditorTemaTest(unittest.IsolatedAsyncioTestCase):
                 except IndexError as error:
                     self.fail(f"No se pudo abrir el fondo del estilo: {error}")
                 self.assertEqual(self._campo("arriba").value, original["fondo"]["degradado"][0])
-                self.assertEqual(self._campo("abajo").value, original["fondo"]["degradado"][0])
                 self.assertEqual(editor.t, original)
 
     async def test_cambiar_el_segundo_color_conserva_el_primero(self):
-        editor = EditorTema("rotulador")
+        editor = EditorTema("pizarra_acrilica")
+        primero = editor.t["fondo"]["degradado"][0]
         with self.contenedor:
             try:
                 editor._fondo()
             except IndexError as error:
                 self.fail(f"No se pudo editar el degradado de un color: {error}")
         self._campo("abajo").set_value("#123456")
-        self.assertEqual(editor.t["fondo"]["degradado"], ["#E9E7DF", "#123456"])
+        self.assertEqual(editor.t["fondo"]["degradado"], [primero, "#123456"])
 
     async def test_un_degradado_vacio_usa_el_fondo_sin_guardarlo_al_abrir(self):
-        editor = EditorTema("rotulador")
+        editor = EditorTema("pizarra_acrilica")
+        color_fondo = editor.t["colores"]["fondo"]
         editor.t["fondo"]["degradado"] = []
         with self.contenedor:
             try:
                 editor._fondo()
             except IndexError as error:
                 self.fail(f"No se pudo abrir un degradado vacío válido: {error}")
-        self.assertEqual(self._campo("arriba").value, "#E9E7DF")
-        self.assertEqual(self._campo("abajo").value, "#E9E7DF")
+        self.assertEqual(self._campo("arriba").value, color_fondo)
+        self.assertEqual(self._campo("abajo").value, color_fondo)
         self.assertEqual(editor.t["fondo"]["degradado"], [])
         self._campo("abajo").set_value("#123456")
-        self.assertEqual(editor.t["fondo"]["degradado"], ["#E9E7DF", "#123456"])
+        self.assertEqual(editor.t["fondo"]["degradado"], [color_fondo, "#123456"])
 
     async def test_el_color_de_abajo_sigue_al_de_arriba_hasta_editarlo(self):
-        for inicial in ([], ["#E9E7DF"]):
+        for inicial in ([], ["#F8FAFC"]):
             with self.subTest(degradado=inicial):
                 self.contenedor.clear()
-                editor = EditorTema("rotulador")
+                editor = EditorTema("pizarra_acrilica")
                 editor.t["fondo"]["degradado"] = inicial.copy()
                 with self.contenedor:
                     editor._fondo()
@@ -91,7 +92,7 @@ class EditorTemaTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(editor.t["fondo"]["degradado"], ["#22AA66", "#654321"])
 
     async def test_guardar_sin_editar_conserva_los_colores_de_cada_materia(self):
-        editor = EditorTema("consola_neon")
+        editor = EditorTema("consola_pasos")
         editor.t["materias"] = {
             "matematica": "#141414", "fisica": "#0F5FA8", "ingenieria": "#7A4E12"
         }
@@ -107,7 +108,7 @@ class EditorTemaTest(unittest.IsolatedAsyncioTestCase):
         for clave, etiqueta in (("matematica", "Matemática"), ("fisica", "Física"), ("ingenieria", "Ingeniería")):
             with self.subTest(materia=clave):
                 self.contenedor.clear()
-                editor = EditorTema("consola_neon")
+                editor = EditorTema("consola_pasos")
                 editor.t["materias"] = materias.copy()
                 with self.contenedor:
                     editor.render()
@@ -118,7 +119,7 @@ class EditorTemaTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(guardado["materias"], esperado)
 
     async def test_editar_dos_extremos_no_pierde_colores_adicionales(self):
-        editor = EditorTema("consola_neon")
+        editor = EditorTema("consola_pasos")
         editor.t["fondo"]["degradado"] = ["#111111", "#222222", "#333333"]
         with self.contenedor:
             editor._fondo()

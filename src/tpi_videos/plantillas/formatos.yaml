@@ -35,7 +35,7 @@ datos:
     Una paradoja famosa, una escala visual o las cuentas de algo que ya conoce. El dibujo carga el peso:
     primero se ve, después se explica.
   moldes: [nadie_te_enseno]
-  tema: consola_dato
+  tema: pizarra_acrilica
   dibujos: [barras, torta, tanque, energia, pendulo_doble]
   color: "#38BDF8"
   cta: "¿Con qué número te quedas?"

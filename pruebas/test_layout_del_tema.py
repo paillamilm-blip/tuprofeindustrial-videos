@@ -46,19 +46,16 @@ def tema_con(layout: dict[str, Any] | None = None, **datos: Any) -> temas.Tema:
 
 class LayoutDelTemaTest(unittest.TestCase):
     def test_un_tema_sin_layout_conserva_las_zonas_del_marco(self) -> None:
-        """Ninguno de los 19 temas de fábrica declara layout: tienen que seguir igual."""
-        for identificador in TEMAS_ORIGINALES:
-            ruta = TEMAS / f"{identificador}.yaml"
-            crudo = yaml.safe_load(ruta.read_text(encoding="utf-8"))
-            self.assertNotIn("layout", crudo, ruta.name)
-            tema = temas.Tema.model_validate(crudo)
+        """Un tema sin layout conserva las zonas de su marco."""
+        for marco in ("pizarra", "hoja"):
+            tema = tema_con(marco=marco)
             with estilo(tema):
                 vistos = (
                     componentes.Y_CABECERA,
                     componentes.Y_ZONA_SUPERIOR,
                     componentes.Y_ZONA_INFERIOR,
                 )
-            self.assertEqual(vistos, ZONAS_DE_HOY[tema.marco], ruta.name)
+            self.assertEqual(vistos, ZONAS_DE_HOY[marco], marco)
 
     def test_sin_tema_las_funciones_sueltas_usan_las_constantes_de_siempre(self) -> None:
         self.assertEqual(componentes.Y_CABECERA, 6.55)

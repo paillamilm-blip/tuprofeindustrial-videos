@@ -1,0 +1,46 @@
+# Estilo Pizarra Acrílica (Blanco Hielo / Light Mode de Alto Impacto).
+nombre: Pizarra Acrílica
+descripcion: 'Pizarra blanca acrílica de alto impacto: trazos tipo plumón de alta densidad sobre acrílico cristalino.'
+rotulo: ACRÍLICO
+marco: pizarra
+resplandor: false
+colores:
+  fondo: '#F8FAFC'
+  panel: '#FFFFFF'
+  borde: '#CBD5E1'
+  titulos: '#0F172A'
+  texto: '#1E293B'
+  formulas: '#0F172A'
+  tenue: '#64748B'
+  acento: '#2563EB'
+  exito: '#16A34A'
+  cuadricula: '#0284C7'
+  error: '#DC2626'
+materias: {matematica: '#2563EB', fisica: '#2563EB', ingenieria: '#2563EB'}
+tipografia:
+  titulos: {familia: Montserrat, grosor: HEAVY, mayusculas: true}
+  texto: {familia: Montserrat, grosor: SEMIBOLD}
+nota: {rol: texto, escala: 1.0, color: acento}
+formulas_negrita: true
+fondo: {tipo: degradado, degradado: ['#FFFFFF', '#F1F5F9']}
+subtitulos:
+  fuente: Montserrat Black
+  tamano: 84
+  color: '#FFFFFF'
+  color_activo: '#FACC15'
+  color_borde: '#0F172A'
+  borde: 8
+  sombra: 4
+  posicion_y: 0.82
+  mayusculas: true
+  max_palabras: 3
+  max_caracteres: 18
+  resaltar: true
+animacion: {titulos: plumon}
+emojis: true
+gramatica:
+  tabs: false
+  panel: false
+  mapa_color: true
+  micro: true
+  paleta_pasos: ['#2563EB', '#DC2626', '#16A34A', '#D97706', '#7C3AED', '#0284C7']
