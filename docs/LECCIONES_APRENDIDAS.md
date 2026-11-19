@@ -16,15 +16,15 @@ Este documento recopila las lecciones técnicas, visuales y de contenido derivad
 
 ---
 
-## 2. 🎨 Rotación Visual Estricta (Regla Anti-Clones)
+## 2. 🎨 Rotación Visual y los 5 Formatos Oficiales (Regla Anti-Clones)
 * **Regla:** Desde el Video 04 en adelante, **ningún video consecutivo puede repetir estilo, color ni estructura narrativa** (a menos que el usuario solicite expresamente una trilogía).
-* **Los 5 estilos oficiales:**
-  1. `consola_pasos`: Azul Marino (`#020617`) / Cian Eléctrico (`#38BDF8`) — Rótulo: `PASO A PASO`
-  2. `consola_error`: Carbón (`#09090B`) / Rojo Carmesí (`#EF4444`) — Rótulo: `ERROR`
-  3. `pizarra_acrilica`: Blanco Hielo (`#F8FAFC`) / Azul Cobalto (`#2563EB`) — Rótulo configurable (`GEOMETRÍA`, etc.)
-  4. `consola_mito`: Obsidiana (`#090514`) / Morado Cyber (`#A855F7`) — Rótulo: `MITO` (pantalla dividida)
-  5. `consola_reto`: Grafito (`#0B0F19`) / Verde Esmeralda (`#22C55E`) — Rótulo: `RETO`
-* **Causa raíz evitada:** No aplicar `molde: mito_realidad` a todos los guiones por defecto, ya que fuerza la pantalla dividida morada. El molde narrativo debe variar según el objetivo didáctico.
+* **Los 5 formatos oficiales y sus temas correspondientes:**
+  1. **`PASO A PASO`** → `consola_pasos`: Fondo Azul Marino (`#0B0E14`) / Cian Eléctrico (`#38BDF8`). Chip superior: `PASO A PASO`.
+  2. **`ERROR`** → `consola_error`: Fondo Carbón (`#0B0E14`) / Rojo Carmesí Eléctrico (`#EF4444`). Chip superior: `ERROR`.
+  3. **`MITO`** → `consola_mito`: Fondo Obsidiana (`#0B0E14`) / Púrpura Cyber (`#A855F7`). Pantalla dividida Mito vs Realidad. Chip superior: `MITO`.
+  4. **`RETO`** → `consola_reto`: Fondo Grafito (`#0B0F19`) / Verde Esmeralda Eléctrico (`#22C55E`). Chip superior: `RETO`.
+  5. **`DATO`** → `pizarra_acrilica`: Fondo Blanco Hielo (`#F8FAFC`) / Azul Cobalto (`#2563EB`). Trazos tipo plumón de alta visibilidad. Chip superior: `DATO`.
+* **Causa raíz evitada:** No aplicar `molde: mito_realidad` a todos los guiones por defecto. El molde y tema deben rotar armónicamente.
 
 ---
 
@@ -43,11 +43,11 @@ Este documento recopila las lecciones técnicas, visuales y de contenido derivad
 
 ---
 
-## 5. 🏷️ Jerarquía de Cabecera y Quiebre de Titulares
+## 5. 🏷️ Jerarquía de Cabecera y Chip Superior (`rotulo`)
 * **Chip superior derecho (`rotulo`):**
-  * Debe indicar la materia o categoría didáctica (`GEOMETRÍA`, `ÁLGEBRA`, `PASO A PASO`, `ERROR`, `RETO`, `MITO`).
-  * **Prohibido:** Mostrar nombres de materiales técnicos o temas internos como `ACRÍLICO`.
-  * El guion puede sobreescribir el chip usando `rotulo: "GEOMETRÍA"` en el YAML.
+  * Debe indicar **exclusivamente uno de los 5 tipos/formatos de video**: `PASO A PASO`, `ERROR`, `MITO`, `RETO` o `DATO`.
+  * **Prohibido terminantemente:** Mostrar nombres de materias escolares (como `GEOMETRÍA` o `ÁLGEBRA`) ni nombres técnicos de temas/materiales (como `ACRÍLICO`).
+  * Cada tema define su rótulo por defecto en su YAML (ej. `pizarra_acrilica.yaml` define `rotulo: DATO`).
 * **Quiebre de líneas en el título:**
   * Si el título lleva prefijo de examen (`PAES M1:`), la pregunta debe comenzar en una línea independiente debajo, para evitar cortes antiestéticos como `PAES M1: ¿SUMAS O` en la primera línea.
   * Formato estándar en YAML:
@@ -59,7 +59,15 @@ Este documento recopila las lecciones técnicas, visuales y de contenido derivad
 
 ---
 
-## 6. 💼 Estrategia de Embudo y Reglas Comerciales
+## 6. 🎬 Animaciones Obligatorias ("Cero Fórmulas Desnudas")
+* **Regla:** Ningún video puede mostrar únicamente fórmulas algebraicas o texto plano aislado. Todo video debe incluir animaciones gráficas dinámicas (`visual:`) en la parte inferior de la pantalla para respaldar visualmente el aprendizaje:
+  * **Ecuaciones cuadráticas y funciones:** `tipo: grafico_funcion` trazando la parábola con sus raíces destacadas en el eje (`marcar: [0.0, 5.0]`), demostrando gráficamente por qué una raíz no puede ser cancelada.
+  * **Geometría y Teorema de Pitágoras:** `tipo: barras` o figuras comparativas demostrando las áreas/cuadrados ($a^2=36$, $b^2=64$, $c^2=100$) vs la suma errónea ($136$).
+  * **Aritmética y raíces:** `tipo: barras` contrastando visualmente la suma real de raíces vs la trampa del DEMRE.
+
+---
+
+## 7. 💼 Estrategia de Embudo y Reglas Comerciales
 * **Prohibido en audio:** No decir precios en pesos (`$18.000`) ni dictar números de teléfono en el guion hablado para evitar penalización y shadowban algorítmico en TikTok e Instagram Reels.
 * **Llamado a la acción (CTA) unificado:**
   * Audio: *"Háblame directo al WhatsApp que está en mi perfil"* / *"Enlace en bio"*.
