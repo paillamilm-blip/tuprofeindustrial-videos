@@ -53,3 +53,10 @@ inclusion: always
   `python3 scripts/doc_a_html.py docs/ANALISIS_TECNICO.md docs/ANALISIS_TECNICO.html` (no editarlo a mano).
   `docs/ESTUDIO_VISUAL_MATEMATICAS.*` es una observación fechada: no se reescribe sin observar de nuevo.
   Cada fase nueva deja su diseño y su plan en `docs/superpowers/`.
+- **Lecciones aprendidas y reglas de oro de producción:** ver `docs/LECCIONES_APRENDIDAS.md`. En particular:
+  1) Voz siempre Charon (Gemini TTS) con fallback multi-modelo;
+  2) Rotación estricta entre los 5 temas (sin videos consecutivos iguales);
+  3) Cámara quieta obligatoria en álgebra;
+  4) Símbolos Unicode `√` y `²` en campos `texto:`, LaTeX en `tex:`;
+  5) Rótulo de cabecera temático (nunca nombres de materiales como ACRÍLICO) y títulos con salto de línea bajo `PAES M1:`;
+  6) Cero precios ni teléfonos hablados (embudo al WhatsApp de la bio).
